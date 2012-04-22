@@ -29,32 +29,35 @@ typedef struct {
   const GSequence *ast;
 } result;
 
-result* (*token(const uint8_t *s))(parse_state *ps);
-result* (*ch(const uint8_t c))(parse_state *ps);
-result* (*range(const uint8_t lower, const uint8_t upper))(parse_state *ps);
-result* (*whitespace(result *(*p1)(parse_state *ps1)))(parse_state *ps);
-//result (*action(result *(*p1)(parse_state *ps1), /* fptr to action on AST */))(parse_state *ps);
-result* (*join_action(result *(*p1)(parse_state *ps1), const uint8_t *sep))(parse_state *ps);
-result* (*left_factor_action(result *(*p1)(parse_state *ps1)))(parse_state *ps);
-result* (*negate(result *(*p1)(parse_state *ps1)))(parse_state *ps);
-result* end_p(parse_state *ps);
-result* nothing_p(parse_state *ps);
-result* (*sequence(result *(*(*p1)(parse_state *ps1))))(parse_state *ps);
-result* (*choice(result *(*(*p1)(parse_state *ps1))))(parse_state *ps);
-result* (*butnot(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2)))(parse_state *ps);
-result* (*difference(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2)))(parse_state *ps);
-result* (*xor(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2)))(parse_state *ps);
-result* (*repeat0(result *(*p1)(parse_state *ps1)))(parse_state *ps);
-result* (*repeat1(result *(*p1)(parse_state *ps1)))(parse_state *ps);
-result* (*repeatN(result *(*p1)(parse_state *ps1), const size_t n))(parse_state *ps);
-result* (*optional(result *(*p1)(parse_state *ps1)))(parse_state *ps);
-void (*expect(result *(*p1)(parse_state *ps1)))(parse_state *ps);
-result* (*chain(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2), result *(*p3)(parse_state *ps3)))(parse_state *ps);
-result* (*chainl(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2)))(parse_state *ps);
-result* (*list(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2)))(parse_state *ps);
-result* epsilon_p(parse_state *ps);
-//result (*semantic(/* fptr to nullary function? */))(parse_state *ps);
-result* (*and(result *(*p1)(parse_state *ps1)))(parse_state *ps);
-result* (*not(result *(*p1)(parse_state *ps1)))(parse_state *ps);
+typedef result*(*parser)(parse_state*);
+
+parser *token(const uint8_t *s);
+parser *ch(const uint8_t c);
+parser *range(const uint8_t lower, const uint8_t upper);
+parser *whitespace(parser *p);
+//parser *action(parser *p, /* fptr to action on AST */);
+parser *join_action(parser *p, const uint8_t *sep);
+parser *left_faction_action(parser *p);
+parser *negate(parser *p);
+parser *end_p();
+parser *nothing_p();
+parser *sequence(parser **p_array);
+parser *choice(parser **p_array);
+parser *butnot(parser *p1, parser *p2);
+parser *difference(parser *p1, parser *p2);
+parser *xor(parser *p1, parser *p2);
+parser *repeat0(parser *p);
+parser *repeat1(parser *p);
+parser *repeat_n(parser *p, const size_t n);
+parser *optional(parser *p);
+parser *expect(parser *p);
+parser *chain(parser *p1, parser *p2, parser *p3);
+parser *chainl(parser *p1, parser *p2);
+parser *list(parser *p1, parser *p2);
+parser *epsilon_p();
+//parser *semantic(/* fptr to nullary function? */);
+parser *and(parser *p);
+parser *not(parser *p);
+
 
 
