@@ -31,33 +31,33 @@ typedef struct {
 
 typedef parse_result*(*parser)(parse_state*);
 
-parser *token(const uint8_t *s);
-parser *ch(const uint8_t c);
-parser *range(const uint8_t lower, const uint8_t upper);
-parser *whitespace(parser *p);
-//parser *action(parser *p, /* fptr to action on AST */);
-parser *join_action(parser *p, const uint8_t *sep);
-parser *left_faction_action(parser *p);
-parser *negate(parser *p);
-parser *end_p();
-parser *nothing_p();
-parser *sequence(parser **p_array);
-parser *choice(parser **p_array);
-parser *butnot(parser *p1, parser *p2);
-parser *difference(parser *p1, parser *p2);
-parser *xor(parser *p1, parser *p2);
-parser *repeat0(parser *p);
-parser *repeat1(parser *p);
-parser *repeat_n(parser *p, const size_t n);
-parser *optional(parser *p);
-parser *expect(parser *p);
-parser *chain(parser *p1, parser *p2, parser *p3);
-parser *chainl(parser *p1, parser *p2);
-parser *list(parser *p1, parser *p2);
-parser *epsilon_p();
-//parser *semantic(/* fptr to nullary function? */);
-parser *and(parser *p);
-parser *not(parser *p);
+parser token(const uint8_t *s);
+parser ch(const uint8_t c);
+parser range(const uint8_t lower, const uint8_t upper);
+parser whitespace(parser p);
+//parser action(parser p, /* fptr to action on AST */);
+parser join_action(parser p, const uint8_t *sep);
+parser left_faction_action(parser p);
+parser negate(parser p);
+parser end_p();
+parser nothing_p();
+parser sequence(parser p_array[]);
+parser choice(parser p_array[]);
+parser butnot(parser p1, parser p2);
+parser difference(parser p1, parser p2);
+parser xor(parser p1, parser p2);
+parser repeat0(parser p);
+parser repeat1(parser p);
+parser repeat_n(parser p, const size_t n);
+parser optional(parser p);
+parser expect(parser p);
+parser chain(parser p1, parser p2, parser p3);
+parser chainl(parser p1, parser p2);
+parser list(parser p1, parser p2);
+parser epsilon_p();
+//parser semantic(/* fptr to nullary function? */);
+parser and(parser p);
+parser not(parser p);
 
 
 

@@ -36,30 +36,30 @@ const parse_result* get_cached(parse_state *ps, const size_t pid); /* {
 							     */
 int put_cached(parse_state *ps, const size_t pid, parse_result cached);
 
-parser *token(const uint8_t *s) { return NULL; }
-parser *ch(const uint8_t c) { return NULL; }
-parser *range(const uint8_t lower, const uint8_t upper) { return NULL; }
-parser *whitespace(parser *p) { return NULL; }
-//parser *action(parser *p, /* fptr to action on AST */) { return NULL; }
-parser *join_action(parser *p, const uint8_t *sep) { return NULL; }
-parser *left_faction_action(parser *p) { return NULL; }
-parser *negate(parser *p) { return NULL; }
-parser *end_p() { return NULL; }
-parser *nothing_p() { return NULL; }
-parser *sequence(parser **p_array) { return NULL; }
-parser *choice(parser **p_array) { return NULL; }
-parser *butnot(parser *p1, parser *p2) { return NULL; }
-parser *difference(parser *p1, parser *p2) { return NULL; }
-parser *xor(parser *p1, parser *p2) { return NULL; }
-parser *repeat0(parser *p) { return NULL; }
-parser *repeat1(parser *p) { return NULL; }
-parser *repeat_n(parser *p, const size_t n) { return NULL; }
-parser *optional(parser *p) { return NULL; }
-parser *expect(parser *p) { return NULL; }
-parser *chain(parser *p1, parser *p2, parser *p3) { return NULL; }
-parser *chainl(parser *p1, parser *p2) { return NULL; }
-parser *list(parser *p1, parser *p2) { return NULL; }
-parser *epsilon_p() { return NULL; }
-//parser *semantic(/* fptr to nullary function? */) { return NULL; }
-parser *and(parser *p) { return NULL; }
-parser *not(parser *p) { return NULL; }
+parser token(const uint8_t *s) { return NULL; }
+parser ch(const uint8_t c) { return NULL; }
+parser range(const uint8_t lower, const uint8_t upper) { return NULL; }
+parser whitespace(parser p) { return NULL; }
+//parser action(parser p, /* fptr to action on AST */) { return NULL; }
+parser join_action(parser p, const uint8_t *sep) { return NULL; }
+parser left_faction_action(parser p) { return NULL; }
+parser negate(parser p) { return NULL; }
+parser end_p() { return NULL; }
+parser nothing_p() { return NULL; }
+parser sequence(parser p_array[]) { return NULL; }
+parser choice(parser p_array[]) { return NULL; }
+parser butnot(parser p1, parser p2) { return NULL; }
+parser difference(parser p1, parser p2) { return NULL; }
+parser xor(parser p1, parser p2) { return NULL; }
+parser repeat0(parser p) { return NULL; }
+parser repeat1(parser p) { return NULL; }
+parser repeat_n(parser p, const size_t n) { return NULL; }
+parser optional(parser p) { return NULL; }
+parser expect(parser p) { return NULL; }
+parser chain(parser p1, parser p2, parser p3) { return NULL; }
+parser chainl(parser p1, parser p2) { return NULL; }
+parser list(parser p1, parser p2) { return NULL; }
+parser epsilon_p() { return NULL; }
+//parser semantic(/* fptr to nullary function? */) { return NULL; }
+parser and(parser p) { return NULL; }
+parser not(parser p) { return NULL; }
