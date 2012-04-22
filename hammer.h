@@ -8,8 +8,8 @@
  *   index - current position in input
  *   length - size of input
  * THE FOLLOWING DESCRIBES HOW JSPARSE DOES IT. OUR MILEAGE MAY VARY.
- *   cache - a hash table describing the state of the parse, including partial parse
- *           results. It's actually a hash table of [parser_id, hash_table[index, result]],
+ *   cache - a hash table describing the state of the parse, including partial parse_results. 
+ *           It's actually a hash table of [parser_id, hash_table[index, parse_result]],
  *           where the parser id is incremented as the parse goes along (parsers that have
  *           already been applied once don't get a new parser_id ... but the global variable
  *           still increments? not sure why that is, need to debug some), and the locations
@@ -27,9 +27,9 @@ typedef struct {
   const uint8_t *remaining;
   const uint8_t *matched;
   const GSequence *ast;
-} result;
+} parse_result;
 
-typedef result*(*parser)(parse_state*);
+typedef parse_result*(*parser)(parse_state*);
 
 parser *token(const uint8_t *s);
 parser *ch(const uint8_t c);

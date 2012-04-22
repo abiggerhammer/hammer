@@ -29,12 +29,12 @@ const gchar* to_string(parse_state *ps) {
   return g_strescape(ps->input, NULL);
 }
 
-const result* get_cached(parse_state *ps, const size_t pid); /* {
+const parse_result* get_cached(parse_state *ps, const size_t pid); /* {
   gpointer p = g_hash_table_lookup(ps->cache, &pid);
   if (NULL != p)
 }
 							     */
-int put_cached(parse_state *ps, const size_t pid, result cached);
+int put_cached(parse_state *ps, const size_t pid, parse_result cached);
 
 parser *token(const uint8_t *s) { return NULL; }
 parser *ch(const uint8_t c) { return NULL; }
