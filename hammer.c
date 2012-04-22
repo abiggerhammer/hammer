@@ -35,3 +35,31 @@ const result* get_cached(parse_state *ps, const size_t pid); /* {
 }
 							     */
 int put_cached(parse_state *ps, const size_t pid, result cached);
+
+result* (*token(const uint8_t *s))(parse_state *ps) { return NULL; }
+result* (*ch(const uint8_t c))(parse_state *ps) { return NULL; }
+result* (*range(const uint8_t lower, const uint8_t upper))(parse_state *ps) { return NULL; }
+result* (*whitespace(result *(*p1)(parse_state *ps1)))(parse_state *ps) { return NULL; }
+//result (*action(result *(*p1)(parse_state *ps1), /* fptr to action on AST */))(parse_state *ps) { return NULL; }
+result* (*join_action(result *(*p1)(parse_state *ps1), const uint8_t *sep))(parse_state *ps) { return NULL; }
+result* (*left_factor_action(result *(*p1)(parse_state *ps1)))(parse_state *ps) { return NULL; }
+result* (*negate(result *(*p1)(parse_state *ps1)))(parse_state *ps) { return NULL; }
+result* end_p(parse_state *ps) { return NULL; }
+result* nothing_p(parse_state *ps) { return NULL; }
+result* (*sequence(result *(*(*p1)(parse_state *ps1))))(parse_state *ps) { return NULL; }
+result* (*choice(result *(*(*p1)(parse_state *ps1))))(parse_state *ps) { return NULL; }
+result* (*butnot(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2)))(parse_state *ps) { return NULL; }
+result* (*difference(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2)))(parse_state *ps) { return NULL; }
+result* (*xor(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2)))(parse_state *ps) { return NULL; }
+result* (*repeat0(result *(*p1)(parse_state *ps1)))(parse_state *ps) { return NULL; }
+result* (*repeat1(result *(*p1)(parse_state *ps1)))(parse_state *ps) { return NULL; }
+result* (*repeatN(result *(*p1)(parse_state *ps1), const size_t n))(parse_state *ps) { return NULL; }
+result* (*optional(result *(*p1)(parse_state *ps1)))(parse_state *ps) { return NULL; }
+void (*expect(result *(*p1)(parse_state *ps1)))(parse_state *ps) { return NULL; }
+result* (*chain(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2), result *(*p3)(parse_state *ps3)))(parse_state *ps) { return NULL; }
+result* (*chainl(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2)))(parse_state *ps) { return NULL; }
+result* (*list(result *(*p1)(parse_state *ps1), result *(*p2)(parse_state *ps2)))(parse_state *ps) { return NULL; }
+result* epsilon_p(parse_state *ps) { return NULL; }
+//result (*semantic(/* fptr to nullary function? */))(parse_state *ps) { return NULL; }
+result* (*and(result *(*p1)(parse_state *ps1)))(parse_state *ps) { return NULL; }
+result* (*not(result *(*p1)(parse_state *ps1)))(parse_state *ps) { return NULL; }
