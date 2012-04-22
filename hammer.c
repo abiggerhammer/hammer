@@ -1,3 +1,20 @@
+/* Parser combinators for binary formats.
+ * Copyright (C) 2012  Meredith L. Patterson, Dan "TQ" Hirsch
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, version 2.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 #include "hammer.h"
 #include <string.h>
 
@@ -26,7 +43,7 @@ const GVariant* at(parse_state_t *ps, const size_t index) {
 }
 
 const gchar* to_string(parse_state_t *ps) {
-  return g_strescape(ps->input, NULL);
+  return g_strescape((const gchar*)(ps->input), NULL);
 }
 
 const parse_result_t* get_cached(parse_state_t *ps, const size_t pid); /* {
