@@ -16,48 +16,53 @@
  *           at which it's been applied are memoized.
  *
  */
-typedef struct {
+typedef struct parse_state {
   const uint8_t *input;
   size_t index;
   size_t length;
   GHashTable *cache; 
-} parse_state;
+} parse_state_t;
 
-typedef struct {
+typedef struct parse_result {
   const uint8_t *remaining;
   const uint8_t *matched;
   const GSequence *ast;
-} parse_result;
+} parse_result_t;
 
-typedef parse_result*(*parser)(parse_state*);
+typedef struct parser {
+  parse_result_t* (*fn)(void* env, parse_state_t *state);
+  void* env;
+} parser_t;
 
-parser token(const uint8_t *s);
-parser ch(const uint8_t c);
-parser range(const uint8_t lower, const uint8_t upper);
-parser whitespace(parser p);
-//parser action(parser p, /* fptr to action on AST */);
-parser join_action(parser p, const uint8_t *sep);
-parser left_faction_action(parser p);
-parser negate(parser p);
-parser end_p();
-parser nothing_p();
-parser sequence(parser p_array[]);
-parser choice(parser p_array[]);
-parser butnot(parser p1, parser p2);
-parser difference(parser p1, parser p2);
-parser xor(parser p1, parser p2);
-parser repeat0(parser p);
-parser repeat1(parser p);
-parser repeat_n(parser p, const size_t n);
-parser optional(parser p);
-parser expect(parser p);
-parser chain(parser p1, parser p2, parser p3);
-parser chainl(parser p1, parser p2);
-parser list(parser p1, parser p2);
-parser epsilon_p();
-//parser semantic(/* fptr to nullary function? */);
-parser and(parser p);
-parser not(parser p);
+parse_result_t* parse(parser_t* parser, const uint8_t* input);
+
+parser_t* token(const uint8_t *s);
+parser_t* ch(const uint8_t c);
+parser_t* range(const uint8_t lower, const uint8_t upper);
+parser_t* whitespace(parser_t* p);
+//parser_t* action(parser_t* p, /* fptr to action on AST */);
+parser_t* join_action(parser_t* p, const uint8_t *sep);
+parser_t* left_faction_action(parser_t* p);
+parser_t* negate(parser_t* p);
+parser_t* end_p();
+parser_t* nothing_p();
+parser_t* sequence(parser_t* p_array[]);
+parser_t* choice(parser_t* p_array[]);
+parser_t* butnot(parser_t* p1, parser_t* p2);
+parser_t* difference(parser_t* p1, parser_t* p2);
+parser_t* xor(parser_t* p1, parser_t* p2);
+parser_t* repeat0(parser_t* p);
+parser_t* repeat1(parser_t* p);
+parser_t* repeat_n(parser_t* p, const size_t n);
+parser_t* optional(parser_t* p);
+parser_t* expect(parser_t* p);
+parser_t* chain(parser_t* p1, parser_t* p2, parser_t* p3);
+parser_t* chainl(parser_t* p1, parser_t* p2);
+parser_t* list(parser_t* p1, parser_t* p2);
+parser_t* epsilon_p();
+//parser_t* semantic(/* fptr to nullary function? */);
+parser_t* and(parser_t* p);
+parser_t* not(parser_t* p);
 
 
 
