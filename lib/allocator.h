@@ -1,5 +1,5 @@
-#ifndef LIB_ALLOCATOR__H__
-#define LIB_ALLOCATOR__H__
+#ifndef HAMMER_ALLOCATOR__H__
+#define HAMMER_ALLOCATOR__H__
 #include <sys/types.h>
 
 typedef struct arena* arena_t; // hidden implementation

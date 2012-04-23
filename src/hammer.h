@@ -15,6 +15,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#ifndef HAMMER_HAMMER__H
+#define HAMMER_HAMMER__H
 #include <glib.h>
 #include <stdint.h>
 
@@ -33,11 +35,16 @@
  *           at which it's been applied are memoized.
  *
  */
+#define BYTE_BIG_ENDIAN 0x1
+#define BIT_BIG_ENDIAN 0x2
+
 typedef struct parse_state {
   const uint8_t *input;
+  GHashTable *cache; 
   size_t index;
   size_t length;
-  GHashTable *cache; 
+  char bit_offset;
+  char endianness;
 } parse_state_t;
 
 typedef struct parse_result {
@@ -81,5 +88,4 @@ parser_t* epsilon_p();
 parser_t* and(parser_t* p);
 parser_t* not(parser_t* p);
 
-
-
+#endif // #ifndef HAMMER_HAMMER__H
