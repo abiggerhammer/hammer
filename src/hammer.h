@@ -15,6 +15,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#ifndef HAMMER_HAMMER__H
+#define HAMMER_HAMMER__H
 #include <glib.h>
 #include <stdint.h>
 
@@ -33,11 +35,23 @@
  *           at which it's been applied are memoized.
  *
  */
-typedef struct parse_state {
+#define BYTE_BIG_ENDIAN 0x1
+#define BIT_BIG_ENDIAN 0x2
+#define BIT_LITTLE_ENDIAN 0x0
+#define BYTE_LITTLE_ENDIAN 0x0
+
+typedef struct input_stream {
+  // This should be considered to be a really big value type.
   const uint8_t *input;
   size_t index;
   size_t length;
+  char bit_offset;
+  char endianness;
+} input_stream_t;
+  
+typedef struct parse_state {
   GHashTable *cache; 
+  input_stream_t input_stream;
 } parse_state_t;
 
 typedef struct parse_result {
@@ -81,5 +95,4 @@ parser_t* epsilon_p();
 parser_t* and(parser_t* p);
 parser_t* not(parser_t* p);
 
-
-
+#endif // #ifndef HAMMER_HAMMER__H

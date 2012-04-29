@@ -1,6 +1,4 @@
-include ../config.mk
+include ../common.mk
 
 all: allocator.o
 
-%.o: %.c
-	gcc $(CFLAGS) -c -o $@ $^
