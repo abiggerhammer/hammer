@@ -37,14 +37,21 @@
  */
 #define BYTE_BIG_ENDIAN 0x1
 #define BIT_BIG_ENDIAN 0x2
+#define BIT_LITTLE_ENDIAN 0x0
+#define BYTE_LITTLE_ENDIAN 0x0
 
-typedef struct parse_state {
+typedef struct input_stream {
+  // This should be considered to be a really big value type.
   const uint8_t *input;
-  GHashTable *cache; 
   size_t index;
   size_t length;
   char bit_offset;
   char endianness;
+} input_stream_t;
+  
+typedef struct parse_state {
+  GHashTable *cache; 
+  input_stream_t input_stream;
 } parse_state_t;
 
 typedef struct parse_result {
