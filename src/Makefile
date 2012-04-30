@@ -1,8 +1,12 @@
--include ../common.mk
 
 OUTPUTS := bitreader.o \
 	   libhammer.a \
 	   test_suite
+
+TOPLEVEL := ../
+
+include ../common.mk
+
 
 all: libhammer.a test_suite
 
