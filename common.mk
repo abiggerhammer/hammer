@@ -1,4 +1,4 @@
-CFLAGS := $(shell pkg-config --cflags glib-2.0)
+CFLAGS := $(shell pkg-config --cflags glib-2.0) -std=c99
 LDFLAGS := $(shell pkg-config --libs glib-2.0)
 CC := gcc
 
