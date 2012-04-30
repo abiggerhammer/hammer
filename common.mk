@@ -12,3 +12,6 @@ CFLAGS += -DINCLUDE_TESTS
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
+
+clean:
+	-rm -f $(OUTPUTS)

@@ -1,9 +1,13 @@
 -include ../common.mk
 
+OUTPUTS := bitreader.o \
+	   libhammer.a \
+	   test_suite
+
 all: libhammer.a test_suite
 
 test_suite: test_suite.o libhammer.a
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 libhammer.a: bitreader.o
 
