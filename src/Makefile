@@ -1,6 +1,7 @@
 -include ../common.mk
 
 OUTPUTS := bitreader.o \
+	   hammer.o \
 	   libhammer.a \
 	   test_suite
 

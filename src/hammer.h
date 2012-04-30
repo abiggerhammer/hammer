@@ -54,28 +54,49 @@ typedef struct parse_state {
   input_stream_t input_stream;
 } parse_state_t;
 
+typedef struct parsed_token {
+  const uint8_t *token;
+  size_t len;
+} parsed_token_t;
+
 typedef struct parse_result {
-  const uint8_t *remaining;
-  const uint8_t *matched;
   const GSequence *ast;
 } parse_result_t;
 
 typedef struct parser {
-  parse_result_t* (*fn)(void* env, parse_state_t *state);
-  void* env;
+  parse_result_t* (*fn)(void *env, parse_state_t *state);
+  void *env;
 } parser_t;
 
 parse_result_t* parse(const parser_t* parser, const uint8_t* input);
 
-const parser_t* token(const uint8_t *s);
+/* Given a string, returns a parser that parses that string value. */
+const parser_t* token(const uint8_t *str, const size_t len);
+
+/* Given a single character, returns a parser that parses that character. */
 const parser_t* ch(const uint8_t c);
+
+/* Given two single-character bounds, lower and upper, returns a parser that parses a single character within the range [lower, upper] (inclusive). */
 const parser_t* range(const uint8_t lower, const uint8_t upper);
+
+/* Given another parser, p, returns a parser that skips any whitespace and then applies p. */
 const parser_t* whitespace(const parser_t* p);
+
+/* Given another parser, p, and a function f, returns a parser that applies p, then applies f to everything in the AST of p's result. */
 //const parser_t* action(const parser_t* p, /* fptr to action on AST */);
-const parser_t* join_action(const parser_t* p, const uint8_t *sep);
-const parser_t* left_faction_action(const parser_t* p);
+
+/* Given another parser, p, and a separator, sep, returns a parser that applies p, then joins everything in the AST of p's result with sep. For example, if the AST of p's result is {"dog", "cat", "hedgehog"} and sep is "|", the AST of this parser's result will be {"dog|cat|hedgehog"}. */
+const parser_t* join_action(const parser_t* p, const uint8_t *sep, const size_t len);
+
+const parser_t* left_factor_action(const parser_t* p);
+
+/* Given a single-character parser, p, returns a single-character parser that will parse any character *other* than the character p would parse. */
 const parser_t* negate(const parser_t* p);
+
+/* A no-argument parser that succeeds if there is no more input to parse. */
 const parser_t* end_p();
+
+/* This parser always fails. */
 const parser_t* nothing_p();
 const parser_t* sequence(const parser_t* p_array[]);
 const parser_t* choice(const parser_t* p_array[]);
