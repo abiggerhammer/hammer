@@ -6,6 +6,8 @@ CFLAGS += -DINCLUDE_TESTS
 
 .SUFFIX:
 
+.DEFAULT_GOAL:=all
+
 %.a:
 	-rm -f $@
 	ar crv $@ $^
