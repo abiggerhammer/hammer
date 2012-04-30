@@ -55,7 +55,7 @@ long long read_bits(input_stream_t* state, int count, char signed_p) {
 
 #define MK_INPUT_STREAM(buf,len,endianness_)   \
   {					      \
-    .input = buf,						\
+    .input = (uint8_t*)buf,					\
       .length = len,						\
       .index = 0,						\
       .bit_offset = (((endianness_) & BIT_BIG_ENDIAN) ? 8 : 0),	\
