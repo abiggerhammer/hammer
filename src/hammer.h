@@ -54,13 +54,30 @@ typedef struct parse_state {
   input_stream_t input_stream;
 } parse_state_t;
 
+typedef enum token_type {
+  TT_NONE,
+  TT_BYTES,
+  TT_SINT,
+  TT_UINT,
+  TT_SEQUENCE,
+  TT_MAX
+} token_type_t;
+
 typedef struct parsed_token {
-  const uint8_t *token;
-  size_t len;
+  token_type_t token_type;
+  union {
+    struct {
+      const uint8_t *token;
+      size_t len;
+    } bytes;
+    int64_t sint;
+    uint64_t uint;
+    GSequence *seq;
+  };
 } parsed_token_t;
 
 typedef struct parse_result {
-  const GSequence *ast;
+  const parsed_token_t *ast;
 } parse_result_t;
 
 typedef struct parser {
@@ -85,9 +102,6 @@ const parser_t* whitespace(const parser_t* p);
 /* Given another parser, p, and a function f, returns a parser that applies p, then applies f to everything in the AST of p's result. */
 //const parser_t* action(const parser_t* p, /* fptr to action on AST */);
 
-/* Given another parser, p, and a separator, sep, returns a parser that applies p, then joins everything in the AST of p's result with sep. For example, if the AST of p's result is {"dog", "cat", "hedgehog"} and sep is "|", the AST of this parser's result will be {"dog|cat|hedgehog"}. */
-const parser_t* join_action(const parser_t* p, const uint8_t *sep, const size_t len);
-
 const parser_t* left_factor_action(const parser_t* p);
 
 /* Given a single-character parser, p, returns a single-character parser that will parse any character *other* than the character p would parse. */
@@ -99,7 +113,7 @@ const parser_t* end_p();
 /* This parser always fails. */
 const parser_t* nothing_p();
 
-
+/* Given an array of parsers, p_array, apply each parser in order. The parse succeeds only if all parsers succeed. */
 const parser_t* sequence(const parser_t* p_array[]);
 const parser_t* choice(const parser_t* p_array[]);
 const parser_t* butnot(const parser_t* p1, const parser_t* p2);
