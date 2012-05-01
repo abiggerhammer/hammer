@@ -216,7 +216,7 @@ typedef struct {
 static parse_result_t* parse_sequence(void *env, parse_state_t *state) {
   sequence_t *s = (sequence_t*)env;
   GSequence *seq = g_sequence_new(NULL);
-  for (int i=0; i<s->len; ++i) {
+  for (size_t i=0; i<s->len; ++i) {
     parse_result_t *tmp = do_parse(s->p_array[i], state);
     g_sequence_append(seq, tmp);
   }
@@ -236,8 +236,7 @@ const parser_t* sequence(const parser_t* p_array[]) {
 
 static parse_result_t* parse_choice(void *env, parse_state_t *state) {
   sequence_t *s = (sequence_t*)env;
-  GSequence *seq = g_sequence_new(NULL);
-  for (int i=0; i<s->len; ++i) {
+  for (size_t i=0; i<s->len; ++i) {
     parse_result_t *tmp = do_parse(s->p_array[i], state);
     if (NULL != tmp)
       return tmp;
