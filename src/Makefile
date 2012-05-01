@@ -1,5 +1,6 @@
 
 OUTPUTS := bitreader.o \
+	   hammer.o \
 	   libhammer.a \
 	   test_suite
 
@@ -11,7 +12,7 @@ include ../common.mk
 all: libhammer.a test_suite
 
 test_suite: test_suite.o libhammer.a
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
 
 libhammer.a: bitreader.o hammer.o
 

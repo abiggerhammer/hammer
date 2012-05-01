@@ -1,4 +1,4 @@
-CFLAGS := $(shell pkg-config --cflags glib-2.0) -std=gnu99 -Wall -Wextra -Werror
+CFLAGS := $(shell pkg-config --cflags glib-2.0) -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter
 LDFLAGS := $(shell pkg-config --libs glib-2.0)
 CC := gcc
 # Set V=1 for verbose mode...
@@ -11,6 +11,8 @@ ifeq ($(TOPLEVEL),)
 $(error $$TOPLEVEL is unset)
 endif
 
+ifsilent = $(if $(findstring 0, $(V)),$(1),)
+hush = $(call ifsilent,$(HUSH) $(1))
 #.SUFFIXES:
 
 ifeq ($(V),0)
@@ -19,19 +21,14 @@ endif
 
 .DEFAULT_GOAL:=all
 
-%.a: | $(HUSH)
+%.a: $(call ifsilent,| $(HUSH))
 	-rm -f $@
-	$(if $(findstr 0,$(V)),$(HUSH) "Archiving $@",) ar cr $@ $^
+	$(call hush,"Archiving $@") ar cr $@ $^
 
 
-ifeq ($(V),0)
-# silent mode
-%.o: %.c | $(HUSH)
-	$(HUSH) "Compiling $<" $(CC) $(CFLAGS) -c -o $@ $<
-else
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-endif
+%.o: %.c $(call ifsilent,| $(HUSH))
+	$(call hush, "Compiling $<") $(CC) $(CFLAGS) -c -o $@ $<
+
 clean:
 	-rm -f $(OUTPUTS)
 
