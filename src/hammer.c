@@ -122,7 +122,7 @@ const parser_t* token(const uint8_t *str, const size_t len) {
 }
 
 static parse_result_t* parse_ch(void* env, parse_state_t *state) {
-  uint8_t c = (uint8_t)env;
+  uint8_t c = (uint8_t)GPOINTER_TO_UINT(env);
   uint8_t r = (uint8_t)read_bits(&state->input_stream, 8, false);
   if (c == r) {
     parsed_token_t *tok = g_new(parsed_token_t, 1);    
@@ -135,7 +135,7 @@ static parse_result_t* parse_ch(void* env, parse_state_t *state) {
 
 const parser_t* ch(const uint8_t c) {  
   parser_t *ret = g_new(parser_t, 1);
-  ret->fn = parse_ch; ret->env = (void*)c;
+  ret->fn = parse_ch; ret->env = GUINT_TO_POINTER(c);
   return (const parser_t*)ret;
 }
 
