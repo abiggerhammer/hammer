@@ -254,7 +254,23 @@ const parser_t* choice(const parser_t* p_array[]) {
   return ret;
 }
 
-const parser_t* butnot(const parser_t* p1, const parser_t* p2) { return NULL; }
+typedef struct {
+  const parser_t *p1;
+  const parser_t *p2;
+} two_parsers_t;
+
+
+static parse_result_t parse_butnot(void *env, parse_state_t *state) {
+  two_parsers_t *parsers = (two_parsers_t*)env;
+  input_stream_t tmp_state = state->input_stream;
+  
+}
+
+const parser_t* butnot(const parser_t* p1, const parser_t* p2) { 
+  two_parsers_t *env = g_new(two_parsers_t, 1);
+  env->p1 = p1; env->p2 = p2;
+}
+
 const parser_t* difference(const parser_t* p1, const parser_t* p2) { return NULL; }
 const parser_t* xor(const parser_t* p1, const parser_t* p2) { return NULL; }
 const parser_t* repeat0(const parser_t* p) { return NULL; }
