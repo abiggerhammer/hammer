@@ -12,41 +12,54 @@ long long read_bits(input_stream_t* state, int count, char signed_p) {
   long long out = 0;
   int offset = 0;
   long long msb = (!!signed_p) << (count - 1); // 0 if unsigned, else 1 << (nbits - 1)
-  while (count) {
-    int segment, segment_len;
-    // Read a segment...
-    if (state->endianness & BIT_BIG_ENDIAN) {
-      if (count >= state->bit_offset) {
-	segment_len = state->bit_offset;
-	state->bit_offset = 8;
-	segment = state->input[state->index] & ((1 << segment_len) - 1);
-	state->index++;
-      } else {
-	segment_len = count;
-	state->bit_offset -= count;
-	segment = (state->input[state->index] >> state->bit_offset) & ((1 << segment_len) - 1);
-      }
-    } else { // BIT_LITTLE_ENDIAN
-      if (count + state->bit_offset >= 8) {
-	segment_len = 8 - state->bit_offset;
-	segment = (state->input[state->index] >> state->bit_offset);
-	state->index++;
-	state->bit_offset = 0;
-      } else {
-	segment_len = count;
-	segment = (state->input[state->index] >> state->bit_offset) & ((1 << segment_len) - 1);
-	state->bit_offset += segment_len;
-      }
-    }
-
-    // have a valid segment; time to assemble the byte
+  if ((state->bit_offset & 0x7) == 0 && (count & 0x7) == 0) {
+    // fast path
     if (state->endianness & BYTE_BIG_ENDIAN) {
-      out = out << segment_len | segment;
-    } else { // BYTE_LITTLE_ENDIAN
-      out |= segment << offset;
-      offset += segment_len;
+      while (count > 0)
+	out = (out << 8) | state->input[state->index++];
+    } else {
+      while (count > 0) {
+	count -= 8;
+	out |= state->input[state->index++] << count;
+      }
     }
-    count -= segment_len;
+  } else {
+    while (count) {
+      int segment, segment_len;
+      // Read a segment...
+      if (state->endianness & BIT_BIG_ENDIAN) {
+	if (count >= state->bit_offset) {
+	  segment_len = state->bit_offset;
+	  state->bit_offset = 8;
+	  segment = state->input[state->index] & ((1 << segment_len) - 1);
+	  state->index++;
+	} else {
+	  segment_len = count;
+	  state->bit_offset -= count;
+	  segment = (state->input[state->index] >> state->bit_offset) & ((1 << segment_len) - 1);
+	}
+      } else { // BIT_LITTLE_ENDIAN
+	if (count + state->bit_offset >= 8) {
+	  segment_len = 8 - state->bit_offset;
+	  segment = (state->input[state->index] >> state->bit_offset);
+	  state->index++;
+	  state->bit_offset = 0;
+	} else {
+	  segment_len = count;
+	  segment = (state->input[state->index] >> state->bit_offset) & ((1 << segment_len) - 1);
+	  state->bit_offset += segment_len;
+	}
+      }
+      
+      // have a valid segment; time to assemble the byte
+      if (state->endianness & BYTE_BIG_ENDIAN) {
+	out = out << segment_len | segment;
+      } else { // BYTE_LITTLE_ENDIAN
+	out |= segment << offset;
+	offset += segment_len;
+      }
+      count -= segment_len;
+    }
   }
   return (out ^ msb) - msb; // perform sign extension
 }
@@ -55,7 +68,7 @@ long long read_bits(input_stream_t* state, int count, char signed_p) {
 
 #define MK_INPUT_STREAM(buf,len,endianness_)   \
   {					      \
-    .input = buf,						\
+    .input = (uint8_t*)buf,					\
       .length = len,						\
       .index = 0,						\
       .bit_offset = (((endianness_) & BIT_BIG_ENDIAN) ? 8 : 0),	\
