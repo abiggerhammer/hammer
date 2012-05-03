@@ -292,7 +292,7 @@ static parse_result_t* parse_butnot(void *env, parse_state_t *state) {
   // cache the initial state of the input stream
   input_stream_t start_state = state->input_stream;
   parse_result_t *r1 = do_parse(parsers->p1, state);
-  // if r1 is null, bail out early
+  // if p1 failed, bail out early
   if (NULL == r1) {
     return NULL;
   } 
@@ -302,7 +302,7 @@ static parse_result_t* parse_butnot(void *env, parse_state_t *state) {
   parse_result_t *r2 = do_parse(parsers->p2, state);
   // TODO(mlp): I'm pretty sure the input stream state should be the post-p1 state in all cases
   state->input_stream = after_p1_state;
-  // if r2 is null, restore post-p1 state and bail out early
+  // if p2 failed, restore post-p1 state and bail out early
   if (NULL == r2) {
     return r1;
   }
@@ -324,8 +324,76 @@ const parser_t* butnot(const parser_t* p1, const parser_t* p2) {
   return ret;
 }
 
-const parser_t* difference(const parser_t* p1, const parser_t* p2) { return NULL; }
-const parser_t* xor(const parser_t* p1, const parser_t* p2) { return NULL; }
+static parse_result_t* parse_difference(void *env, parse_state_t *state) {
+  two_parsers_t *parsers = (two_parsers_t*)env;
+  // cache the initial state of the input stream
+  input_stream_t start_state = state->input_stream;
+  parse_result_t *r1 = do_parse(parsers->p1, state);
+  // if p1 failed, bail out early
+  if (NULL == r1) {
+    return NULL;
+  } 
+  // cache the state after parse #1, since we might have to back up to it
+  input_stream_t after_p1_state = state->input_stream;
+  state->input_stream = start_state;
+  parse_result_t *r2 = do_parse(parsers->p2, state);
+  // TODO(mlp): I'm pretty sure the input stream state should be the post-p1 state in all cases
+  state->input_stream = after_p1_state;
+  // if p2 failed, restore post-p1 state and bail out early
+  if (NULL == r2) {
+    return r1;
+  }
+  size_t r1len = token_length(r1);
+  size_t r2len = token_length(r2);
+  // if both match but p1's text is shorter than p2's, fail
+  if (r1len < r2len) {
+    return NULL;
+  } else {
+    return r1;
+  }
+}
+
+const parser_t* difference(const parser_t* p1, const parser_t* p2) { 
+  two_parsers_t *env = g_new(two_parsers_t, 1);
+  env->p1 = p1; env->p2 = p2;
+  parser_t *ret = g_new(parser_t, 1);
+  ret->fn = parse_difference; ret->env = (void*)env;
+  return ret;
+}
+
+static parse_result_t* parse_xor(void *env, parse_state_t *state) {
+  two_parsers_t *parsers = (two_parsers_t*)env;
+  // cache the initial state of the input stream
+  input_stream_t start_state = state->input_stream;
+  parse_result_t *r1 = do_parse(parsers->p1, state);
+  input_stream_t after_p1_state = state->input_stream;
+  // reset input stream, parse again
+  state->input_stream = start_state;
+  parse_result_t *r2 = do_parse(parsers->p2, state);
+  if (NULL == r1) {
+    if (NULL != r2) {
+      return r2;
+    } else {
+      return NULL;
+    }
+  } else {
+    if (NULL == r2) {
+      state->input_stream = after_p1_state;
+      return r1;
+    } else {
+      return NULL;
+    }
+  }
+}
+
+const parser_t* xor(const parser_t* p1, const parser_t* p2) { 
+  two_parsers_t *env = g_new(two_parsers_t, 1);
+  env->p1 = p1; env->p2 = p2;
+  parser_t *ret = g_new(parser_t, 1);
+  ret->fn = parse_xor; ret->env = (void*)env;
+  return ret;
+}
+
 const parser_t* repeat0(const parser_t* p) { return NULL; }
 const parser_t* repeat1(const parser_t* p) { return NULL; }
 const parser_t* repeat_n(const parser_t* p, const size_t n) { return NULL; }

@@ -116,9 +116,22 @@ const parser_t* sequence(const parser_t* p_array[]);
 /* Given an array of parsers, p_array, apply each parser in order. The first parser to succeed is the result; if no parsers succeed, the parse fails. */
 const parser_t* choice(const parser_t* p_array[]);
 
+/* Given two parsers, p1 and p2, this parser succeeds in the following cases: 
+ * - if p1 succeeds and p2 fails
+ * - if both succeed but p1's result is shorter than p2's
+ */
 const parser_t* butnot(const parser_t* p1, const parser_t* p2);
+
+/* Given two parsers, p1 and p2, this parser succeeds in the following cases:
+ * - if p1 succeeds and p2 fails
+ * - if both succeed but p2's result is shorter than p1's
+ */
 const parser_t* difference(const parser_t* p1, const parser_t* p2);
+
+/* Given two parsers, p1 and p2, this parser succeeds if *either* p1 or p2 succeed, but not if they both do.
+ */
 const parser_t* xor(const parser_t* p1, const parser_t* p2);
+
 const parser_t* repeat0(const parser_t* p);
 const parser_t* repeat1(const parser_t* p);
 const parser_t* repeat_n(const parser_t* p, const size_t n);
