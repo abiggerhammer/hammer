@@ -26,15 +26,7 @@
  *   input - the entire string being parsed
  *   index - current position in input
  *   length - size of input
- * THE FOLLOWING DESCRIBES HOW JSPARSE DOES IT. OUR MILEAGE MAY VARY.
- *   cache - a hash table describing the state of the parse, including partial parse_results. 
- *           It's actually a hash table of [parser_id, hash_table[index, parse_result]],
- *           where the parser id is incremented as the parse goes along (parsers that have
- *           already been applied once don't get a new parser_id ... but the global variable
- *           still increments? not sure why that is, need to debug some), and the locations
- *           at which it's been applied are memoized.
- * 
- *           In our case, it's a hash table from parser_cache_key_t to parse_state_t. 
+ *   cache - a hash table describing the state of the parse, including partial parse_results. It's a hash table from parser_cache_key_t to parse_state_t. 
  *
  */
 #define BYTE_BIG_ENDIAN 0x1
