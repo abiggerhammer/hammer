@@ -76,6 +76,9 @@ typedef struct parsed_token {
   };
 } parsed_token_t;
 
+/* If a parse fails, the parse result will be NULL.
+ * If a parse is successful but there's nothing there (i.e., if end_p succeeds) then there's a parse result but its ast is NULL.
+ */
 typedef struct parse_result {
   const parsed_token_t *ast;
 } parse_result_t;
