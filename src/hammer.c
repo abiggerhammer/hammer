@@ -48,45 +48,36 @@ const gchar* to_string(parse_state_t *ps) {
   return g_strescape((const gchar*)(ps->input_stream.input), NULL);
 }
 
-uint8_t djbhash(size_t index, char bit_offset) {
-  unsigned int hash = 5381;
-  for (uint8_t i = 0; i < sizeof(size_t); ++i) {
-    hash = hash * 33 + (index & 0xFF);
-    index >>= 8;
+guint djbhash(const 
+uint8_t *buf, size_t len) {
+  guint hash = 5381;
+  while (len--) {
+    hash = hash * 33 + *buf++;
   }
-  hash = hash * 33 + bit_offset;
   return hash;
 }
 
-parse_result_t* get_cached(parse_state_t *ps, const parser_t *p) {
-  gpointer t = g_hash_table_lookup(ps->cache, p);
-  if (NULL != t) {
-    parse_result_t* ret = g_hash_table_lookup(t, GUINT_TO_POINTER(djbhash(ps->input_stream.index, 
-									  ps->input_stream.length)));
-    if (NULL != ret) {
-      return ret;
-    } else {
-      // TODO(mlp): need a return value for "this parser was in the cache but nothing was at this location"
-      return NULL;
-    }
+parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
+  // TODO(thequux): add caching here.
+  parser_cache_key_t key = {
+    .input_pos = state->input_stream,
+    .parser = parser
+  };
+  
+  // check to see if there is already a result for this object...
+  if (g_hash_table_contains(state->cache, &key)) {
+    // it exists!
+    // TODO(thequux): handle left recursion case
+    return g_hash_table_lookup(state->cache, &key);
   } else {
-    // TODO(mlp): need a return value for "this parser wasn't in the cache"
-    return NULL;
+    // It doesn't exist... run the 
+    parse_result_t *res;
+    res = parser->fn(parser->env, state);
+    // update the cache
+    g_hash_table_replace(state->cache, &key, res);
+    return res;
   }
 }
-
-void put_cached(parse_state_t *ps, const parser_t *p, parse_result_t *cached) {
-  gpointer t = g_hash_table_lookup(ps->cache, p);
-  if (NULL != t) {
-    g_hash_table_insert(t, GUINT_TO_POINTER(djbhash(ps->input_stream.index, ps->input_stream.length)), (gpointer)cached); 
-  } else {
-    GHashTable *t = g_hash_table_new(g_direct_hash, g_direct_equal);
-    g_hash_table_insert(t, GUINT_TO_POINTER(djbhash(ps->input_stream.index, ps->input_stream.length)), (gpointer)cached);
-    g_hash_table_insert(ps->cache, (parser_t*)p, t);
-  }
-}
-
-parse_result_t* do_parse(const parser_t* parser, parse_state_t *state);
 
 /* Helper function, since these lines appear in every parser */
 inline parse_result_t* make_result(parsed_token_t *tok) {
@@ -270,4 +261,29 @@ const parser_t* epsilon_p() { return NULL; }
 const parser_t* and(const parser_t* p) { return NULL; }
 const parser_t* not(const parser_t* p) { return NULL; }
 
-parse_result_t* parse(const parser_t* parser, const uint8_t* input) { return NULL; }
+static guint cache_key_hash(gconstpointer key) {
+  return djbhash(key, sizeof(parser_cache_key_t));
+}
+static gboolean cache_key_equal(gconstpointer key1, gconstpointer key2) {
+  return memcmp(key1, key2, sizeof(parser_cache_key_t)) == 0;
+}
+
+
+parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t length) { 
+  // Set up a parse state...
+  parse_state_t *parse_state = g_new0(parse_state_t, 1);
+  parse_state->cache = g_hash_table_new(cache_key_hash, // hash_func
+					cache_key_equal);// key_equal_func
+  parse_state->input_stream.input = input;
+  parse_state->input_stream.bit_offset = 8; // bit big endian
+  parse_state->input_stream.endianness = BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN;
+  parse_state->input_stream.length = length;
+  
+  parse_result_t *res = do_parse(parser, parse_state);
+  // tear down the parse state. For now, leak like a sieve.
+  // BUG: Leaks like a sieve.
+  // TODO(thequux): Pull in the arena allocator.
+  g_hash_table_destroy(parse_state->cache);
+
+  return res;
+}

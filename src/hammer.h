@@ -33,6 +33,8 @@
  *           already been applied once don't get a new parser_id ... but the global variable
  *           still increments? not sure why that is, need to debug some), and the locations
  *           at which it's been applied are memoized.
+ * 
+ *           In our case, it's a hash table from parser_cache_key_t to parse_state_t. 
  *
  */
 #define BYTE_BIG_ENDIAN 0x1
@@ -85,7 +87,7 @@ typedef struct parser {
   void *env;
 } parser_t;
 
-parse_result_t* parse(const parser_t* parser, const uint8_t* input);
+parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t length);
 
 /* Given a string, returns a parser that parses that string value. */
 const parser_t* token(const uint8_t *str, const size_t len);
@@ -131,5 +133,7 @@ const parser_t* epsilon_p();
 //const parser_t* semantic(/* fptr to nullary function? */);
 const parser_t* and(const parser_t* p);
 const parser_t* not(const parser_t* p);
+
+const parser_t* ignore(const parser_t* p); // parse p, but return no ast.
 
 #endif // #ifndef HAMMER_HAMMER__H
