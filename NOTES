@@ -1,0 +1,6 @@
+NOTES
+=====
+
+Regarding parse_result_t:
+If a parse fails, the parse_result_t will be NULL.
+If a parse is successful but there's nothing there (i.e., if end_p succeeds), then there's a parse_result_t but its ast is NULL.

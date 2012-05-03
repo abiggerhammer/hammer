@@ -78,6 +78,9 @@ typedef struct parsed_token {
   };
 } parsed_token_t;
 
+/* If a parse fails, the parse result will be NULL.
+ * If a parse is successful but there's nothing there (i.e., if end_p succeeds) then there's a parse result but its ast is NULL.
+ */
 typedef struct parse_result {
   const parsed_token_t *ast;
 } parse_result_t;
@@ -117,7 +120,10 @@ const parser_t* nothing_p();
 
 /* Given an array of parsers, p_array, apply each parser in order. The parse succeeds only if all parsers succeed. */
 const parser_t* sequence(const parser_t* p_array[]);
+
+/* Given an array of parsers, p_array, apply each parser in order. The first parser to succeed is the result; if no parsers succeed, the parse fails. */
 const parser_t* choice(const parser_t* p_array[]);
+
 const parser_t* butnot(const parser_t* p1, const parser_t* p2);
 const parser_t* difference(const parser_t* p1, const parser_t* p2);
 const parser_t* xor(const parser_t* p1, const parser_t* p2);

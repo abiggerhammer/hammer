@@ -209,7 +209,12 @@ static parse_result_t* parse_sequence(void *env, parse_state_t *state) {
   GSequence *seq = g_sequence_new(NULL);
   for (size_t i=0; i<s->len; ++i) {
     parse_result_t *tmp = do_parse(s->p_array[i], state);
-    g_sequence_append(seq, tmp);
+    // if the interim parse fails, the whole thing fails
+    if (NULL == tmp) {
+      return NULL;
+    } else {
+      g_sequence_append(seq, tmp);
+    }
   }
   parsed_token_t *tok = g_new(parsed_token_t, 1);
   tok->token_type = TT_SEQUENCE; tok->seq = seq;
@@ -245,7 +250,80 @@ const parser_t* choice(const parser_t* p_array[]) {
   return ret;
 }
 
-const parser_t* butnot(const parser_t* p1, const parser_t* p2) { return NULL; }
+typedef struct {
+  const parser_t *p1;
+  const parser_t *p2;
+} two_parsers_t;
+
+void accumulate_size(gpointer pr, gpointer acc) {
+  size_t tmp = GPOINTER_TO_SIZE(acc);
+  if (NULL != ((parse_result_t*)pr)->ast) {
+    switch(((parse_result_t*)pr)->ast->token_type) {
+    case TT_BYTES:
+      tmp += ((parse_result_t*)pr)->ast->bytes.len;
+      acc = GSIZE_TO_POINTER(tmp);
+      break;
+    case TT_SINT:
+    case TT_UINT:
+      tmp += 8;
+      acc = GSIZE_TO_POINTER(tmp);
+      break;
+    case TT_SEQUENCE:
+      g_sequence_foreach(((parse_result_t*)pr)->ast->seq, accumulate_size, acc);
+      break;
+    default:
+      break;
+    }
+  } // no else, if the AST is null then acc doesn't change
+}
+
+size_t token_length(parse_result_t *pr) {
+  size_t ret = 0;
+  if (NULL == pr) {
+    return ret;
+  } else {
+    accumulate_size(pr, GSIZE_TO_POINTER(ret));
+  }
+  return ret;
+}
+
+static parse_result_t* parse_butnot(void *env, parse_state_t *state) {
+  two_parsers_t *parsers = (two_parsers_t*)env;
+  // cache the initial state of the input stream
+  input_stream_t start_state = state->input_stream;
+  parse_result_t *r1 = do_parse(parsers->p1, state);
+  // if r1 is null, bail out early
+  if (NULL == r1) {
+    return NULL;
+  } 
+  // cache the state after parse #1, since we might have to back up to it
+  input_stream_t after_p1_state = state->input_stream;
+  state->input_stream = start_state;
+  parse_result_t *r2 = do_parse(parsers->p2, state);
+  // TODO(mlp): I'm pretty sure the input stream state should be the post-p1 state in all cases
+  state->input_stream = after_p1_state;
+  // if r2 is null, restore post-p1 state and bail out early
+  if (NULL == r2) {
+    return r1;
+  }
+  size_t r1len = token_length(r1);
+  size_t r2len = token_length(r2);
+  // if both match but p1's text is longer than p2's, fail
+  if (r1len > r2len) {
+    return NULL;
+  } else {
+    return r1;
+  }
+}
+
+const parser_t* butnot(const parser_t* p1, const parser_t* p2) { 
+  two_parsers_t *env = g_new(two_parsers_t, 1);
+  env->p1 = p1; env->p2 = p2;
+  parser_t *ret = g_new(parser_t, 1);
+  ret->fn = parse_butnot; ret->env = (void*)env;
+  return ret;
+}
+
 const parser_t* difference(const parser_t* p1, const parser_t* p2) { return NULL; }
 const parser_t* xor(const parser_t* p1, const parser_t* p2) { return NULL; }
 const parser_t* repeat0(const parser_t* p) { return NULL; }
