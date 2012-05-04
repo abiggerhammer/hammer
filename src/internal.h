@@ -1,5 +1,6 @@
 #ifndef HAMMER_INTERNAL__H
 #define HAMMER_INTERNAL__H
+#include <glib.h>
 #include "hammer.h"
 
 #define false 0
@@ -9,6 +10,24 @@ typedef struct parser_cache_key {
   input_stream_t input_pos;
   const parser_t *parser;
 } parser_cache_key_t;
+
+typedef unsigned int *charset;
+
+static inline charset new_charset() {
+  charset cs = g_new0(unsigned int, 256 / sizeof(unsigned int));
+  return cs;
+}
+
+static inline int charset_isset(charset cs, uint8_t pos) {
+  return !!(cs[pos / sizeof(*cs)] & (1 << (pos % sizeof(*cs))));
+}
+
+static inline void charset_set(charset cs, uint8_t pos, int val) {
+  cs[pos / sizeof(*cs)] =
+    val
+    ? cs[pos / sizeof(*cs)] |  (1 << (pos % sizeof(*cs)))
+    : cs[pos / sizeof(*cs)] & ~(1 << (pos % sizeof(*cs)));
+}
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
 

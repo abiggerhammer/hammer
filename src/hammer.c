@@ -19,14 +19,14 @@
 #include "internal.h"
 #include <assert.h>
 #include <string.h>
-/* TODO(thequux): rewrite to follow new parse_state_t layout
+
 parse_state_t* from(parse_state_t *ps, const size_t index) {
-  parse_state_t p = { ps->input, ps->index + index, ps->length - index, ps->cache };
   parse_state_t *ret = g_new(parse_state_t, 1);
-  *ret = p;
+  *ret = *ps;
+  ret->input_stream.index += index;
   return ret;
 }
-*/
+
 const uint8_t* substring(const parse_state_t *ps, const size_t start, const size_t end) {
   if (end > start && (ps->input_stream.index + end) < ps->input_stream.length) {
     gpointer ret = g_malloc(end - start);
@@ -48,8 +48,7 @@ const gchar* to_string(parse_state_t *ps) {
   return g_strescape((const gchar*)(ps->input_stream.input), NULL);
 }
 
-guint djbhash(const 
-uint8_t *buf, size_t len) {
+guint djbhash(const uint8_t *buf, size_t len) {
   guint hash = 5381;
   while (len--) {
     hash = hash * 33 + *buf++;
@@ -75,6 +74,12 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
     res = parser->fn(parser->env, state);
     // update the cache
     g_hash_table_replace(state->cache, &key, res);
+#ifdef CONSISTENCY_CHECK
+    if (!res) {
+      state->input_stream = INVALID;
+      state->input_stream.input = key.input_pos.input;
+    }
+#endif
     return res;
   }
 }
@@ -135,47 +140,41 @@ typedef struct {
   uint8_t upper;
 } range_t;
 
-static parse_result_t* parse_range(void* env, parse_state_t *state) {
-  range_t *range = (range_t*)env;
-  uint8_t r = (uint8_t)read_bits(&state->input_stream, 8, false);
-  if (range->lower <= r && range->upper >= r) {
-    parsed_token_t *tok = g_new(parsed_token_t, 1);
-    tok->token_type = TT_UINT; tok->uint = r;
-    return make_result(tok);
-  } else {
-    return NULL;
-  }
-}
-
-const parser_t* range(const uint8_t lower, const uint8_t upper) { 
-  range_t *r = g_new(range_t, 1);
-  r->lower = lower; r->upper = upper;
-  parser_t *ret = g_new(parser_t, 1);
-  ret->fn = parse_range; ret->env = (void*)r;
-  return (const parser_t*)ret;
-}
 const parser_t* whitespace(const parser_t* p) { return NULL; }
 //const parser_t* action(const parser_t* p, /* fptr to action on AST */) { return NULL; }
 
 const parser_t* left_factor_action(const parser_t* p) { return NULL; }
 
-static parse_result_t* parse_negate(void *env, parse_state_t *state) {
-  parser_t *p = (parser_t*)env;
-  parse_result_t *result = do_parse(p, state);
-  if (NULL == result) {
-    uint8_t r = (uint8_t)read_bits(&state->input_stream, 8, false);
-    parsed_token_t *tok = g_new(parsed_token_t, 1);    
-    tok->token_type = TT_UINT; tok->uint = r;
+static parse_result_t* parse_charset(void *env, parse_state_t *state) {
+  uint8_t in = read_bits(&state->input_stream, 8, false);
+  charset cs = (charset)env;
+
+  if (charset_isset(cs, in)) {
+    parsed_token_t *tok = g_new(parsed_token_t, 1);
+    tok->token_type = TT_UINT; tok->uint = in;
     return make_result(tok);    
-  } else {
+  } else
     return NULL;
-  }
 }
 
-const parser_t* negate(const parser_t* p) { 
-  assert(parse_ch == p->fn || parse_range == p->fn);
+const parser_t* range(const uint8_t lower, const uint8_t upper) {
   parser_t *ret = g_new(parser_t, 1);
-  ret->fn = parse_negate; ret->env = (void*)p;
+  charset cs = new_charset();
+  for (int i = 0; i < 256; i++)
+    charset_set(cs, i, (lower <= i) && (i <= upper));
+  ret->fn = parse_charset; ret->env = (void*)cs;
+  return (const parser_t*)ret;
+}
+
+const parser_t* notin(const uint8_t *options, int count) {
+  parser_t *ret = g_new(parser_t, 1);
+  charset cs = new_charset();
+  for (int i = 0; i < 256; i++)
+    charset_set(cs, i, 1);
+  for (int i = 0; i < count; i++)
+    charset_set(cs, i, 0);
+
+  ret->fn = parse_charset; ret->env = (void*)cs;
   return (const parser_t*)ret;
 }
 
@@ -232,7 +231,10 @@ const parser_t* sequence(const parser_t* p_array[]) {
 
 static parse_result_t* parse_choice(void *env, parse_state_t *state) {
   sequence_t *s = (sequence_t*)env;
+  input_stream_t backup = state->input_stream;
   for (size_t i=0; i<s->len; ++i) {
+    if (i != 0)
+      state->input_stream = backup;
     parse_result_t *tmp = do_parse(s->p_array[i], state);
     if (NULL != tmp)
       return tmp;

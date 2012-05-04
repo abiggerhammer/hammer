@@ -8,10 +8,14 @@
 #define MSB(range) (1:range)
 #define LDB(range,i) (((i)>>LSB(range))&((1<<(MSB(range)-LSB(range)+1))-1))
 
+
 long long read_bits(input_stream_t* state, int count, char signed_p) {
+  // BUG: Does not 
   long long out = 0;
   int offset = 0;
   long long msb = (!!signed_p) << (count - 1); // 0 if unsigned, else 1 << (nbits - 1)
+  // BUG: does not stop early in case of
+  
   if ((state->bit_offset & 0x7) == 0 && (count & 0x7) == 0) {
     // fast path
     if (state->endianness & BYTE_BIG_ENDIAN) {

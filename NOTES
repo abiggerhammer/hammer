@@ -4,3 +4,17 @@ NOTES
 Regarding parse_result_t:
 If a parse fails, the parse_result_t will be NULL.
 If a parse is successful but there's nothing there (i.e., if end_p succeeds), then there's a parse_result_t but its ast is NULL.
+
+Regarding input location:
+If parse is successful, input is left at beginning of next thing to be read.
+If parse fails, location is UNPREDICTABLE.
+
+
+If CONSISTENCY_CHECK is defined, enable a bunch of additional internal
+consistency checks.
+
+TODO: Add consistency check to the bitreader
+
+We should support the use of parse-table-based parse methods; add a
+parse_compile method that must be called before the newly-created
+parser is used.

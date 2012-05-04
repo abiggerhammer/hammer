@@ -11,6 +11,9 @@ SUBDIRS = src \
 %:
 	+for dir in $(SUBDIRS); do $(MAKE) -C $${dir} $@; done
 
+test: src/test_suite
+	$<
+
 define SUBDIR_TEMPLATE
 $(1)/%:
 	$$(MAKE) -C $(1) $$*
