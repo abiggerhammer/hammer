@@ -109,8 +109,8 @@ const parser_t* whitespace(const parser_t* p);
 
 const parser_t* left_factor_action(const parser_t* p);
 
-/* Given a single-character parser, p, returns a single-character parser that will parse any character *other* than the character p would parse. */
-const parser_t* negate(const parser_t* p);
+/* Parse a single character *NOT* in charset */
+const parser_t* notin(const uint8_t charset, int length);
 
 /* A no-argument parser that succeeds if there is no more input to parse. */
 const parser_t* end_p();
