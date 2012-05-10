@@ -41,6 +41,7 @@ typedef struct input_stream {
   size_t length;
   char bit_offset;
   char endianness;
+  char overrun;
 } input_stream_t;
   
 typedef struct parse_state {

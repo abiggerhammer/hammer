@@ -13,14 +13,37 @@ long long read_bits(input_stream_t* state, int count, char signed_p) {
   // BUG: Does not 
   long long out = 0;
   int offset = 0;
+  int final_shift = 0;
   long long msb = (!!signed_p) << (count - 1); // 0 if unsigned, else 1 << (nbits - 1)
-  // BUG: does not stop early in case of
+  
+  
+  // overflow check...
+  int bits_left = (state->length - state->index); // well, bytes for now
+  if (bits_left <= 64) { // Large enough to handle any valid count, but small enough that overflow isn't a problem.
+    // not in danger of overflowing, so add in bits
+    // add in number of bits...
+    if (state->endianness & BIT_BIG_ENDIAN)
+      bits_left = (bits_left << 3) - 8 + state->bit_offset;
+    else
+      bits_left = (bits_left << 3) - state->bit_offset;
+    if (bits_left < count) {
+      if (state->endianness & BYTE_BIG_ENDIAN)
+	final_shift = count - bits_left;
+      else
+	final_shift = 0;
+      count = bits_left;
+      state->overrun = true;
+    } else
+      final_shift = 0;
+  }
   
   if ((state->bit_offset & 0x7) == 0 && (count & 0x7) == 0) {
     // fast path
     if (state->endianness & BYTE_BIG_ENDIAN) {
-      while (count > 0)
+      while (count > 0) {
+	count -= 8;
 	out = (out << 8) | state->input[state->index++];
+      }
     } else {
       while (count > 0) {
 	count -= 8;
@@ -65,6 +88,7 @@ long long read_bits(input_stream_t* state, int count, char signed_p) {
       count -= segment_len;
     }
   }
+  out <<= final_shift;
   return (out ^ msb) - msb; // perform sign extension
 }
 
