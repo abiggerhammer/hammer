@@ -72,7 +72,7 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
     // It doesn't exist... run the 
     parse_result_t *res;
     res = parser->fn(parser->env, state);
-    if (state->input.overrun)
+    if (state->input_stream.overrun)
       res = NULL; // overrun is always failure.
     // update the cache
     g_hash_table_replace(state->cache, &key, res);
