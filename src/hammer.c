@@ -319,8 +319,8 @@ static parse_result_t* parse_butnot(void *env, parse_state_t *state) {
   }
   size_t r1len = token_length(r1);
   size_t r2len = token_length(r2);
-  // if both match but p1's text is longer than p2's, fail
-  if (r1len > r2len) {
+  // if both match but p1's text is as long as or longer than p2's, fail
+  if (r1len >= r2len) {
     return NULL;
   } else {
     return r1;
@@ -656,23 +656,56 @@ static void test_sequence(void) {
 }
 
 static void test_choice(void) {
-
+  const parser_t *choice_ = choice(ch('a'), ch('b'), NULL);
+  parse_result_t *ret1 = parse(choice_, (const uint8_t*)"a", 1);
+  parse_result_t *ret2 = parse(choice_, (const uint8_t*)"b", 1);
+  parse_result_t *ret3 = parse(choice_, (const uint8_t*)"c", 1);
+  g_check_cmpint(ret1->ast->uint, ==, 'a');
+  g_check_cmpint(ret2->ast->uint, ==, 'b');
+  g_check_failed(ret3);
 }
 
 static void test_butnot(void) {
-
+  const parser_t *butnot_1 = butnot(ch('a'), token((const uint8_t*)"ab", 2));
+  const parser_t *butnot_2 = butnot(range('0', '9'), ch('6'));
+  parse_result_t *ret1 = parse(butnot_1, (const uint8_t*)"a", 1);
+  parse_result_t *ret2 = parse(butnot_1, (const uint8_t*)"ab", 2);
+  parse_result_t *ret3 = parse(butnot_1, (const uint8_t*)"aa", 2);
+  parse_result_t *ret4 = parse(butnot_2, (const uint8_t*)"6", 1);
+  g_check_cmpint(ret1->ast->uint, ==, 'a');
+  g_check_failed(ret2);
+  g_check_cmpint(ret3->ast->uint, ==, 'a');
+  g_check_failed(ret4);
 }
 
 static void test_difference(void) {
-
+  const parser_t *difference_ = difference(token((const uint8_t*)"ab", 2), ch('a'));
+  parse_result_t *ret1 = parse(difference_, (const uint8_t*)"ab", 2);
+  parse_result_t *ret2 = parse(difference_, (const uint8_t*)"a", 1);
+  g_check_cmpint(ret1->ast->uint, ==, 'a');
+  g_check_failed(ret2);
 }
 
 static void test_xor(void) {
-
+  const parser_t *xor_ = xor(range('0', '6'), range('5', '9'));
+  parse_result_t *ret1 = parse(xor_, (const uint8_t*)"0", 1);
+  parse_result_t *ret2 = parse(xor_, (const uint8_t*)"9", 1);
+  parse_result_t *ret3 = parse(xor_, (const uint8_t*)"5", 1);
+  parse_result_t *ret4 = parse(xor_, (const uint8_t*)"a", 1);
+  g_check_cmpint(ret1->ast->uint, ==, '0');
+  g_check_cmpint(ret2->ast->uint, ==, '9');
+  g_check_failed(ret3);
+  g_check_failed(ret4);
 }
 
 static void test_repeat0(void) {
-
+  const parser_t *repeat0_ = repeat0(choice(ch('a'), ch('b'), NULL));
+  parse_result_t *ret1 = parse(repeat0_, (const uint8_t*)"adef", 4);
+  parse_result_t *ret2 = parse(repeat0_, (const uint8_t*)"bdef", 4);
+  parse_result_t *ret3 = parse(repeat0_, (const uint8_t*)"aabbabadef", 10);
+  parse_result_t *ret4 = parse(repeat0_, (const uint8_t*)"daabbabadef", 11);
+  g_check_cmpint(ret1->ast->uint, ==, 'a');
+  g_check_cmpint(ret2->ast->uint, ==, 'b');
 }
 
 static void test_repeat1(void) {
@@ -687,7 +720,7 @@ static void test_optional(void) {
 
 }
 
-static void test_expect(void) {
+static void test_ignore(void) {
 
 }
 
@@ -716,10 +749,6 @@ static void test_and(void) {
 }
 
 static void test_not(void) {
-
-}
-
-static void test_ignore(void) {
 
 }
 
@@ -752,7 +781,6 @@ void register_parser_tests(void) {
   g_test_add_func("/core/parser/repeat1", test_repeat1);
   g_test_add_func("/core/parser/repeat_n", test_repeat_n);
   g_test_add_func("/core/parser/optional", test_optional);
-  g_test_add_func("/core/parser/expect", test_expect);
   g_test_add_func("/core/parser/chain", test_chain);
   g_test_add_func("/core/parser/chainl", test_chainl);
   g_test_add_func("/core/parser/list", test_list);

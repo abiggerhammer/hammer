@@ -155,7 +155,7 @@ const parser_t* choice(const parser_t* p_array[]);
 
 /* Given two parsers, p1 and p2, this parser succeeds in the following cases: 
  * - if p1 succeeds and p2 fails
- * - if both succeed but p1's result is shorter than p2's
+ * - if both succeed but p1's result is as long as or shorter than p2's
  */
 const parser_t* butnot(const parser_t* p1, const parser_t* p2);
 
