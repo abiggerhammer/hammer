@@ -193,9 +193,16 @@ const parser_t* end_p() {
   ret->fn = parse_end; ret->env = NULL;
   return (const parser_t*)ret;
 }
-const parser_t* nothing_p() { 
+
+static parse_result_t* parse_nothing() {
   // not a mistake, this parser always fails
-  return NULL; 
+  return NULL;
+}
+
+const parser_t* nothing_p() { 
+  parser_t *ret = g_new(parser_t, 1);
+  ret->fn = parse_nothing; ret->env = NULL;
+  return (const parser_t*)ret;
 }
 
 typedef struct {
@@ -441,84 +448,156 @@ parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t lengt
 #include "test_suite.h"
 
 static void test_token(void) {
-  uint8_t test[3] = { '9', '5', 0xa2 };
-  const parser_t *token_ = token(test , 3);
-  parse_result_t *ret = parse(token_, test, 3);
-  g_check_bytes((ret->ast)[0].bytes.len, (ret->ast)[0].bytes.token, ==, test);
+  uint8_t test1[3] = { '9', '5', 0xa2 };
+  uint8_t test2[2] = { '9', '5' };
+  const parser_t *token_ = token(test1 , 3);
+  parse_result_t *ret1 = parse(token_, test1, 3);
+  parse_result_t *ret2 = parse(token_, test2, 2);
+  g_check_bytes(ret1->ast->bytes.len, (ret1->ast)[0].bytes.token, ==, test1);
+  g_check_failed(ret2);
 }
 
 static void test_ch(void) {
-  uint8_t test[1] = { 0xa2 };
+  uint8_t test1[1] = { 0xa2 };
+  uint8_t test2[1] = { 0xa3 };
   const parser_t *ch_ = ch(0xa2);
-  parse_result_t *ret = parse(ch_, test , 1);
-  g_check_cmpint((long long int)(ret->ast)[0].uint, ==, 0xa2);
+  parse_result_t *ret1 = parse(ch_, test1 , 1);
+  parse_result_t *ret2 = parse(ch_, test2, 1);
+  g_check_cmpint(ret1->ast->uint, ==, 0xa2);
+  g_check_failed(ret2);
 }
 
 static void test_range(void) {
-  uint8_t test[1] = { 'b' };
+  uint8_t test1[1] = { 'b' };
+  uint8_t test2[1] = { 'd' };
   const parser_t *range_ = range('a', 'c');
-  parse_result_t *ret = parse(range_, test, 1);
-  g_check_cmpint((long long int)(ret->ast)[0].uint, ==, 'b');
+  parse_result_t *ret1 = parse(range_, test1, 1);
+  parse_result_t *ret2 = parse(range_, test2, 1);
+  g_check_cmpint(ret1->ast->uint, ==, 'b');
+  g_check_failed(ret2);
 }
 
 static void test_int64(void) {
-  uint8_t test[8] = { 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x00, 0x00 };
+  uint8_t test1[8] = { 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x00, 0x00 };
+  uint8_t test2[7] = { 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x00 };
   const parser_t *int64_ = int64();
-  parse_result_t *ret = parse(int64_, test, 8);
-  g_check_cmplong((ret->ast)[0].sint, ==, -8589934592L);
+  parse_result_t *ret1 = parse(int64_, test1, 8);
+  parse_result_t *ret2 = parse(int64_, test2, 7);
+  g_check_cmplong(ret1->ast->sint, ==, -8589934592L);
+  g_check_failed(ret2);
 }
 
 static void test_int32(void) {
-  uint8_t test[4] = { 0xff, 0xfe, 0x00, 0x00 };
+  uint8_t test1[4] = { 0xff, 0xfe, 0x00, 0x00 };
+  uint8_t test2[3] = { 0xff, 0xfe, 0x00 };
   const parser_t *int32_ = int32();
-  parse_result_t *ret = parse(int32_, test, 4);
-  g_check_cmpint((ret->ast)[0].sint, ==, -131072);
+  parse_result_t *ret1 = parse(int32_, test1, 4);
+  parse_result_t *ret2 = parse(int32_, test2, 3);
+  g_check_cmpint(ret1->ast->sint, ==, -131072);
+  g_check_failed(ret2);
 }
 
 static void test_int16(void) {
-  uint8_t test[2] = { 0xfe, 0x00 };
+  uint8_t test1[2] = { 0xfe, 0x00 };
+  uint8_t test2[1] = { 0xfe };
   const parser_t *int16_ = int16();
-  parse_result_t *ret = parse(int16_, test, 2);
-  g_check_cmpint((ret->ast)[0].sint, ==, -512);
+  parse_result_t *ret1 = parse(int16_, test1, 2);
+  parse_result_t *ret2 = parse(int16_, test2, 1);
+  g_check_cmpint(ret1->ast->sint, ==, -512);
+  g_check_failed(ret2);
 }
 
 static void test_int8(void) {
-  uint8_t test[1] = { 0x88 };
+  uint8_t test1[1] = { 0x88 };
+  uint8_t test2[0] = {};
   const parser_t *int8_ = int8();
-  parse_result_t *ret = parse(int8_, test, 1);
-  g_check_cmpint((ret->ast)[0].sint, ==, -120);
+  parse_result_t *ret1 = parse(int8_, test1, 1);
+  parse_result_t *ret2 = parse(int8_, test2, 0);
+  g_check_cmpint(ret1->ast->sint, ==, -120);
+  g_check_failed(ret2)
 }
 
 static void test_uint64(void) {
-
+  uint8_t test1[8] = { 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00 };
+  uint8_t test2[7] = { 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00 };
+  const parser_t *uint64_ = uint64();
+  parse_result_t *ret1 = parse(uint64_, test1, 8);
+  parse_result_t *ret2 = parse(uint64_, test2, 7);
+  g_check_cmpulong(ret1->ast->uint, ==, 8589934592);
+  g_check_failed(ret2);
 }
 
 static void test_uint32(void) {
-
+  uint8_t test1[4] = { 0x00, 0x02, 0x00, 0x00 };
+  uint8_t test2[3] = { 0x00, 0x02, 0x00 };
+  const parser_t *uint32_ = uint32();
+  parse_result_t *ret1 = parse(uint32_, test1, 4);
+  parse_result_t *ret2 = parse(uint32_, test2, 3);
+  g_check_cmpuint(ret1->ast->uint, ==, 131072);
+  g_check_failed(ret2);
 }
 
 static void test_uint16(void) {
-
+  uint8_t test1[2] = { 0x02, 0x00 };
+  uint8_t test2[1] = { 0x02 };
+  const parser_t *uint16_ = uint16();
+  parse_result_t *ret1 = parse(uint16_, test1, 2);
+  parse_result_t *ret2 = parse(uint16_, test2, 1);
+  g_check_cmpuint(ret1->ast->uint, ==, 512);
+  g_check_failed(ret2);
 }
 
 static void test_uint8(void) {
-
+  uint8_t test1[1] = { 0x78 };
+  uint8_t test2[0] = {};
+  const parser_t *uint8_ = uint8();
+  parse_result_t *ret1 = parse(uint8_, test1, 1);
+  parse_result_t *ret2 = parse(uint8_, test2, 0);
+  g_check_cmpuint(ret1->ast->uint, ==, 120);
+  g_check_failed(ret2);
 }
 
 static void test_float64(void) {
-
+  uint8_t test1[8] = { 0x3f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+  uint8_t test2[7] = { 0x3f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00 };
+  const parser_t *float64_ = float64();
+  parse_result_t *ret1 = parse(float64_, test1, 8);
+  parse_result_t *ret2 = parse(float64_, test2, 7);
+  g_check_cmpdouble(ret1->ast->dbl, ==, 1);
+  g_check_failed(ret2);
 }
 
 static void test_float32(void) {
-
+  uint8_t test1[4] = { 0x3f, 0x80, 0x00, 0x00 };
+  uint8_t test2[3] = { 0x3f, 0x80, 0x00 };
+  const parser_t *float32_ = float32();
+  parse_result_t *ret1 = parse(float32_, test1, 4);
+  parse_result_t *ret2 = parse(float32_, test2, 3);
+  g_check_cmpfloat(ret1->ast->flt, ==, 1);
+  g_check_failed(ret2);
 }
 
 static void test_whitespace(void) {
-
+  uint8_t test1[1] = { 'a' };
+  uint8_t test2[2] = { ' ', 'a' };
+  uint8_t test3[3] = { ' ', ' ', 'a' };
+  uint8_t test4[2] = { '\t', 'a' };
+  uint8_t test5[2] = { '_', 'a' };
+  const parser_t *whitespace_ = whitespace(ch('a'));
+  parse_result_t *ret1 = parse(whitespace_, test1, 1);
+  parse_result_t *ret2 = parse(whitespace_, test2, 2);
+  parse_result_t *ret3 = parse(whitespace_, test3, 3);
+  parse_result_t *ret4 = parse(whitespace_, test4, 2);
+  parse_result_t *ret5 = parse(whitespace_, test5, 2);
+  g_check_cmpint(ret1->ast->uint, ==, 'a');
+  g_check_cmpint(ret2->ast->uint, ==, 'a');
+  g_check_cmpint(ret3->ast->uint, ==, 'a');
+  g_check_cmpint(ret4->ast->uint, ==, 'a');
+  g_check_failed(ret5);
 }
 
 static void test_action(void) {
-
+  
 }
 
 static void test_left_factor_action(void) {
@@ -526,19 +605,52 @@ static void test_left_factor_action(void) {
 }
 
 static void test_notin(void) {
-
+  uint8_t options[3] = { 'a', 'b', 'c' };
+  uint8_t test1[1] = { 'd' };
+  uint8_t test2[1] = { 'a' };
+  const parser_t *notin_ = notin(options, 3);
+  parse_result_t *ret1 = parse(notin_, test1, 1);
+  parse_result_t *ret2 = parse(notin_, test2, 1);
+  g_check_cmpint(ret1->ast->uint, ==, 'd');
+  g_check_failed(ret2);
 }
 
 static void test_end_p(void) {
-
+  uint8_t test1[1] = { 'a' };
+  uint8_t test2[2] = { 'a', 'a' };
+  const parser_t *p_array[2] = { ch('a'), end_p() };
+  const parser_t *end_p_ = sequence(p_array);
+  parse_result_t *ret1 = parse(end_p_, test1, 1);
+  parse_result_t *ret2 = parse(end_p_, test2, 2);
+  g_check_cmpint(ret1->ast->uint, ==, 'a');
+  g_check_failed(ret2);
 }
 
 static void test_nothing_p(void) {
-
+  uint8_t test[1] = { 'a' };
+  const parser_t *nothing_p_ = nothing_p();
+  parse_result_t *ret = parse(nothing_p_, test, 1);
+  g_check_failed(ret);
 }
 
 static void test_sequence(void) {
-
+  uint8_t test1[2] = { 'a', 'b' };
+  uint8_t test2[1] = { 'a' };
+  uint8_t test3[1] = { 'b' };
+  uint8_t test4[3] = { 'a', ' ', 'b' };
+  uint8_t test5[4] = { 'a', ' ', ' ', 'b' };
+  uint8_t test6[2] = { 'a', 'b' };
+  const parser_t *s1[2] = { ch('a'), ch('b') };
+  const parser_t *s2[2] = { ch('a'), whitespace(ch('b')) };
+  const parser_t *sequence_1 = sequence(s1);
+  const parser_t *sequence_2 = sequence(s2);
+  parse_result_t *ret1 = parse(sequence_1, test1, 2);
+  parse_result_t *ret2 = parse(sequence_1, test2, 1);
+  parse_result_t *ret3 = parse(sequence_1, test3, 1);
+  parse_result_t *ret4 = parse(sequence_2, test4, 3);
+  parse_result_t *ret5 = parse(sequence_2, test5, 4);
+  parse_result_t *ret6 = parse(sequence_2, test6, 2);
+  //g_check_cmpseq(ret1->ast->
 }
 
 static void test_choice(void) {

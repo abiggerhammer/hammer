@@ -23,12 +23,25 @@
     }						\
   }
 
+#define g_check_cmpseq(n1, op, n2) {            \
+    GSequence *seq = (n1);                      \
+    
+    
+#define g_check_failed(res) {		        \
+    const parse_result_t *result = (res);       \
+    if (NULL != result) {                       \
+      g_test_message("Check failed: shouldn't have succeeded, but did"); \
+      g_test_fail();                            \
+    }                                           \
+  }
+
 #define g_check_cmpint(n1, op, n2) g_check_inttype("%d", int, n1, op, n2)
 #define g_check_cmplong(n1, op, n2) g_check_inttype("%ld", long, n1, op, n2)
 #define g_check_cmplonglong(n1, op, n2) g_check_inttype("%lld", long long, n1, op, n2)
 #define g_check_cmpuint(n1, op, n2) g_check_inttype("%u", unsigned int, n1, op, n2)
 #define g_check_cmpulong(n1, op, n2) g_check_inttype("%lu", unsigned long, n1, op, n2)
-#define g_check_cmpulonglong(n1, op, n2) g_check_inttype("%llu", unsigned long long, n1, op, n2)
+#define g_check_cmpfloat(n1, op, n2) g_check_inttype("%g", float, n1, op, n2)
+#define g_check_cmpdouble(n1, op, n2) g_check_inttype("%g", double, n1, op, n2)
 
 
 #endif // #ifndef HAMMER_TEST_SUITE__H

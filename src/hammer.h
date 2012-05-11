@@ -34,6 +34,7 @@
 #define BIT_LITTLE_ENDIAN 0x0
 #define BYTE_LITTLE_ENDIAN 0x0
 
+typedef int bool;
 typedef struct input_stream {
   // This should be considered to be a really big value type.
   const uint8_t *input;
@@ -66,6 +67,8 @@ typedef struct parsed_token {
     } bytes;
     int64_t sint;
     uint64_t uint;
+    double dbl;
+    float flt;
     GSequence *seq;
   };
 } parsed_token_t;
@@ -92,6 +95,9 @@ const parser_t* ch(const uint8_t c);
 
 /* Given two single-character bounds, lower and upper, returns a parser that parses a single character within the range [lower, upper] (inclusive). */
 const parser_t* range(const uint8_t lower, const uint8_t upper);
+
+/* Returns a parser that parses the specified number of bits. sign == true if signed, false if unsigned. */
+const parser_t* bits(size_t len, bool sign);
 
 /* Returns a parser that parses a signed 8-byte integer value. */
 const parser_t* int64();
@@ -162,11 +168,21 @@ const parser_t* difference(const parser_t* p1, const parser_t* p2);
  */
 const parser_t* xor(const parser_t* p1, const parser_t* p2);
 
+/* Given a parser, p, this parser succeeds for zero or more repetitions of p. */
 const parser_t* repeat0(const parser_t* p);
+
+/* Given a parser, p, this parser succeeds for one or more repetitions of p. */
 const parser_t* repeat1(const parser_t* p);
+
+/* Given a parser, p, this parser succeeds for exactly N repetitions of p. */
 const parser_t* repeat_n(const parser_t* p, const size_t n);
+
+/* Given a parser, p, this parser succeeds with the value p parsed or with an empty result. */
 const parser_t* optional(const parser_t* p);
-const parser_t* expect(const parser_t* p);
+
+/* Given a parser, p, this parser succeeds if p succeeds, but doesn't include p's result in the result. */
+const parser_t* ignore(const parser_t* p);
+
 const parser_t* chain(const parser_t* p1, const parser_t* p2, const parser_t* p3);
 const parser_t* chainl(const parser_t* p1, const parser_t* p2);
 const parser_t* list(const parser_t* p1, const parser_t* p2);
@@ -174,7 +190,5 @@ const parser_t* epsilon_p();
 //const parser_t* semantic(/* fptr to nullary function? */);
 const parser_t* and(const parser_t* p);
 const parser_t* not(const parser_t* p);
-
-const parser_t* ignore(const parser_t* p); // parse p, but return no ast.
 
 #endif // #ifndef HAMMER_HAMMER__H
