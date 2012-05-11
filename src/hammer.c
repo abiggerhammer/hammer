@@ -72,6 +72,8 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
     // It doesn't exist... run the 
     parse_result_t *res;
     res = parser->fn(parser->env, state);
+    if (state->input_stream.overrun)
+      res = NULL; // overrun is always failure.
     // update the cache
     g_hash_table_replace(state->cache, &key, res);
 #ifdef CONSISTENCY_CHECK
@@ -166,7 +168,7 @@ const parser_t* range(const uint8_t lower, const uint8_t upper) {
   return (const parser_t*)ret;
 }
 
-const parser_t* notin(const uint8_t *options, int count) {
+const parser_t* not_in(const uint8_t *options, int count) {
   parser_t *ret = g_new(parser_t, 1);
   charset cs = new_charset();
   for (int i = 0; i < 256; i++)
@@ -604,11 +606,11 @@ static void test_left_factor_action(void) {
 
 }
 
-static void test_notin(void) {
+static void test_not_in(void) {
   uint8_t options[3] = { 'a', 'b', 'c' };
   uint8_t test1[1] = { 'd' };
   uint8_t test2[1] = { 'a' };
-  const parser_t *notin_ = notin(options, 3);
+  const parser_t *not_in_ = not_in(options, 3);
   parse_result_t *ret1 = parse(notin_, test1, 1);
   parse_result_t *ret2 = parse(notin_, test2, 1);
   g_check_cmpint(ret1->ast->uint, ==, 'd');
@@ -738,7 +740,7 @@ void register_parser_tests(void) {
   g_test_add_func("/core/parser/whitespace", test_whitespace);
   g_test_add_func("/core/parser/action", test_action);
   g_test_add_func("/core/parser/left_factor_action", test_left_factor_action);
-  g_test_add_func("/core/parser/notin", test_notin);
+  g_test_add_func("/core/parser/not_in", test_not_in);
   g_test_add_func("/core/parser/end_p", test_end_p);
   g_test_add_func("/core/parser/nothing_p", test_nothing_p);
   g_test_add_func("/core/parser/sequence", test_sequence);

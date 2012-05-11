@@ -42,6 +42,7 @@ typedef struct input_stream {
   size_t length;
   char bit_offset;
   char endianness;
+  char overrun;
 } input_stream_t;
   
 typedef struct parse_state {
@@ -138,7 +139,7 @@ const parser_t* whitespace(const parser_t* p);
 const parser_t* left_factor_action(const parser_t* p);
 
 /* Parse a single character *NOT* in charset */
-const parser_t* notin(const uint8_t *options, int count);
+const parser_t* not_in(const uint8_t *charset, int length);
 
 /* A no-argument parser that succeeds if there is no more input to parse. */
 const parser_t* end_p();
