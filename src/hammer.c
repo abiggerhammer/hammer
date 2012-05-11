@@ -441,10 +441,10 @@ parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t lengt
 #include "test_suite.h"
 
 static void test_token(void) {
-  //uint8_t test[3] = { '9', '5', 0xa2 };
-  //const parser_t *token_ = token(test , 3);
-  //parse_result_t *ret = parse(token_, test, 3);
-  // need a g_check_cmpstr function for this :P
+  uint8_t test[3] = { '9', '5', 0xa2 };
+  const parser_t *token_ = token(test , 3);
+  parse_result_t *ret = parse(token_, test, 3);
+  g_check_bytes((ret->ast)[0].bytes.len, (ret->ast)[0].bytes.token, ==, test);
 }
 
 static void test_ch(void) {
@@ -465,28 +465,28 @@ static void test_int64(void) {
   uint8_t test[8] = { 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x00, 0x00 };
   const parser_t *int64_ = int64();
   parse_result_t *ret = parse(int64_, test, 8);
-  g_check_cmpint((long long int)(ret->ast)[0].sint, ==, -8589934592L);
+  g_check_cmplong((ret->ast)[0].sint, ==, -8589934592L);
 }
 
 static void test_int32(void) {
   uint8_t test[4] = { 0xff, 0xfe, 0x00, 0x00 };
   const parser_t *int32_ = int32();
   parse_result_t *ret = parse(int32_, test, 4);
-  g_check_cmpint((long long int)(ret->ast)[0].sint, ==, -131072);
+  g_check_cmpint((ret->ast)[0].sint, ==, -131072);
 }
 
 static void test_int16(void) {
   uint8_t test[2] = { 0xfe, 0x00 };
   const parser_t *int16_ = int16();
   parse_result_t *ret = parse(int16_, test, 2);
-  g_check_cmpint((long long int)(ret->ast)[0].sint, ==, -512);
+  g_check_cmpint((ret->ast)[0].sint, ==, -512);
 }
 
 static void test_int8(void) {
   uint8_t test[1] = { 0x88 };
   const parser_t *int8_ = int8();
   parse_result_t *ret = parse(int8_, test, 1);
-  g_check_cmpint((long long int)(ret->ast)[0].sint, ==, -120);
+  g_check_cmpint((ret->ast)[0].sint, ==, -120);
 }
 
 static void test_uint64(void) {
