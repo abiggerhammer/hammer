@@ -611,8 +611,8 @@ static void test_not_in(void) {
   uint8_t test1[1] = { 'd' };
   uint8_t test2[1] = { 'a' };
   const parser_t *not_in_ = not_in(options, 3);
-  parse_result_t *ret1 = parse(notin_, test1, 1);
-  parse_result_t *ret2 = parse(notin_, test2, 1);
+  parse_result_t *ret1 = parse(not_in_, test1, 1);
+  parse_result_t *ret2 = parse(not_in_, test2, 1);
   g_check_cmpint(ret1->ast->uint, ==, 'd');
   g_check_failed(ret2);
 }
