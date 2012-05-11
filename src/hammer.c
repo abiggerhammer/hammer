@@ -435,3 +435,164 @@ parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t lengt
 
   return res;
 }
+
+#ifdef INCLUDE_TESTS
+
+#define MK_INPUT_STREAM(buf,len,endianness_) \
+  {                                          \
+    .input = (uint8_t*)buf,                  \
+    .length = len,                           \
+    .index = 0,                              \
+    .bit_offset = (((endianness_) & BIT_BIG_ENDIAN) ? 8 : 0), \
+    .endianness = endianness_                \
+  }
+
+static void test_token(void) {
+
+}
+
+static void test_ch(void) {
+
+}
+
+static void test_range(void) {
+
+}
+
+static void test_int64(void) {
+
+}
+
+static void test_int32(void) {
+
+}
+
+static void test_int16(void) {
+
+}
+
+static void test_int8(void) {
+
+}
+
+static void test_uint64(void) {
+
+}
+
+static void test_uint32(void) {
+
+}
+
+static void test_uint16(void) {
+
+}
+
+static void test_uint8(void) {
+
+}
+
+static void test_float64(void) {
+
+}
+
+static void test_float32(void) {
+
+}
+
+static void test_whitespace(void) {
+
+}
+
+static void test_action(void) {
+
+}
+
+static void test_left_factor_action(void) {
+
+}
+
+static void test_notin(void) {
+
+}
+
+static void test_end_p(void) {
+
+}
+
+static void test_nothing_p(void) {
+
+}
+
+static void test_sequence(void) {
+
+}
+
+static void test_choice(void) {
+
+}
+
+static void test_butnot(void) {
+
+}
+
+static void test_difference(void) {
+
+}
+
+static void test_xor(void) {
+
+}
+
+static void test_repeat0(void) {
+
+}
+
+static void test_repeat1(void) {
+
+}
+
+static void test_repeat_n(void) {
+
+}
+
+static void test_optional(void) {
+
+}
+
+static void test_expect(void) {
+
+}
+
+static void test_chain(void) {
+
+}
+
+static void test_chainl(void) {
+
+}
+
+static void test_list(void) {
+
+}
+
+static void test_epsilon_p(void) {
+
+}
+
+static void test_semantic(void) {
+
+}
+
+static void test_and(void) {
+
+}
+
+static void test_not(void) {
+
+}
+
+static void test_ignore(void) {
+
+}
+
+#endif // #ifdef INCLUDE_TESTS

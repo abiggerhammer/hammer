@@ -93,6 +93,36 @@ const parser_t* ch(const uint8_t c);
 /* Given two single-character bounds, lower and upper, returns a parser that parses a single character within the range [lower, upper] (inclusive). */
 const parser_t* range(const uint8_t lower, const uint8_t upper);
 
+/* Returns a parser that parses a signed 8-byte integer value. */
+const parser_t* int64();
+
+/* Returns a parser that parses a signed 4-byte integer value. */
+const parser_t* int32();
+
+/* Returns a parser that parses a signed 2-byte integer value. */
+const parser_t* int16();
+
+/* Returns a parser that parses a signed 1-byte integer value. */
+const parser_t* int8();
+
+/* Returns a parser that parses an unsigned 8-byte integer value. */
+const parser_t* uint64();
+
+/* Returns a parser that parses an unsigned 4-byte integer value. */
+const parser_t* uint32();
+
+/* Returns a parser that parses an unsigned 2-byte integer value. */
+const parser_t* uint16();
+
+/* Returns a parser that parses an unsigned 1-byte integer value. */
+const parser_t* uint8();
+
+/* Returns a parser that parses a double-precision floating-point value. */
+const parser_t* float64();
+
+/* Returns a parser that parses a single-precision floating-point value. */
+const parser_t* float32();
+
 /* Given another parser, p, returns a parser that skips any whitespace and then applies p. */
 const parser_t* whitespace(const parser_t* p);
 
