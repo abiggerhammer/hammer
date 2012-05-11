@@ -595,4 +595,44 @@ static void test_ignore(void) {
 
 }
 
+void register_parser_tests(void) {
+  g_test_add_func("/core/parser/token", test_token);
+  g_test_add_func("/core/parser/ch", test_ch);
+  g_test_add_func("/core/parser/range", test_range);
+  g_test_add_func("/core/parser/int64", test_int64);
+  g_test_add_func("/core/parser/int32", test_int32);
+  g_test_add_func("/core/parser/int16", test_int16);
+  g_test_add_func("/core/parser/int8", test_int8);
+  g_test_add_func("/core/parser/uint64", test_uint64);
+  g_test_add_func("/core/parser/uint32", test_uint32);
+  g_test_add_func("/core/parser/uint16", test_uint16);
+  g_test_add_func("/core/parser/uint8", test_uint8);
+  g_test_add_func("/core/parser/float64", test_float64);
+  g_test_add_func("/core/parser/float32", test_float32);
+  g_test_add_func("/core/parser/whitespace", test_whitespace);
+  g_test_add_func("/core/parser/action", test_action);
+  g_test_add_func("/core/parser/left_factor_action", test_left_factor_action);
+  g_test_add_func("/core/parser/notin", test_notin);
+  g_test_add_func("/core/parser/end_p", test_end_p);
+  g_test_add_func("/core/parser/nothing_p", test_nothing_p);
+  g_test_add_func("/core/parser/sequence", test_sequence);
+  g_test_add_func("/core/parser/choice", test_choice);
+  g_test_add_func("/core/parser/butnot", test_butnot);
+  g_test_add_func("/core/parser/difference", test_difference);
+  g_test_add_func("/core/parser/xor", test_xor);
+  g_test_add_func("/core/parser/repeat0", test_repeat0);
+  g_test_add_func("/core/parser/repeat1", test_repeat1);
+  g_test_add_func("/core/parser/repeat_n", test_repeat_n);
+  g_test_add_func("/core/parser/optional", test_optional);
+  g_test_add_func("/core/parser/expect", test_expect);
+  g_test_add_func("/core/parser/chain", test_chain);
+  g_test_add_func("/core/parser/chainl", test_chainl);
+  g_test_add_func("/core/parser/list", test_list);
+  g_test_add_func("/core/parser/epsilon_p", test_epsilon_p);
+  g_test_add_func("/core/parser/semantic", test_semantic);
+  g_test_add_func("/core/parser/and", test_and);
+  g_test_add_func("/core/parser/not", test_not);
+  g_test_add_func("/core/parser/ignore", test_ignore);
+}
+
 #endif // #ifdef INCLUDE_TESTS
