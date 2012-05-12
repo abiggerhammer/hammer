@@ -72,6 +72,7 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
 parse_result_t* make_result(parse_state_t *state, parsed_token_t *tok) {
   parse_result_t *ret = a_new(parse_result_t, 1);
   ret->ast = tok;
+  ret->arena = state->arena;
   return ret;
 }
 

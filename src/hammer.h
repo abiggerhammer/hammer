@@ -80,6 +80,7 @@ typedef struct parsed_token {
  */
 typedef struct parse_result {
   const parsed_token_t *ast;
+  arena_t arena;
 } parse_result_t;
 
 /* Type of an action to apply to an AST, used in the action() parser. */
