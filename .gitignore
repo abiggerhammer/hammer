@@ -3,3 +3,4 @@
 *.a
 src/test_suite
 lib/hush
+TAGS

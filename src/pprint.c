@@ -99,7 +99,7 @@ static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
     append_buf(buf, tmpbuf, len);
     break;
   case TT_UINT:
-    len = asprintf(&tmpbuf, "s%#lx\n", tok->uint);
+    len = asprintf(&tmpbuf, "s%#lx", tok->uint);
     append_buf(buf, tmpbuf, len);
     break;
   case TT_SEQUENCE: {
@@ -117,8 +117,10 @@ static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
       unamb_sub(subtok, buf);
     }
     append_buf_c(buf, ')');
-  } // TODO: implement this
+  }
+    break;
   default:
+    fprintf(stderr, "Unexpected token type %d\n", tok->token_type);
     g_assert_not_reached();
   }
 }

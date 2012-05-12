@@ -23,3 +23,6 @@ $(foreach dir,$(SUBDIRS),$(eval $(call SUBDIR_TEMPLATE,$(dir))))
 
 #.DEFAULT:
 #	$(if $(findstring ./,$(dir $@)),$(error No rule to make target `$@'),$(MAKE) -C $(dir $@) $(notdir $@))
+
+TAGS: $(shell find * -name "*.c")
+	etags $^

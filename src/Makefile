@@ -18,3 +18,6 @@ libhammer.a: bitreader.o hammer.o pprint.o
 
 bitreader.o: test_suite.h
 hammer.o: hammer.h
+
+test: test_suite
+	./test_suite -v
