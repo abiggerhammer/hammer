@@ -57,6 +57,7 @@ typedef enum token_type {
   TT_SINT,
   TT_UINT,
   TT_SEQUENCE,
+  TT_ERR,
   TT_MAX
 } token_type_t;
 
@@ -80,6 +81,7 @@ typedef struct parsed_token {
  */
 typedef struct parse_result {
   const parsed_token_t *ast;
+  arena_t arena;
 } parse_result_t;
 
 /* Type of an action to apply to an AST, used in the action() parser. */

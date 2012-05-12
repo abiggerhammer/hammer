@@ -72,6 +72,7 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
 parse_result_t* make_result(parse_state_t *state, parsed_token_t *tok) {
   parse_result_t *ret = a_new(parse_result_t, 1);
   ret->ast = tok;
+  ret->arena = state->arena;
   return ret;
 }
 
@@ -79,6 +80,23 @@ typedef struct {
   uint8_t *str;
   uint8_t len;
 } token_t;
+
+static parse_result_t* parse_unimplemented(void* env, parse_state_t *state) {
+  (void) env;
+  (void) state;
+  static parsed_token_t token = {
+    .token_type = TT_ERR
+  };
+  static parse_result_t result = {
+    .ast = &token
+  };
+  return &result;
+}
+
+static parser_t unimplemented = {
+  .fn = parse_unimplemented,
+  .env = NULL
+};
 
 static parse_result_t* parse_token(void *env, parse_state_t *state) {
   token_t *t = (token_t*)env;
@@ -144,7 +162,7 @@ const parser_t* whitespace(const parser_t* p) {
   return ret;
 }
 
-const parser_t* action(const parser_t* p, const action_t a) { return NULL; }
+const parser_t* action(const parser_t* p, const action_t a) { return &unimplemented; }
 
 static parse_result_t* parse_charset(void *env, parse_state_t *state) {
   uint8_t in = read_bits(&state->input_stream, 8, false);
@@ -440,35 +458,16 @@ const parser_t* xor(const parser_t* p1, const parser_t* p2) {
   return ret;
 }
 
-const parser_t* repeat0(const parser_t* p) { return NULL; }
-const parser_t* repeat1(const parser_t* p) { return NULL; }
-const parser_t* repeat_n(const parser_t* p, const size_t n) { return NULL; }
-
-static parse_result_t* parse_optional(void *env, parse_state_t *state) {
-  return NULL;
-}
-
-const parser_t* optional(const parser_t* p) { 
-  parser_t *ret = g_new(parser_t, 1);
-  ret->fn = parse_optional; ret->env = NULL;
-  return ret;
-}
-
-static parse_result_t* parse_ignore(void *env, parse_state_t *state) {
-  return NULL;
-}
-
-const parser_t* ignore(const parser_t* p) {  
-  parser_t *ret = g_new(parser_t, 1);
-  ret->fn = parse_ignore; ret->env = NULL;
-  return ret;
-}
-
-const parser_t* list(const parser_t* p, const parser_t* sep) { return NULL; }
-const parser_t* epsilon_p() { return NULL; }
-const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return NULL; }
-const parser_t* and(const parser_t* p) { return NULL; }
-const parser_t* not(const parser_t* p) { return NULL; }
+const parser_t* repeat0(const parser_t* p) { return &unimplemented; }
+const parser_t* repeat1(const parser_t* p) { return &unimplemented; }
+const parser_t* repeat_n(const parser_t* p, const size_t n) { return &unimplemented; }
+const parser_t* optional(const parser_t* p) { return &unimplemented; }
+const parser_t* ignore(const parser_t* p) { return &unimplemented; }
+const parser_t* list(const parser_t* p, const parser_t* sep) { return &unimplemented; }
+const parser_t* epsilon_p() { return &unimplemented; }
+const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return &unimplemented; }
+const parser_t* and(const parser_t* p) { return &unimplemented; }
+const parser_t* not(const parser_t* p) { return &unimplemented; }
 
 static guint cache_key_hash(gconstpointer key) {
   return djbhash(key, sizeof(parser_cache_key_t));

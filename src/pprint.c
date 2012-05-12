@@ -1,3 +1,20 @@
+/* Pretty-printer for Hammer.
+ * Copyright (C) 2012  Meredith L. Patterson, Dan "TQ" Hirsch
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, version 2.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <glib.h>
@@ -101,6 +118,9 @@ static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
   case TT_UINT:
     len = asprintf(&tmpbuf, "s%#lx", tok->uint);
     append_buf(buf, tmpbuf, len);
+    break;
+  case TT_ERR:
+    append_buf(buf, "ERR", 3);
     break;
   case TT_SEQUENCE: {
     GSequenceIter *it;
