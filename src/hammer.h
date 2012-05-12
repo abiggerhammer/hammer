@@ -19,7 +19,7 @@
 #define HAMMER_HAMMER__H
 #include <glib.h>
 #include <stdint.h>
-
+#include "allocator.h"
 /* The state of the parser.
  *
  * Members:
@@ -48,6 +48,7 @@ typedef struct input_stream {
 typedef struct parse_state {
   GHashTable *cache; 
   input_stream_t input_stream;
+  arena_t arena;
 } parse_state_t;
 
 typedef enum token_type {

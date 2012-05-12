@@ -17,38 +17,15 @@
 
 #include "hammer.h"
 #include "internal.h"
+#include "allocator.h"
 #include <assert.h>
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
 
-parse_state_t* from(parse_state_t *ps, const size_t index) {
-  parse_state_t *ret = g_new(parse_state_t, 1);
-  *ret = *ps;
-  ret->input_stream.index += index;
-  return ret;
-}
-
-const uint8_t* substring(const parse_state_t *ps, const size_t start, const size_t end) {
-  if (end > start && (ps->input_stream.index + end) < ps->input_stream.length) {
-    gpointer ret = g_malloc(end - start);
-    memcpy(ret, ps->input_stream.input, end - start);
-    return (const uint8_t*)ret;
-  } else {
-    return NULL;
-  }
-}
-
-const GVariant* at(parse_state_t *ps, const size_t index) {
-  GVariant *ret = NULL;
-  if (index + ps->input_stream.index < ps->input_stream.length) 
-    ret = g_variant_new_byte((ps->input_stream.input)[index + ps->input_stream.index]);
-  return g_variant_new_maybe(G_VARIANT_TYPE_BYTE, ret);
-}
-
-const gchar* to_string(parse_state_t *ps) {
-  return g_strescape((const gchar*)(ps->input_stream.input), NULL);
-}
+#define a_new_(arena, typ, count) ((typ*)arena_malloc((arena), sizeof(typ)*(count)))
+#define a_new(typ, count) a_new_(state->arena, typ, count)
+// we can create a_new0 if necessary. It would allocate some memory and immediately zero it out.
 
 guint djbhash(const uint8_t *buf, size_t len) {
   guint hash = 5381;
@@ -92,8 +69,8 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
 }
 
 /* Helper function, since these lines appear in every parser */
-parse_result_t* make_result(parsed_token_t *tok) {
-  parse_result_t *ret = g_new(parse_result_t, 1);
+parse_result_t* make_result(parse_state_t *state, parsed_token_t *tok) {
+  parse_result_t *ret = a_new(parse_result_t, 1);
   ret->ast = tok;
   return ret;
 }
@@ -111,9 +88,9 @@ static parse_result_t* parse_token(void *env, parse_state_t *state) {
       return NULL;
     }
   }
-  parsed_token_t *tok = g_new(parsed_token_t, 1);
+  parsed_token_t *tok = a_new(parsed_token_t, 1);
   tok->token_type = TT_BYTES; tok->bytes.token = t->str; tok->bytes.len = t->len;
-  return make_result(tok);
+  return make_result(state, tok);
 }
 
 const parser_t* token(const uint8_t *str, const size_t len) { 
@@ -128,9 +105,9 @@ static parse_result_t* parse_ch(void* env, parse_state_t *state) {
   uint8_t c = (uint8_t)GPOINTER_TO_UINT(env);
   uint8_t r = (uint8_t)read_bits(&state->input_stream, 8, false);
   if (c == r) {
-    parsed_token_t *tok = g_new(parsed_token_t, 1);    
+    parsed_token_t *tok = a_new(parsed_token_t, 1);    
     tok->token_type = TT_UINT; tok->uint = r;
-    return make_result(tok);
+    return make_result(state, tok);
   } else {
     return NULL;
   }
@@ -174,9 +151,9 @@ static parse_result_t* parse_charset(void *env, parse_state_t *state) {
   charset cs = (charset)env;
 
   if (charset_isset(cs, in)) {
-    parsed_token_t *tok = g_new(parsed_token_t, 1);
+    parsed_token_t *tok = a_new(parsed_token_t, 1);
     tok->token_type = TT_UINT; tok->uint = in;
-    return make_result(tok);    
+    return make_result(state, tok);    
   } else
     return NULL;
 }
@@ -204,7 +181,7 @@ const parser_t* not_in(const uint8_t *options, int count) {
 
 static parse_result_t* parse_end(void *env, parse_state_t *state) {
   if (state->input_stream.index == state->input_stream.length) {
-    parse_result_t *ret = g_new(parse_result_t, 1);
+    parse_result_t *ret = a_new(parse_result_t, 1);
     ret->ast = NULL;
     return ret;
   } else {
@@ -247,9 +224,9 @@ static parse_result_t* parse_sequence(void *env, parse_state_t *state) {
 	g_sequence_append(seq, (void*)tmp->ast);
     }
   }
-  parsed_token_t *tok = g_new(parsed_token_t, 1);
+  parsed_token_t *tok = a_new(parsed_token_t, 1);
   tok->token_type = TT_SEQUENCE; tok->seq = seq;
-  return make_result(tok);
+  return make_result(state, tok);
 }
 
 const parser_t* sequence(const parser_t *p, ...) {
@@ -484,14 +461,17 @@ static gboolean cache_key_equal(gconstpointer key1, gconstpointer key2) {
 
 parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t length) { 
   // Set up a parse state...
-  parse_state_t *parse_state = g_new0(parse_state_t, 1);
+  arena_t arena = new_arena(0);
+  parse_state_t *parse_state = a_new_(arena, parse_state_t, 1);
   parse_state->cache = g_hash_table_new(cache_key_hash, // hash_func
 					cache_key_equal);// key_equal_func
   parse_state->input_stream.input = input;
+  parse_state->input_stream.index = 0;
   parse_state->input_stream.bit_offset = 8; // bit big endian
+  parse_state->input_stream.overrun = 0;
   parse_state->input_stream.endianness = BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN;
   parse_state->input_stream.length = length;
-  
+  parse_state->arena = arena;
   parse_result_t *res = do_parse(parser, parse_state);
   // tear down the parse state. For now, leak like a sieve.
   // BUG: Leaks like a sieve.
