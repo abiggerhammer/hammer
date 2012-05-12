@@ -468,8 +468,6 @@ const parser_t* repeat1(const parser_t* p) { return NULL; }
 const parser_t* repeat_n(const parser_t* p, const size_t n) { return NULL; }
 const parser_t* optional(const parser_t* p) { return NULL; }
 const parser_t* ignore(const parser_t* p) { return NULL; }
-const parser_t* chain(const parser_t* p1, const parser_t* p2, const parser_t* p3) { return NULL; }
-const parser_t* chainl(const parser_t* p1, const parser_t* p2) { return NULL; }
 const parser_t* list(const parser_t* p, const parser_t* sep) { return NULL; }
 const parser_t* epsilon_p() { return NULL; }
 const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return NULL; }
@@ -735,14 +733,6 @@ static void test_ignore(void) {
   g_check_parse_failed(ignore_, "ac", 2);
 }
 
-static void test_chain(void) {
-
-}
-
-static void test_chainl(void) {
-
-}
-
 static void test_list(void) {
   const parser_t *list_ = list(choice(ch('1'), ch('2'), ch('3'), NULL), ch(','));
 
@@ -816,8 +806,6 @@ void register_parser_tests(void) {
   g_test_add_func("/core/parser/repeat1", test_repeat1);
   g_test_add_func("/core/parser/repeat_n", test_repeat_n);
   g_test_add_func("/core/parser/optional", test_optional);
-  g_test_add_func("/core/parser/chain", test_chain);
-  g_test_add_func("/core/parser/chainl", test_chainl);
   g_test_add_func("/core/parser/list", test_list);
   g_test_add_func("/core/parser/epsilon_p", test_epsilon_p);
   g_test_add_func("/core/parser/attr_bool", test_attr_bool);

@@ -188,9 +188,6 @@ const parser_t* optional(const parser_t* p);
 /* Given a parser, p, this parser succeeds if p succeeds, but doesn't include p's result in the result. */
 const parser_t* ignore(const parser_t* p);
 
-const parser_t* chain(const parser_t* p1, const parser_t* p2, const parser_t* p3);
-const parser_t* chainl(const parser_t* p1, const parser_t* p2);
-
 /* Given a parser, p, and a parser for a separator, sep, this parser matches a list of things that p can parse, separated by sep.
  * For example, if p is repeat1(range('0','9')) and sep is ch(','), list(p, sep) will match a comma-separated list of integers. 
  */
