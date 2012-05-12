@@ -461,8 +461,27 @@ const parser_t* xor(const parser_t* p1, const parser_t* p2) {
 
 const parser_t* repeat0(const parser_t* p) { return &unimplemented; }
 const parser_t* repeat1(const parser_t* p) { return &unimplemented; }
+
+
 const parser_t* repeat_n(const parser_t* p, const size_t n) { return &unimplemented; }
-const parser_t* optional(const parser_t* p) { return &unimplemented; }
+
+static parse_result_t* parse_optional(void* env, parse_state_t* state) {
+  input_stream_t bak = state->input_stream;
+  parse_result_t *res0 = do_parse((parser_t*)env, state);
+  if (res0)
+    return res0;
+  state->input_stream = bak;
+  parsed_token_t *ast = a_new(parsed_token_t, 1);
+  ast->token_type = TT_NONE;
+  return make_result(state, ast);
+}
+
+const parser_t* optional(const parser_t* p) {
+  parser_t *ret = g_new(parser_t, 1);
+  ret->fn = parse_optional;
+  ret->env = (void*)p;
+  return ret;
+}
 
 static parse_result_t* parse_ignore(void* env, parse_state_t* state) {
   parse_result_t *res0 = do_parse((parser_t*)env, state);
@@ -734,7 +753,7 @@ static void test_optional(void) {
   
   g_check_parse_ok(optional_, "abd", 3, "(s0x61 s0x62 s0x64)");
   g_check_parse_ok(optional_, "acd", 3, "(s0x61 s0x63 s0x64)");
-  g_check_parse_ok(optional_, "ad", 2, "(s0x61 s0x64)");
+  g_check_parse_ok(optional_, "ad", 2, "(s0x61 null s0x64)");
   g_check_parse_failed(optional_, "aed", 3);
   g_check_parse_failed(optional_, "ab", 2);
   g_check_parse_failed(optional_, "ac", 2);
