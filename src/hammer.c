@@ -463,7 +463,22 @@ const parser_t* repeat0(const parser_t* p) { return &unimplemented; }
 const parser_t* repeat1(const parser_t* p) { return &unimplemented; }
 const parser_t* repeat_n(const parser_t* p, const size_t n) { return &unimplemented; }
 const parser_t* optional(const parser_t* p) { return &unimplemented; }
-const parser_t* ignore(const parser_t* p) { return &unimplemented; }
+
+static parse_result_t* parse_ignore(void* env, parse_state_t* state) {
+  parse_result_t *res0 = do_parse((parser_t*)env, state);
+  if (!res0)
+    return NULL;
+  parse_result_t *res = a_new(parse_result_t, 1);
+  res->ast = NULL;
+  res->arena = state->arena;
+  return res;
+}
+const parser_t* ignore(const parser_t* p) {
+  parser_t* ret = g_new(parser_t, 1);
+  ret->fn = parse_ignore;
+  ret->env = (void*)p;
+  return ret;
+}
 const parser_t* list(const parser_t* p, const parser_t* sep) { return &unimplemented; }
 const parser_t* epsilon_p() { return &unimplemented; }
 const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return &unimplemented; }
