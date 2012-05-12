@@ -102,6 +102,9 @@ static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
     len = asprintf(&tmpbuf, "s%#lx", tok->uint);
     append_buf(buf, tmpbuf, len);
     break;
+  case TT_ERR:
+    append_buf(buf, "ERR", 3);
+    break;
   case TT_SEQUENCE: {
     GSequenceIter *it;
     int at_begin = 1;

@@ -57,6 +57,7 @@ typedef enum token_type {
   TT_SINT,
   TT_UINT,
   TT_SEQUENCE,
+  TT_ERR,
   TT_MAX
 } token_type_t;
 
