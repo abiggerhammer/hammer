@@ -54,7 +54,7 @@
 #define g_check_parse_ok(parser, input, inp_len, result) {		\
     parse_result_t *res = parse(parser, (const uint8_t*)input, inp_len); \
     if (!res) {								\
-      g_test_message("Parse failed");					\
+      g_test_message("Parse failed on line %d", __LINE__);				\
       g_test_fail();							\
     } else {								\
       char* cres = write_result_unamb(res->ast);			\
