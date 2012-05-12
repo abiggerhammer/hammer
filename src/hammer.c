@@ -443,8 +443,27 @@ const parser_t* xor(const parser_t* p1, const parser_t* p2) {
 const parser_t* repeat0(const parser_t* p) { return NULL; }
 const parser_t* repeat1(const parser_t* p) { return NULL; }
 const parser_t* repeat_n(const parser_t* p, const size_t n) { return NULL; }
-const parser_t* optional(const parser_t* p) { return NULL; }
-const parser_t* ignore(const parser_t* p) { return NULL; }
+
+static parse_result_t* parse_optional(void *env, parse_state_t *state) {
+  return NULL;
+}
+
+const parser_t* optional(const parser_t* p) { 
+  parser_t *ret = g_new(parser_t, 1);
+  ret->fn = parse_optional; ret->env = NULL;
+  return ret;
+}
+
+static parse_result_t* parse_ignore(void *env, parse_state_t *state) {
+  return NULL;
+}
+
+const parser_t* ignore(const parser_t* p) {  
+  parser_t *ret = g_new(parser_t, 1);
+  ret->fn = parse_ignore; ret->env = NULL;
+  return ret;
+}
+
 const parser_t* list(const parser_t* p, const parser_t* sep) { return NULL; }
 const parser_t* epsilon_p() { return NULL; }
 const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return NULL; }
