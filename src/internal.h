@@ -11,6 +11,23 @@ typedef struct parser_cache_key {
   const parser_t *parser;
 } parser_cache_key_t;
 
+typedef enum parser_cache_value_type {
+  PC_BASE,
+  PC_IN_RECURSION,
+  PC_LRESULT,
+  PC_RESULT
+} parser_cache_value_type_t;
+
+typedef struct parser_cache_value {
+  parser_cache_value_type_t value_type;
+  union {
+    int base;
+    parse_result_t *in_recursion;
+    parse_result_t *lresult;
+    parse_result_t *result;
+  };
+} parser_cache_value_t;
+
 typedef unsigned int *charset;
 
 static inline charset new_charset() {

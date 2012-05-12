@@ -22,34 +22,6 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-parse_state_t* from(parse_state_t *ps, const size_t index) {
-  parse_state_t *ret = g_new(parse_state_t, 1);
-  *ret = *ps;
-  ret->input_stream.index += index;
-  return ret;
-}
-
-const uint8_t* substring(const parse_state_t *ps, const size_t start, const size_t end) {
-  if (end > start && (ps->input_stream.index + end) < ps->input_stream.length) {
-    gpointer ret = g_malloc(end - start);
-    memcpy(ret, ps->input_stream.input, end - start);
-    return (const uint8_t*)ret;
-  } else {
-    return NULL;
-  }
-}
-
-const GVariant* at(parse_state_t *ps, const size_t index) {
-  GVariant *ret = NULL;
-  if (index + ps->input_stream.index < ps->input_stream.length) 
-    ret = g_variant_new_byte((ps->input_stream.input)[index + ps->input_stream.index]);
-  return g_variant_new_maybe(G_VARIANT_TYPE_BYTE, ret);
-}
-
-const gchar* to_string(parse_state_t *ps) {
-  return g_strescape((const gchar*)(ps->input_stream.input), NULL);
-}
-
 guint djbhash(const uint8_t *buf, size_t len) {
   guint hash = 5381;
   while (len--) {
