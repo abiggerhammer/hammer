@@ -20,17 +20,22 @@ struct arena_link {
 struct arena {
   struct arena_link *head;
   size_t block_size;
+  size_t used;
+  size_t wasted;
 };
 
 arena_t new_arena(size_t block_size) {
+  if (block_size == 0)
+    block_size = 4096;
   struct arena *ret = g_new(struct arena, 1);
   struct arena_link *link = (struct arena_link*)g_malloc0(sizeof(struct arena_link) + block_size);
   link->free = block_size;
   link->used = 0;
   link->next = NULL;
   ret->head = link;
-  ret->block_size = 0;
-
+  ret->block_size = block_size;
+  ret->used = 0;
+  ret->wasted = sizeof(struct arena_link) + sizeof(struct arena) + block_size;
   return ret;
 }
 
@@ -38,12 +43,16 @@ void* arena_malloc(arena_t arena, size_t size) {
   if (size <= arena->head->free) {
     // fast path..
     void* ret = arena->head->rest + arena->head->used;
+    arena->used += size;
+    arena->wasted -= size;
     arena->head->used += size;
     arena->head->free -= size;
     return ret;
   } else if (size > arena->block_size) {
     // We need a new, dedicated block for it, because it won't fit in a standard sized one.
     // This involves some annoying casting...
+    arena->used += size;
+    arena->wasted += sizeof(struct arena_link*);
     void* link = g_malloc(size + sizeof(struct arena_link*));
     *(struct arena_link**)link = arena->head->next;
     arena->head->next = (struct arena_link*)link;
@@ -55,6 +64,8 @@ void* arena_malloc(arena_t arena, size_t size) {
     link->used = size;
     link->next = arena->head;
     arena->head = link;
+    arena->used += size;
+    arena->wasted += sizeof(struct arena_link) + arena->block_size - size;
     return link->rest;
   }
 }
@@ -70,4 +81,9 @@ void delete_arena(arena_t arena) {
     link = next;
   }
   g_free(arena);
+}
+
+void allocator_stats(arena_t arena, arena_stats_t *stats) {
+  stats->used = arena->used;
+  stats->wasted = arena->wasted;
 }

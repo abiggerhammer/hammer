@@ -3,7 +3,7 @@ LDFLAGS := $(shell pkg-config --libs glib-2.0)
 CC := gcc
 # Set V=1 for verbose mode...
 V := 0
-CFLAGS += -DINCLUDE_TESTS
+CFLAGS += -DINCLUDE_TESTS $(EXTRA_CFLAGS)
 HUSH = $(TOPLEVEL)/lib/hush
 
 # Check to make sure variables are properly set

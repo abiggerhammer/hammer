@@ -37,10 +37,9 @@ guint djbhash(const uint8_t *buf, size_t len) {
 
 parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
   // TODO(thequux): add caching here.
-  parser_cache_key_t key = {
-    .input_pos = state->input_stream,
-    .parser = parser
-  };
+  parser_cache_key_t *key = a_new(parser_cache_key_t, 1);
+  key->input_pos = state->input_stream;
+  key->parser = parser;
   
   // check to see if there is already a result for this object...
   if (g_hash_table_contains(state->cache, &key)) {
@@ -50,9 +49,11 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
   } else {
     // It doesn't exist... run the 
     parse_result_t *res;
-    if (parser)
+    if (parser) {
       res = parser->fn(parser->env, state);
-    else
+      if (res)
+	res->arena = state->arena;
+    } else
       res = NULL;
     if (state->input_stream.overrun)
       res = NULL; // overrun is always failure.
@@ -766,7 +767,10 @@ static void test_and(void) {
 
 static void test_not(void) {
   const parser_t *not_1 = sequence(ch('a'), choice(ch('+'), token((const uint8_t*)"++", 2), NULL), ch('b'), NULL);
-  const parser_t *not_2 = sequence(ch('a'), choice(sequence(ch('+'), not(ch('+')), NULL), token((const uint8_t*)"", 2), NULL), ch('b'), NULL);
+  const parser_t *not_2 = sequence(ch('a'),
+				   choice(sequence(ch('+'), not(ch('+')), NULL),
+					  token((const uint8_t*)"++", 2),
+					  NULL), ch('b'), NULL);
 
   g_check_parse_ok(not_1, "a+b", 3, "(s0x61 s0x2B s0x62)");
   g_check_parse_failed(not_1, "a++b", 4);
