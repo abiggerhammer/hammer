@@ -72,7 +72,7 @@ typedef struct parsed_token {
     uint64_t uint;
     double dbl;
     float flt;
-    GSequence *seq;
+    GSequence *seq; // a sequence of parsed_token_t's
   };
 } parsed_token_t;
 
