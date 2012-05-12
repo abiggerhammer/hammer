@@ -81,6 +81,12 @@ typedef struct parse_result {
   const parsed_token_t *ast;
 } parse_result_t;
 
+/* Type of an action to apply to an AST, used in the action() parser. */
+typedef parse_result_t* (*action_t)(parse_result_t *p);
+
+/* Type of a boolean attribute-checking function, used in the attr_bool() parser. */
+typedef int (*attr_bool_t)(void *env);
+
 typedef struct parser {
   parse_result_t* (*fn)(void *env, parse_state_t *state);
   void *env;
@@ -134,9 +140,7 @@ const parser_t* float32();
 const parser_t* whitespace(const parser_t* p);
 
 /* Given another parser, p, and a function f, returns a parser that applies p, then applies f to everything in the AST of p's result. */
-//const parser_t* action(const parser_t* p, /* fptr to action on AST */);
-
-const parser_t* left_factor_action(const parser_t* p);
+const parser_t* action(const parser_t* p, const action_t a);
 
 /* Parse a single character *NOT* in charset */
 const parser_t* not_in(const uint8_t *charset, int length);
@@ -186,10 +190,42 @@ const parser_t* ignore(const parser_t* p);
 
 const parser_t* chain(const parser_t* p1, const parser_t* p2, const parser_t* p3);
 const parser_t* chainl(const parser_t* p1, const parser_t* p2);
-const parser_t* list(const parser_t* p1, const parser_t* p2);
+
+/* Given a parser, p, and a parser for a separator, sep, this parser matches a list of things that p can parse, separated by sep.
+ * For example, if p is repeat1(range('0','9')) and sep is ch(','), list(p, sep) will match a comma-separated list of integers. 
+ */
+const parser_t* list(const parser_t* p, const parser_t* sep);
+
+/* This parser always returns a zero length match, i.e., empty string. */
 const parser_t* epsilon_p();
-//const parser_t* semantic(/* fptr to nullary function? */);
+
+/* This parser attaches an attribute function, which returns true or false, to a parser. The function is evaluated over the parser's result AST. 
+ * The parse only succeeds if the attribute function returns true. 
+ */
+const parser_t* attr_bool(const parser_t* p, const attr_bool_t a);
+
+/* The 'and' parser is a predicate. It asserts that a conditional syntax is satisfied, but consumes no input. 
+ * This is useful for lookahead. As an example:
+ *
+ * Suppose you already have a parser, hex_p, that parses numbers in hexadecimal format (including the leading '0x'). Then
+ *   sequence(and(token((const uint8_t*)"0x", 2)), hex_p)
+ * checks to see whether there is a leading "0x", *does not* consume the "0x", and then applies hex_p to parse the hex-formatted number.
+ *
+ * 'and' succeeds if p succeeds, and fails if p fails. Like 'ignore', 'and' does not attach a result to the AST.
+ */
 const parser_t* and(const parser_t* p);
+
+/* The 'not' parser is a predicate. It asserts that a conditional syntax is *not* satisfied, and consumes no input.
+ * As a somewhat contrived example:
+ * 
+ * Since 'choice' applies its arguments in order, the following parser:
+ *   sequence(ch('a'), choice(ch('+'), token((const uint8_t*)"++"), NULL), ch('b'), NULL)
+ * will not parse "a++b", because once choice() has succeeded, it will not backtrack and try other alternatives if a later parser in the sequence
+ * fails. 
+ * Instead, you can force the use of the second alternative by turning the ch('+') alternative into a sequence with not:
+ *   sequence(ch('a'), choice(sequence(ch('+'), not(ch('+')), NULL), token((const uint8_t*)"++")), ch('b'), NULL)
+ * If the input string is "a+b", the first alternative is applied; if the input string is "a++b", the second alternative is applied.
+ */
 const parser_t* not(const parser_t* p);
 
 #endif // #ifndef HAMMER_HAMMER__H

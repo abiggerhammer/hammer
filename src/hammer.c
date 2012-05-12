@@ -166,9 +166,8 @@ const parser_t* whitespace(const parser_t* p) {
   ret->env = (void*)p;
   return ret;
 }
-//const parser_t* action(const parser_t* p, /* fptr to action on AST */) { return NULL; }
 
-const parser_t* left_factor_action(const parser_t* p) { return NULL; }
+const parser_t* action(const parser_t* p, const action_t a) { return NULL; }
 
 static parse_result_t* parse_charset(void *env, parse_state_t *state) {
   uint8_t in = read_bits(&state->input_stream, 8, false);
@@ -468,12 +467,12 @@ const parser_t* repeat0(const parser_t* p) { return NULL; }
 const parser_t* repeat1(const parser_t* p) { return NULL; }
 const parser_t* repeat_n(const parser_t* p, const size_t n) { return NULL; }
 const parser_t* optional(const parser_t* p) { return NULL; }
-const parser_t* expect(const parser_t* p) { return NULL; }
+const parser_t* ignore(const parser_t* p) { return NULL; }
 const parser_t* chain(const parser_t* p1, const parser_t* p2, const parser_t* p3) { return NULL; }
 const parser_t* chainl(const parser_t* p1, const parser_t* p2) { return NULL; }
-const parser_t* list(const parser_t* p1, const parser_t* p2) { return NULL; }
+const parser_t* list(const parser_t* p, const parser_t* sep) { return NULL; }
 const parser_t* epsilon_p() { return NULL; }
-//const parser_t* semantic(/* fptr to nullary function? */) { return NULL; }
+const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return NULL; }
 const parser_t* and(const parser_t* p) { return NULL; }
 const parser_t* not(const parser_t* p) { return NULL; }
 
@@ -509,7 +508,6 @@ parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t lengt
 #include "test_suite.h"
 
 static void test_token(void) {
-  //uint8_t test[3] = { '9', '5', 0xa2 };
   const parser_t *token_ = token((const uint8_t*)"95\xa2", 3);
 
   g_check_parse_ok(token_, "95\xa2", 3, "<39.35.A2>");
@@ -607,6 +605,7 @@ static void test_float32(void) {
 
 static void test_whitespace(void) {
   const parser_t *whitespace_ = whitespace(ch('a'));
+
   g_check_parse_ok(whitespace_, "a", 1, "s0x61");
   g_check_parse_ok(whitespace_, " a", 2, "s0x61");
   g_check_parse_ok(whitespace_, "  a", 3, "s0x61");
@@ -614,12 +613,15 @@ static void test_whitespace(void) {
   g_check_parse_failed(whitespace_, "_a", 2);
 }
 
-static void test_action(void) {
-  
+parse_result_t* upcase(parse_result_t *p) {
+  return NULL; // shut compiler up
 }
 
-static void test_left_factor_action(void) {
+static void test_action(void) {
+  const parser_t *action_ = action(sequence(choice(ch('a'), ch('A'), NULL), choice(ch('b'), ch('B'), NULL), NULL), upcase);
 
+  g_check_parse_ok(action_, "ab", 2, "(s0x41, s0x42)");
+  g_check_parse_ok(action_, "AB", 2, "(s0x41, s0x42)");
 }
 
 static void test_not_in(void) {
@@ -699,19 +701,38 @@ static void test_repeat0(void) {
 }
 
 static void test_repeat1(void) {
+  const parser_t *repeat1_ = repeat1(choice(ch('a'), ch('b'), NULL));
 
+  g_check_parse_ok(repeat1_, "adef", 4, "(s0x61)");
+  g_check_parse_ok(repeat1_, "bdef", 4, "(s0x62)");
+  g_check_parse_ok(repeat1_, "aabbabadef", 10, "(s0x61 s0x61 s0x62 s0x62 s0x61 s0x62 s0x61)");
+  g_check_parse_failed(repeat1_, "daabbabadef", 11);  
 }
 
 static void test_repeat_n(void) {
+  const parser_t *repeat_n_ = repeat_n(choice(ch('a'), ch('b'), NULL), 2);
 
+  g_check_parse_failed(repeat_n_, "adef", 4);
+  g_check_parse_ok(repeat_n_, "abdef", 5, "(s0x61 s0x62)");
+  g_check_parse_failed(repeat_n_, "dabdef", 6);
 }
 
 static void test_optional(void) {
-
+  const parser_t *optional_ = sequence(ch('a'), optional(choice(ch('b'), ch('c'), NULL)), ch('d'), NULL);
+  
+  g_check_parse_ok(optional_, "abd", 3, "(s0x61 s0x62 s0x64)");
+  g_check_parse_ok(optional_, "acd", 3, "(s0x61 s0x63 s0x64)");
+  g_check_parse_ok(optional_, "ad", 2, "(s0x61 s0x64)");
+  g_check_parse_failed(optional_, "aed", 3);
+  g_check_parse_failed(optional_, "ab", 2);
+  g_check_parse_failed(optional_, "ac", 2);
 }
 
 static void test_ignore(void) {
+  const parser_t *ignore_ = sequence(ch('a'), ignore(ch('b')), ch('c'), NULL);
 
+  g_check_parse_ok(ignore_, "abc", 3, "(s0x61 s0x63)");
+  g_check_parse_failed(ignore_, "ac", 2);
 }
 
 static void test_chain(void) {
@@ -723,23 +744,46 @@ static void test_chainl(void) {
 }
 
 static void test_list(void) {
+  const parser_t *list_ = list(choice(ch('1'), ch('2'), ch('3'), NULL), ch(','));
 
+  g_check_parse_ok(list_, "1,2,3", 5, "(s0x31 s0x32 s0x33)");
+  g_check_parse_ok(list_, "1,3,2", 5, "(s0x31 s0x33 s0x32)");
+  g_check_parse_ok(list_, "1,3", 3, "(s0x31 s0x33)");
+  g_check_parse_ok(list_, "3", 1, "(s0x33)");
 }
 
 static void test_epsilon_p(void) {
-
+  const parser_t *epsilon_p_1 = sequence(ch('a'), epsilon_p(), ch('b'), NULL);
+  const parser_t *epsilon_p_2 = sequence(epsilon_p(), ch('a'), NULL);
+  const parser_t *epsilon_p_3 = sequence(ch('a'), epsilon_p(), NULL);
+  
+  g_check_parse_ok(epsilon_p_1, "ab", 2, "(s0x61 s0x62)");
+  g_check_parse_ok(epsilon_p_2, "a", 1, "(s0x61)");
+  g_check_parse_ok(epsilon_p_3, "a", 1, "(s0x61)");
 }
 
-static void test_semantic(void) {
+static void test_attr_bool(void) {
 
 }
 
 static void test_and(void) {
+  const parser_t *and_1 = sequence(and(ch('0')), ch('0'), NULL);
+  const parser_t *and_2 = sequence(and(ch('0')), ch('1'), NULL);
+  const parser_t *and_3 = sequence(ch('1'), and(ch('2')), NULL);
 
+  g_check_parse_ok(and_1, "0", 1, "(s0x30)");
+  g_check_parse_failed(and_2, "0", 1);
+  g_check_parse_ok(and_3, "12", 2, "(s0x31)");
 }
 
 static void test_not(void) {
+  const parser_t *not_1 = sequence(ch('a'), choice(ch('+'), token((const uint8_t*)"++", 2), NULL), ch('b'), NULL);
+  const parser_t *not_2 = sequence(ch('a'), choice(sequence(ch('+'), not(ch('+')), NULL), token((const uint8_t*)"", 2), NULL), ch('b'), NULL);
 
+  g_check_parse_ok(not_1, "a+b", 3, "(s0x61 s0x2B s0x62)");
+  g_check_parse_failed(not_1, "a++b", 4);
+  g_check_parse_ok(not_2, "a+b", 3, "(s0x61 s0x2B s0x62)");
+  g_check_parse_ok(not_2, "a++b", 4, "(s0x61 <2B.2B> s0x62)");
 }
 
 void register_parser_tests(void) {
@@ -760,7 +804,6 @@ void register_parser_tests(void) {
 #endif
   g_test_add_func("/core/parser/whitespace", test_whitespace);
   g_test_add_func("/core/parser/action", test_action);
-  g_test_add_func("/core/parser/left_factor_action", test_left_factor_action);
   g_test_add_func("/core/parser/not_in", test_not_in);
   g_test_add_func("/core/parser/end_p", test_end_p);
   g_test_add_func("/core/parser/nothing_p", test_nothing_p);
@@ -777,7 +820,7 @@ void register_parser_tests(void) {
   g_test_add_func("/core/parser/chainl", test_chainl);
   g_test_add_func("/core/parser/list", test_list);
   g_test_add_func("/core/parser/epsilon_p", test_epsilon_p);
-  g_test_add_func("/core/parser/semantic", test_semantic);
+  g_test_add_func("/core/parser/attr_bool", test_attr_bool);
   g_test_add_func("/core/parser/and", test_and);
   g_test_add_func("/core/parser/not", test_not);
   g_test_add_func("/core/parser/ignore", test_ignore);
