@@ -14,7 +14,7 @@ all: libhammer.a test_suite
 test_suite: test_suite.o libhammer.a
 	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
 
-libhammer.a: bitreader.o hammer.o pprint.o
+libhammer.a: bitreader.o hammer.o pprint.o allocator.o
 
 bitreader.o: test_suite.h
 hammer.o: hammer.h

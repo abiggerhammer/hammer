@@ -3,8 +3,7 @@
 # and kick off a recursive make
 # Also, "make src/all" turns into "make -C src all"
 
-SUBDIRS = src \
-	  lib
+SUBDIRS = src
 
 .DEFAULT_GOAL := all
 
