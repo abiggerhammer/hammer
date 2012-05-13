@@ -177,10 +177,10 @@ const parser_t* difference(const parser_t* p1, const parser_t* p2);
 const parser_t* xor(const parser_t* p1, const parser_t* p2);
 
 /* Given a parser, p, this parser succeeds for zero or more repetitions of p. */
-const parser_t* repeat0(const parser_t* p);
+const parser_t* many(const parser_t* p);
 
 /* Given a parser, p, this parser succeeds for one or more repetitions of p. */
-const parser_t* repeat1(const parser_t* p);
+const parser_t* many1(const parser_t* p);
 
 /* Given a parser, p, this parser succeeds for exactly N repetitions of p. */
 const parser_t* repeat_n(const parser_t* p, const size_t n);
@@ -191,10 +191,15 @@ const parser_t* optional(const parser_t* p);
 /* Given a parser, p, this parser succeeds if p succeeds, but doesn't include p's result in the result. */
 const parser_t* ignore(const parser_t* p);
 
-/* Given a parser, p, and a parser for a separator, sep, this parser matches a list of things that p can parse, separated by sep.
- * For example, if p is repeat1(range('0','9')) and sep is ch(','), list(p, sep) will match a comma-separated list of integers. 
+/* Given a parser, p, and a parser for a separator, sep, this parser matches a (possibly empty) list of things that p can parse, separated by sep.
+ * For example, if p is repeat1(range('0','9')) and sep is ch(','), sepBy(p, sep) will match a comma-separated list of integers. 
  */
-const parser_t* list(const parser_t* p, const parser_t* sep);
+const parser_t* sepBy(const parser_t* p, const parser_t* sep);
+
+/* Given a parser, p, and a parser for a separator, sep, this parser matches a list of things that p can parse, separated by sep. Unlike sepBy, this ensures that the result has at least one element.
+ * For example, if p is repeat1(range('0','9')) and sep is ch(','), sepBy1(p, sep) will match a comma-separated list of integers. 
+ */
+const parser_t* sepBy1(const parser_t* p, const parser_t* sep);
 
 /* This parser always returns a zero length match, i.e., empty string. */
 const parser_t* epsilon_p();

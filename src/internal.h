@@ -18,8 +18,17 @@
 #ifndef HAMMER_INTERNAL__H
 #define HAMMER_INTERNAL__H
 #include <glib.h>
+#include <err.h>
 #include "hammer.h"
 
+#ifdef NDEBUG
+#define assert_message(check, message) do { } while(0)
+#else
+#define assert_message(check, message) do {				\
+    if (!(check))							\
+      errx(1, "Assertation failed (programmer error): %s", message);	\
+  } while(0)
+#endif
 #define false 0
 #define true 1
 
@@ -71,4 +80,5 @@ void put_cached(parse_state_t *ps, const parser_t *p, parse_result_t *cached);
 guint djbhash(const uint8_t *buf, size_t len);
 char* write_result_unamb(const parsed_token_t* tok);
 void pprint(const parsed_token_t* tok, int indent, int delta);
+
 #endif // #ifndef HAMMER_INTERNAL__H

@@ -102,7 +102,7 @@ static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
       append_buf(buf, "<>", 2);
     else {
       for (size_t i = 0; i < tok->bytes.len; i++) {
-	const char *HEX = "0123456789ABCDEF";
+	const char *HEX = "0123456789abcdef";
 	append_buf_c(buf, (i == 0) ? '<': '.');
 	char c = tok->bytes.token[i];
 	append_buf_c(buf, HEX[(c >> 4) & 0xf]);

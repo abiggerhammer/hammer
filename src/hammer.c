@@ -459,28 +459,83 @@ const parser_t* xor(const parser_t* p1, const parser_t* p2) {
   return ret;
 }
 
-const parser_t* repeat0(const parser_t* p) { return &unimplemented; }
-const parser_t* repeat1(const parser_t* p) { return &unimplemented; }
-
-
-const parser_t* repeat_n(const parser_t* p, const size_t n) { return &unimplemented; }
-
-static parse_result_t* parse_optional(void* env, parse_state_t* state) {
-  input_stream_t bak = state->input_stream;
-  parse_result_t *res0 = do_parse((parser_t*)env, state);
-  if (res0)
-    return res0;
+typedef struct {
+  const parser_t *p, *sep;
+  size_t count;
+  bool min_p;
+} repeat_t;
+static parse_result_t *parse_many(void* env, parse_state_t *state) {
+  repeat_t *env_ = (repeat_t*) env;
+  GSequence *seq = g_sequence_new(NULL);
+  size_t count = 0;
+  input_stream_t bak;
+  while (env_->min_p || env_->count > count) {
+    bak = state->input_stream;
+    if (count > 0) {
+      parse_result_t *sep = do_parse(env_->sep, state);
+      if (!sep)
+	goto err0;
+    }
+    parse_result_t *elem = do_parse(env_->p, state);
+    if (!elem)
+      goto err0;
+    if (elem->ast)
+      g_sequence_append(seq, (gpointer)elem->ast);
+    count++;
+  }
+  if (count < env_->count)
+    goto err;
+ succ:
+  ; // necessary for the label to be here...
+  parsed_token_t *res = a_new(parsed_token_t, 1);
+  res->token_type = TT_SEQUENCE;
+  res->seq = seq;
+  return make_result(state, res);
+ err0:
+  if (count >= env_->count) {
+    state->input_stream = bak;
+    goto succ;
+  }
+ err:
+  g_sequence_free(seq);
   state->input_stream = bak;
-  parsed_token_t *ast = a_new(parsed_token_t, 1);
-  ast->token_type = TT_NONE;
-  return make_result(state, ast);
+  return NULL;
 }
 
-const parser_t* optional(const parser_t* p) {
-  parser_t *ret = g_new(parser_t, 1);
-  ret->fn = parse_optional;
-  ret->env = (void*)p;
-  return ret;
+const parser_t* many(const parser_t* p) {
+  parser_t *res = g_new(parser_t, 1);
+  repeat_t *env = g_new(repeat_t, 1);
+  env->p = p;
+  env->sep = epsilon_p();
+  env->count = 0;
+  env->min_p = true;
+  res->fn = parse_many;
+  res->env = env;
+  return res;
+}
+
+const parser_t* many1(const parser_t* p) {
+  parser_t *res = g_new(parser_t, 1);
+  repeat_t *env = g_new(repeat_t, 1);
+  env->p = p;
+  env->sep = epsilon_p();
+  env->count = 1;
+  env->min_p = true;
+  res->fn = parse_many;
+  res->env = env;
+  return res;
+}
+
+const parser_t* repeat_n(const parser_t* p, const size_t n) {
+  parser_t *res = g_new(parser_t, 1);
+  repeat_t *env = g_new(repeat_t, 1);
+  env->p = p;
+  env->sep = epsilon_p();
+  env->count = n;
+  env->min_p = false;
+  res->fn = parse_many;
+  res->env = env;
+  return res;
 }
 
 static parse_result_t* parse_ignore(void* env, parse_state_t* state) {
@@ -498,11 +553,83 @@ const parser_t* ignore(const parser_t* p) {
   ret->env = (void*)p;
   return ret;
 }
-const parser_t* list(const parser_t* p, const parser_t* sep) { return &unimplemented; }
-const parser_t* epsilon_p() { return &unimplemented; }
+
+static parse_result_t* parse_optional(void* env, parse_state_t* state) {
+  input_stream_t bak = state->input_stream;
+  parse_result_t *res0 = do_parse((parser_t*)env, state);
+  if (res0)
+    return res0;
+  state->input_stream = bak;
+  parsed_token_t *ast = a_new(parsed_token_t, 1);
+  ast->token_type = TT_NONE;
+  return make_result(state, ast);
+}
+
+const parser_t* optional(const parser_t* p) {
+  assert_message(p->fn != parse_ignore, "Thou shalt ignore an option, rather than the other way 'round.");
+  parser_t *ret = g_new(parser_t, 1);
+  ret->fn = parse_optional;
+  ret->env = (void*)p;
+  return ret;
+}
+
+const parser_t* sepBy(const parser_t* p, const parser_t* sep) {
+  parser_t *res = g_new(parser_t, 1);
+  repeat_t *env = g_new(repeat_t, 1);
+  env->p = p;
+  env->sep = sep;
+  env->count = 0;
+  env->min_p = true;
+  res->fn = parse_many;
+  res->env = env;
+  return res;
+}
+
+const parser_t* sepBy1(const parser_t* p, const parser_t* sep) {
+  parser_t *res = g_new(parser_t, 1);
+  repeat_t *env = g_new(repeat_t, 1);
+  env->p = p;
+  env->sep = sep;
+  env->count = 1;
+  env->min_p = true;
+  res->fn = parse_many;
+  res->env = env;
+  return res;
+}
+
+static parse_result_t* parse_epsilon(void* env, parse_state_t* state) {
+  (void)env;
+  parse_result_t* res = a_new(parse_result_t, 1);
+  res->ast = NULL;
+  res->arena = state->arena;
+  return res;
+}
+
+const parser_t* epsilon_p() {
+  parser_t *res = g_new(parser_t, 1);
+  res->fn = parse_epsilon;
+  res->env = NULL;
+  return res;
+}
 const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return &unimplemented; }
 const parser_t* and(const parser_t* p) { return &unimplemented; }
-const parser_t* not(const parser_t* p) { return &unimplemented; }
+
+static parse_result_t* parse_not(void* env, parse_state_t* state) {
+  input_stream_t bak = state->input_stream;
+  if (do_parse((parser_t*)env, state))
+    return NULL;
+  else {
+    state->input_stream = bak;
+    return make_result(state, NULL);
+  }
+}
+
+const parser_t* not(const parser_t* p) {
+  parser_t *res = g_new(parser_t, 1);
+  res->fn = parse_not;
+  res->env = (void*)p;
+  return res;
+}
 
 static guint cache_key_hash(gconstpointer key) {
   return djbhash(key, sizeof(parser_cache_key_t));
@@ -541,7 +668,7 @@ parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t lengt
 static void test_token(void) {
   const parser_t *token_ = token((const uint8_t*)"95\xa2", 3);
 
-  g_check_parse_ok(token_, "95\xa2", 3, "<39.35.A2>");
+  g_check_parse_ok(token_, "95\xa2", 3, "<39.35.a2>");
   g_check_parse_failed(token_, "95", 2);
 }
 
@@ -722,22 +849,22 @@ static void test_xor(void) {
   g_check_parse_failed(xor_, "a", 1);
 }
 
-static void test_repeat0(void) {
-  const parser_t *repeat0_ = repeat0(choice(ch('a'), ch('b'), NULL));
+static void test_many(void) {
+  const parser_t *many_ = many(choice(ch('a'), ch('b'), NULL));
 
-  g_check_parse_ok(repeat0_, "adef", 4, "(s0x61)");
-  g_check_parse_ok(repeat0_, "bdef", 4, "(s0x62)");
-  g_check_parse_ok(repeat0_, "aabbabadef", 10, "(s0x61 s0x61 s0x62 s0x62 s0x61 s0x62 s0x61)");
-  g_check_parse_ok(repeat0_, "daabbabadef", 11, "()");
+  g_check_parse_ok(many_, "adef", 4, "(s0x61)");
+  g_check_parse_ok(many_, "bdef", 4, "(s0x62)");
+  g_check_parse_ok(many_, "aabbabadef", 10, "(s0x61 s0x61 s0x62 s0x62 s0x61 s0x62 s0x61)");
+  g_check_parse_ok(many_, "daabbabadef", 11, "()");
 }
 
-static void test_repeat1(void) {
-  const parser_t *repeat1_ = repeat1(choice(ch('a'), ch('b'), NULL));
+static void test_many1(void) {
+  const parser_t *many1_ = many1(choice(ch('a'), ch('b'), NULL));
 
-  g_check_parse_ok(repeat1_, "adef", 4, "(s0x61)");
-  g_check_parse_ok(repeat1_, "bdef", 4, "(s0x62)");
-  g_check_parse_ok(repeat1_, "aabbabadef", 10, "(s0x61 s0x61 s0x62 s0x62 s0x61 s0x62 s0x61)");
-  g_check_parse_failed(repeat1_, "daabbabadef", 11);  
+  g_check_parse_ok(many1_, "adef", 4, "(s0x61)");
+  g_check_parse_ok(many1_, "bdef", 4, "(s0x62)");
+  g_check_parse_ok(many1_, "aabbabadef", 10, "(s0x61 s0x61 s0x62 s0x62 s0x61 s0x62 s0x61)");
+  g_check_parse_failed(many1_, "daabbabadef", 11);  
 }
 
 static void test_repeat_n(void) {
@@ -766,13 +893,13 @@ static void test_ignore(void) {
   g_check_parse_failed(ignore_, "ac", 2);
 }
 
-static void test_list(void) {
-  const parser_t *list_ = list(choice(ch('1'), ch('2'), ch('3'), NULL), ch(','));
+static void test_sepBy1(void) {
+  const parser_t *sepBy1_ = sepBy1(choice(ch('1'), ch('2'), ch('3'), NULL), ch(','));
 
-  g_check_parse_ok(list_, "1,2,3", 5, "(s0x31 s0x32 s0x33)");
-  g_check_parse_ok(list_, "1,3,2", 5, "(s0x31 s0x33 s0x32)");
-  g_check_parse_ok(list_, "1,3", 3, "(s0x31 s0x33)");
-  g_check_parse_ok(list_, "3", 1, "(s0x33)");
+  g_check_parse_ok(sepBy1_, "1,2,3", 5, "(s0x31 s0x32 s0x33)");
+  g_check_parse_ok(sepBy1_, "1,3,2", 5, "(s0x31 s0x33 s0x32)");
+  g_check_parse_ok(sepBy1_, "1,3", 3, "(s0x31 s0x33)");
+  g_check_parse_ok(sepBy1_, "3", 1, "(s0x33)");
 }
 
 static void test_epsilon_p(void) {
@@ -806,10 +933,10 @@ static void test_not(void) {
 					  token((const uint8_t*)"++", 2),
 					  NULL), ch('b'), NULL);
 
-  g_check_parse_ok(not_1, "a+b", 3, "(s0x61 s0x2B s0x62)");
+  g_check_parse_ok(not_1, "a+b", 3, "(s0x61 s0x2b s0x62)");
   g_check_parse_failed(not_1, "a++b", 4);
-  g_check_parse_ok(not_2, "a+b", 3, "(s0x61 s0x2B s0x62)");
-  g_check_parse_ok(not_2, "a++b", 4, "(s0x61 <2B.2B> s0x62)");
+  g_check_parse_ok(not_2, "a+b", 3, "(s0x61 (s0x2b) s0x62)");
+  g_check_parse_ok(not_2, "a++b", 4, "(s0x61 <2b.2b> s0x62)");
 }
 
 void register_parser_tests(void) {
@@ -838,11 +965,11 @@ void register_parser_tests(void) {
   g_test_add_func("/core/parser/butnot", test_butnot);
   g_test_add_func("/core/parser/difference", test_difference);
   g_test_add_func("/core/parser/xor", test_xor);
-  g_test_add_func("/core/parser/repeat0", test_repeat0);
-  g_test_add_func("/core/parser/repeat1", test_repeat1);
+  g_test_add_func("/core/parser/many", test_many);
+  g_test_add_func("/core/parser/many1", test_many1);
   g_test_add_func("/core/parser/repeat_n", test_repeat_n);
   g_test_add_func("/core/parser/optional", test_optional);
-  g_test_add_func("/core/parser/list", test_list);
+  g_test_add_func("/core/parser/sepBy1", test_sepBy1);
   g_test_add_func("/core/parser/epsilon_p", test_epsilon_p);
   g_test_add_func("/core/parser/attr_bool", test_attr_bool);
   g_test_add_func("/core/parser/and", test_and);
