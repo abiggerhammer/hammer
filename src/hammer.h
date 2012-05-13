@@ -43,13 +43,13 @@ typedef struct input_stream {
   char bit_offset;
   char endianness;
   char overrun;
-  GQueue *lr_stack;
 } input_stream_t;
   
 typedef struct parse_state {
   GHashTable *cache; 
   input_stream_t input_stream;
   arena_t arena;
+  GQueue *lr_stack;
 } parse_state_t;
 
 typedef enum token_type {
