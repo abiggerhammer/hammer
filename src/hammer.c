@@ -58,7 +58,7 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
     // It doesn't exist, so create a dummy result to cache
     LR_t *base = a_new(LR_t, 1);
     base->seed = NULL; base->rule = parser; base->head = NULL;
-    g_queue_push_head(state->input_stream.lr_stack, base);
+    g_queue_push_head(state->lr_stack, base);
     // cache it
     parser_cache_value_t *dummy = a_new(parser_cache_value_t, 1);
     dummy->value_type = PC_LEFT; dummy->left = base;
@@ -79,7 +79,7 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
     }
 #endif
     // the base variable has passed equality tests with the cache
-    g_queue_pop_head(state->input_stream.lr_stack);
+    g_queue_pop_head(state->lr_stack);
     // setupLR, used below, mutates the LR to have a head if appropriate, so we check to see if we have one
     if (NULL == base->head) {
       parser_cache_value_t *right = a_new(parser_cache_value_t, 1);
@@ -95,7 +95,7 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
     // it exists!
     parser_cache_value_t *value = g_hash_table_lookup(state->cache, key);
     if (PC_LEFT == value->value_type) {
-      setupLR(parser, state->input_stream.lr_stack, value->left);
+      setupLR(parser, state->lr_stack, value->left);
       return value->left->seed; // BUG: this might not be correct
     } else {
       return value->right;
@@ -685,7 +685,7 @@ parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t lengt
   parse_state->input_stream.overrun = 0;
   parse_state->input_stream.endianness = BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN;
   parse_state->input_stream.length = length;
-  g_queue_init(parse_state->input_stream.lr_stack);
+  parse_state->lr_stack = g_queue_new();
   parse_state->arena = arena;
   parse_result_t *res = do_parse(parser, parse_state);
   // tear down the parse state. For now, leak like a sieve.
