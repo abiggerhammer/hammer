@@ -29,19 +29,27 @@ typedef struct parser_cache_key {
 } parser_cache_key_t;
 
 typedef enum parser_cache_value_type {
-  PC_BASE,
-  PC_IN_RECURSION,
-  PC_LRESULT,
-  PC_RESULT
+  PC_LEFT,
+  PC_RIGHT
 } parser_cache_value_type_t;
+
+typedef struct head {
+  parser_t *head_parser;
+  GSList *involved_set;
+  GSList *eval_set;
+} head_t;
+
+typedef struct LR {
+  parse_result_t *seed;
+  const parser_t *rule;
+  head_t *head;
+} LR_t;
 
 typedef struct parser_cache_value {
   parser_cache_value_type_t value_type;
   union {
-    int base;
-    parse_result_t *in_recursion;
-    parse_result_t *lresult;
-    parse_result_t *result;
+    LR_t *left;
+    parse_result_t *right;
   };
 } parser_cache_value_t;
 
