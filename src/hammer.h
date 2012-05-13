@@ -43,6 +43,7 @@ typedef struct input_stream {
   char bit_offset;
   char endianness;
   char overrun;
+  GQueue *lr_stack;
 } input_stream_t;
   
 typedef struct parse_state {
