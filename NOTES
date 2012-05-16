@@ -32,3 +32,7 @@ or the result of p1 otherwise, though the comments say it should
 succeed if p2's result is shorter than p1's. Whatever; we're doing
 what the comments say.
 
+
+TODO: implement datastructure linearization func
+TODO: implement free func for parsers
+TODO: Reimplement GSequence et al for use with arena allocator. (*&%$#@ Glib doesn't allow per-datastructure allocators)
