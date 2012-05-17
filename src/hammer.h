@@ -61,6 +61,13 @@ typedef enum token_type {
   TT_MAX
 } token_type_t;
 
+typedef struct counted_array {
+  size_t capacity;
+  size_t used;
+  arena_t arena;
+  void **elements;
+} counted_array_t;
+
 typedef struct parsed_token {
   token_type_t token_type;
   union {
@@ -72,9 +79,11 @@ typedef struct parsed_token {
     uint64_t uint;
     double dbl;
     float flt;
-    GSequence *seq; // a sequence of parsed_token_t's
+    counted_array_t *seq; // a sequence of parsed_token_t's
   };
 } parsed_token_t;
+
+
 
 /* If a parse fails, the parse result will be NULL.
  * If a parse is successful but there's nothing there (i.e., if end_p succeeds) then there's a parse result but its ast is NULL.

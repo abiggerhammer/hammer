@@ -32,6 +32,7 @@
 #define false 0
 #define true 1
 
+
 typedef struct parser_cache_key {
   input_stream_t input_pos;
   const parser_t *parser;
@@ -80,5 +81,14 @@ void put_cached(parse_state_t *ps, const parser_t *p, parse_result_t *cached);
 guint djbhash(const uint8_t *buf, size_t len);
 char* write_result_unamb(const parsed_token_t* tok);
 void pprint(const parsed_token_t* tok, int indent, int delta);
+
+counted_array_t *carray_new_sized(arena_t arena, size_t size);
+counted_array_t *carray_new(arena_t arena);
+void carray_append(counted_array_t *array, void* item);
+
+#if 0
+#include <malloc.h>
+#define arena_malloc(a, s) malloc(s)
+#endif
 
 #endif // #ifndef HAMMER_INTERNAL__H

@@ -17,6 +17,7 @@
 
 #ifndef HAMMER_TEST_SUITE__H
 #define HAMMER_TEST_SUITE__H
+#include <malloc.h>
 
 // Equivalent to g_assert_*, but not using g_assert...
 #define g_check_inttype(fmt, typ, n1, op, n2) do {				\
@@ -76,12 +77,14 @@
     } else {								\
       char* cres = write_result_unamb(res->ast);			\
       g_check_string(cres, ==, result);					\
+      g_free(cres);							\
       arena_stats_t stats;						\
       allocator_stats(res->arena, &stats);				\
       g_test_message("Parse used %zd bytes, wasted %zd bytes. "		\
                      "Inefficiency: %5f%%",				\
 		     stats.used, stats.wasted,				\
 		     stats.wasted * 100. / (stats.used+stats.wasted));	\
+      delete_arena(res->arena);						\
     }									\
   } while(0)
 

@@ -60,10 +60,10 @@ void* arena_malloc(arena_t arena, size_t size) {
   if (size <= arena->head->free) {
     // fast path..
     void* ret = arena->head->rest + arena->head->used;
-    arena->used += size;
+    arena->used += size + 1;
     arena->wasted -= size;
-    arena->head->used += size;
-    arena->head->free -= size;
+    arena->head->used += size + 1;
+    arena->head->free -= size + 1;
     return ret;
   } else if (size > arena->block_size) {
     // We need a new, dedicated block for it, because it won't fit in a standard sized one.
@@ -73,7 +73,7 @@ void* arena_malloc(arena_t arena, size_t size) {
     void* link = g_malloc(size + sizeof(struct arena_link*));
     *(struct arena_link**)link = arena->head->next;
     arena->head->next = (struct arena_link*)link;
-    return (void*)((uint8_t*)link + sizeof(struct arena_link*));
+    return (void*)(((uint8_t*)link) + sizeof(struct arena_link*));
   } else {
     // we just need to allocate an ordinary new block.
     struct arena_link *link = (struct arena_link*)g_malloc0(sizeof(struct arena_link) + arena->block_size);

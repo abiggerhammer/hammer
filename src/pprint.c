@@ -52,13 +52,9 @@ void pprint(const parsed_token_t* tok, int indent, int delta) {
      printf("%*ss %#lx\n", indent, "", tok->uint);
     break;
   case TT_SEQUENCE: {
-    GSequenceIter *it;
     printf("%*s[\n", indent, "");
-    for (it = g_sequence_get_begin_iter(tok->seq);
-	 !g_sequence_iter_is_end(it);
-	 it = g_sequence_iter_next(it)) {
-      parsed_token_t* subtok = g_sequence_get(it);
-      pprint(subtok, indent + delta, delta);
+    for (size_t i = 0; i < tok->seq->used; i++) {
+      pprint(tok->seq->elements[i], indent + delta, delta);
     }
     printf("%*s]\n", indent, "");
   } // TODO: implement this
@@ -123,18 +119,11 @@ static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
     append_buf(buf, "ERR", 3);
     break;
   case TT_SEQUENCE: {
-    GSequenceIter *it;
-    int at_begin = 1;
     append_buf_c(buf, '(');
-    for (it = g_sequence_get_begin_iter(tok->seq);
-	 !g_sequence_iter_is_end(it);
-	 it = g_sequence_iter_next(it)) {
-      parsed_token_t* subtok = g_sequence_get(it);
-      if (at_begin)
-	at_begin = 0;
-      else
+    for (size_t i = 0; i < tok->seq->used; i++) {
+      if (i > 0)
 	append_buf_c(buf, ' ');
-      unamb_sub(subtok, buf);
+      unamb_sub(tok->seq->elements[i], buf);
     }
     append_buf_c(buf, ')');
   }
@@ -153,6 +142,7 @@ char* write_result_unamb(const parsed_token_t* tok) {
     .capacity = 16
   };
   unamb_sub(tok, &buf);
+  append_buf_c(&buf, 0);
   return buf.output;
 }
   

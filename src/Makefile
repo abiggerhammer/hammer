@@ -2,6 +2,9 @@
 OUTPUTS := bitreader.o \
 	   hammer.o \
 	   libhammer.a \
+	   pprint.o \
+	   allocator.o \
+	   datastructures.o \
 	   test_suite
 
 TOPLEVEL := ../
@@ -14,7 +17,7 @@ all: libhammer.a test_suite
 test_suite: test_suite.o libhammer.a
 	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
 
-libhammer.a: bitreader.o hammer.o pprint.o allocator.o
+libhammer.a: bitreader.o hammer.o pprint.o allocator.o datastructures.o
 
 bitreader.o: test_suite.h
 hammer.o: hammer.h

@@ -37,7 +37,9 @@ guint djbhash(const uint8_t *buf, size_t len) {
 
 parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
   // TODO(thequux): add caching here.
-  parser_cache_key_t *key = a_new(parser_cache_key_t, 1);
+  parser_cache_key_t *key;
+  key = a_new(parser_cache_key_t, 1);
+  memset(key, 0, sizeof(*key));
   key->input_pos = state->input_stream;
   key->parser = parser;
   
@@ -232,7 +234,7 @@ typedef struct {
 
 static parse_result_t* parse_sequence(void *env, parse_state_t *state) {
   sequence_t *s = (sequence_t*)env;
-  GSequence *seq = g_sequence_new(NULL);
+  counted_array_t *seq = carray_new_sized(state->arena, (s->len > 0) ? s->len : 4);
   for (size_t i=0; i<s->len; ++i) {
     parse_result_t *tmp = do_parse(s->p_array[i], state);
     // if the interim parse fails, the whole thing fails
@@ -240,7 +242,7 @@ static parse_result_t* parse_sequence(void *env, parse_state_t *state) {
       return NULL;
     } else {
       if (tmp->ast)
-	g_sequence_append(seq, (void*)tmp->ast);
+	carray_append(seq, (void*)tmp->ast);
     }
   }
   parsed_token_t *tok = a_new(parsed_token_t, 1);
@@ -320,36 +322,34 @@ typedef struct {
   const parser_t *p2;
 } two_parsers_t;
 
-void accumulate_size(gpointer pr, gpointer acc) {
-  size_t tmp = GPOINTER_TO_SIZE(acc);
+size_t accumulate_size(parse_result_t *pr) {
   if (NULL != ((parse_result_t*)pr)->ast) {
-    switch(((parse_result_t*)pr)->ast->token_type) {
+    switch (pr->ast->token_type) {
     case TT_BYTES:
-      tmp += ((parse_result_t*)pr)->ast->bytes.len;
-      acc = GSIZE_TO_POINTER(tmp);
-      break;
+      return pr->ast->bytes.len;
     case TT_SINT:
     case TT_UINT:
-      tmp += 8;
-      acc = GSIZE_TO_POINTER(tmp);
-      break;
-    case TT_SEQUENCE:
-      g_sequence_foreach(((parse_result_t*)pr)->ast->seq, accumulate_size, acc);
-      break;
+      return sizeof(pr->ast->uint);
+    case TT_SEQUENCE: {
+      counted_array_t *arr = pr->ast->seq;
+      size_t ret = 0;
+      for (size_t i = 0; i < arr->used; i++)
+	ret += accumulate_size(arr->elements[i]);
+      return ret;
+    }
     default:
-      break;
+      return 0;
     }
   } // no else, if the AST is null then acc doesn't change
+  return 0;
 }
 
 size_t token_length(parse_result_t *pr) {
-  size_t ret = 0;
   if (NULL == pr) {
-    return ret;
+    return 0;
   } else {
-    accumulate_size(pr, GSIZE_TO_POINTER(ret));
+    return accumulate_size(pr);
   }
-  return ret;
 }
 
 static parse_result_t* parse_butnot(void *env, parse_state_t *state) {
@@ -464,9 +464,10 @@ typedef struct {
   size_t count;
   bool min_p;
 } repeat_t;
+
 static parse_result_t *parse_many(void* env, parse_state_t *state) {
   repeat_t *env_ = (repeat_t*) env;
-  GSequence *seq = g_sequence_new(NULL);
+  counted_array_t *seq = carray_new_sized(state->arena, (env_->count > 0 ? env_->count : 4));
   size_t count = 0;
   input_stream_t bak;
   while (env_->min_p || env_->count > count) {
@@ -480,7 +481,7 @@ static parse_result_t *parse_many(void* env, parse_state_t *state) {
     if (!elem)
       goto err0;
     if (elem->ast)
-      g_sequence_append(seq, (gpointer)elem->ast);
+      carray_append(seq, (void*)elem->ast);
     count++;
   }
   if (count < env_->count)
@@ -497,7 +498,6 @@ static parse_result_t *parse_many(void* env, parse_state_t *state) {
     goto succ;
   }
  err:
-  g_sequence_free(seq);
   state->input_stream = bak;
   return NULL;
 }
@@ -653,10 +653,10 @@ parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t lengt
   parse_state->input_stream.length = length;
   parse_state->arena = arena;
   parse_result_t *res = do_parse(parser, parse_state);
-  // tear down the parse state. For now, leak like a sieve.
-  // BUG: Leaks like a sieve.
-  // TODO(thequux): Pull in the arena allocator.
+  // tear down the parse state
   g_hash_table_destroy(parse_state->cache);
+  if (!res)
+    delete_arena(parse_state->arena);
 
   return res;
 }
@@ -851,11 +851,12 @@ static void test_xor(void) {
 
 static void test_many(void) {
   const parser_t *many_ = many(choice(ch('a'), ch('b'), NULL));
-
-  g_check_parse_ok(many_, "adef", 4, "(s0x61)");
-  g_check_parse_ok(many_, "bdef", 4, "(s0x62)");
-  g_check_parse_ok(many_, "aabbabadef", 10, "(s0x61 s0x61 s0x62 s0x62 s0x61 s0x62 s0x61)");
-  g_check_parse_ok(many_, "daabbabadef", 11, "()");
+  for (int i = 0; i < 100; i++) {
+    g_check_parse_ok(many_, "adef", 4, "(s0x61)");
+    g_check_parse_ok(many_, "bdef", 4, "(s0x62)");
+    g_check_parse_ok(many_, "aabbabadef", 10, "(s0x61 s0x61 s0x62 s0x62 s0x61 s0x62 s0x61)");
+    g_check_parse_ok(many_, "daabbabadef", 11, "()");
+  }
 }
 
 static void test_many1(void) {
