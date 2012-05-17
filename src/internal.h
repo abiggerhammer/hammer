@@ -84,8 +84,8 @@ typedef enum parser_cache_value_type {
 /* A recursion head.
  *
  * Members:
- *   head_parser -
- *   involved_set -
+ *   head_parser - the parse rule that started this recursion
+ *   involved_set - A list of rules (parser_t's) involved in the recursion
  *   eval_set - 
  */
 typedef struct head {

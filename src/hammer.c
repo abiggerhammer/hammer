@@ -59,13 +59,23 @@ parser_cache_value_t* recall(parser_cache_key_t *k, parse_state_t *state) {
   }
 }
 
+/* Setting up the left recursion. We have the LR for the rule head;
+ * we modify the involved_sets of all LRs in the stack, until we 
+ * see the current parser again.
+ */
+
 void setupLR(const parser_t *p, GQueue *stack, LR_t *rec_detect) {
   if (!rec_detect->head) {
     head_t *some = g_new(head_t, 1);
     some->head_parser = p; some->involved_set = NULL; some->eval_set = NULL;
     rec_detect->head = some;
   }
-  
+  size_t i = 0;
+  LR_t *lr = g_queue_peek_nth(stack, i);
+  while (lr && lr->rule != p) {
+    lr->head = rec_detect->head;
+    lr->head->involved_set = g_slist_prepend(lr->head->involved_set, (gpointer)lr->rule);
+  }
 }
 
 parse_result_t* lr_answer(const parser_t *p, parse_state_t *state, LR_t *growable) {
