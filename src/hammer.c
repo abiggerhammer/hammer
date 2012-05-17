@@ -35,7 +35,36 @@ guint djbhash(const uint8_t *buf, size_t len) {
   return hash;
 }
 
-void setupLR(const parser_t *p, GQueue *stack, LR_t *recDetect) {
+parser_cache_value_t* recall(parser_cache_key_t *k, parse_state_t *state) {
+  parser_cache_value_t *cached = g_hash_table_lookup(state->cache, k);
+  head_t *head = g_hash_table_lookup(state->recursion_heads, &(state->input_stream));
+  if (!head) { // No heads found
+    return cached;
+  } else { // Some heads found
+    if (!cached && head->head_parser != k->parser && !g_slist_find(head->involved_set, k->parser)) {
+      // Nothing in the cache, and the key parser is not involved
+      return /* TODO(mlp): figure out what to return here instead of Some(MemoEntry(Right(Failure("dummy", in")))) */ NULL;
+    }
+    if (g_slist_find(head->eval_set, k->parser)) {
+      // Something is in the cache, and the key parser is in the eval set. Remove the key parser from the eval set of the head. 
+      head->eval_set = g_slist_remove_all(head->eval_set, k->parser);
+      parse_result_t *tmp_res = k->parser->fn(k->parser->env, state);
+      if (tmp_res)
+	tmp_res->arena = state->arena;
+      // we know that cached has an entry here, modify it
+      cached->value_type = PC_RIGHT;
+      cached->right = tmp_res;
+    }
+    return cached;
+  }
+}
+
+void setupLR(const parser_t *p, GQueue *stack, LR_t *rec_detect) {
+  if (!rec_detect->head) {
+    head_t *some = g_new(head_t, 1);
+    some->head_parser = p; some->involved_set = NULL; some->eval_set = NULL;
+    rec_detect->head = some;
+  }
   
 }
 
@@ -47,6 +76,7 @@ parse_result_t* grow(const parser_t *p, parse_state_t *state, head_t *head) {
   return NULL;
 }
 
+/* Warth's recursion. Hi Alessandro! */
 parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
   // TODO(thequux): add caching here.
   parser_cache_key_t *key = a_new(parser_cache_key_t, 1);
@@ -67,7 +97,8 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
     parse_result_t *tmp_res;
     if (parser) {
       tmp_res = parser->fn(parser->env, state);
-      tmp_res->arena = state->arena;
+      if (tmp_res)
+	tmp_res->arena = state->arena;
     } else
       tmp_res = NULL;
     if (state->input_stream.overrun)

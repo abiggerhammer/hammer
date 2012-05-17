@@ -20,37 +20,15 @@
 #include <glib.h>
 #include <stdint.h>
 #include "allocator.h"
-/* The state of the parser.
- *
- * Members:
- *   input - the entire string being parsed
- *   index - current position in input
- *   length - size of input
- *   cache - a hash table describing the state of the parse, including partial parse_results. It's a hash table from parser_cache_key_t to parse_state_t. 
- *
- */
+
 #define BYTE_BIG_ENDIAN 0x1
 #define BIT_BIG_ENDIAN 0x2
 #define BIT_LITTLE_ENDIAN 0x0
 #define BYTE_LITTLE_ENDIAN 0x0
 
 typedef int bool;
-typedef struct input_stream {
-  // This should be considered to be a really big value type.
-  const uint8_t *input;
-  size_t index;
-  size_t length;
-  char bit_offset;
-  char endianness;
-  char overrun;
-} input_stream_t;
-  
-typedef struct parse_state {
-  GHashTable *cache; 
-  input_stream_t input_stream;
-  arena_t arena;
-  GQueue *lr_stack;
-} parse_state_t;
+
+typedef struct parse_state parse_state_t;
 
 typedef enum token_type {
   TT_NONE,

@@ -32,28 +32,85 @@
 #define false 0
 #define true 1
 
+typedef struct input_stream {
+  // This should be considered to be a really big value type.
+  const uint8_t *input;
+  size_t index;
+  size_t length;
+  char bit_offset;
+  char endianness;
+  char overrun;
+} input_stream_t;
+
+/* The state of the parser.
+ *
+ * Members:
+ *   cache - a hash table describing the state of the parse, including partial parse_results. It's a hash table from parser_cache_key_t to parser_cache_value_t. 
+ *   input_stream - the input stream at this state.
+ *   arena - the arena that has been allocated for the parse this state is in.
+ *   lr_stack - used in Warth's recursion
+ *   recursion_heads - used in Warth's recursion
+ *
+ */
+  
+typedef struct parse_state {
+  GHashTable *cache; 
+  input_stream_t input_stream;
+  arena_t arena;
+  GQueue *lr_stack;
+  GHashTable *recursion_heads;
+} parse_state_t;
+
+/* The (location, parser) tuple used to key the cache.
+ */
+
 typedef struct parser_cache_key {
   input_stream_t input_pos;
   const parser_t *parser;
 } parser_cache_key_t;
+
+/* A value in the cache is either of value Left or Right (this is a 
+ * holdover from Scala, which used Either here). Left corresponds to
+ * LR_t, which is for left recursion; Right corresponds to 
+ * parse_result_t.
+ */
 
 typedef enum parser_cache_value_type {
   PC_LEFT,
   PC_RIGHT
 } parser_cache_value_type_t;
 
+
+/* A recursion head.
+ *
+ * Members:
+ *   head_parser -
+ *   involved_set -
+ *   eval_set - 
+ */
 typedef struct head {
-  parser_t *head_parser;
+  const parser_t *head_parser;
   GSList *involved_set;
   GSList *eval_set;
 } head_t;
 
+
+/* A left recursion.
+ *
+ * Members:
+ *   seed -
+ *   rule -
+ *   head -
+ */
 typedef struct LR {
   parse_result_t *seed;
   const parser_t *rule;
   head_t *head;
 } LR_t;
 
+/* Tagged union for values in the cache: either LR's (Left) or 
+ * parse_result_t's (Right).
+ */
 typedef struct parser_cache_value {
   parser_cache_value_type_t value_type;
   union {
