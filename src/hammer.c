@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <error.h>
 
 #define a_new_(arena, typ, count) ((typ*)arena_malloc((arena), sizeof(typ)*(count)))
 #define a_new(typ, count) a_new_(state->arena, typ, count)
@@ -35,39 +36,170 @@ guint djbhash(const uint8_t *buf, size_t len) {
   return hash;
 }
 
-parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
-  // TODO(thequux): add caching here.
-  parser_cache_key_t *key;
-  key = a_new(parser_cache_key_t, 1);
-  memset(key, 0, sizeof(*key));
-  key->input_pos = state->input_stream;
-  key->parser = parser;
+parser_cache_value_t* recall(parser_cache_key_t *k, parse_state_t *state) {
+  parser_cache_value_t *cached = g_hash_table_lookup(state->cache, k);
+  head_t *head = g_hash_table_lookup(state->recursion_heads, k);
+  if (!head) { // No heads found
+    return cached;
+  } else { // Some heads found
+    if (!cached && head->head_parser != k->parser && !g_slist_find(head->involved_set, k->parser)) {
+      // Nothing in the cache, and the key parser is not involved
+      parse_result_t *tmp = g_new(parse_result_t, 1);
+      tmp->ast = NULL; tmp->arena = state->arena;
+      parser_cache_value_t *ret = g_new(parser_cache_value_t, 1);
+      ret->value_type = PC_RIGHT; ret->right = tmp;
+      return ret;
+    }
+    if (g_slist_find(head->eval_set, k->parser)) {
+      // Something is in the cache, and the key parser is in the eval set. Remove the key parser from the eval set of the head. 
+      head->eval_set = g_slist_remove_all(head->eval_set, k->parser);
+      parse_result_t *tmp_res = k->parser->fn(k->parser->env, state);
+      if (tmp_res)
+	tmp_res->arena = state->arena;
+      // we know that cached has an entry here, modify it
+      cached->value_type = PC_RIGHT;
+      cached->right = tmp_res;
+    }
+    return cached;
+  }
+}
+
+/* Setting up the left recursion. We have the LR for the rule head;
+ * we modify the involved_sets of all LRs in the stack, until we 
+ * see the current parser again.
+ */
+
+void setupLR(const parser_t *p, GQueue *stack, LR_t *rec_detect) {
+  if (!rec_detect->head) {
+    head_t *some = g_new(head_t, 1);
+    some->head_parser = p; some->involved_set = NULL; some->eval_set = NULL;
+    rec_detect->head = some;
+  }
+  size_t i = 0;
+  LR_t *lr = g_queue_peek_nth(stack, i);
+  while (lr && lr->rule != p) {
+    lr->head = rec_detect->head;
+    lr->head->involved_set = g_slist_prepend(lr->head->involved_set, (gpointer)lr->rule);
+  }
+}
+
+/* If recall() returns NULL, we need to store a dummy failure in the cache and compute the
+ * future parse. 
+ */
+
+parse_result_t* grow(parser_cache_key_t *k, parse_state_t *state, head_t *head) {
+  // Store the head into the recursion_heads
+  g_hash_table_replace(state->recursion_heads, k, head);
+  parser_cache_value_t *old_cached = g_hash_table_lookup(state->cache, k);
+  if (!old_cached || PC_LEFT == old_cached->value_type)
+    errx(1, "impossible match");
+  parse_result_t *old_res = old_cached->right;
   
-  // check to see if there is already a result for this object...
-  if (g_hash_table_contains(state->cache, &key)) {
-    // it exists!
-    // TODO(thequux): handle left recursion case
-    return g_hash_table_lookup(state->cache, &key);
+  // reset the eval_set of the head of the recursion at each beginning of growth
+  head->eval_set = head->involved_set;
+  parse_result_t *tmp_res;
+  if (k->parser) {
+    tmp_res = k->parser->fn(k->parser->env, state);
+    if (tmp_res)
+      tmp_res->arena = state->arena;
+  } else
+    tmp_res = NULL;
+  if (tmp_res) {
+    if ((old_res->ast->index < tmp_res->ast->index) || 
+	(old_res->ast->index == tmp_res->ast->index && old_res->ast->bit_offset < tmp_res->ast->bit_offset)) {
+      parser_cache_value_t *v = g_new(parser_cache_value_t, 1);
+      v->value_type = PC_RIGHT; v->right = tmp_res;
+      g_hash_table_replace(state->cache, k, v);
+      return grow(k, state, head);
+    } else {
+      // we're done with growing, we can remove data from the recursion head
+      g_hash_table_remove(state->recursion_heads, k);
+      parser_cache_value_t *cached = g_hash_table_lookup(state->cache, k);
+      if (cached && PC_RIGHT == cached->value_type) {
+	return cached->right;
+      } else {
+	errx(1, "impossible match");
+      }
+    }
   } else {
-    // It doesn't exist... run the 
-    parse_result_t *res;
+    g_hash_table_remove(state->recursion_heads, k);
+    return old_res;
+  }
+}
+
+parse_result_t* lr_answer(parser_cache_key_t *k, parse_state_t *state, LR_t *growable) {
+  if (growable->head) {
+    if (growable->head->head_parser != k->parser) {
+      // not the head rule, so not growing
+      return growable->seed;
+    }
+    else {
+      // update cache
+      parser_cache_value_t *v = g_new(parser_cache_value_t, 1);
+      v->value_type = PC_RIGHT; v->right = growable->seed;
+      g_hash_table_replace(state->cache, k, v);
+      if (!growable->seed)
+	return NULL;
+      else
+	return grow(k, state, growable->head);
+    }
+  } else {
+    errx(1, "lrAnswer with no head");
+  }
+}
+
+/* Warth's recursion. Hi Alessandro! */
+parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
+  parser_cache_key_t *key = a_new(parser_cache_key_t, 1);
+  key->input_pos = state->input_stream; key->parser = parser;
+  parser_cache_value_t *m = recall(key, state);
+  // check to see if there is already a result for this object...
+  if (!m) {
+    // It doesn't exist, so create a dummy result to cache
+    LR_t *base = a_new(LR_t, 1);
+    base->seed = NULL; base->rule = parser; base->head = NULL;
+    g_queue_push_head(state->lr_stack, base);
+    // cache it
+    parser_cache_value_t *dummy = a_new(parser_cache_value_t, 1);
+    dummy->value_type = PC_LEFT; dummy->left = base;
+    g_hash_table_replace(state->cache, key, dummy);
+    // parse the input
+    parse_result_t *tmp_res;
     if (parser) {
-      res = parser->fn(parser->env, state);
-      if (res)
-	res->arena = state->arena;
+      tmp_res = parser->fn(parser->env, state);
+      if (tmp_res)
+	tmp_res->arena = state->arena;
     } else
-      res = NULL;
+      tmp_res = NULL;
     if (state->input_stream.overrun)
-      res = NULL; // overrun is always failure.
-    // update the cache
-    g_hash_table_replace(state->cache, &key, res);
+      return NULL; // overrun is always failure.
 #ifdef CONSISTENCY_CHECK
-    if (!res) {
+    if (!tmp_res) {
       state->input_stream = INVALID;
-      state->input_stream.input = key.input_pos.input;
+      state->input_stream.input = key->input_pos.input;
     }
 #endif
-    return res;
+    // the base variable has passed equality tests with the cache
+    g_queue_pop_head(state->lr_stack);
+    // setupLR, used below, mutates the LR to have a head if appropriate, so we check to see if we have one
+    if (NULL == base->head) {
+      parser_cache_value_t *right = a_new(parser_cache_value_t, 1);
+      right->value_type = PC_RIGHT; right->right = tmp_res;
+      g_hash_table_replace(state->cache, key, right);
+      return tmp_res;
+    } else {
+      base->seed = tmp_res;
+      parse_result_t *res = lr_answer(key, state, base);
+      return res;
+    }
+  } else {
+    // it exists!
+    if (PC_LEFT == m->value_type) {
+      setupLR(parser, state->lr_stack, m->left);
+      return m->left->seed; // BUG: this might not be correct
+    } else {
+      return m->right;
+    }
   }
 }
 
@@ -611,6 +743,22 @@ const parser_t* epsilon_p() {
   res->env = NULL;
   return res;
 }
+
+
+static parse_result_t* parse_indirect(void* env, parse_state_t* state) {
+  return do_parse(env, state);
+}
+void bind_indirect(parser_t* indirect, parser_t* inner) {
+  indirect->env = inner;
+}
+
+parser_t* indirect() {
+  parser_t *res = g_new(parser_t, 1);
+  res->fn = parse_indirect;
+  res->env = NULL;
+  return res;
+}
+
 const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return &unimplemented; }
 const parser_t* and(const parser_t* p) { return &unimplemented; }
 
@@ -651,8 +799,13 @@ parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t lengt
   parse_state->input_stream.overrun = 0;
   parse_state->input_stream.endianness = BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN;
   parse_state->input_stream.length = length;
+  parse_state->lr_stack = g_queue_new();
+  parse_state->recursion_heads = g_hash_table_new(cache_key_hash,
+						  cache_key_equal);
   parse_state->arena = arena;
   parse_result_t *res = do_parse(parser, parse_state);
+  g_queue_free(parse_state->lr_stack);
+  g_hash_table_destroy(parse_state->recursion_heads);
   // tear down the parse state
   g_hash_table_destroy(parse_state->cache);
   if (!res)
@@ -851,7 +1004,7 @@ static void test_xor(void) {
 
 static void test_many(void) {
   const parser_t *many_ = many(choice(ch('a'), ch('b'), NULL));
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < 10000; i++) {
     g_check_parse_ok(many_, "adef", 4, "(s0x61)");
     g_check_parse_ok(many_, "bdef", 4, "(s0x62)");
     g_check_parse_ok(many_, "aabbabadef", 10, "(s0x61 s0x61 s0x62 s0x62 s0x61 s0x62 s0x61)");

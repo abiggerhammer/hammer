@@ -20,6 +20,7 @@
 #include <glib.h>
 #include <string.h>
 #include "hammer.h"
+#include <malloc.h>
 
 typedef struct pp_state {
   int delta;
@@ -110,10 +111,12 @@ static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
   case TT_SINT:
     len = asprintf(&tmpbuf, "u%#lx", tok->sint);
     append_buf(buf, tmpbuf, len);
+    free(tmpbuf);
     break;
   case TT_UINT:
     len = asprintf(&tmpbuf, "s%#lx", tok->uint);
     append_buf(buf, tmpbuf, len);
+    free(tmpbuf);
     break;
   case TT_ERR:
     append_buf(buf, "ERR", 3);
