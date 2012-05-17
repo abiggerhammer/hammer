@@ -48,8 +48,8 @@ typedef struct input_stream {
  *   cache - a hash table describing the state of the parse, including partial parse_results. It's a hash table from parser_cache_key_t to parser_cache_value_t. 
  *   input_stream - the input stream at this state.
  *   arena - the arena that has been allocated for the parse this state is in.
- *   lr_stack - used in Warth's recursion
- *   recursion_heads - used in Warth's recursion
+ *   lr_stack - a stack of LRs, used in Warth's recursion
+ *   recursion_heads - table of recursion heads. Keys are parse_cache_key_t's with only an input_state_t (parser can be NULL), values are head_t.
  *
  */
   

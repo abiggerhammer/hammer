@@ -53,6 +53,8 @@ typedef struct parsed_token {
     float flt;
     GSequence *seq; // a sequence of parsed_token_t's
   };
+  size_t index;
+  char bit_offset;
 } parsed_token_t;
 
 /* If a parse fails, the parse result will be NULL.
