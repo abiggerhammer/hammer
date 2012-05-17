@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <error.h>
 
 #define a_new_(arena, typ, count) ((typ*)arena_malloc((arena), sizeof(typ)*(count)))
 #define a_new(typ, count) a_new_(state->arena, typ, count)
@@ -78,12 +79,33 @@ void setupLR(const parser_t *p, GQueue *stack, LR_t *rec_detect) {
   }
 }
 
-parse_result_t* lr_answer(const parser_t *p, parse_state_t *state, LR_t *growable) {
-  return NULL;
-}
+/* If recall() returns NULL, we need to store a dummy failure in the cache and compute the
+ * future parse. 
+ */
 
 parse_result_t* grow(const parser_t *p, parse_state_t *state, head_t *head) {
   return NULL;
+}
+
+parse_result_t* lr_answer(parser_cache_key_t *k, parse_state_t *state, LR_t *growable) {
+  if (growable->head) {
+    if (growable->head->head_parser != k->parser) {
+      // not the head rule, so not growing
+      return growable->seed;
+    }
+    else {
+      // update cache
+      parser_cache_value_t *v = g_new(parser_cache_value_t, 1);
+      v->value_type = PC_RIGHT; v->right = growable->seed;
+      g_hash_table_replace(state->cache, k, v);
+      if (!growable->seed)
+	return NULL;
+      else
+	return grow(k->parser, state, growable->head);
+    }
+  } else {
+    errx(1, "lrAnswer with no head");
+  }
 }
 
 /* Warth's recursion. Hi Alessandro! */
@@ -129,7 +151,7 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
       return tmp_res;
     } else {
       base->seed = tmp_res;
-      parse_result_t *res = lr_answer(parser, state, base);
+      parse_result_t *res = lr_answer(key, state, base);
       return res;
     }
   } else {
