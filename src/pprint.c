@@ -47,10 +47,14 @@ void pprint(const parsed_token_t* tok, int indent, int delta) {
     }
     break;
   case TT_SINT:
-    printf("%*su %#lx\n", indent, "", tok->sint);
+    if (tok->sint < 0)
+      printf("%*ss -%#lx\n", indent, "", -tok->sint);
+    else
+      printf("%*ss %#lx\n", indent, "", tok->sint);
+      
     break;
   case TT_UINT:
-     printf("%*ss %#lx\n", indent, "", tok->uint);
+     printf("%*su %#lx\n", indent, "", tok->uint);
     break;
   case TT_SEQUENCE: {
     printf("%*s[\n", indent, "");
@@ -109,12 +113,15 @@ static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
     }
     break;
   case TT_SINT:
-    len = asprintf(&tmpbuf, "u%#lx", tok->sint);
+    if (tok->sint < 0)
+      len = asprintf(&tmpbuf, "s-%#lx", -tok->sint);
+    else
+      len = asprintf(&tmpbuf, "s%#lx", tok->sint);
     append_buf(buf, tmpbuf, len);
     free(tmpbuf);
     break;
   case TT_UINT:
-    len = asprintf(&tmpbuf, "s%#lx", tok->uint);
+    len = asprintf(&tmpbuf, "u%#lx", tok->uint);
     append_buf(buf, tmpbuf, len);
     free(tmpbuf);
     break;

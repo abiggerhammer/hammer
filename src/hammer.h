@@ -123,12 +123,6 @@ const parser_t* uint16();
 /* Returns a parser that parses an unsigned 1-byte integer value. */
 const parser_t* uint8();
 
-/* Returns a parser that parses a double-precision floating-point value. */
-const parser_t* float64();
-
-/* Returns a parser that parses a single-precision floating-point value. */
-const parser_t* float32();
-
 /* Given another parser, p, returns a parser that skips any whitespace and then applies p. */
 const parser_t* whitespace(const parser_t* p);
 
