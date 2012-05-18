@@ -36,6 +36,7 @@ typedef enum token_type {
   TT_SINT,
   TT_UINT,
   TT_SEQUENCE,
+  TT_USER = 64,
   TT_ERR,
   TT_MAX
 } token_type_t;
@@ -59,6 +60,7 @@ typedef struct parsed_token {
     double dbl;
     float flt;
     counted_array_t *seq; // a sequence of parsed_token_t's
+    void *user;
   };
   size_t index;
   char bit_offset;

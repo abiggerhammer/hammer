@@ -297,7 +297,29 @@ const parser_t* whitespace(const parser_t* p) {
   return ret;
 }
 
-const parser_t* action(const parser_t* p, const action_t a) { return &unimplemented; }
+typedef struct {
+  const parser_t *p;
+  action_t action;
+} parse_action_t;
+
+static parse_result_t* parse_action(void *env, parse_state_t *state) {
+  parse_action_t *a = (parse_action_t*)env;
+  if (a->p && a->action) {
+    parse_result_t *ret = a->action(do_parse(a->p, state));
+    return ret;
+  } else // either the parser's missing or the action's missing
+    return NULL;
+}
+
+const parser_t* action(const parser_t* p, const action_t a) { 
+  parser_t *res = g_new(parser_t, 1);
+  res->fn = parse_action;
+  parse_action_t *env = g_new(parse_action_t, 1);
+  env->p = p;
+  env->action = a;
+  res->env = (void*)env;
+  return res;
+}
 
 static parse_result_t* parse_charset(void *env, parse_state_t *state) {
   uint8_t in = read_bits(&state->input_stream, 8, false);
