@@ -744,7 +744,6 @@ const parser_t* epsilon_p() {
   return res;
 }
 
-
 static parse_result_t* parse_indirect(void* env, parse_state_t* state) {
   return do_parse(env, state);
 }
@@ -759,7 +758,17 @@ parser_t* indirect() {
   return res;
 }
 
+typedef struct {
+  predicate_t pred;
+} attr_bool_t;
+
+static parse_result_t* parse_attr_bool(void *env, parse_state_t *state) {
+
+
+}
+
 const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return &unimplemented; }
+
 const parser_t* and(const parser_t* p) { return &unimplemented; }
 
 static parse_result_t* parse_not(void* env, parse_state_t* state) {

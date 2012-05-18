@@ -78,7 +78,7 @@ typedef struct parse_result {
 typedef parse_result_t* (*action_t)(parse_result_t *p);
 
 /* Type of a boolean attribute-checking function, used in the attr_bool() parser. */
-typedef int (*attr_bool_t)(void *env);
+typedef int (*predicate_t)(parse_result_t *p);
 
 typedef struct parser {
   parse_result_t* (*fn)(void *env, parse_state_t *state);
