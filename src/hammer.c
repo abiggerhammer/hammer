@@ -759,15 +759,31 @@ parser_t* indirect() {
 }
 
 typedef struct {
+  const parser_t *p;
   predicate_t pred;
 } attr_bool_t;
 
 static parse_result_t* parse_attr_bool(void *env, parse_state_t *state) {
-
-
+  attr_bool_t *a = (attr_bool_t*)env;
+  parse_result_t *res = do_parse(a->p, state);
+  if (res) {
+    if (a->pred(res))
+      return res;
+    else
+      return NULL;
+  } else
+    return NULL;
 }
 
-const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return &unimplemented; }
+const parser_t* attr_bool(const parser_t* p, predicate_t pred) { 
+  parser_t *res = g_new(parser_t, 1);
+  res->fn = parse_attr_bool;
+  attr_bool_t *env = g_new(attr_bool_t, 1);
+  env->p = p;
+  env->pred = pred;
+  res->env = (void*)env;
+  return res;
+}
 
 const parser_t* and(const parser_t* p) { return &unimplemented; }
 
