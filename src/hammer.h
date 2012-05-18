@@ -66,10 +66,11 @@ typedef struct parsed_token {
   char bit_offset;
 } parsed_token_t;
 
-
-
-/* If a parse fails, the parse result will be NULL.
- * If a parse is successful but there's nothing there (i.e., if end_p succeeds) then there's a parse result but its ast is NULL.
+/**
+ * The result of a successful parse.
+ * If a parse fails, the parse result will be NULL.
+ * If a parse is successful but there's nothing there (i.e., if end_p 
+ * succeeds) then there's a parse result but its ast is NULL.
  */
 typedef struct parse_result {
   const parsed_token_t *ast;
@@ -78,13 +79,20 @@ typedef struct parse_result {
 
 /**
  * Type of an action to apply to an AST, used in the action() parser. 
+ * It can be any (user-defined) function that takes a parse_result_t*
+ * and returns a parsed_token_t*. (This is so that the user doesn't 
+ * have to worry about memory allocation; action() does that for you.)
+ * Note that the tagged union in parsed_token_t* supports user-defined 
+ * types, so you can create your own token types (corresponding to, 
+ * say, structs) and stuff values for them into the void* in the 
+ * tagged union in parsed_token_t. 
  */
-typedef parse_result_t* (*action_t)(parse_result_t *p);
+typedef parsed_token_t* (*action_t)(parse_result_t *p);
 
 /**
  * Type of a boolean attribute-checking function, used in the 
  * attr_bool() parser. It can be any (user-defined) function that takes
- * a parse_result_t and returns true or false. 
+ * a parse_result_t* and returns true or false. 
  */
 typedef bool (*predicate_t)(parse_result_t *p);
 

@@ -305,8 +305,8 @@ typedef struct {
 static parse_result_t* parse_action(void *env, parse_state_t *state) {
   parse_action_t *a = (parse_action_t*)env;
   if (a->p && a->action) {
-    parse_result_t *ret = a->action(do_parse(a->p, state));
-    return ret;
+    parsed_token_t *tok = a->action(do_parse(a->p, state));
+    return make_result(state, tok);
   } else // either the parser's missing or the action's missing
     return NULL;
 }
@@ -971,7 +971,7 @@ static void test_whitespace(void) {
   g_check_parse_failed(whitespace_, "_a", 2);
 }
 
-parse_result_t* upcase(parse_result_t *p) {
+parsed_token_t* upcase(parse_result_t *p) {
   return NULL; // shut compiler up
 }
 
