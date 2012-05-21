@@ -233,6 +233,45 @@ static parser_t unimplemented = {
   .env = NULL
 };
 
+struct bits_env {
+  uint8_t length;
+  uint8_t signedp;
+};
+
+static parse_result_t* parse_bits(void* env, parse_state_t *state) {
+  struct bits_env *env_ = env;
+  parsed_token_t *result = a_new(parsed_token_t, 1);
+  result->token_type = (env_->signedp ? TT_SINT : TT_UINT);
+  if (env_->signedp)
+    result->sint = read_bits(&state->input_stream, env_->length, true);
+  else
+    result->uint = read_bits(&state->input_stream, env_->length, false);
+  return make_result(state, result);
+}
+
+const parser_t* bits(size_t len, bool sign) {
+  struct bits_env *env = g_new(struct bits_env, 1);
+  env->length = len;
+  env->signedp = sign;
+  parser_t *res = g_new(parser_t, 1);
+  res->fn = parse_bits;
+  res->env = env;
+  return res;
+}
+
+#define SIZED_BITS(name_pre, len, signedp) \
+  const parser_t* name_pre##len () {	       \
+    return bits(len, signedp);	       \
+  }
+SIZED_BITS(int, 8, true)
+SIZED_BITS(int, 16, true)
+SIZED_BITS(int, 32, true)
+SIZED_BITS(int, 64, true)
+SIZED_BITS(uint, 8, false)
+SIZED_BITS(uint, 16, false)
+SIZED_BITS(uint, 32, false)
+SIZED_BITS(uint, 64, false)
+
 static parse_result_t* parse_token(void *env, parse_state_t *state) {
   token_t *t = (token_t*)env;
   for (int i=0; i<t->len; ++i) {
@@ -864,7 +903,6 @@ parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t lengt
 #ifdef INCLUDE_TESTS
 
 #include "test_suite.h"
-
 static void test_token(void) {
   const parser_t *token_ = token((const uint8_t*)"95\xa2", 3);
 
@@ -875,76 +913,76 @@ static void test_token(void) {
 static void test_ch(void) {
   const parser_t *ch_ = ch(0xa2);
 
-  g_check_parse_ok(ch_, "\xa2", 1, "s0xa2");
+  g_check_parse_ok(ch_, "\xa2", 1, "u0xa2");
   g_check_parse_failed(ch_, "\xa3", 1);
 }
 
 static void test_range(void) {
   const parser_t *range_ = range('a', 'c');
 
-  g_check_parse_ok(range_, "b", 1, "s0x62");
+  g_check_parse_ok(range_, "b", 1, "u0x62");
   g_check_parse_failed(range_, "d", 1);
 }
 
-#if 0
+//@MARK_START
 static void test_int64(void) {
-  uint8_t test1[8] = { 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x00, 0x00 };
-  uint8_t test2[7] = { 0xff, 0xff, 0xff, 0xfe, 0x00, 0x00, 0x00 };
   const parser_t *int64_ = int64();
 
-  g_check_parse_ok(int64_, "\xff\xff\xff\xfe\x00\x00\x00\x00", 8, -8589934592);
+  g_check_parse_ok(int64_, "\xff\xff\xff\xfe\x00\x00\x00\x00", 8, "s-0x200000000");
   g_check_parse_failed(int64_, "\xff\xff\xff\xfe\x00\x00\x00", 7);
 }
 
 static void test_int32(void) {
   const parser_t *int32_ = int32();
 
-  g_check_parse_ok(int32_, "\xff\xfe\x00\x00", 4, -131072);
+  g_check_parse_ok(int32_, "\xff\xfe\x00\x00", 4, "s-0x20000");
   g_check_parse_failed(int32_, "\xff\xfe\x00", 3);
 }
 
 static void test_int16(void) {
   const parser_t *int16_ = int16();
 
-  g_check_parse_ok(int16_, "\xfe\x00", 2, -512);
+  g_check_parse_ok(int16_, "\xfe\x00", 2, "s0x200");
   g_check_parse_failed(int16_, "\xfe", 1);
 }
 
 static void test_int8(void) {
   const parser_t *int8_ = int8();
 
-  g_check_parse_ok(int8_, "\x88", 1, -120);
-  g_check_parse_failed(int8_, "", 0)
+  g_check_parse_ok(int8_, "\x88", 1, "s-0x78");
+  g_check_parse_failed(int8_, "", 0);
 }
 
 static void test_uint64(void) {
   const parser_t *uint64_ = uint64();
 
-  g_check_parse_ok(uint64_, "\x00\x00\x00\x02\x00\x00\x00\x00", 8, 8589934592);
+  g_check_parse_ok(uint64_, "\x00\x00\x00\x02\x00\x00\x00\x00", 8, "u0x200000000");
   g_check_parse_failed(uint64_, "\x00\x00\x00\x02\x00\x00\x00", 7);
 }
 
 static void test_uint32(void) {
   const parser_t *uint32_ = uint32();
 
-  g_check_parse_ok(uint32_, "\x00\x02\x00\x00", 4, 131072);
-  g_check_parse_failed(uint32_, "\x00\x02\x00", 3)
+  g_check_parse_ok(uint32_, "\x00\x02\x00\x00", 4, "u0x20000");
+  g_check_parse_failed(uint32_, "\x00\x02\x00", 3);
 }
 
 static void test_uint16(void) {
   const parser_t *uint16_ = uint16();
 
-  g_check_parse_ok(uint16_, "\x02\x00", 2, 512);
+  g_check_parse_ok(uint16_, "\x02\x00", 2, "u0x200");
   g_check_parse_failed(uint16_, "\x02", 1);
 }
 
 static void test_uint8(void) {
   const parser_t *uint8_ = uint8();
 
-  g_check_parse_ok(uint8_, "\x78", 1, 120);
+  g_check_parse_ok(uint8_, "\x78", 1, "u0x78");
   g_check_parse_failed(uint8_, "", 0);
 }
+//@MARK_END
 
+#if 0
 static void test_float64(void) {
   const parser_t *float64_ = float64();
 
@@ -964,10 +1002,10 @@ static void test_float32(void) {
 static void test_whitespace(void) {
   const parser_t *whitespace_ = whitespace(ch('a'));
 
-  g_check_parse_ok(whitespace_, "a", 1, "s0x61");
-  g_check_parse_ok(whitespace_, " a", 2, "s0x61");
-  g_check_parse_ok(whitespace_, "  a", 3, "s0x61");
-  g_check_parse_ok(whitespace_, "\ta", 2, "s0x61");
+  g_check_parse_ok(whitespace_, "a", 1, "u0x61");
+  g_check_parse_ok(whitespace_, " a", 2, "u0x61");
+  g_check_parse_ok(whitespace_, "  a", 3, "u0x61");
+  g_check_parse_ok(whitespace_, "\ta", 2, "u0x61");
   g_check_parse_failed(whitespace_, "_a", 2);
 }
 
@@ -978,21 +1016,21 @@ parsed_token_t* upcase(parse_result_t *p) {
 static void test_action(void) {
   const parser_t *action_ = action(sequence(choice(ch('a'), ch('A'), NULL), choice(ch('b'), ch('B'), NULL), NULL), upcase);
 
-  g_check_parse_ok(action_, "ab", 2, "(s0x41, s0x42)");
-  g_check_parse_ok(action_, "AB", 2, "(s0x41, s0x42)");
+  g_check_parse_ok(action_, "ab", 2, "(u0x41, u0x42)");
+  g_check_parse_ok(action_, "AB", 2, "(u0x41, u0x42)");
 }
 
 static void test_not_in(void) {
   uint8_t options[3] = { 'a', 'b', 'c' };
   const parser_t *not_in_ = not_in(options, 3);
-  g_check_parse_ok(not_in_, "d", 1, "s0x64");
+  g_check_parse_ok(not_in_, "d", 1, "u0x64");
   g_check_parse_failed(not_in_, "a", 1);
 
 }
 
 static void test_end_p(void) {
   const parser_t *end_p_ = sequence(ch('a'), end_p(), NULL);
-  g_check_parse_ok(end_p_, "a", 1, "(s0x61)");
+  g_check_parse_ok(end_p_, "a", 1, "(u0x61)");
   g_check_parse_failed(end_p_, "aa", 2);
 }
 
@@ -1007,19 +1045,19 @@ static void test_sequence(void) {
   const parser_t *sequence_1 = sequence(ch('a'), ch('b'), NULL);
   const parser_t *sequence_2 = sequence(ch('a'), whitespace(ch('b')), NULL);
 
-  g_check_parse_ok(sequence_1, "ab", 2, "(s0x61 s0x62)");
+  g_check_parse_ok(sequence_1, "ab", 2, "(u0x61 u0x62)");
   g_check_parse_failed(sequence_1, "a", 1);
   g_check_parse_failed(sequence_1, "b", 1);
-  g_check_parse_ok(sequence_2, "ab", 2, "(s0x61 s0x62)");
-  g_check_parse_ok(sequence_2, "a b", 3, "(s0x61 s0x62)");
-  g_check_parse_ok(sequence_2, "a  b", 4, "(s0x61 s0x62)");  
+  g_check_parse_ok(sequence_2, "ab", 2, "(u0x61 u0x62)");
+  g_check_parse_ok(sequence_2, "a b", 3, "(u0x61 u0x62)");
+  g_check_parse_ok(sequence_2, "a  b", 4, "(u0x61 u0x62)");  
 }
 
 static void test_choice(void) {
   const parser_t *choice_ = choice(ch('a'), ch('b'), NULL);
 
-  g_check_parse_ok(choice_, "a", 1, "s0x61");
-  g_check_parse_ok(choice_, "b", 1, "s0x62");
+  g_check_parse_ok(choice_, "a", 1, "u0x61");
+  g_check_parse_ok(choice_, "b", 1, "u0x62");
   g_check_parse_failed(choice_, "c", 1);
 }
 
@@ -1027,9 +1065,9 @@ static void test_butnot(void) {
   const parser_t *butnot_1 = butnot(ch('a'), token((const uint8_t*)"ab", 2));
   const parser_t *butnot_2 = butnot(range('0', '9'), ch('6'));
 
-  g_check_parse_ok(butnot_1, "a", 1, "s0x61");
+  g_check_parse_ok(butnot_1, "a", 1, "u0x61");
   g_check_parse_failed(butnot_1, "ab", 2);
-  g_check_parse_ok(butnot_1, "aa", 2, "s0x61");
+  g_check_parse_ok(butnot_1, "aa", 2, "u0x61");
   g_check_parse_failed(butnot_2, "6", 1);
 }
 
@@ -1043,8 +1081,8 @@ static void test_difference(void) {
 static void test_xor(void) {
   const parser_t *xor_ = xor(range('0', '6'), range('5', '9'));
 
-  g_check_parse_ok(xor_, "0", 1, "s0x30");
-  g_check_parse_ok(xor_, "9", 1, "s0x39");
+  g_check_parse_ok(xor_, "0", 1, "u0x30");
+  g_check_parse_ok(xor_, "9", 1, "u0x39");
   g_check_parse_failed(xor_, "5", 1);
   g_check_parse_failed(xor_, "a", 1);
 }
@@ -1052,9 +1090,9 @@ static void test_xor(void) {
 static void test_many(void) {
   const parser_t *many_ = many(choice(ch('a'), ch('b'), NULL));
   for (int i = 0; i < 10000; i++) {
-    g_check_parse_ok(many_, "adef", 4, "(s0x61)");
-    g_check_parse_ok(many_, "bdef", 4, "(s0x62)");
-    g_check_parse_ok(many_, "aabbabadef", 10, "(s0x61 s0x61 s0x62 s0x62 s0x61 s0x62 s0x61)");
+    g_check_parse_ok(many_, "adef", 4, "(u0x61)");
+    g_check_parse_ok(many_, "bdef", 4, "(u0x62)");
+    g_check_parse_ok(many_, "aabbabadef", 10, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
     g_check_parse_ok(many_, "daabbabadef", 11, "()");
   }
 }
@@ -1062,9 +1100,9 @@ static void test_many(void) {
 static void test_many1(void) {
   const parser_t *many1_ = many1(choice(ch('a'), ch('b'), NULL));
 
-  g_check_parse_ok(many1_, "adef", 4, "(s0x61)");
-  g_check_parse_ok(many1_, "bdef", 4, "(s0x62)");
-  g_check_parse_ok(many1_, "aabbabadef", 10, "(s0x61 s0x61 s0x62 s0x62 s0x61 s0x62 s0x61)");
+  g_check_parse_ok(many1_, "adef", 4, "(u0x61)");
+  g_check_parse_ok(many1_, "bdef", 4, "(u0x62)");
+  g_check_parse_ok(many1_, "aabbabadef", 10, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
   g_check_parse_failed(many1_, "daabbabadef", 11);  
 }
 
@@ -1072,16 +1110,16 @@ static void test_repeat_n(void) {
   const parser_t *repeat_n_ = repeat_n(choice(ch('a'), ch('b'), NULL), 2);
 
   g_check_parse_failed(repeat_n_, "adef", 4);
-  g_check_parse_ok(repeat_n_, "abdef", 5, "(s0x61 s0x62)");
+  g_check_parse_ok(repeat_n_, "abdef", 5, "(u0x61 u0x62)");
   g_check_parse_failed(repeat_n_, "dabdef", 6);
 }
 
 static void test_optional(void) {
   const parser_t *optional_ = sequence(ch('a'), optional(choice(ch('b'), ch('c'), NULL)), ch('d'), NULL);
   
-  g_check_parse_ok(optional_, "abd", 3, "(s0x61 s0x62 s0x64)");
-  g_check_parse_ok(optional_, "acd", 3, "(s0x61 s0x63 s0x64)");
-  g_check_parse_ok(optional_, "ad", 2, "(s0x61 null s0x64)");
+  g_check_parse_ok(optional_, "abd", 3, "(u0x61 u0x62 u0x64)");
+  g_check_parse_ok(optional_, "acd", 3, "(u0x61 u0x63 u0x64)");
+  g_check_parse_ok(optional_, "ad", 2, "(u0x61 null u0x64)");
   g_check_parse_failed(optional_, "aed", 3);
   g_check_parse_failed(optional_, "ab", 2);
   g_check_parse_failed(optional_, "ac", 2);
@@ -1090,17 +1128,17 @@ static void test_optional(void) {
 static void test_ignore(void) {
   const parser_t *ignore_ = sequence(ch('a'), ignore(ch('b')), ch('c'), NULL);
 
-  g_check_parse_ok(ignore_, "abc", 3, "(s0x61 s0x63)");
+  g_check_parse_ok(ignore_, "abc", 3, "(u0x61 u0x63)");
   g_check_parse_failed(ignore_, "ac", 2);
 }
 
 static void test_sepBy1(void) {
   const parser_t *sepBy1_ = sepBy1(choice(ch('1'), ch('2'), ch('3'), NULL), ch(','));
 
-  g_check_parse_ok(sepBy1_, "1,2,3", 5, "(s0x31 s0x32 s0x33)");
-  g_check_parse_ok(sepBy1_, "1,3,2", 5, "(s0x31 s0x33 s0x32)");
-  g_check_parse_ok(sepBy1_, "1,3", 3, "(s0x31 s0x33)");
-  g_check_parse_ok(sepBy1_, "3", 1, "(s0x33)");
+  g_check_parse_ok(sepBy1_, "1,2,3", 5, "(u0x31 u0x32 u0x33)");
+  g_check_parse_ok(sepBy1_, "1,3,2", 5, "(u0x31 u0x33 u0x32)");
+  g_check_parse_ok(sepBy1_, "1,3", 3, "(u0x31 u0x33)");
+  g_check_parse_ok(sepBy1_, "3", 1, "(u0x33)");
 }
 
 static void test_epsilon_p(void) {
@@ -1108,9 +1146,9 @@ static void test_epsilon_p(void) {
   const parser_t *epsilon_p_2 = sequence(epsilon_p(), ch('a'), NULL);
   const parser_t *epsilon_p_3 = sequence(ch('a'), epsilon_p(), NULL);
   
-  g_check_parse_ok(epsilon_p_1, "ab", 2, "(s0x61 s0x62)");
-  g_check_parse_ok(epsilon_p_2, "a", 1, "(s0x61)");
-  g_check_parse_ok(epsilon_p_3, "a", 1, "(s0x61)");
+  g_check_parse_ok(epsilon_p_1, "ab", 2, "(u0x61 u0x62)");
+  g_check_parse_ok(epsilon_p_2, "a", 1, "(u0x61)");
+  g_check_parse_ok(epsilon_p_3, "a", 1, "(u0x61)");
 }
 
 static void test_attr_bool(void) {
@@ -1122,9 +1160,9 @@ static void test_and(void) {
   const parser_t *and_2 = sequence(and(ch('0')), ch('1'), NULL);
   const parser_t *and_3 = sequence(ch('1'), and(ch('2')), NULL);
 
-  g_check_parse_ok(and_1, "0", 1, "(s0x30)");
+  g_check_parse_ok(and_1, "0", 1, "(u0x30)");
   g_check_parse_failed(and_2, "0", 1);
-  g_check_parse_ok(and_3, "12", 2, "(s0x31)");
+  g_check_parse_ok(and_3, "12", 2, "(u0x31)");
 }
 
 static void test_not(void) {
@@ -1134,17 +1172,16 @@ static void test_not(void) {
 					  token((const uint8_t*)"++", 2),
 					  NULL), ch('b'), NULL);
 
-  g_check_parse_ok(not_1, "a+b", 3, "(s0x61 s0x2b s0x62)");
+  g_check_parse_ok(not_1, "a+b", 3, "(u0x61 u0x2b u0x62)");
   g_check_parse_failed(not_1, "a++b", 4);
-  g_check_parse_ok(not_2, "a+b", 3, "(s0x61 (s0x2b) s0x62)");
-  g_check_parse_ok(not_2, "a++b", 4, "(s0x61 <2b.2b> s0x62)");
+  g_check_parse_ok(not_2, "a+b", 3, "(u0x61 (u0x2b) u0x62)");
+  g_check_parse_ok(not_2, "a++b", 4, "(u0x61 <2b.2b> u0x62)");
 }
 
 void register_parser_tests(void) {
   g_test_add_func("/core/parser/token", test_token);
   g_test_add_func("/core/parser/ch", test_ch);
   g_test_add_func("/core/parser/range", test_range);
-#if 0
   g_test_add_func("/core/parser/int64", test_int64);
   g_test_add_func("/core/parser/int32", test_int32);
   g_test_add_func("/core/parser/int16", test_int16);
@@ -1153,6 +1190,7 @@ void register_parser_tests(void) {
   g_test_add_func("/core/parser/uint32", test_uint32);
   g_test_add_func("/core/parser/uint16", test_uint16);
   g_test_add_func("/core/parser/uint8", test_uint8);
+#if 0
   g_test_add_func("/core/parser/float64", test_float64);
   g_test_add_func("/core/parser/float32", test_float32);
 #endif
