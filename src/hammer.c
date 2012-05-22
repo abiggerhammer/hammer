@@ -846,6 +846,41 @@ const parser_t* attr_bool(const parser_t* p, predicate_t pred) {
   return res;
 }
 
+typedef struct {
+  parser_t *length;
+  parser_t *value;
+} lv_t;
+
+static parse_result_t* parse_length_value(void *env, parse_state_t *state) {
+  lv_t *lv = (lv_t*)env;
+  parse_result_t *len = do_parse(lv->length, state);
+  if (!len)
+    return NULL;
+  if (len->ast->token_type != TT_UINT)
+    errx(1, "Length parser must return an unsigned integer");
+  parser_t epsilon_local = {
+    .fn = parse_epsilon,
+    .env = NULL
+  };
+  repeat_t repeat = {
+    .p = lv->value,
+    .sep = &epsilon_local,
+    .count = len->ast->uint,
+    .min_p = false
+  }
+  return parse_many((void*)repeat, state);
+}
+
+const parser_t* length_value(const parser_t* length, const parser_t* value) {
+  parser_t *res = g_new(parser_t, 1);
+  res->fn = parse_length_value;
+  lv_t *env = g_new(lv_t, 1);
+  env->length = length;
+  env->value = value;
+  res->env = (void*)env;
+  return res;
+}
+
 const parser_t* and(const parser_t* p) { return &unimplemented; }
 
 static parse_result_t* parse_not(void* env, parse_state_t* state) {
@@ -1010,7 +1045,17 @@ static void test_whitespace(void) {
 }
 
 parsed_token_t* upcase(parse_result_t *p) {
-  return NULL; // shut compiler up
+  switch(p->ast->token_type) {
+  case TT_SEQUENCE:
+    for (size_t i=0; i<p->ast->seq->used; ++i) {
+      upcase((parse_result_t*)p->ast->seq->elements[i]);
+      return p->ast;
+    }
+  case TT_UINT:
+    // if i'm a char, upcase me
+  default:
+    return p->ast;
+  }
 }
 
 static void test_action(void) {
