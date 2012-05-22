@@ -336,7 +336,31 @@ const parser_t* whitespace(const parser_t* p) {
   return ret;
 }
 
-const parser_t* action(const parser_t* p, const action_t a) { return &unimplemented; }
+typedef struct {
+  const parser_t *p;
+  action_t action;
+} parse_action_t;
+
+static parse_result_t* parse_action(void *env, parse_state_t *state) {
+  parse_action_t *a = (parse_action_t*)env;
+  if (a->p && a->action) {
+    parse_result_t *tmp = do_parse(a->p, state);
+    //parsed_token_t *tok = a->action(do_parse(a->p, state));
+    const parsed_token_t *tok = a->action(tmp);
+    return make_result(state, (parsed_token_t*)tok);
+  } else // either the parser's missing or the action's missing
+    return NULL;
+}
+
+const parser_t* action(const parser_t* p, const action_t a) { 
+  parser_t *res = g_new(parser_t, 1);
+  res->fn = parse_action;
+  parse_action_t *env = g_new(parse_action_t, 1);
+  env->p = p;
+  env->action = a;
+  res->env = (void*)env;
+  return res;
+}
 
 static parse_result_t* parse_charset(void *env, parse_state_t *state) {
   uint8_t in = read_bits(&state->input_stream, 8, false);
@@ -783,7 +807,6 @@ const parser_t* epsilon_p() {
   return res;
 }
 
-
 static parse_result_t* parse_indirect(void* env, parse_state_t* state) {
   return do_parse(env, state);
 }
@@ -798,7 +821,68 @@ parser_t* indirect() {
   return res;
 }
 
-const parser_t* attr_bool(const parser_t* p, attr_bool_t a) { return &unimplemented; }
+typedef struct {
+  const parser_t *p;
+  predicate_t pred;
+} attr_bool_t;
+
+static parse_result_t* parse_attr_bool(void *env, parse_state_t *state) {
+  attr_bool_t *a = (attr_bool_t*)env;
+  parse_result_t *res = do_parse(a->p, state);
+  if (res) {
+    if (a->pred(res))
+      return res;
+    else
+      return NULL;
+  } else
+    return NULL;
+}
+
+const parser_t* attr_bool(const parser_t* p, predicate_t pred) { 
+  parser_t *res = g_new(parser_t, 1);
+  res->fn = parse_attr_bool;
+  attr_bool_t *env = g_new(attr_bool_t, 1);
+  env->p = p;
+  env->pred = pred;
+  res->env = (void*)env;
+  return res;
+}
+
+typedef struct {
+  const parser_t *length;
+  const parser_t *value;
+} lv_t;
+
+static parse_result_t* parse_length_value(void *env, parse_state_t *state) {
+  lv_t *lv = (lv_t*)env;
+  parse_result_t *len = do_parse(lv->length, state);
+  if (!len)
+    return NULL;
+  if (len->ast->token_type != TT_UINT)
+    errx(1, "Length parser must return an unsigned integer");
+  parser_t epsilon_local = {
+    .fn = parse_epsilon,
+    .env = NULL
+  };
+  repeat_t repeat = {
+    .p = lv->value,
+    .sep = &epsilon_local,
+    .count = len->ast->uint,
+    .min_p = false
+  };
+  return parse_many(&repeat, state);
+}
+
+const parser_t* length_value(const parser_t* length, const parser_t* value) {
+  parser_t *res = g_new(parser_t, 1);
+  res->fn = parse_length_value;
+  lv_t *env = g_new(lv_t, 1);
+  env->length = length;
+  env->value = value;
+  res->env = (void*)env;
+  return res;
+}
+
 const parser_t* and(const parser_t* p) { return &unimplemented; }
 
 static parse_result_t* parse_not(void* env, parse_state_t* state) {
@@ -881,7 +965,7 @@ static void test_range(void) {
 static void test_int64(void) {
   const parser_t *int64_ = int64();
 
-  g_check_parse_ok(int64_, "\xff\xff\xff\xfe\x00\x00\x00\x00", 8, "s-0x200000000");
+  g_check_parse_ok(int64_, "\xff\xff\xff\xfe\x00\x00\x00\x00", 8, "s0x200000000");
   g_check_parse_failed(int64_, "\xff\xff\xff\xfe\x00\x00\x00", 7);
 }
 
@@ -962,15 +1046,52 @@ static void test_whitespace(void) {
   g_check_parse_failed(whitespace_, "_a", 2);
 }
 
-parse_result_t* upcase(parse_result_t *p) {
-  return NULL; // shut compiler up
+#include <ctype.h>
+
+const parsed_token_t* upcase(parse_result_t *p) {
+  switch(p->ast->token_type) {
+  case TT_SEQUENCE:
+    {
+      parsed_token_t *ret = a_new_(p->arena, parsed_token_t, 1);
+      counted_array_t *seq = carray_new_sized(p->arena, p->ast->seq->used);
+      ret->token_type = TT_SEQUENCE;
+      for (size_t i=0; i<p->ast->seq->used; ++i) {
+	if (TT_UINT == ((parsed_token_t*)p->ast->seq->elements[i])->token_type) {
+	  parsed_token_t *tmp = a_new_(p->arena, parsed_token_t, 1);
+	  tmp->token_type = TT_UINT;
+	  tmp->uint = toupper(((parsed_token_t*)p->ast->seq->elements[i])->uint);
+	  carray_append(seq, tmp);
+	} else {
+	  carray_append(seq, p->ast->seq->elements[i]);
+	}
+      }
+      ret->seq = seq;
+      return (const parsed_token_t*)ret;
+    }
+  case TT_UINT:
+    {
+      parsed_token_t *ret = a_new_(p->arena, parsed_token_t, 1);
+      ret->token_type = TT_UINT;
+      ret->uint = toupper(p->ast->uint);
+      return (const parsed_token_t*)ret;
+    }
+  default:
+    return p->ast;
+  }
 }
 
 static void test_action(void) {
-  const parser_t *action_ = action(sequence(choice(ch('a'), ch('A'), NULL), choice(ch('b'), ch('B'), NULL), NULL), upcase);
+  const parser_t *action_ = action(sequence(choice(ch('a'), 
+						   ch('A'), 
+						   NULL), 
+					    choice(ch('b'), 
+						   ch('B'), 
+						   NULL), 
+					    NULL), 
+				   upcase);
 
-  g_check_parse_ok(action_, "ab", 2, "(u0x41, u0x42)");
-  g_check_parse_ok(action_, "AB", 2, "(u0x41, u0x42)");
+  g_check_parse_ok(action_, "ab", 2, "(u0x41 u0x42)");
+  g_check_parse_ok(action_, "AB", 2, "(u0x41 u0x42)");
 }
 
 static void test_not_in(void) {

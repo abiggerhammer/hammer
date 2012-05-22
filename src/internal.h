@@ -26,7 +26,7 @@
 #else
 #define assert_message(check, message) do {				\
     if (!(check))							\
-      errx(1, "Assertation failed (programmer error): %s", message);	\
+      errx(1, "Assertion failed (programmer error): %s", message);	\
   } while(0)
 #endif
 #define false 0

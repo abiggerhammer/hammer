@@ -94,6 +94,10 @@ static inline void append_buf_c(struct result_buf *buf, char v) {
 static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
   char* tmpbuf;
   int len;
+  if (!tok) {
+    append_buf(buf, "NULL", 4);
+    return;
+  }
   switch (tok->token_type) {
   case TT_NONE:
     append_buf(buf, "null", 4);
