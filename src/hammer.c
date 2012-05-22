@@ -1163,12 +1163,10 @@ static void test_xor(void) {
 
 static void test_many(void) {
   const parser_t *many_ = many(choice(ch('a'), ch('b'), NULL));
-  for (int i = 0; i < 10000; i++) {
-    g_check_parse_ok(many_, "adef", 4, "(u0x61)");
-    g_check_parse_ok(many_, "bdef", 4, "(u0x62)");
-    g_check_parse_ok(many_, "aabbabadef", 10, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
-    g_check_parse_ok(many_, "daabbabadef", 11, "()");
-  }
+  g_check_parse_ok(many_, "adef", 4, "(u0x61)");
+  g_check_parse_ok(many_, "bdef", 4, "(u0x62)");
+  g_check_parse_ok(many_, "aabbabadef", 10, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
+  g_check_parse_ok(many_, "daabbabadef", 11, "()");
 }
 
 static void test_many1(void) {
