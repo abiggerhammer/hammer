@@ -847,8 +847,8 @@ const parser_t* attr_bool(const parser_t* p, predicate_t pred) {
 }
 
 typedef struct {
-  parser_t *length;
-  parser_t *value;
+  const parser_t *length;
+  const parser_t *value;
 } lv_t;
 
 static parse_result_t* parse_length_value(void *env, parse_state_t *state) {
@@ -867,8 +867,8 @@ static parse_result_t* parse_length_value(void *env, parse_state_t *state) {
     .sep = &epsilon_local,
     .count = len->ast->uint,
     .min_p = false
-  }
-  return parse_many((void*)repeat, state);
+  };
+  return parse_many(&repeat, state);
 }
 
 const parser_t* length_value(const parser_t* length, const parser_t* value) {
@@ -1044,22 +1044,35 @@ static void test_whitespace(void) {
   g_check_parse_failed(whitespace_, "_a", 2);
 }
 
+#include <ctype.h>
+
 parsed_token_t* upcase(parse_result_t *p) {
   switch(p->ast->token_type) {
   case TT_SEQUENCE:
     for (size_t i=0; i<p->ast->seq->used; ++i) {
       upcase((parse_result_t*)p->ast->seq->elements[i]);
-      return p->ast;
+      return (parsed_token_t*)p->ast;
     }
   case TT_UINT:
-    // if i'm a char, upcase me
+    {
+      parsed_token_t *ret = (parsed_token_t*)p->ast;
+      ret->uint = toupper(ret->uint);
+      return ret;
+    }
   default:
-    return p->ast;
+    return (parsed_token_t*)p->ast;
   }
 }
 
 static void test_action(void) {
-  const parser_t *action_ = action(sequence(choice(ch('a'), ch('A'), NULL), choice(ch('b'), ch('B'), NULL), NULL), upcase);
+  const parser_t *action_ = action(sequence(choice(ch('a'), 
+						   ch('A'), 
+						   NULL), 
+					    choice(ch('b'), 
+						   ch('B'), 
+						   NULL), 
+					    NULL), 
+				   upcase);
 
   g_check_parse_ok(action_, "ab", 2, "(u0x41, u0x42)");
   g_check_parse_ok(action_, "AB", 2, "(u0x41, u0x42)");
