@@ -31,7 +31,7 @@ long long read_bits(input_stream_t* state, int count, char signed_p) {
   long long out = 0;
   int offset = 0;
   int final_shift = 0;
-  long long msb = (!!signed_p) << (count - 1); // 0 if unsigned, else 1 << (nbits - 1)
+  long long msb = ((signed_p ? 1LL:0) << (count - 1)); // 0 if unsigned, else 1 << (nbits - 1)
   
   
   // overflow check...
@@ -120,6 +120,12 @@ long long read_bits(input_stream_t* state, int count, char signed_p) {
       .endianness = endianness_					\
       }
 
+
+static void test_bitreader_ints(void) {
+  input_stream_t is = MK_INPUT_STREAM("\xFF\xFF\xFF\xFE\x00\x00\x00\x00", 8, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
+  g_check_cmplong(read_bits(&is, 64, true), ==, -0x200000000);
+}
+
 static void test_bitreader_be(void) {
   input_stream_t is = MK_INPUT_STREAM("\x6A\x5A", 2, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
   g_check_cmpint(read_bits(&is, 3, false), ==, 0x03);
@@ -165,6 +171,7 @@ void register_bitreader_tests(void)  {
   g_test_add_func("/core/bitreader/largebits-le", test_largebits_le);
   g_test_add_func("/core/bitreader/offset-largebits-be", test_offset_largebits_be);
   g_test_add_func("/core/bitreader/offset-largebits-le", test_offset_largebits_le);
+  g_test_add_func("/core/bitreader/ints", test_bitreader_ints);
 }
 
 #endif // #ifdef INCLUDE_TESTS

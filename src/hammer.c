@@ -895,7 +895,7 @@ static void test_int32(void) {
 static void test_int16(void) {
   const parser_t *int16_ = int16();
 
-  g_check_parse_ok(int16_, "\xfe\x00", 2, "s0x200");
+  g_check_parse_ok(int16_, "\xfe\x00", 2, "s-0x200");
   g_check_parse_failed(int16_, "\xfe", 1);
 }
 
