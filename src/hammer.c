@@ -965,7 +965,7 @@ static void test_range(void) {
 static void test_int64(void) {
   const parser_t *int64_ = int64();
 
-  g_check_parse_ok(int64_, "\xff\xff\xff\xfe\x00\x00\x00\x00", 8, "s0x200000000");
+  g_check_parse_ok(int64_, "\xff\xff\xff\xfe\x00\x00\x00\x00", 8, "s-0x200000000");
   g_check_parse_failed(int64_, "\xff\xff\xff\xfe\x00\x00\x00", 7);
 }
 
