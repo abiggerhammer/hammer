@@ -344,8 +344,10 @@ typedef struct {
 static parse_result_t* parse_action(void *env, parse_state_t *state) {
   parse_action_t *a = (parse_action_t*)env;
   if (a->p && a->action) {
-    parsed_token_t *tok = a->action(do_parse(a->p, state));
-    return make_result(state, tok);
+    parse_result_t *tmp = do_parse(a->p, state);
+    //parsed_token_t *tok = a->action(do_parse(a->p, state));
+    const parsed_token_t *tok = a->action(tmp);
+    return make_result(state, (parsed_token_t*)tok);
   } else // either the parser's missing or the action's missing
     return NULL;
 }
@@ -1046,21 +1048,35 @@ static void test_whitespace(void) {
 
 #include <ctype.h>
 
-parsed_token_t* upcase(parse_result_t *p) {
+const parsed_token_t* upcase(parse_result_t *p) {
   switch(p->ast->token_type) {
   case TT_SEQUENCE:
-    for (size_t i=0; i<p->ast->seq->used; ++i) {
-      upcase((parse_result_t*)p->ast->seq->elements[i]);
-      return (parsed_token_t*)p->ast;
+    {
+      parsed_token_t *ret = a_new_(p->arena, parsed_token_t, 1);
+      counted_array_t *seq = carray_new_sized(p->arena, p->ast->seq->used);
+      ret->token_type = TT_SEQUENCE;
+      for (size_t i=0; i<p->ast->seq->used; ++i) {
+	if (TT_UINT == ((parsed_token_t*)p->ast->seq->elements[i])->token_type) {
+	  parsed_token_t *tmp = a_new_(p->arena, parsed_token_t, 1);
+	  tmp->token_type = TT_UINT;
+	  tmp->uint = toupper(((parsed_token_t*)p->ast->seq->elements[i])->uint);
+	  carray_append(seq, tmp);
+	} else {
+	  carray_append(seq, p->ast->seq->elements[i]);
+	}
+      }
+      ret->seq = seq;
+      return (const parsed_token_t*)ret;
     }
   case TT_UINT:
     {
-      parsed_token_t *ret = (parsed_token_t*)p->ast;
-      ret->uint = toupper(ret->uint);
-      return ret;
+      parsed_token_t *ret = a_new_(p->arena, parsed_token_t, 1);
+      ret->token_type = TT_UINT;
+      ret->uint = toupper(p->ast->uint);
+      return (const parsed_token_t*)ret;
     }
   default:
-    return (parsed_token_t*)p->ast;
+    return p->ast;
   }
 }
 
@@ -1074,8 +1090,8 @@ static void test_action(void) {
 					    NULL), 
 				   upcase);
 
-  g_check_parse_ok(action_, "ab", 2, "(u0x41, u0x42)");
-  g_check_parse_ok(action_, "AB", 2, "(u0x41, u0x42)");
+  g_check_parse_ok(action_, "ab", 2, "(u0x41 u0x42)");
+  g_check_parse_ok(action_, "AB", 2, "(u0x41 u0x42)");
 }
 
 static void test_not_in(void) {
