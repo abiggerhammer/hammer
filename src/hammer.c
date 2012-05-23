@@ -228,7 +228,7 @@ static parse_result_t* parse_unimplemented(void* env, parse_state_t *state) {
   return &result;
 }
 
-static parser_t unimplemented = {
+static parser_t unimplemented __attribute__((unused)) = {
   .fn = parse_unimplemented,
   .env = NULL
 };
@@ -883,7 +883,22 @@ const parser_t* length_value(const parser_t* length, const parser_t* value) {
   return res;
 }
 
-const parser_t* and(const parser_t* p) { return &unimplemented; }
+static parse_result_t *parse_and(void* env, parse_state_t* state) {
+  input_stream_t bak = state->input_stream;
+  parse_result_t *res = do_parse((parser_t*)env, state);
+  state->input_stream = bak;
+  if (res)
+    return make_result(state, NULL);
+  return NULL;
+}
+
+const parser_t* and(const parser_t* p) {
+  // zero-width postive lookahead
+  parser_t *res = g_new(parser_t, 1);
+  res->env = (void*)p;
+  res->fn = parse_and;
+  return res;
+}
 
 static parse_result_t* parse_not(void* env, parse_state_t* state) {
   input_stream_t bak = state->input_stream;
