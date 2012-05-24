@@ -379,12 +379,32 @@ const parser_t* ch_range(const uint8_t lower, const uint8_t upper) {
 }
 
 typedef struct {
+  const parser_t *p;
   int64_t lower;
   int64_t upper;
 } range_t;
 
 static parse_result_t* parse_int_range(void *env, parse_state_t *state) {
-  return NULL;
+  range_t *r_env = (range_t*)env;
+  if (!r_env->p)
+    return NULL;
+  parse_result_t *ret = do_parse(r_env->p, state);
+  if (!ret || !ret->ast)
+    return NULL;
+  switch(ret->ast->token_type) {
+  case TT_SINT:
+    if (r_env->lower <= ret->ast->sint && r_env->upper >= ret->ast->sint)
+      return ret;
+    else
+      return NULL;
+  case TT_UINT:
+    if ((uint64_t)r_env->lower <= ret->ast->uint && (uint64_t)r_env->upper >= ret->ast->uint)
+      return ret;
+    else
+      return NULL;
+  default:
+    return NULL;
+  }
 }
 
 const parser_t* int_range(const parser_t *p, const int64_t lower, const int64_t upper) {
@@ -395,6 +415,7 @@ const parser_t* int_range(const parser_t *p, const int64_t lower, const int64_t 
   assert_message(!(b_env->signedp) ? (b_env->length < 64) : true, "int_range can't use a uint64 parser");
 
   range_t *r_env = g_new(range_t, 1);
+  r_env->p = p;
   r_env->lower = lower;
   r_env->upper = upper;
   parser_t *ret = g_new(parser_t, 1);
