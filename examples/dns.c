@@ -5,7 +5,7 @@
 
 bool is_zero(parse_result_t *p) {
   if (TT_UINT != p->ast->token_type)
-    return 0;
+    return false;
   return (0 == p->ast->uint);
 }
 
@@ -14,7 +14,7 @@ bool is_zero(parse_result_t *p) {
  */
 bool validate_label(parse_result_t *p) {
   if (TT_SEQUENCE != p->ast->token_type)
-    return 0;
+    return false;
   return (64 > p->ast->seq->used);
 }
 
@@ -25,19 +25,20 @@ bool validate_label(parse_result_t *p) {
  */
 bool validate_dns(parse_result_t *p) {
   if (TT_SEQUENCE != p->ast->token_type)
-    return 0;
+    return false;
   // The header holds the counts as its last 4 elements.
   parsed_token_t *header = p->ast->seq->elements[0];
-  size_t qd = ((parsed_token_t*)header->seq->elements[8])->uint;
-  size_t an = ((parsed_token_t*)header->seq->elements[9])->uint;
-  size_t ns = ((parsed_token_t*)header->seq->elements[10])->uint;
-  size_t ar = ((parsed_token_t*)header->seq->elements[11])->uint;
+  size_t qd = header->seq->elements[8]->uint;
+  size_t an = header->seq->elements[9]->uint;
+  size_t ns = header->seq->elements[10]->uint;
+  size_t ar = header->seq->elements[11]->uint;
   parsed_token_t *questions = p->ast->seq->elements[1];
   if (questions->seq->used != qd)
-    return 0;
+    return false;
   parsed_token_t *rrs = p->ast->seq->elements[2];
   if (an+ns+ar != rrs->seq->used)
-    return 0;
+    return false;
+  return true;
 }
 
 parser_t* init_parser() {
@@ -60,9 +61,21 @@ parser_t* init_parser() {
 				       uint16(), // ARCOUNT
 				       NULL);
 
+  const parser_t *type = int_range(uint16(), 1, 16);
+
+  const parser_t *qtype = choice(type, 
+				 int_range(uint16(), 252, 255),
+				 NULL);
+
+  const parser_t *class = int_range(uint16(), 1, 4);
+  
+  const parser_t *qclass = choice(class,
+				  int_range(uint16(), 255, 255),
+				  NULL);
+
   const parser_t *dns_question = sequence(length_value(uint8(), uint8()), // QNAME
-					  uint16(),                       // QTYPE
-					  uint16(),                       // QCLASS
+					  qtype,                          // QTYPE
+					  qclass,                         // QCLASS
 					  NULL);
 
   const parser_t *letter = choice(ch_range('a', 'z'),

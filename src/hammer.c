@@ -19,10 +19,11 @@
 #include "internal.h"
 #include "allocator.h"
 #include <assert.h>
-#include <string.h>
-#include <stdarg.h>
 #include <ctype.h>
 #include <error.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <string.h>
 
 #define a_new_(arena, typ, count) ((typ*)arena_malloc((arena), sizeof(typ)*(count)))
 #define a_new(typ, count) a_new_(state->arena, typ, count)
@@ -407,10 +408,34 @@ static parse_result_t* parse_int_range(void *env, parse_state_t *state) {
 
 const parser_t* int_range(const parser_t *p, const int64_t lower, const int64_t upper) {
   struct bits_env *b_env = p->env;
-  // p must be an integer parser, which means it's using parse_bits;
-  // if it's a uint parser, it can't be uint64
+  // p must be an integer parser, which means it's using parse_bits
   assert_message(p->fn == parse_bits, "int_range requires an integer parser"); 
+  // if it's a uint parser, it can't be uint64
   assert_message(!(b_env->signedp) ? (b_env->length < 64) : true, "int_range can't use a uint64 parser");
+  // and regardless, the bounds need to fit in the parser in question
+  switch(b_env->length) {
+  case 32:
+    if (b_env->signedp)
+      assert_message(lower >= INT_MIN && upper <= INT_MAX, "bounds for 32-bit signed integer exceeded");
+    else
+      assert_message(lower >= 0 && upper <= UINT_MAX, "bounds for 32-bit unsigned integer exceeded");
+    break;
+  case 16:
+    if (b_env->signedp)
+      assert_message(lower >= SHRT_MIN && upper <= SHRT_MAX, "bounds for 16-bit signed integer exceeded");
+    else
+      assert_message(lower >= 0 && upper <= USHRT_MAX, "bounds for 16-bit unsigned integer exceeded");
+    break;
+  case 8:
+    if (b_env->signedp)
+      assert_message(lower >= SCHAR_MIN && upper <= SCHAR_MAX, "bounds for 8-bit signed integer exceeded");
+    else
+      assert_message(lower >= 0 && upper <= UCHAR_MAX, "bounds for 8-bit unsigned integer exceeded");
+    break;
+  default:
+    // how'd that happen? if we got here, this parser is broken.
+    return NULL;
+  }
 
   range_t *r_env = g_new(range_t, 1);
   r_env->p = p;
@@ -557,24 +582,6 @@ typedef struct {
 } two_parsers_t;
 
 size_t accumulate_size(parse_result_t *pr) {
-  if (NULL != ((parse_result_t*)pr)->ast) {
-    switch (pr->ast->token_type) {
-    case TT_BYTES:
-      return pr->ast->bytes.len;
-    case TT_SINT:
-    case TT_UINT:
-      return sizeof(pr->ast->uint);
-    case TT_SEQUENCE: {
-      counted_array_t *arr = pr->ast->seq;
-      size_t ret = 0;
-      for (size_t i = 0; i < arr->used; i++)
-	ret += accumulate_size(arr->elements[i]);
-      return ret;
-    }
-    default:
-      return 0;
-    }
-  } // no else, if the AST is null then acc doesn't change
   return 0;
 }
 

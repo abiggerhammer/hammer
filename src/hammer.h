@@ -41,11 +41,13 @@ typedef enum token_type {
   TT_MAX
 } token_type_t;
 
+typedef struct parsed_token parsed_token_t;
+
 typedef struct counted_array {
   size_t capacity;
   size_t used;
   arena_t arena;
-  void **elements;
+  parsed_token_t **elements;
 } counted_array_t;
 
 typedef struct parsed_token {
