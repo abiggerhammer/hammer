@@ -21,17 +21,16 @@ bool validate_label(parse_result_t *p) {
 /**
  * Every DNS message should have QDCOUNT entries in the question
  * section, and ANCOUNT+NSCOUNT+ARCOUNT resource records.
- *
  */
 bool validate_dns(parse_result_t *p) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
   // The header holds the counts as its last 4 elements.
-  parsed_token_t *header = p->ast->seq->elements[0];
-  size_t qd = header->seq->elements[8]->uint;
-  size_t an = header->seq->elements[9]->uint;
-  size_t ns = header->seq->elements[10]->uint;
-  size_t ar = header->seq->elements[11]->uint;
+  parsed_token_t **elems = p->ast->seq->elements[0]->seq->elements;
+  size_t qd = elems[8]->uint;
+  size_t an = elems[9]->uint;
+  size_t ns = elems[10]->uint;
+  size_t ar = elems[11]->uint;
   parsed_token_t *questions = p->ast->seq->elements[1];
   if (questions->seq->used != qd)
     return false;
