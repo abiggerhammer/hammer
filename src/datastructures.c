@@ -21,7 +21,7 @@ counted_array_t *carray_new(arena_t arena) {
 
 void carray_append(counted_array_t *array, void* item) {
   if (array->used >= array->capacity) {
-    void **elements = arena_malloc(array->arena, (array->capacity *= 2) * sizeof(counted_array_t*));
+    parsed_token_t **elements = arena_malloc(array->arena, (array->capacity *= 2) * sizeof(counted_array_t*));
     for (size_t i = 0; i < array->used; i++)
       elements[i] = array->elements[i];
     for (size_t i = array->used; i < array->capacity; i++)
