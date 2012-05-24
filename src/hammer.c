@@ -19,10 +19,11 @@
 #include "internal.h"
 #include "allocator.h"
 #include <assert.h>
-#include <string.h>
-#include <stdarg.h>
 #include <ctype.h>
 #include <error.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <string.h>
 
 #define a_new_(arena, typ, count) ((typ*)arena_malloc((arena), sizeof(typ)*(count)))
 #define a_new(typ, count) a_new_(state->arena, typ, count)
@@ -321,11 +322,6 @@ const parser_t* ch(const uint8_t c) {
   return (const parser_t*)ret;
 }
 
-typedef struct {
-  uint8_t lower;
-  uint8_t upper;
-} range_t;
-
 static parse_result_t* parse_whitespace(void* env, parse_state_t *state) {
   char c;
   input_stream_t bak;
@@ -384,13 +380,81 @@ static parse_result_t* parse_charset(void *env, parse_state_t *state) {
     return NULL;
 }
 
-const parser_t* range(const uint8_t lower, const uint8_t upper) {
+const parser_t* ch_range(const uint8_t lower, const uint8_t upper) {
   parser_t *ret = g_new(parser_t, 1);
   charset cs = new_charset();
   for (int i = 0; i < 256; i++)
     charset_set(cs, i, (lower <= i) && (i <= upper));
   ret->fn = parse_charset; ret->env = (void*)cs;
   return (const parser_t*)ret;
+}
+
+typedef struct {
+  const parser_t *p;
+  int64_t lower;
+  int64_t upper;
+} range_t;
+
+static parse_result_t* parse_int_range(void *env, parse_state_t *state) {
+  range_t *r_env = (range_t*)env;
+  parse_result_t *ret = do_parse(r_env->p, state);
+  if (!ret || !ret->ast)
+    return NULL;
+  switch(ret->ast->token_type) {
+  case TT_SINT:
+    if (r_env->lower <= ret->ast->sint && r_env->upper >= ret->ast->sint)
+      return ret;
+    else
+      return NULL;
+  case TT_UINT:
+    if ((uint64_t)r_env->lower <= ret->ast->uint && (uint64_t)r_env->upper >= ret->ast->uint)
+      return ret;
+    else
+      return NULL;
+  default:
+    return NULL;
+  }
+}
+
+const parser_t* int_range(const parser_t *p, const int64_t lower, const int64_t upper) {
+  struct bits_env *b_env = p->env;
+  // p must be an integer parser, which means it's using parse_bits
+  assert_message(p->fn == parse_bits, "int_range requires an integer parser"); 
+  // if it's a uint parser, it can't be uint64
+  assert_message(!(b_env->signedp) ? (b_env->length < 64) : true, "int_range can't use a uint64 parser");
+  // and regardless, the bounds need to fit in the parser in question
+  switch(b_env->length) {
+  case 32:
+    if (b_env->signedp)
+      assert_message(lower >= INT_MIN && upper <= INT_MAX, "bounds for 32-bit signed integer exceeded");
+    else
+      assert_message(lower >= 0 && upper <= UINT_MAX, "bounds for 32-bit unsigned integer exceeded");
+    break;
+  case 16:
+    if (b_env->signedp)
+      assert_message(lower >= SHRT_MIN && upper <= SHRT_MAX, "bounds for 16-bit signed integer exceeded");
+    else
+      assert_message(lower >= 0 && upper <= USHRT_MAX, "bounds for 16-bit unsigned integer exceeded");
+    break;
+  case 8:
+    if (b_env->signedp)
+      assert_message(lower >= SCHAR_MIN && upper <= SCHAR_MAX, "bounds for 8-bit signed integer exceeded");
+    else
+      assert_message(lower >= 0 && upper <= UCHAR_MAX, "bounds for 8-bit unsigned integer exceeded");
+    break;
+  default:
+    // how'd that happen? if we got here, this parser is broken.
+    return NULL;
+  }
+
+  range_t *r_env = g_new(range_t, 1);
+  r_env->p = p;
+  r_env->lower = lower;
+  r_env->upper = upper;
+  parser_t *ret = g_new(parser_t, 1);
+  ret->fn = parse_int_range;
+  ret->env = (void*)r_env;
+  return ret;
 }
 
 const parser_t* not_in(const uint8_t *options, int count) {
@@ -528,13 +592,6 @@ typedef struct {
 } two_parsers_t;
 
 // return token size in bits...
-size_t accumulate_size(parse_result_t *pr) {
-  if (pr) {
-    return pr->bit_length;
-  } // no else, if the AST is null then acc doesn't change
-  return 0;
-}
-
 size_t token_length(parse_result_t *pr) {
   if (pr) {
     return pr->bit_length;
@@ -825,7 +882,7 @@ typedef struct {
 static parse_result_t* parse_attr_bool(void *env, parse_state_t *state) {
   attr_bool_t *a = (attr_bool_t*)env;
   parse_result_t *res = do_parse(a->p, state);
-  if (res) {
+  if (res && res->ast) {
     if (a->pred(res))
       return res;
     else
@@ -965,8 +1022,8 @@ static void test_ch(void) {
   g_check_parse_failed(ch_, "\xa3", 1);
 }
 
-static void test_range(void) {
-  const parser_t *range_ = range('a', 'c');
+static void test_ch_range(void) {
+  const parser_t *range_ = ch_range('a', 'c');
 
   g_check_parse_ok(range_, "b", 1, "u0x62");
   g_check_parse_failed(range_, "d", 1);
@@ -1029,6 +1086,13 @@ static void test_uint8(void) {
   g_check_parse_failed(uint8_, "", 0);
 }
 //@MARK_END
+
+static void test_int_range(void) {
+  const parser_t *int_range_ = int_range(uint8(), 3, 10);
+  
+  g_check_parse_ok(int_range_, "\x05", 1, "u0x5");
+  g_check_parse_failed(int_range_, "\xb", 1);
+}
 
 #if 0
 static void test_float64(void) {
@@ -1148,7 +1212,7 @@ static void test_choice(void) {
 
 static void test_butnot(void) {
   const parser_t *butnot_1 = butnot(ch('a'), token((const uint8_t*)"ab", 2));
-  const parser_t *butnot_2 = butnot(range('0', '9'), ch('6'));
+  const parser_t *butnot_2 = butnot(ch_range('0', '9'), ch('6'));
 
   g_check_parse_ok(butnot_1, "a", 1, "u0x61");
   g_check_parse_failed(butnot_1, "ab", 2);
@@ -1164,7 +1228,7 @@ static void test_difference(void) {
 }
 
 static void test_xor(void) {
-  const parser_t *xor_ = xor(range('0', '6'), range('5', '9'));
+  const parser_t *xor_ = xor(ch_range('0', '6'), ch_range('5', '9'));
 
   g_check_parse_ok(xor_, "0", 1, "u0x30");
   g_check_parse_ok(xor_, "9", 1, "u0x39");
@@ -1264,7 +1328,7 @@ static void test_not(void) {
 void register_parser_tests(void) {
   g_test_add_func("/core/parser/token", test_token);
   g_test_add_func("/core/parser/ch", test_ch);
-  g_test_add_func("/core/parser/range", test_range);
+  g_test_add_func("/core/parser/ch_range", test_ch_range);
   g_test_add_func("/core/parser/int64", test_int64);
   g_test_add_func("/core/parser/int32", test_int32);
   g_test_add_func("/core/parser/int16", test_int16);
@@ -1273,6 +1337,7 @@ void register_parser_tests(void) {
   g_test_add_func("/core/parser/uint32", test_uint32);
   g_test_add_func("/core/parser/uint16", test_uint16);
   g_test_add_func("/core/parser/uint8", test_uint8);
+  g_test_add_func("/core/parser/int_range", test_int_range);
 #if 0
   g_test_add_func("/core/parser/float64", test_float64);
   g_test_add_func("/core/parser/float32", test_float32);
