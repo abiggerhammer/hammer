@@ -166,9 +166,19 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
     // parse the input
     parse_result_t *tmp_res;
     if (parser) {
+      input_stream_t bak = state->input_stream;
       tmp_res = parser->fn(parser->env, state);
-      if (tmp_res)
+      if (tmp_res) {
 	tmp_res->arena = state->arena;
+	if (!state->input_stream.overrun) {
+	  tmp_res->bit_length = ((state->input_stream.index - bak.index) << 3);
+	  if (state->input_stream.endianness & BIT_BIG_ENDIAN)
+	    tmp_res->bit_length += state->input_stream.bit_offset - bak.bit_offset;
+	  else
+	    tmp_res->bit_length += bak.bit_offset - state->input_stream.bit_offset;
+	} else
+	  tmp_res->bit_length = 0;
+      }
     } else
       tmp_res = NULL;
     if (state->input_stream.overrun)
@@ -216,7 +226,7 @@ typedef struct {
   uint8_t len;
 } token_t;
 
-static parse_result_t* parse_unimplemented(void* env, parse_state_t *state) {
+ static parse_result_t* parse_unimplemented(void* env, parse_state_t *state) {
   (void) env;
   (void) state;
   static parsed_token_t token = {
@@ -517,33 +527,19 @@ typedef struct {
   const parser_t *p2;
 } two_parsers_t;
 
+// return token size in bits...
 size_t accumulate_size(parse_result_t *pr) {
-  if (NULL != ((parse_result_t*)pr)->ast) {
-    switch (pr->ast->token_type) {
-    case TT_BYTES:
-      return pr->ast->bytes.len;
-    case TT_SINT:
-    case TT_UINT:
-      return sizeof(pr->ast->uint);
-    case TT_SEQUENCE: {
-      counted_array_t *arr = pr->ast->seq;
-      size_t ret = 0;
-      for (size_t i = 0; i < arr->used; i++)
-	ret += accumulate_size(arr->elements[i]);
-      return ret;
-    }
-    default:
-      return 0;
-    }
+  if (pr) {
+    return pr->bit_length;
   } // no else, if the AST is null then acc doesn't change
   return 0;
 }
 
 size_t token_length(parse_result_t *pr) {
-  if (NULL == pr) {
-    return 0;
+  if (pr) {
+    return pr->bit_length;
   } else {
-    return accumulate_size(pr);
+    return 0;
   }
 }
 
@@ -568,8 +564,8 @@ static parse_result_t* parse_butnot(void *env, parse_state_t *state) {
   }
   size_t r1len = token_length(r1);
   size_t r2len = token_length(r2);
-  // if both match but p1's text is as long as or longer than p2's, fail
-  if (r1len >= r2len) {
+  // if both match but p1's text is shorter than than p2's (or the same length), fail
+  if (r1len <= r2len) {
     return NULL;
   } else {
     return r1;

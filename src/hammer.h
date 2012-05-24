@@ -74,6 +74,7 @@ typedef struct parsed_token {
  */
 typedef struct parse_result {
   const parsed_token_t *ast;
+  long long bit_length;
   arena_t arena;
 } parse_result_t;
 
@@ -254,7 +255,7 @@ const parser_t* choice(const parser_t* p, ...) __attribute__((sentinel));
  * Given two parsers, p1 and p2, this parser succeeds in the following 
  * cases: 
  * - if p1 succeeds and p2 fails
- * - if both succeed but p1's result is as long as or shorter than p2's
+ * - if both succeed but p1's result is as long as or longer than p2's
  *
  * Result token type: p1's result type.
  */
