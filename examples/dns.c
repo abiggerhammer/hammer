@@ -1,4 +1,7 @@
-#include "../hammer.h"
+#include "../src/hammer.h"
+
+#define false 0
+#define true 1
 
 bool is_zero(parse_result_t *p) {
   if (TT_UINT != p->ast->token_type)
@@ -10,7 +13,7 @@ bool is_zero(parse_result_t *p) {
  * A label can't be more than 63 characters.
  */
 bool validate_label(parse_result_t *p) {
-  if (TT_SEQ != p->ast->token_type)
+  if (TT_SEQUENCE != p->ast->token_type)
     return 0;
   return (64 > p->ast->seq->used);
 }
@@ -21,23 +24,23 @@ bool validate_label(parse_result_t *p) {
  *
  */
 bool validate_dns(parse_result_t *p) {
-  if (TT_SEQ != p->ast->token_type)
+  if (TT_SEQUENCE != p->ast->token_type)
     return 0;
   // The header holds the counts as its last 4 elements.
   parsed_token_t *header = p->ast->seq->elements[0];
-  size_t qd = header->seq->elements[8];
-  size_t an = header->seq->elements[9];
-  size_t ns = header->seq->elements[10];
-  size_t ar = header->seq->elements[11];
+  size_t qd = ((parsed_token_t*)header->seq->elements[8])->uint;
+  size_t an = ((parsed_token_t*)header->seq->elements[9])->uint;
+  size_t ns = ((parsed_token_t*)header->seq->elements[10])->uint;
+  size_t ar = ((parsed_token_t*)header->seq->elements[11])->uint;
   parsed_token_t *questions = p->ast->seq->elements[1];
   if (questions->seq->used != qd)
-    return false;
+    return 0;
   parsed_token_t *rrs = p->ast->seq->elements[2];
   if (an+ns+ar != rrs->seq->used)
-    return false;
+    return 0;
 }
 
-parser_t init_parser() {
+parser_t* init_parser() {
   static parser_t *dns_message = NULL;
   if (dns_message)
     return dns_message;
@@ -62,12 +65,12 @@ parser_t init_parser() {
 					  uint16(),                       // QCLASS
 					  NULL);
 
-  const parser_t *letter = choice(range('a', 'z'),
-				  range('A', 'Z'),
+  const parser_t *letter = choice(ch_range('a', 'z'),
+				  ch_range('A', 'Z'),
 				  NULL);
 
   const parser_t *let_dig = choice(letter,
-				   range('0', '9'),
+				   ch_range('0', '9'),
 				   NULL);
 
   const parser_t *ldh_str = many1(choice(let_dig,
@@ -95,7 +98,7 @@ parser_t init_parser() {
    * ... but this is easier and equivalent
    */
 
-  parser_t *subdomain = sepBy1(label, ch('.'));
+  const parser_t *subdomain = sepBy1(label, ch('.'));
 
   const parser_t *domain = choice(subdomain, 
 				  ch(' '), 
@@ -105,16 +108,16 @@ parser_t init_parser() {
 				    uint16(),                       // TYPE
 				    uint16(),                       // CLASS
 				    uint32(),                       // TTL
-				    length_value(uint16(), uint8()) // RDLENGTH+RDATA
+				    length_value(uint16(), uint8()), // RDLENGTH+RDATA
 				    NULL);
 
 
-  dns_message = attr_bool(sequence(dns_header,
-				   many(dns_question),
-				   many(dns_rr),
-				   end_p(),
-				   NULL),
-			  validate_dns);
+  dns_message = (parser_t*)attr_bool(sequence(dns_header,
+					      many(dns_question),
+					      many(dns_rr),
+					      end_p(),
+					      NULL),
+				     validate_dns);
 
   return dns_message;
 }
