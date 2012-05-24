@@ -383,19 +383,23 @@ typedef struct {
   int64_t upper;
 } range_t;
 
-const parser_t* int_range(const int64_t lower, const int64_t upper) {
-  struct bits_env env = p->env;
+static parse_result_t* parse_int_range(void *env, parse_state_t *state) {
+  return NULL;
+}
+
+const parser_t* int_range(const parser_t *p, const int64_t lower, const int64_t upper) {
+  struct bits_env *b_env = p->env;
   // p must be an integer parser, which means it's using parse_bits;
   // if it's a uint parser, it can't be uint64
   assert_message(p->fn == parse_bits, "int_range requires an integer parser"); 
-  assert_message(!(env->signed) ? (env->length < 64) : true, "int_range can't use a uint64 parser");
+  assert_message(!(b_env->signedp) ? (b_env->length < 64) : true, "int_range can't use a uint64 parser");
 
-  range_t *env = g_new(range_t, 1);
-  env->lower = lower;
-  env->upper = upper;
+  range_t *r_env = g_new(range_t, 1);
+  r_env->lower = lower;
+  r_env->upper = upper;
   parser_t *ret = g_new(parser_t, 1);
   ret->fn = parse_int_range;
-  ret->env = (void*)env;
+  ret->env = (void*)r_env;
   return ret;
 }
 
@@ -970,8 +974,8 @@ static void test_ch(void) {
   g_check_parse_failed(ch_, "\xa3", 1);
 }
 
-static void test_range(void) {
-  const parser_t *range_ = range('a', 'c');
+static void test_ch_range(void) {
+  const parser_t *range_ = ch_range('a', 'c');
 
   g_check_parse_ok(range_, "b", 1, "u0x62");
   g_check_parse_failed(range_, "d", 1);
@@ -1153,7 +1157,7 @@ static void test_choice(void) {
 
 static void test_butnot(void) {
   const parser_t *butnot_1 = butnot(ch('a'), token((const uint8_t*)"ab", 2));
-  const parser_t *butnot_2 = butnot(range('0', '9'), ch('6'));
+  const parser_t *butnot_2 = butnot(ch_range('0', '9'), ch('6'));
 
   g_check_parse_ok(butnot_1, "a", 1, "u0x61");
   g_check_parse_failed(butnot_1, "ab", 2);
@@ -1169,7 +1173,7 @@ static void test_difference(void) {
 }
 
 static void test_xor(void) {
-  const parser_t *xor_ = xor(range('0', '6'), range('5', '9'));
+  const parser_t *xor_ = xor(ch_range('0', '6'), ch_range('5', '9'));
 
   g_check_parse_ok(xor_, "0", 1, "u0x30");
   g_check_parse_ok(xor_, "9", 1, "u0x39");
@@ -1269,7 +1273,7 @@ static void test_not(void) {
 void register_parser_tests(void) {
   g_test_add_func("/core/parser/token", test_token);
   g_test_add_func("/core/parser/ch", test_ch);
-  g_test_add_func("/core/parser/range", test_range);
+  g_test_add_func("/core/parser/ch_range", test_ch_range);
   g_test_add_func("/core/parser/int64", test_int64);
   g_test_add_func("/core/parser/int32", test_int32);
   g_test_add_func("/core/parser/int16", test_int16);
