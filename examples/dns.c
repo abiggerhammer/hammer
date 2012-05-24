@@ -72,9 +72,12 @@ parser_t* init_parser() {
 				  int_range(uint16(), 255, 255),
 				  NULL);
 
-  const parser_t *dns_question = sequence(length_value(uint8(), uint8()), // QNAME
-					  qtype,                          // QTYPE
-					  qclass,                         // QCLASS
+  const parser_t *dns_question = sequence(sequence(many1(length_value(uint8(), 
+								      uint8())), 
+						   ch('\x00'),
+						   NULL),  // QNAME
+					  qtype,           // QTYPE
+					  qclass,          // QCLASS
 					  NULL);
 
   const parser_t *letter = choice(ch_range('a', 'z'),
