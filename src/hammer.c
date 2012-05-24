@@ -311,11 +311,6 @@ const parser_t* ch(const uint8_t c) {
   return (const parser_t*)ret;
 }
 
-typedef struct {
-  uint8_t lower;
-  uint8_t upper;
-} range_t;
-
 static parse_result_t* parse_whitespace(void* env, parse_state_t *state) {
   char c;
   input_stream_t bak;
@@ -374,13 +369,34 @@ static parse_result_t* parse_charset(void *env, parse_state_t *state) {
     return NULL;
 }
 
-const parser_t* range(const uint8_t lower, const uint8_t upper) {
+const parser_t* ch_range(const uint8_t lower, const uint8_t upper) {
   parser_t *ret = g_new(parser_t, 1);
   charset cs = new_charset();
   for (int i = 0; i < 256; i++)
     charset_set(cs, i, (lower <= i) && (i <= upper));
   ret->fn = parse_charset; ret->env = (void*)cs;
   return (const parser_t*)ret;
+}
+
+typedef struct {
+  int64_t lower;
+  int64_t upper;
+} range_t;
+
+const parser_t* int_range(const int64_t lower, const int64_t upper) {
+  struct bits_env env = p->env;
+  // p must be an integer parser, which means it's using parse_bits;
+  // if it's a uint parser, it can't be uint64
+  assert_message(p->fn == parse_bits, "int_range requires an integer parser"); 
+  assert_message(!(env->signed) ? (env->length < 64) : true, "int_range can't use a uint64 parser");
+
+  range_t *env = g_new(range_t, 1);
+  env->lower = lower;
+  env->upper = upper;
+  parser_t *ret = g_new(parser_t, 1);
+  ret->fn = parse_int_range;
+  ret->env = (void*)env;
+  return ret;
 }
 
 const parser_t* not_in(const uint8_t *options, int count) {
@@ -829,7 +845,7 @@ typedef struct {
 static parse_result_t* parse_attr_bool(void *env, parse_state_t *state) {
   attr_bool_t *a = (attr_bool_t*)env;
   parse_result_t *res = do_parse(a->p, state);
-  if (res) {
+  if (res && res->ast) {
     if (a->pred(res))
       return res;
     else

@@ -1,16 +1,48 @@
 #include "../hammer.h"
 
 bool is_zero(parse_result_t *p) {
+  if (TT_UINT != p->ast->token_type)
+    return 0;
   return (0 == p->ast->uint);
 }
 
-bool validate_dns(parse_result_t *p) {
-  
+/**
+ * A label can't be more than 63 characters.
+ */
+bool validate_label(parse_result_t *p) {
+  if (TT_SEQ != p->ast->token_type)
+    return 0;
+  return (64 > p->ast->seq->used);
 }
 
-int main(int argc, char **argv) {
+/**
+ * Every DNS message should have QDCOUNT entries in the question
+ * section, and ANCOUNT+NSCOUNT+ARCOUNT resource records.
+ *
+ */
+bool validate_dns(parse_result_t *p) {
+  if (TT_SEQ != p->ast->token_type)
+    return 0;
+  // The header holds the counts as its last 4 elements.
+  parsed_token_t *header = p->ast->seq->elements[0];
+  size_t qd = header->seq->elements[8];
+  size_t an = header->seq->elements[9];
+  size_t ns = header->seq->elements[10];
+  size_t ar = header->seq->elements[11];
+  parsed_token_t *questions = p->ast->seq->elements[1];
+  if (questions->seq->used != qd)
+    return false;
+  parsed_token_t *rrs = p->ast->seq->elements[2];
+  if (an+ns+ar != rrs->seq->used)
+    return false;
+}
 
-  const parser_t dns_header = sequence(bits(16, false), // ID
+parser_t init_parser() {
+  static parser_t *dns_message = NULL;
+  if (dns_message)
+    return dns_message;
+
+  const parser_t *dns_header = sequence(bits(16, false), // ID
 				       bits(1, false),  // QR
 				       bits(4, false),  // opcode
 				       bits(1, false),  // AA
@@ -42,11 +74,12 @@ int main(int argc, char **argv) {
 					 ch('-'),
 					 NULL));
 
-  const parser_t *label = sequence(letter,
-				   optional(sequence(optional(ldh_str),
-						     let_dig,
-						     NULL)),
-				   NULL);
+  const parser_t *label = attr_bool(sequence(letter,
+					     optional(sequence(optional(ldh_str),
+							       let_dig,
+							       NULL)),
+					     NULL),
+				    validate_label);
 
   /**
    * You could write it like this ...
@@ -76,10 +109,12 @@ int main(int argc, char **argv) {
 				    NULL);
 
 
-  const parser_t *dns_message = attr_bool(sequence(dns_header,
-						   dns_question,
-						   many(dns_rr),
-						   end_p(),
-						   NULL),
-					  validate_dns);
+  dns_message = attr_bool(sequence(dns_header,
+				   many(dns_question),
+				   many(dns_rr),
+				   end_p(),
+				   NULL),
+			  validate_dns);
+
+  return dns_message;
 }

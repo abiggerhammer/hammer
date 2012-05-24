@@ -129,7 +129,14 @@ const parser_t* ch(const uint8_t c);
  * 
  * Result token type: TT_UINT
  */
-const parser_t* range(const uint8_t lower, const uint8_t upper);
+const parser_t* ch_range(const uint8_t lower, const uint8_t upper);
+
+/**
+ * Given an integer parser, p, and two integer bounds, lower and upper,
+ * returns a parser that parses an integral value within the range 
+ * [lower, upper] (inclusive).
+ */
+const parser_t* int_range(const parser_t *p, const int64_t lower, const int64_t upper);
 
 /**
  * Returns a parser that parses the specified number of bits. sign == 
@@ -359,8 +366,13 @@ const parser_t* length_value(const parser_t* length, const parser_t* value);
  * This parser attaches a predicate function, which returns true or 
  * false, to a parser. The function is evaluated over the parser's 
  * result. 
+ *
  * The parse only succeeds if the attribute function returns true. 
  *
+ * attr_bool will check whether p's result exists and whether p's 
+ * result AST exists; you do not need to check for this in your 
+ * predicate function.
+ * 
  * Result token type: p's result type if pred succeeded, NULL otherwise.
  */
 const parser_t* attr_bool(const parser_t* p, predicate_t pred);
