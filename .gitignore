@@ -3,4 +3,5 @@
 *.a
 src/test_suite
 lib/hush
+examples/dns
 TAGS
