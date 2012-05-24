@@ -386,8 +386,6 @@ typedef struct {
 
 static parse_result_t* parse_int_range(void *env, parse_state_t *state) {
   range_t *r_env = (range_t*)env;
-  if (!r_env->p)
-    return NULL;
   parse_result_t *ret = do_parse(r_env->p, state);
   if (!ret || !ret->ast)
     return NULL;
