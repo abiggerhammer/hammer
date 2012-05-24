@@ -1,5 +1,6 @@
 #include "../src/hammer.h"
 #include "dns_common.h"
+#include "dns.h"
 
 #define false 0
 #define true 1
@@ -31,6 +32,8 @@ bool validate_dns(parse_result_t *p) {
     return false;
   return true;
 }
+
+const parsed_token_t* pack_dns_struct(const parse_result_t *p);
 
 const parser_t* init_parser() {
   static parser_t *dns_message = NULL;

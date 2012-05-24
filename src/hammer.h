@@ -90,7 +90,7 @@ typedef struct parse_result {
  * say, structs) and stuff values for them into the void* in the 
  * tagged union in parsed_token_t. 
  */
-typedef const parsed_token_t* (*action_t)(parse_result_t *p);
+typedef const parsed_token_t* (*action_t)(const parse_result_t *p);
 
 /**
  * Type of a boolean attribute-checking function, used in the 

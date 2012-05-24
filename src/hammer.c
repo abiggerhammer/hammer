@@ -1123,7 +1123,7 @@ static void test_whitespace(void) {
 
 #include <ctype.h>
 
-const parsed_token_t* upcase(parse_result_t *p) {
+const parsed_token_t* upcase(const parse_result_t *p) {
   switch(p->ast->token_type) {
   case TT_SEQUENCE:
     {
