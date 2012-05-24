@@ -1058,6 +1058,13 @@ static void test_uint8(void) {
 }
 //@MARK_END
 
+static void test_int_range(void) {
+  const parser_t *int_range_ = int_range(uint8(), 3, 10);
+  
+  g_check_parse_ok(int_range_, "\x05", 1, "u0x5");
+  g_check_parse_failed(int_range_, "\xb", 1);
+}
+
 #if 0
 static void test_float64(void) {
   const parser_t *float64_ = float64();
@@ -1301,6 +1308,7 @@ void register_parser_tests(void) {
   g_test_add_func("/core/parser/uint32", test_uint32);
   g_test_add_func("/core/parser/uint16", test_uint16);
   g_test_add_func("/core/parser/uint8", test_uint8);
+  g_test_add_func("/core/parser/int_range", test_int_range);
 #if 0
   g_test_add_func("/core/parser/float64", test_float64);
   g_test_add_func("/core/parser/float32", test_float32);
