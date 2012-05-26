@@ -1,11 +1,35 @@
 
+PARSERS := \
+	unimplemented \
+	bits \
+	token \
+	whitespace \
+	ch \
+	action \
+	charset \
+	int_range \
+	sequence \
+	choice \
+	nothing \
+	end \
+	butnot \
+	difference \
+	many \
+	xor \
+	optional \
+	ignore \
+	epsilon \
+	and \
+	not
+
 OUTPUTS := bitreader.o \
 	   hammer.o \
 	   libhammer.a \
 	   pprint.o \
 	   allocator.o \
 	   datastructures.o \
-	   test_suite
+	   test_suite \
+	   $(PARSERS:%=parsers/%.o)
 
 TOPLEVEL := ../
 
@@ -18,6 +42,7 @@ test_suite: test_suite.o libhammer.a
 	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
 
 libhammer.a: bitreader.o hammer.o pprint.o allocator.o datastructures.o
+libhammer.a: $(PARSERS:%=parsers/%.o)
 
 bitreader.o: test_suite.h
 hammer.o: hammer.h
