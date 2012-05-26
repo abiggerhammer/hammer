@@ -28,7 +28,7 @@ typedef struct pp_state {
   int at_bol;
 } pp_state_t;
 
-void pprint(const parsed_token_t* tok, int indent, int delta) {
+void pprint(const HParsedToken* tok, int indent, int delta) {
   switch (tok->token_type) {
   case TT_NONE:
     printf("%*snull\n", indent, "");
@@ -91,7 +91,7 @@ static inline void append_buf_c(struct result_buf *buf, char v) {
   buf->output[buf->len++] = v;
 }
 
-static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
+static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
   char* tmpbuf;
   int len;
   if (!tok) {
@@ -149,7 +149,7 @@ static void unamb_sub(const parsed_token_t* tok, struct result_buf *buf) {
 }
   
 
-char* write_result_unamb(const parsed_token_t* tok) {
+char* write_result_unamb(const HParsedToken* tok) {
   struct result_buf buf = {
     .output = g_malloc0(16),
     .len = 0,

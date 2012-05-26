@@ -32,7 +32,7 @@
 #define false 0
 #define true 1
 
-typedef struct input_stream {
+typedef struct HInputStream_ {
   // This should be considered to be a really big value type.
   const uint8_t *input;
   size_t index;
@@ -40,7 +40,7 @@ typedef struct input_stream {
   char bit_offset;
   char endianness;
   char overrun;
-} input_stream_t;
+} HInputStream;
 
 /* The state of the parser.
  *
@@ -55,8 +55,8 @@ typedef struct input_stream {
   
 struct HParseState_ {
   GHashTable *cache; 
-  input_stream_t input_stream;
-  arena_t arena;
+  HInputStream input_stream;
+  HArena * arena;
   GQueue *lr_stack;
   GHashTable *recursion_heads;
 };
@@ -65,14 +65,14 @@ struct HParseState_ {
  */
 
 typedef struct parser_cache_key {
-  input_stream_t input_pos;
-  const parser_t *parser;
+  HInputStream input_pos;
+  const HParser *parser;
 } parser_cache_key_t;
 
 /* A value in the cache is either of value Left or Right (this is a 
  * holdover from Scala, which used Either here). Left corresponds to
  * LR_t, which is for left recursion; Right corresponds to 
- * parse_result_t.
+ * HParseResult.
  */
 
 typedef enum parser_cache_value_type {
@@ -85,11 +85,11 @@ typedef enum parser_cache_value_type {
  *
  * Members:
  *   head_parser - the parse rule that started this recursion
- *   involved_set - A list of rules (parser_t's) involved in the recursion
+ *   involved_set - A list of rules (HParser's) involved in the recursion
  *   eval_set - 
  */
 typedef struct head {
-  const parser_t *head_parser;
+  const HParser *head_parser;
   GSList *involved_set;
   GSList *eval_set;
 } head_t;
@@ -103,19 +103,19 @@ typedef struct head {
  *   head -
  */
 typedef struct LR {
-  parse_result_t *seed;
-  const parser_t *rule;
+  HParseResult *seed;
+  const HParser *rule;
   head_t *head;
 } LR_t;
 
 /* Tagged union for values in the cache: either LR's (Left) or 
- * parse_result_t's (Right).
+ * HParseResult's (Right).
  */
 typedef struct parser_cache_value {
   parser_cache_value_type_t value_type;
   union {
     LR_t *left;
-    parse_result_t *right;
+    HParseResult *right;
   };
 } parser_cache_value_t;
 
@@ -139,16 +139,16 @@ static inline void charset_set(charset cs, uint8_t pos, int val) {
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
 
-long long read_bits(input_stream_t* state, int count, char signed_p);
-parse_result_t* do_parse(const parser_t* parser, HParseState *state);
-void put_cached(HParseState *ps, const parser_t *p, parse_result_t *cached);
+long long read_bits(HInputStream* state, int count, char signed_p);
+HParseResult* do_parse(const HParser* parser, HParseState *state);
+void put_cached(HParseState *ps, const HParser *p, HParseResult *cached);
 guint djbhash(const uint8_t *buf, size_t len);
-char* write_result_unamb(const parsed_token_t* tok);
-void pprint(const parsed_token_t* tok, int indent, int delta);
+char* write_result_unamb(const HParsedToken* tok);
+void pprint(const HParsedToken* tok, int indent, int delta);
 
-counted_array_t *carray_new_sized(arena_t arena, size_t size);
-counted_array_t *carray_new(arena_t arena);
-void carray_append(counted_array_t *array, void* item);
+HCountedArray *carray_new_sized(HArena * arena, size_t size);
+HCountedArray *carray_new(HArena * arena);
+void carray_append(HCountedArray *array, void* item);
 
 #if 0
 #include <malloc.h>

@@ -54,7 +54,7 @@
 
 // TODO: replace uses of this with g_check_parse_failed
 #define g_check_failed(res) do {					\
-    const parse_result_t *result = (res);				\
+    const HParseResult *result = (res);					\
     if (NULL != result) {						\
       g_test_message("Check failed: shouldn't have succeeded, but did"); \
       g_test_fail();							\
@@ -62,7 +62,7 @@
   } while(0)
 
 #define g_check_parse_failed(parser, input, inp_len) do {		\
-    const parse_result_t *result = parse(parser, (const uint8_t*)input, inp_len); \
+    const HParseResult *result = parse(parser, (const uint8_t*)input, inp_len); \
     if (NULL != result) {						\
       g_test_message("Check failed: shouldn't have succeeded, but did"); \
       g_test_fail();							\
@@ -70,7 +70,7 @@
   } while(0)
 
 #define g_check_parse_ok(parser, input, inp_len, result) do {		\
-    parse_result_t *res = parse(parser, (const uint8_t*)input, inp_len); \
+    HParseResult *res = parse(parser, (const uint8_t*)input, inp_len); \
     if (!res) {								\
       g_test_message("Parse failed on line %d", __LINE__);		\
       g_test_fail();							\
@@ -78,7 +78,7 @@
       char* cres = write_result_unamb(res->ast);			\
       g_check_string(cres, ==, result);					\
       g_free(cres);							\
-      arena_stats_t stats;						\
+      HArenaStats stats;						\
       allocator_stats(res->arena, &stats);				\
       g_test_message("Parse used %zd bytes, wasted %zd bytes. "		\
                      "Inefficiency: %5f%%",				\
