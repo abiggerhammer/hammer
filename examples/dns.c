@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <err.h>
+#include <string.h>
 #include "../src/hammer.h"
 #include "dns_common.h"
 #include "dns.h"
@@ -505,8 +506,13 @@ int main(int argc, char** argv) {
       
     }
     printf("%p\n", content);
-    
 
+
+
+
+
+    
+    // Not much time to actually implement the DNS server for the talk, so here's something quick and dirty. 
     // Traditional response for this time of year...
     uint8_t response_buf[4096];
     uint8_t *rp = response_buf;
@@ -514,9 +520,9 @@ int main(int argc, char** argv) {
     *rp++ = message->header.id >> 8;
     *rp++ = message->header.id & 0xff;
     *rp++ = 0x80 | (message->header.opcode << 3) | message->header.rd;
-    *rp++ = 0x3; // change to 0 for no error...
+    *rp++ = 0x0; // change to 0 for no error...
     *rp++ = 0; *rp++ = 1; // QDCOUNT
-    *rp++ = 0; *rp++ = 0; // ANCOUNT
+    *rp++ = 0; *rp++ = 1; // ANCOUNT
     *rp++ = 0; *rp++ = 0; // NSCOUNT
     *rp++ = 0; *rp++ = 0; // ARCOUNT
     // encode the first question...
@@ -527,6 +533,17 @@ int main(int argc, char** argv) {
       *rp++ = (question->qtype     ) & 0xff;
       *rp++ = (question->qclass >> 8) & 0xff;
       *rp++ = (question->qclass     ) & 0xff;
+
+      // it's a cname...
+      format_qname(&question->qname, &rp);
+      *rp++ = 0; *rp++ = 5;
+      *rp++ = (question->qclass >> 8) & 0xff;
+      *rp++ = (question->qclass     ) & 0xff;
+      *rp++ = 0; *rp++ = 0; *rp++ = 0; *rp++ = 0; // TTL.
+      //const char cname_rd[14] = "\x09spargelze\x02it";
+      *rp++ = 0; *rp++ = 14;
+      memcpy(rp, "\x09spargelze\x02it", 14);
+      rp += 14;
     }
     // send response.
     sendto(sock, response_buf, (rp - response_buf), 0, (struct sockaddr*)&remote, remote_len);
