@@ -12,9 +12,11 @@ static const HParserVtable epsilon_vt = {
   .parse = parse_epsilon,
 };
 
+static const HParser epsilon_p = {
+  .vtable = &epsilon_vt,
+  .env = NULL
+};
+
 const HParser* h_epsilon_p() {
-  HParser *res = g_new(HParser, 1);
-  res->vtable = &epsilon_vt;
-  res->env = NULL;
-  return res;
+  return &epsilon_p;
 }
