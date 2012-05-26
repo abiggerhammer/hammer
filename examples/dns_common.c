@@ -51,7 +51,7 @@ const parser_t* init_domain() {
    * ... but this is easier and equivalent
    */
 
-  const parser_t *subdomain = sepBy1(label, ch('.'));
+  const HParser *subdomain = sepBy1(label, ch('.'));
 
   domain = choice(subdomain, 
 		  ch(' '), 
@@ -60,8 +60,8 @@ const parser_t* init_domain() {
   return domain;
 }
 
-const parser_t* init_character_string() {
-  static const parser_t *cstr = NULL;
+const HParser* init_character_string() {
+  static const HParser *cstr = NULL;
   if (cstr)
     return cstr;
 

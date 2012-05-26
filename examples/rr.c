@@ -5,8 +5,8 @@
 #define false 0
 #define true 1
 
-const parser_t* init_cname() {
-  static const parser_t *cname = NULL;
+const HParser* init_cname() {
+  static const HParser *cname = NULL;
   if (cname)
     return cname;
   
@@ -17,12 +17,12 @@ const parser_t* init_cname() {
   return cname;
 }
 
-const parser_t* init_hinfo() {
-  static const parser_t *hinfo = NULL;
+const HParser* init_hinfo() {
+  static const HParser *hinfo = NULL;
   if (hinfo)
     return hinfo;
 
-  const parser_t* cstr = init_character_string();
+  const HParser* cstr = init_character_string();
   
   hinfo = sequence(cstr,
 		   cstr,
@@ -32,8 +32,8 @@ const parser_t* init_hinfo() {
   return hinfo;
 }
 
-const parser_t* init_mb() {
-  static const parser_t *mb = NULL;
+const HParser* init_mb() {
+  static const HParser *mb = NULL;
   if (mb)
     return mb;
   
@@ -44,8 +44,8 @@ const parser_t* init_mb() {
   return mb;
 }
 
-const parser_t* init_md() {
-  static const parser_t *md = NULL;
+const HParser* init_md() {
+  static const HParser *md = NULL;
   if (md)
     return md;
   
@@ -56,8 +56,8 @@ const parser_t* init_md() {
   return md;
 }
 
-const parser_t* init_mf() {
-  static const parser_t *mf = NULL;
+const HParser* init_mf() {
+  static const HParser *mf = NULL;
   if (mf)
     return mf;
   
@@ -68,8 +68,8 @@ const parser_t* init_mf() {
   return mf;
 }
 
-const parser_t* init_mg() {
-  static const parser_t *mg = NULL;
+const HParser* init_mg() {
+  static const HParser *mg = NULL;
   if (mg)
     return mg;
   
@@ -80,12 +80,12 @@ const parser_t* init_mg() {
   return mg;
 }
 
-const parser_t* init_minfo() {
-  static const parser_t *minfo = NULL;
+const HParser* init_minfo() {
+  static const HParser *minfo = NULL;
   if (minfo)
     return minfo;
 
-  const parser_t* domain = init_domain();
+  const HParser* domain = init_domain();
 
   minfo = sequence(domain,
 		   domain,
@@ -95,8 +95,8 @@ const parser_t* init_minfo() {
   return minfo;
 }
 
-const parser_t* init_mr() {
-  static const parser_t *mr = NULL;
+const HParser* init_mr() {
+  static const HParser *mr = NULL;
   if (mr)
     return mr;
   
@@ -107,8 +107,8 @@ const parser_t* init_mr() {
   return mr;
 }
 
-const parser_t* init_mx() {
-  static const parser_t *mx = NULL;
+const HParser* init_mx() {
+  static const HParser *mx = NULL;
   if (mx)
     return mx;
   
@@ -126,8 +126,8 @@ bool validate_null(parse_result_t *p) {
   return (65536 > p->ast->seq->used);
 }
 
-const parser_t* init_null() {
-  static const parser_t *null_ = NULL;
+const HParser* init_null() {
+  static const HParser *null_ = NULL;
   if (null_)
     return null_;
 
@@ -136,8 +136,8 @@ const parser_t* init_null() {
   return null_;
 }
 
-const parser_t* init_ns() {
-  static const parser_t *ns = NULL;
+const HParser* init_ns() {
+  static const HParser *ns = NULL;
   if (ns)
     return ns;
 
@@ -148,8 +148,8 @@ const parser_t* init_ns() {
   return ns;
 }
 
-const parser_t* init_ptr() {
-  static const parser_t *ptr = NULL;
+const HParser* init_ptr() {
+  static const HParser *ptr = NULL;
   if (ptr)
     return ptr;
   
@@ -160,12 +160,12 @@ const parser_t* init_ptr() {
   return ptr;
 }
 
-const parser_t* init_soa() {
-  static const parser_t *soa = NULL;
+const HParser* init_soa() {
+  static const HParser *soa = NULL;
   if (soa)
     return soa;
 
-  const parser_t *domain = init_domain();
+  const HParser *domain = init_domain();
 
   soa = sequence(domain,   // MNAME
 		 domain,   // RNAME
@@ -180,8 +180,8 @@ const parser_t* init_soa() {
   return soa;
 }
 
-const parser_t* init_txt() {
-  static const parser_t *txt = NULL;
+const HParser* init_txt() {
+  static const HParser *txt = NULL;
   if (txt)
     return txt;
 
@@ -192,8 +192,8 @@ const parser_t* init_txt() {
   return txt;
 }
 
-const parser_t* init_a() {
-  static const parser_t *a = NULL;
+const HParser* init_a() {
+  static const HParser *a = NULL;
   if (a)
     return a;
 
@@ -204,8 +204,8 @@ const parser_t* init_a() {
   return a;
 }
 
-const parser_t* init_wks() {
-  static const parser_t *wks = NULL;
+const HParser* init_wks() {
+  static const HParser *wks = NULL;
   if (wks)
     return wks;
 
