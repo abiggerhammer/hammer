@@ -81,6 +81,23 @@ char* get_domain(const HParsedToken *t) {
   }
 }
 
+uint8_t* get_cs(const HCountedArray *arr) {
+  uint8_t *ret = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->used);
+  for (size_t i=0; i<arr->used; ++i)
+    ret[i] = arr->elements[i]->uint;
+  return ret;
+}
+
+uint8_t** get_txt(const HCountedArray *arr) {
+  uint8_t **ret = h_arena_malloc(arr->arena, sizeof(uint8_t*)*arr->used);
+  for (size_t i=0; i<arr->used; ++i) {
+    uint8_t *tmp = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->elements[i]->seq->used);
+    for (size_t j=0; j<arr->elements[i]->seq->used; ++j)
+      tmp[j] = arr->elements[i]->seq->elements[j]->uint;
+  }
+  return ret;
+}
+
 void set_rr(struct dns_rr rr, HCountedArray *rdata) {
   uint8_t *data = h_arena_malloc(rdata->arena, sizeof(uint8_t)*rdata->used);
   for (size_t i=0; i<rdata->used; ++i)
@@ -218,8 +235,8 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
       if (!r)
 	rr.type = 0;
       else {
-	rr.hinfo.cpu = get_cs(r->ast->seq->elements[0]);
-	rr.hinfo.os = get_cs(r->ast->seq->elements[1]);
+	rr.hinfo.cpu = get_cs(r->ast->seq->elements[0]->seq);
+	rr.hinfo.os = get_cs(r->ast->seq->elements[1]->seq);
       }
       break;
     }
@@ -252,7 +269,7 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
 	rr.type = 0;
       else {
 	rr.txt.count = r->ast->seq->elements[0]->seq->used;
-	rr.txt.txt_data = get_txt(r->ast->seq->elements[0]);
+	rr.txt.txt_data = get_txt(r->ast->seq->elements[0]->seq);
       }
       break;
     }
