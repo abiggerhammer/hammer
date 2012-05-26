@@ -388,7 +388,7 @@ const HParser* init_parser() {
 				   h_int_range(h_uint16(), 255, 255),
 				   NULL);
 
-  const HParser *dns_question = h_sequence(h_sequence(h_many1(h_length_value(h_uint8(), 
+  const HParser *dns_question = h_sequence(h_sequence(h_many1(h_length_value(h_int_range(h_uint8(), 1, 255), 
 									     h_uint8())), 
 						      h_ch('\x00'),
 						      NULL),  // QNAME
@@ -405,12 +405,13 @@ const HParser* init_parser() {
 				     NULL);
 
 
-  dns_message = (HParser*)h_attr_bool(h_sequence(dns_header,
-						 h_many(dns_question),
-						 h_many(dns_rr),
-						 h_end_p(),
-						 NULL),
-				      validate_dns);
+  dns_message = (HParser*)h_action(h_attr_bool(h_sequence(dns_header,
+							  h_many(dns_question),
+							  h_many(dns_rr),
+							  h_end_p(),
+							  NULL),
+					       validate_dns),
+				   pack_dns_struct);
 
   return dns_message;
 }
