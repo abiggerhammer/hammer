@@ -98,8 +98,12 @@ typedef const HParsedToken* (*HAction)(const HParseResult *p);
  */
 typedef bool (*HPredicate)(HParseResult *p);
 
+typedef struct HParserVtable_ {
+  HParseResult* (*parse)(void *env, HParseState *state);
+} HParserVtable;
+
 typedef struct HParser_ {
-  HParseResult* (*fn)(void *env, HParseState *state);
+  const HParserVtable *vtable;
   void *env;
 } HParser;
 

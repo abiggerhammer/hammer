@@ -148,6 +148,7 @@ HCountedArray *h_carray_new_sized(HArena * arena, size_t size);
 HCountedArray *h_carray_new(HArena * arena);
 void h_carray_append(HCountedArray *array, void* item);
 
+
 #if 0
 #include <malloc.h>
 #define arena_malloc(a, s) malloc(s)
