@@ -1,4 +1,5 @@
-typedef int bool;
+#include "../src/hammer.h"
+
 struct dns_header {
   uint16_t id;
   bool qr, aa, tc, rd, ra;
@@ -66,7 +67,7 @@ struct dns_rr {
       uint32_t address;
       uint8_t protocol;
       size_t len;
-      uint8_t** bit_map;
+      uint8_t* bit_map;
     } wks;
   };
 };
