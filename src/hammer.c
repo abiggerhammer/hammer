@@ -54,7 +54,7 @@ HParserCacheValue* recall(HParserCacheKey *k, HParseState *state) {
     if (g_slist_find(head->eval_set, k->parser)) {
       // Something is in the cache, and the key parser is in the eval set. Remove the key parser from the eval set of the head. 
       head->eval_set = g_slist_remove_all(head->eval_set, k->parser);
-      HParseResult *tmp_res = k->parser->fn(k->parser->env, state);
+      HParseResult *tmp_res = k->parser->vtable->parse(k->parser->env, state);
       if (tmp_res)
 	tmp_res->arena = state->arena;
       // we know that cached has an entry here, modify it
@@ -100,7 +100,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
   head->eval_set = head->involved_set;
   HParseResult *tmp_res;
   if (k->parser) {
-    tmp_res = k->parser->fn(k->parser->env, state);
+    tmp_res = k->parser->vtable->parse(k->parser->env, state);
     if (tmp_res)
       tmp_res->arena = state->arena;
   } else
@@ -168,7 +168,7 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
     HParseResult *tmp_res;
     if (parser) {
       HInputStream bak = state->input_stream;
-      tmp_res = parser->fn(parser->env, state);
+      tmp_res = parser->vtable->parse(parser->env, state);
       if (tmp_res) {
 	tmp_res->arena = state->arena;
 	if (!state->input_stream.overrun) {
@@ -239,8 +239,11 @@ typedef struct {
   return &result;
 }
 
+static const HParserVtable unimplemented_vt = {
+  .parse = parse_unimplemented,
+};
 static HParser unimplemented __attribute__((unused)) = {
-  .fn = parse_unimplemented,
+  .vtable = &unimplemented_vt,
   .env = NULL
 };
 
@@ -260,12 +263,15 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
   return make_result(state, result);
 }
 
+static const HParserVtable bits_vt = {
+  .parse = parse_bits,
+};
 const HParser* h_bits(size_t len, bool sign) {
   struct bits_env *env = g_new(struct bits_env, 1);
   env->length = len;
   env->signedp = sign;
   HParser *res = g_new(HParser, 1);
-  res->fn = parse_bits;
+  res->vtable = &bits_vt;
   res->env = env;
   return res;
 }
@@ -296,11 +302,16 @@ static HParseResult* parse_token(void *env, HParseState *state) {
   return make_result(state, tok);
 }
 
+const const HParserVtable token_vt = {
+  .parse = parse_token,
+};
+
 const HParser* h_token(const uint8_t *str, const size_t len) { 
   HToken *t = g_new(HToken, 1);
   t->str = (uint8_t*)str, t->len = len;
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_token; ret->env = t;
+  ret->vtable = &token_vt;
+  ret->env = t;
   return (const HParser*)ret;
 }
 
@@ -316,9 +327,13 @@ static HParseResult* parse_ch(void* env, HParseState *state) {
   }
 }
 
+static const HParserVtable ch_vt = {
+  .parse = parse_ch,
+};
 const HParser* h_ch(const uint8_t c) {  
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_ch; ret->env = GUINT_TO_POINTER(c);
+  ret->vtable = &ch_vt;
+  ret->env = GUINT_TO_POINTER(c);
   return (const HParser*)ret;
 }
 
@@ -335,9 +350,13 @@ static HParseResult* parse_whitespace(void* env, HParseState *state) {
   return h_do_parse((HParser*)env, state);
 }
 
+static const HParserVtable whitespace_vt = {
+  .parse = parse_whitespace,
+};
+
 const HParser* h_whitespace(const HParser* p) {
   HParser *ret = g_new(HParser, 1);
-  ret->fn  = parse_whitespace;
+  ret->vtable = &whitespace_vt;
   ret->env = (void*)p;
   return ret;
 }
@@ -358,9 +377,13 @@ static HParseResult* parse_action(void *env, HParseState *state) {
     return NULL;
 }
 
+static const HParserVtable action_vt = {
+  .parse = parse_action,
+};
+
 const HParser* h_action(const HParser* p, const HAction a) { 
   HParser *res = g_new(HParser, 1);
-  res->fn = parse_action;
+  res->vtable = &action_vt;
   HParseAction *env = g_new(HParseAction, 1);
   env->p = p;
   env->action = a;
@@ -380,12 +403,17 @@ static HParseResult* parse_charset(void *env, HParseState *state) {
     return NULL;
 }
 
+static const HParserVtable charset_vt = {
+  .parse = parse_charset,
+};
+
 const HParser* h_ch_range(const uint8_t lower, const uint8_t upper) {
   HParser *ret = g_new(HParser, 1);
   HCharset cs = new_charset();
   for (int i = 0; i < 256; i++)
     charset_set(cs, i, (lower <= i) && (i <= upper));
-  ret->fn = parse_charset; ret->env = (void*)cs;
+  ret->vtable = &charset_vt;
+  ret->env = (void*)cs;
   return (const HParser*)ret;
 }
 
@@ -416,10 +444,14 @@ static HParseResult* parse_int_range(void *env, HParseState *state) {
   }
 }
 
+static const HParserVtable int_range_vt = {
+  .parse = parse_int_range,
+};
+
 const HParser* h_int_range(const HParser *p, const int64_t lower, const int64_t upper) {
   struct bits_env *b_env = p->env;
   // p must be an integer parser, which means it's using parse_bits
-  assert_message(p->fn == parse_bits, "int_range requires an integer parser"); 
+  assert_message(p->vtable == &bits_vt, "int_range requires an integer parser"); 
   // if it's a uint parser, it can't be uint64
   assert_message(!(b_env->signedp) ? (b_env->length < 64) : true, "int_range can't use a uint64 parser");
   // and regardless, the bounds need to fit in the parser in question
@@ -452,7 +484,7 @@ const HParser* h_int_range(const HParser *p, const int64_t lower, const int64_t 
   r_env->lower = lower;
   r_env->upper = upper;
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_int_range;
+  ret->vtable = &int_range_vt;
   ret->env = (void*)r_env;
   return ret;
 }
@@ -465,7 +497,8 @@ const HParser* h_not_in(const uint8_t *options, int count) {
   for (int i = 0; i < count; i++)
     charset_set(cs, options[i], 0);
 
-  ret->fn = parse_charset; ret->env = (void*)cs;
+  ret->vtable = &charset_vt;
+  ret->env = (void*)cs;
   return (const HParser*)ret;
 }
 
@@ -479,9 +512,13 @@ static HParseResult* parse_end(void *env, HParseState *state) {
   }
 }
 
+static const HParserVtable end_vt = {
+  .parse = parse_end,
+};
+
 const HParser* h_end_p() { 
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_end; ret->env = NULL;
+  ret->vtable = &end_vt; ret->env = NULL;
   return (const HParser*)ret;
 }
 
@@ -490,9 +527,13 @@ static HParseResult* parse_nothing() {
   return NULL;
 }
 
+static const HParserVtable nothing_vt = {
+  .parse = parse_nothing,
+};
+
 const HParser* h_nothing_p() { 
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_nothing; ret->env = NULL;
+  ret->vtable = &nothing_vt; ret->env = NULL;
   return (const HParser*)ret;
 }
 
@@ -519,6 +560,10 @@ static HParseResult* parse_sequence(void *env, HParseState *state) {
   return make_result(state, tok);
 }
 
+static const HParserVtable sequence_vt = {
+  .parse = parse_sequence,
+};
+
 const HParser* h_sequence(const HParser *p, ...) {
   va_list ap;
   size_t len = 0;
@@ -541,7 +586,7 @@ const HParser* h_sequence(const HParser *p, ...) {
 
   s->len = len;
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_sequence; ret->env = (void*)s;
+  ret->vtable = &sequence_vt; ret->env = (void*)s;
   return ret;
 }
 
@@ -558,6 +603,10 @@ static HParseResult* parse_choice(void *env, HParseState *state) {
   // nothing succeeded, so fail
   return NULL;
 }
+
+static const HParserVtable choice_vt = {
+  .parse = parse_choice,
+};
 
 const HParser* h_choice(const HParser* p, ...) {
   va_list ap;
@@ -582,7 +631,7 @@ const HParser* h_choice(const HParser* p, ...) {
 
   s->len = len;
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_choice; ret->env = (void*)s;
+  ret->vtable = &choice_vt; ret->env = (void*)s;
   return ret;
 }
 
@@ -629,11 +678,15 @@ static HParseResult* parse_butnot(void *env, HParseState *state) {
   }
 }
 
+static const HParserVtable butnot_vt = {
+  .parse = parse_butnot,
+};
+
 const HParser* h_butnot(const HParser* p1, const HParser* p2) { 
   HTwoParsers *env = g_new(HTwoParsers, 1);
   env->p1 = p1; env->p2 = p2;
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_butnot; ret->env = (void*)env;
+  ret->vtable = &butnot_vt; ret->env = (void*)env;
   return ret;
 }
 
@@ -666,11 +719,15 @@ static HParseResult* parse_difference(void *env, HParseState *state) {
   }
 }
 
+static HParserVtable difference_vt = {
+  .parse = parse_difference,
+};
+
 const HParser* h_difference(const HParser* p1, const HParser* p2) { 
   HTwoParsers *env = g_new(HTwoParsers, 1);
   env->p1 = p1; env->p2 = p2;
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_difference; ret->env = (void*)env;
+  ret->vtable = &difference_vt; ret->env = (void*)env;
   return ret;
 }
 
@@ -699,11 +756,15 @@ static HParseResult* parse_xor(void *env, HParseState *state) {
   }
 }
 
+static const HParserVtable xor_vt = {
+  .parse = parse_xor,
+};
+
 const HParser* h_xor(const HParser* p1, const HParser* p2) { 
   HTwoParsers *env = g_new(HTwoParsers, 1);
   env->p1 = p1; env->p2 = p2;
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_xor; ret->env = (void*)env;
+  ret->vtable = &xor_vt; ret->env = (void*)env;
   return ret;
 }
 
@@ -750,6 +811,10 @@ static HParseResult *parse_many(void* env, HParseState *state) {
   return NULL;
 }
 
+static const HParserVtable many_vt = {
+  .parse = parse_many,
+};
+
 const HParser* h_many(const HParser* p) {
   HParser *res = g_new(HParser, 1);
   HRepeat *env = g_new(HRepeat, 1);
@@ -757,7 +822,7 @@ const HParser* h_many(const HParser* p) {
   env->sep = h_epsilon_p();
   env->count = 0;
   env->min_p = true;
-  res->fn = parse_many;
+  res->vtable = &many_vt;
   res->env = env;
   return res;
 }
@@ -769,7 +834,7 @@ const HParser* h_many1(const HParser* p) {
   env->sep = h_epsilon_p();
   env->count = 1;
   env->min_p = true;
-  res->fn = parse_many;
+  res->vtable = &many_vt;
   res->env = env;
   return res;
 }
@@ -781,7 +846,7 @@ const HParser* h_repeat_n(const HParser* p, const size_t n) {
   env->sep = h_epsilon_p();
   env->count = n;
   env->min_p = false;
-  res->fn = parse_many;
+  res->vtable = &many_vt;
   res->env = env;
   return res;
 }
@@ -795,9 +860,14 @@ static HParseResult* parse_ignore(void* env, HParseState* state) {
   res->arena = state->arena;
   return res;
 }
+
+static const HParserVtable ignore_vt = {
+  .parse = parse_ignore,
+};
+
 const HParser* h_ignore(const HParser* p) {
   HParser* ret = g_new(HParser, 1);
-  ret->fn = parse_ignore;
+  ret->vtable = &ignore_vt;
   ret->env = (void*)p;
   return ret;
 }
@@ -813,10 +883,14 @@ static HParseResult* parse_optional(void* env, HParseState* state) {
   return make_result(state, ast);
 }
 
+static const HParserVtable optional_vt = {
+  .parse = parse_optional,
+};
+
 const HParser* h_optional(const HParser* p) {
-  assert_message(p->fn != parse_ignore, "Thou shalt ignore an option, rather than the other way 'round.");
+  assert_message(p->vtable != &ignore_vt, "Thou shalt ignore an option, rather than the other way 'round.");
   HParser *ret = g_new(HParser, 1);
-  ret->fn = parse_optional;
+  ret->vtable = &optional_vt;
   ret->env = (void*)p;
   return ret;
 }
@@ -828,7 +902,7 @@ const HParser* h_sepBy(const HParser* p, const HParser* sep) {
   env->sep = sep;
   env->count = 0;
   env->min_p = true;
-  res->fn = parse_many;
+  res->vtable = &many_vt;
   res->env = env;
   return res;
 }
@@ -840,7 +914,7 @@ const HParser* h_sepBy1(const HParser* p, const HParser* sep) {
   env->sep = sep;
   env->count = 1;
   env->min_p = true;
-  res->fn = parse_many;
+  res->vtable = &many_vt;
   res->env = env;
   return res;
 }
@@ -853,9 +927,13 @@ static HParseResult* parse_epsilon(void* env, HParseState* state) {
   return res;
 }
 
+static const HParserVtable epsilon_vt = {
+  .parse = parse_epsilon,
+};
+
 const HParser* h_epsilon_p() {
   HParser *res = g_new(HParser, 1);
-  res->fn = parse_epsilon;
+  res->vtable = &epsilon_vt;
   res->env = NULL;
   return res;
 }
@@ -863,13 +941,18 @@ const HParser* h_epsilon_p() {
 static HParseResult* parse_indirect(void* env, HParseState* state) {
   return h_do_parse(env, state);
 }
+static const HParserVtable indirect_vt = {
+  .parse = parse_indirect,
+};
+
 void h_bind_indirect(HParser* indirect, HParser* inner) {
+  assert_message(indirect->vtable == &indirect_vt, "You can only bind an indirect parser");
   indirect->env = inner;
 }
 
 HParser* h_indirect() {
   HParser *res = g_new(HParser, 1);
-  res->fn = parse_indirect;
+  res->vtable = &indirect_vt;
   res->env = NULL;
   return res;
 }
@@ -891,9 +974,13 @@ static HParseResult* parse_attr_bool(void *env, HParseState *state) {
     return NULL;
 }
 
+static const HParserVtable attr_bool_vt = {
+  .parse = parse_attr_bool,
+};
+
 const HParser* h_attr_bool(const HParser* p, HPredicate pred) { 
   HParser *res = g_new(HParser, 1);
-  res->fn = parse_attr_bool;
+  res->vtable = &attr_bool_vt;
   HAttrBool *env = g_new(HAttrBool, 1);
   env->p = p;
   env->pred = pred;
@@ -914,7 +1001,7 @@ static HParseResult* parse_length_value(void *env, HParseState *state) {
   if (len->ast->token_type != TT_UINT)
     errx(1, "Length parser must return an unsigned integer");
   HParser epsilon_local = {
-    .fn = parse_epsilon,
+    .vtable = &epsilon_vt,
     .env = NULL
   };
   HRepeat repeat = {
@@ -926,9 +1013,13 @@ static HParseResult* parse_length_value(void *env, HParseState *state) {
   return parse_many(&repeat, state);
 }
 
+static const HParserVtable length_value_vt = {
+  .parse = parse_length_value,
+};
+
 const HParser* h_length_value(const HParser* length, const HParser* value) {
   HParser *res = g_new(HParser, 1);
-  res->fn = parse_length_value;
+  res->vtable = &length_value_vt;
   HLenVal *env = g_new(HLenVal, 1);
   env->length = length;
   env->value = value;
@@ -945,11 +1036,15 @@ static HParseResult *parse_and(void* env, HParseState* state) {
   return NULL;
 }
 
+static const HParserVtable and_vt = {
+  .parse = parse_and,
+};
+
 const HParser* h_and(const HParser* p) {
   // zero-width postive lookahead
   HParser *res = g_new(HParser, 1);
   res->env = (void*)p;
-  res->fn = parse_and;
+  res->vtable = &and_vt;
   return res;
 }
 
@@ -963,9 +1058,13 @@ static HParseResult* parse_not(void* env, HParseState* state) {
   }
 }
 
+static const HParserVtable not_vt = {
+  .parse = parse_not,
+};
+
 const HParser* h_not(const HParser* p) {
   HParser *res = g_new(HParser, 1);
-  res->fn = parse_not;
+  res->vtable = &not_vt;
   res->env = (void*)p;
   return res;
 }
