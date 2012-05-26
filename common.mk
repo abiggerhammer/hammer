@@ -1,8 +1,9 @@
 CFLAGS := $(shell pkg-config --cflags glib-2.0) -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes
 LDFLAGS := $(shell pkg-config --libs glib-2.0)
-CC := gcc
+CC ?= gcc
+$(info CC=$(CC))
 # Set V=1 for verbose mode...
-V := 0
+V ?= 0
 CFLAGS += -DINCLUDE_TESTS $(EXTRA_CFLAGS)
 HUSH = $(TOPLEVEL)/lib/hush
 
