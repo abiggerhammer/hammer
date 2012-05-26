@@ -28,40 +28,41 @@ typedef struct pp_state {
   int at_bol;
 } pp_state_t;
 
-void pprint(const HParsedToken* tok, int indent, int delta) {
+void h_pprint(FILE* stream, const HParsedToken* tok, int indent, int delta) {
   switch (tok->token_type) {
   case TT_NONE:
-    printf("%*snull\n", indent, "");
+    fprintf(stream, "%*snull\n", indent, "");
     break;
   case TT_BYTES:
     if (tok->bytes.len == 0)
-      printf("%*s<>\n", indent, "");
+      fprintf(stream, "%*s<>\n", indent, "");
     else {
-      printf("%*s", indent, "");
+      fprintf(stream, "%*s", indent, "");
       for (size_t i = 0; i < tok->bytes.len; i++) {
-	printf("%c%02hhx",
-	       (i == 0) ? '<' : '.',
-	       tok->bytes.token[i]);
+	fprintf(stream,
+		"%c%02hhx",
+		(i == 0) ? '<' : '.',
+		tok->bytes.token[i]);
       }
-      printf(">\n");
+      fprintf(stream, ">\n");
     }
     break;
   case TT_SINT:
     if (tok->sint < 0)
-      printf("%*ss -%#lx\n", indent, "", -tok->sint);
+      fprintf(stream, "%*ss -%#lx\n", indent, "", -tok->sint);
     else
-      printf("%*ss %#lx\n", indent, "", tok->sint);
+      fprintf(stream, "%*ss %#lx\n", indent, "", tok->sint);
       
     break;
   case TT_UINT:
-     printf("%*su %#lx\n", indent, "", tok->uint);
+    fprintf(stream, "%*su %#lx\n", indent, "", tok->uint);
     break;
   case TT_SEQUENCE: {
-    printf("%*s[\n", indent, "");
+    fprintf(stream, "%*s[\n", indent, "");
     for (size_t i = 0; i < tok->seq->used; i++) {
-      pprint(tok->seq->elements[i], indent + delta, delta);
+      h_pprint(stream, tok->seq->elements[i], indent + delta, delta);
     }
-    printf("%*s]\n", indent, "");
+    fprintf(stream, "%*s]\n", indent, "");
   } // TODO: implement this
   default:
     g_assert_not_reached();
@@ -149,7 +150,7 @@ static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
 }
   
 
-char* write_result_unamb(const HParsedToken* tok) {
+char* h_write_result_unamb(const HParsedToken* tok) {
   struct result_buf buf = {
     .output = g_malloc0(16),
     .len = 0,
