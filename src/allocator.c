@@ -41,7 +41,7 @@ struct HArena_ {
   size_t wasted;
 };
 
-HArena *new_arena(size_t block_size) {
+HArena *h_new_arena(size_t block_size) {
   if (block_size == 0)
     block_size = 4096;
   struct HArena_ *ret = g_new(struct HArena_, 1);
@@ -56,7 +56,7 @@ HArena *new_arena(size_t block_size) {
   return ret;
 }
 
-void* arena_malloc(HArena *arena, size_t size) {
+void* h_arena_malloc(HArena *arena, size_t size) {
   if (size <= arena->head->free) {
     // fast path..
     void* ret = arena->head->rest + arena->head->used;
@@ -87,7 +87,7 @@ void* arena_malloc(HArena *arena, size_t size) {
   }
 }
     
-void delete_arena(HArena *arena) {
+void h_delete_arena(HArena *arena) {
   struct arena_link *link = arena->head;
   while (link) {
     struct arena_link *next = link->next; 
@@ -100,7 +100,7 @@ void delete_arena(HArena *arena) {
   g_free(arena);
 }
 
-void allocator_stats(HArena *arena, HArenaStats *stats) {
+void h_allocator_stats(HArena *arena, HArenaStats *stats) {
   stats->used = arena->used;
   stats->wasted = arena->wasted;
 }

@@ -26,7 +26,7 @@
 #define LDB(range,i) (((i)>>LSB(range))&((1<<(MSB(range)-LSB(range)+1))-1))
 
 
-long long read_bits(HInputStream* state, int count, char signed_p) {
+long long h_read_bits(HInputStream* state, int count, char signed_p) {
   // BUG: Does not 
   long long out = 0;
   int offset = 0;
@@ -123,44 +123,44 @@ long long read_bits(HInputStream* state, int count, char signed_p) {
 
 static void test_bitreader_ints(void) {
   HInputStream is = MK_INPUT_STREAM("\xFF\xFF\xFF\xFE\x00\x00\x00\x00", 8, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
-  g_check_cmplong(read_bits(&is, 64, true), ==, -0x200000000);
+  g_check_cmplong(h_read_bits(&is, 64, true), ==, -0x200000000);
 }
 
 static void test_bitreader_be(void) {
   HInputStream is = MK_INPUT_STREAM("\x6A\x5A", 2, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
-  g_check_cmpint(read_bits(&is, 3, false), ==, 0x03);
-  g_check_cmpint(read_bits(&is, 8, false), ==, 0x52);
-  g_check_cmpint(read_bits(&is, 5, false), ==, 0x1A);
+  g_check_cmpint(h_read_bits(&is, 3, false), ==, 0x03);
+  g_check_cmpint(h_read_bits(&is, 8, false), ==, 0x52);
+  g_check_cmpint(h_read_bits(&is, 5, false), ==, 0x1A);
 }
 static void test_bitreader_le(void) {
   HInputStream is = MK_INPUT_STREAM("\x6A\x5A", 2, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
-  g_check_cmpint(read_bits(&is, 3, false), ==, 0x02);
-  g_check_cmpint(read_bits(&is, 8, false), ==, 0x4D);
-  g_check_cmpint(read_bits(&is, 5, false), ==, 0x0B);
+  g_check_cmpint(h_read_bits(&is, 3, false), ==, 0x02);
+  g_check_cmpint(h_read_bits(&is, 8, false), ==, 0x4D);
+  g_check_cmpint(h_read_bits(&is, 5, false), ==, 0x0B);
 }
 
 static void test_largebits_be(void) {
   HInputStream is = MK_INPUT_STREAM("\x6A\x5A", 2, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
-  g_check_cmpint(read_bits(&is, 11, false), ==, 0x352);
-  g_check_cmpint(read_bits(&is, 5, false), ==, 0x1A);
+  g_check_cmpint(h_read_bits(&is, 11, false), ==, 0x352);
+  g_check_cmpint(h_read_bits(&is, 5, false), ==, 0x1A);
 }
   
 static void test_largebits_le(void) {
   HInputStream is = MK_INPUT_STREAM("\x6A\x5A", 2, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
-  g_check_cmpint(read_bits(&is, 11, false), ==, 0x26A);
-  g_check_cmpint(read_bits(&is, 5, false), ==, 0x0B);
+  g_check_cmpint(h_read_bits(&is, 11, false), ==, 0x26A);
+  g_check_cmpint(h_read_bits(&is, 5, false), ==, 0x0B);
 }
 
 static void test_offset_largebits_be(void) {
   HInputStream is = MK_INPUT_STREAM("\x6A\x5A", 2, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
-  g_check_cmpint(read_bits(&is, 5, false), ==, 0xD);
-  g_check_cmpint(read_bits(&is, 11, false), ==, 0x25A);
+  g_check_cmpint(h_read_bits(&is, 5, false), ==, 0xD);
+  g_check_cmpint(h_read_bits(&is, 11, false), ==, 0x25A);
 }
   
 static void test_offset_largebits_le(void) {
   HInputStream is = MK_INPUT_STREAM("\x6A\x5A", 2, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
-  g_check_cmpint(read_bits(&is, 5, false), ==, 0xA);
-  g_check_cmpint(read_bits(&is, 11, false), ==, 0x2D3);
+  g_check_cmpint(h_read_bits(&is, 5, false), ==, 0xA);
+  g_check_cmpint(h_read_bits(&is, 11, false), ==, 0x2D3);
 }
 
 

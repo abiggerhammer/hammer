@@ -139,16 +139,14 @@ static inline void charset_set(HCharset cs, uint8_t pos, int val) {
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
 
-long long read_bits(HInputStream* state, int count, char signed_p);
-HParseResult* do_parse(const HParser* parser, HParseState *state);
+long long h_read_bits(HInputStream* state, int count, char signed_p);
+// need to decide if we want to make this public. 
+HParseResult* h_do_parse(const HParser* parser, HParseState *state);
 void put_cached(HParseState *ps, const HParser *p, HParseResult *cached);
-guint djbhash(const uint8_t *buf, size_t len);
-char* write_result_unamb(const HParsedToken* tok);
-void pprint(const HParsedToken* tok, int indent, int delta);
 
-HCountedArray *carray_new_sized(HArena * arena, size_t size);
-HCountedArray *carray_new(HArena * arena);
-void carray_append(HCountedArray *array, void* item);
+HCountedArray *h_carray_new_sized(HArena * arena, size_t size);
+HCountedArray *h_carray_new(HArena * arena);
+void h_carray_append(HCountedArray *array, void* item);
 
 #if 0
 #include <malloc.h>

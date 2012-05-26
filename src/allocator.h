@@ -21,16 +21,16 @@
 
 typedef struct HArena_ HArena ; // hidden implementation
 
-HArena *new_arena(size_t block_size); // pass 0 for default...
-void* arena_malloc(HArena *arena, size_t count) __attribute__(( malloc, alloc_size(2) ));
-void delete_arena(HArena *arena);
+HArena *h_new_arena(size_t block_size); // pass 0 for default...
+void* h_arena_malloc(HArena *arena, size_t count) __attribute__(( malloc, alloc_size(2) ));
+void h_delete_arena(HArena *arena);
 
 typedef struct {
   size_t used;
   size_t wasted;
 } HArenaStats;
 
-void allocator_stats(HArena *arena, HArenaStats *stats);
+void h_allocator_stats(HArena *arena, HArenaStats *stats);
 
 
 #endif // #ifndef LIB_ALLOCATOR__H__
