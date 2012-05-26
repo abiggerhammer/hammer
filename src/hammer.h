@@ -229,7 +229,7 @@ const HParser* h_action(const HParser* p, const HAction a);
  *
  * Result token type: TT_UINT
  */
-const HParser* h_not_in(const uint8_t *charset, int length);
+const HParser* h_not_in(const uint8_t *charset, size_t length);
 
 /**
  * A no-argument parser that succeeds if there is no more input to 
