@@ -63,7 +63,11 @@ void h_pprint(FILE* stream, const HParsedToken* tok, int indent, int delta) {
       h_pprint(stream, tok->seq->elements[i], indent + delta, delta);
     }
     fprintf(stream, "%*s]\n", indent, "");
-  } // TODO: implement this
+  }
+    break;
+  case TT_USER:
+    fprintf(stream, "%*sUSER\n", indent, "");
+    break;
   default:
     g_assert_not_reached();
   }
