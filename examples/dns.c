@@ -33,7 +33,40 @@ bool validate_dns(HParseResult *p) {
   return true;
 }
 
+struct dns_qname get_qname(const HParsedToken *t) {
+  // The qname parser parses at least 1 length-value pair, then a NULL.
+  // So, t->seq->elements[0] is a sequence of at least 1 such pair,
+  // and t->seq->elements[1] is the null.
+  const HParsedToken *labels = t->seq->elements[0];
+  struct dns_qname ret = {
+    .qlen = labels->seq->used,
+    .labels = arena_malloc(t->seq->arena, sizeof(ret.labels)*ret.qlen)
+  };
+  // i is which label we're on
+  for (size_t i=0; i<labels->seq->used; ++i) {
+    ret.labels[i].len = labels->seq->elements[i]->seq->used;
+    ret.labels[i].label = arena_malloc(t->seq->arena, sizeof(uint8_t)*ret.labels[i].len);
+    // j is which char of the label we're on
+    for (size_t j=0; j<ret.labels[i].len; ++j)
+      ret.labels[i].label[j] = labels->seq->elements[i]->seq->elements[j]->uint;
+  }
+  return ret;
+}
 
+char* get_name(const HParsedToken *t) {
+  switch(t->token_type) {
+  case TT_UINT:
+    return " ";
+  case TT_SEQUENCE:
+    {
+      // Sequence of subdomains separated by "."
+      
+    }
+  default:
+    return NULL;
+  }
+
+}
 
 const HParsedToken* pack_dns_struct(const HParseResult *p) {
   HParsedToken *ret = arena_malloc(p->arena, sizeof(HParsedToken*));
@@ -62,6 +95,8 @@ const HParsedToken* pack_dns_struct(const HParseResult *p) {
   struct dns_question *questions = arena_malloc(p->arena,
 						sizeof(struct dns_question)*(header.question_count));
   for (size_t i=0; i<header.question_count; ++i) {
+    // QNAME is a sequence of labels. In the parser, it's defined as
+    // sequence(many1(length_value(...)), ch('\x00'), NULL).
     questions[i].qname = get_qname(qs->seq->elements[i]->seq->elements[0]);
     questions[i].qtype = qs->seq->elements[i]->seq->elements[1]->uint;
     questions[i].qclass = qs->seq->elements[i]->seq->elements[2]->uint;
@@ -145,8 +180,8 @@ const HParser* init_parser() {
 
   const HParser *dns_question = sequence(sequence(many1(length_value(uint8(), 
 								      uint8())), 
-						   ch('\x00'),
-						   NULL),  // QNAME
+						  ch('\x00'),
+						  NULL),  // QNAME
 					  qtype,           // QTYPE
 					  qclass,          // QCLASS
 					  NULL);

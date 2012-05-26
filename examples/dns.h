@@ -8,8 +8,15 @@ struct dns_header {
   size_t authority_count;
   size_t additional_count;
 };
+struct dns_qname {
+  size_t qlen;
+  struct {
+    size_t len;
+    uint8_t *label;
+  } *labels;
+};
 struct dns_question {
-  char** qname; // change to whatever format you want; I'm assuming you'll keep the length-prefixed terms.
+  struct dns_qname qname;
   uint16_t qtype;
   uint16_t qclass;
 };
