@@ -173,6 +173,7 @@ const parser_t* init_soa() {
 		 uint32(), // REFRESH
 		 uint32(), // RETRY
 		 uint32(), // EXPIRE
+		 uint32(), // MINIMUM
 		 end_p(),
 		 NULL);
 
