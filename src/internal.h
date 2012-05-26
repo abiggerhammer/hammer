@@ -45,11 +45,11 @@ typedef struct HInputStream_ {
 /* The state of the parser.
  *
  * Members:
- *   cache - a hash table describing the state of the parse, including partial parse_results. It's a hash table from parser_cache_key_t to parser_cache_value_t. 
+ *   cache - a hash table describing the state of the parse, including partial HParseResult's. It's a hash table from HParserCacheKey to HParserCacheValue. 
  *   input_stream - the input stream at this state.
  *   arena - the arena that has been allocated for the parse this state is in.
- *   lr_stack - a stack of LRs, used in Warth's recursion
- *   recursion_heads - table of recursion heads. Keys are parse_cache_key_t's with only an input_state_t (parser can be NULL), values are head_t.
+ *   lr_stack - a stack of HLeftRec's, used in Warth's recursion
+ *   recursion_heads - table of recursion heads. Keys are HParserCacheKey's with only an HInputStream (parser can be NULL), values are HRecursionHead's.
  *
  */
   
@@ -64,21 +64,21 @@ struct HParseState_ {
 /* The (location, parser) tuple used to key the cache.
  */
 
-typedef struct parser_cache_key {
+typedef struct HParserCacheKey_ {
   HInputStream input_pos;
   const HParser *parser;
-} parser_cache_key_t;
+} HParserCacheKey;
 
 /* A value in the cache is either of value Left or Right (this is a 
  * holdover from Scala, which used Either here). Left corresponds to
- * LR_t, which is for left recursion; Right corresponds to 
+ * HLeftRec, which is for left recursion; Right corresponds to 
  * HParseResult.
  */
 
-typedef enum parser_cache_value_type {
+typedef enum HParserCacheValueType_ {
   PC_LEFT,
   PC_RIGHT
-} parser_cache_value_type_t;
+} HParserCacheValueType;
 
 
 /* A recursion head.
@@ -88,11 +88,11 @@ typedef enum parser_cache_value_type {
  *   involved_set - A list of rules (HParser's) involved in the recursion
  *   eval_set - 
  */
-typedef struct head {
+typedef struct HRecursionHead_ {
   const HParser *head_parser;
   GSList *involved_set;
   GSList *eval_set;
-} head_t;
+} HRecursionHead;
 
 
 /* A left recursion.
@@ -102,35 +102,35 @@ typedef struct head {
  *   rule -
  *   head -
  */
-typedef struct LR {
+typedef struct HLeftRec_ {
   HParseResult *seed;
   const HParser *rule;
-  head_t *head;
-} LR_t;
+  HRecursionHead *head;
+} HLeftRec;
 
-/* Tagged union for values in the cache: either LR's (Left) or 
+/* Tagged union for values in the cache: either HLeftRec's (Left) or 
  * HParseResult's (Right).
  */
-typedef struct parser_cache_value {
-  parser_cache_value_type_t value_type;
+typedef struct HParserCacheValue_t {
+  HParserCacheValueType value_type;
   union {
-    LR_t *left;
+    HLeftRec *left;
     HParseResult *right;
   };
-} parser_cache_value_t;
+} HParserCacheValue;
 
-typedef unsigned int *charset;
+typedef unsigned int *HCharset;
 
-static inline charset new_charset() {
-  charset cs = g_new0(unsigned int, 256 / sizeof(unsigned int));
+static inline HCharset new_charset() {
+  HCharset cs = g_new0(unsigned int, 256 / sizeof(unsigned int));
   return cs;
 }
 
-static inline int charset_isset(charset cs, uint8_t pos) {
+static inline int charset_isset(HCharset cs, uint8_t pos) {
   return !!(cs[pos / sizeof(*cs)] & (1 << (pos % sizeof(*cs))));
 }
 
-static inline void charset_set(charset cs, uint8_t pos, int val) {
+static inline void charset_set(HCharset cs, uint8_t pos, int val) {
   cs[pos / sizeof(*cs)] =
     val
     ? cs[pos / sizeof(*cs)] |  (1 << (pos % sizeof(*cs)))
