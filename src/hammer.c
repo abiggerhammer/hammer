@@ -45,9 +45,9 @@ HParserCacheValue* recall(HParserCacheKey *k, HParseState *state) {
   } else { // Some heads found
     if (!cached && head->head_parser != k->parser && !g_slist_find(head->involved_set, k->parser)) {
       // Nothing in the cache, and the key parser is not involved
-      HParseResult *tmp = g_new(HParseResult, 1);
+      HParseResult *tmp = a_new(HParseResult, 1);
       tmp->ast = NULL; tmp->arena = state->arena;
-      HParserCacheValue *ret = g_new(HParserCacheValue, 1);
+      HParserCacheValue *ret = a_new(HParserCacheValue, 1);
       ret->value_type = PC_RIGHT; ret->right = tmp;
       return ret;
     }
@@ -58,6 +58,8 @@ HParserCacheValue* recall(HParserCacheKey *k, HParseState *state) {
       if (tmp_res)
 	tmp_res->arena = state->arena;
       // we know that cached has an entry here, modify it
+      if (!cached)
+	cached = a_new(HParserCacheValue, 1);
       cached->value_type = PC_RIGHT;
       cached->right = tmp_res;
     }
@@ -70,14 +72,14 @@ HParserCacheValue* recall(HParserCacheKey *k, HParseState *state) {
  * see the current parser again.
  */
 
-void setupLR(const HParser *p, GQueue *stack, HLeftRec *rec_detect) {
+void setupLR(const HParser *p, HParseState *state, HLeftRec *rec_detect) {
   if (!rec_detect->head) {
-    HRecursionHead *some = g_new(HRecursionHead, 1);
+    HRecursionHead *some = a_new(HRecursionHead, 1);
     some->head_parser = p; some->involved_set = NULL; some->eval_set = NULL;
     rec_detect->head = some;
   }
   size_t i = 0;
-  HLeftRec *lr = g_queue_peek_nth(stack, i);
+  HLeftRec *lr = g_queue_peek_nth(state->lr_stack, i);
   while (lr && lr->rule != p) {
     lr->head = rec_detect->head;
     lr->head->involved_set = g_slist_prepend(lr->head->involved_set, (gpointer)lr->rule);
@@ -108,7 +110,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
   if (tmp_res) {
     if ((old_res->ast->index < tmp_res->ast->index) || 
 	(old_res->ast->index == tmp_res->ast->index && old_res->ast->bit_offset < tmp_res->ast->bit_offset)) {
-      HParserCacheValue *v = g_new(HParserCacheValue, 1);
+      HParserCacheValue *v = a_new(HParserCacheValue, 1);
       v->value_type = PC_RIGHT; v->right = tmp_res;
       g_hash_table_replace(state->cache, k, v);
       return grow(k, state, head);
@@ -136,7 +138,7 @@ HParseResult* lr_answer(HParserCacheKey *k, HParseState *state, HLeftRec *growab
     }
     else {
       // update cache
-      HParserCacheValue *v = g_new(HParserCacheValue, 1);
+      HParserCacheValue *v = a_new(HParserCacheValue, 1);
       v->value_type = PC_RIGHT; v->right = growable->seed;
       g_hash_table_replace(state->cache, k, v);
       if (!growable->seed)
@@ -206,7 +208,7 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
   } else {
     // it exists!
     if (PC_LEFT == m->value_type) {
-      setupLR(parser, state->lr_stack, m->left);
+      setupLR(parser, state, m->left);
       return m->left->seed; // BUG: this might not be correct
     } else {
       return m->right;
