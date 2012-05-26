@@ -5,214 +5,215 @@
 #define false 0
 #define true 1
 
-const parser_t* init_cname() {
-  static const parser_t *cname = NULL;
+const HParser* init_cname() {
+  static const HParser *cname = NULL;
   if (cname)
     return cname;
   
-  cname = sequence(init_domain(),
-		   end_p(),
-		   NULL);
+  cname = h_sequence(init_domain(),
+		     h_end_p(),
+		     NULL);
   
   return cname;
 }
 
-const parser_t* init_hinfo() {
-  static const parser_t *hinfo = NULL;
+const HParser* init_hinfo() {
+  static const HParser *hinfo = NULL;
   if (hinfo)
     return hinfo;
 
-  const parser_t* cstr = init_character_string();
+  const HParser* cstr = init_character_string();
   
-  hinfo = sequence(cstr,
-		   cstr,
-		   end_p(),
-		   NULL);
+  hinfo = h_sequence(cstr,
+		     cstr,
+		     h_end_p(),
+		     NULL);
 
   return hinfo;
 }
 
-const parser_t* init_mb() {
-  static const parser_t *mb = NULL;
+const HParser* init_mb() {
+  static const HParser *mb = NULL;
   if (mb)
     return mb;
   
-  mb = sequence(init_domain(),
-		end_p(),
-		NULL);
+  mb = h_sequence(init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return mb;
 }
 
-const parser_t* init_md() {
-  static const parser_t *md = NULL;
+const HParser* init_md() {
+  static const HParser *md = NULL;
   if (md)
     return md;
   
-  md = sequence(init_domain(),
-		end_p,
-		NULL);
+  md = h_sequence(init_domain(),
+		  h_end_p,
+		  NULL);
 
   return md;
 }
 
-const parser_t* init_mf() {
-  static const parser_t *mf = NULL;
+const HParser* init_mf() {
+  static const HParser *mf = NULL;
   if (mf)
     return mf;
   
-  mf = sequence(init_domain(),
-		end_p(),
-		NULL);
+  mf = h_sequence(init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return mf;
 }
 
-const parser_t* init_mg() {
-  static const parser_t *mg = NULL;
+const HParser* init_mg() {
+  static const HParser *mg = NULL;
   if (mg)
     return mg;
   
-  mg = sequence(init_domain(),
-		end_p(),
-		NULL);
+  mg = h_sequence(init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return mg;
 }
 
-const parser_t* init_minfo() {
-  static const parser_t *minfo = NULL;
+const HParser* init_minfo() {
+  static const HParser *minfo = NULL;
   if (minfo)
     return minfo;
 
-  const parser_t* domain = init_domain();
+  const HParser* domain = init_domain();
 
-  minfo = sequence(domain,
-		   domain,
-		   end_p(),
-		   NULL);
+  minfo = h_sequence(domain,
+		     domain,
+		     h_end_p(),
+		     NULL);
 
   return minfo;
 }
 
-const parser_t* init_mr() {
-  static const parser_t *mr = NULL;
+const HParser* init_mr() {
+  static const HParser *mr = NULL;
   if (mr)
     return mr;
   
-  mr = sequence(init_domain(),
-		end_p(),
-		NULL);
+  mr = h_sequence(init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return mr;
 }
 
-const parser_t* init_mx() {
-  static const parser_t *mx = NULL;
+const HParser* init_mx() {
+  static const HParser *mx = NULL;
   if (mx)
     return mx;
   
-  mx = sequence(uint16(),
-		init_domain(),
-		end_p(),
-		NULL);
+  mx = h_sequence(h_uint16(),
+		  init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return mx;
 }
 
-bool validate_null(parse_result_t *p) {
+bool validate_null(HParseResult *p) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
   return (65536 > p->ast->seq->used);
 }
 
-const parser_t* init_null() {
-  static const parser_t *null_ = NULL;
+const HParser* init_null() {
+  static const HParser *null_ = NULL;
   if (null_)
     return null_;
 
-  null_ = attr_bool(uint8(), validate_null);
+  null_ = h_attr_bool(h_many(h_uint8()), validate_null);
 
   return null_;
 }
 
-const parser_t* init_ns() {
-  static const parser_t *ns = NULL;
+const HParser* init_ns() {
+  static const HParser *ns = NULL;
   if (ns)
     return ns;
 
-  ns = sequence(init_domain(),
-		end_p(),
-		NULL);
+  ns = h_sequence(init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return ns;
 }
 
-const parser_t* init_ptr() {
-  static const parser_t *ptr = NULL;
+const HParser* init_ptr() {
+  static const HParser *ptr = NULL;
   if (ptr)
     return ptr;
   
-  ptr = sequence(init_domain(),
-		end_p(),
-		NULL);
+  ptr = h_sequence(init_domain(),
+		   h_end_p(),
+		   NULL);
 
   return ptr;
 }
 
-const parser_t* init_soa() {
-  static const parser_t *soa = NULL;
+const HParser* init_soa() {
+  static const HParser *soa = NULL;
   if (soa)
     return soa;
 
-  const parser_t *domain = init_domain();
+  const HParser *domain = init_domain();
 
-  soa = sequence(domain,   // MNAME
-		 domain,   // RNAME
-		 uint32(), // SERIAL
-		 uint32(), // REFRESH
-		 uint32(), // RETRY
-		 uint32(), // EXPIRE
-		 end_p(),
-		 NULL);
+  soa = h_sequence(domain,   // MNAME
+		   domain,   // RNAME
+		   h_uint32(), // SERIAL
+		   h_uint32(), // REFRESH
+		   h_uint32(), // RETRY
+		   h_uint32(), // EXPIRE
+		   h_uint32(), // MINIMUM
+		   h_end_p(),
+		   NULL);
 
   return soa;
 }
 
-const parser_t* init_txt() {
-  static const parser_t *txt = NULL;
+const HParser* init_txt() {
+  static const HParser *txt = NULL;
   if (txt)
     return txt;
 
-  txt = sequence(many1(init_character_string()),
-		 end_p(),
-		 NULL);
+  txt = h_sequence(h_many1(init_character_string()),
+		   h_end_p(),
+		   NULL);
 
   return txt;
 }
 
-const parser_t* init_a() {
-  static const parser_t *a = NULL;
+const HParser* init_a() {
+  static const HParser *a = NULL;
   if (a)
     return a;
 
-  a = sequence(uint32(),
-	       end_p(),
-	       NULL);
+  a = h_sequence(h_uint32(),
+		 h_end_p(),
+		 NULL);
 
   return a;
 }
 
-const parser_t* init_wks() {
-  static const parser_t *wks = NULL;
+const HParser* init_wks() {
+  static const HParser *wks = NULL;
   if (wks)
     return wks;
 
-  wks = sequence(uint32(),
-		 uint8(),
-		 many(uint8()),
-		 end_p(),
-		 NULL);
+  wks = h_sequence(h_uint32(),
+		   h_uint8(),
+		   h_many(h_uint8()),
+		   h_end_p(),
+		   NULL);
 
   return wks;
 }

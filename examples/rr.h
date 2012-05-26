@@ -3,21 +3,21 @@
 
 #include "../src/hammer.h"
 
-const parser_t* init_cname();
-const parser_t* init_hinfo();
-const parser_t* init_mb();
-const parser_t* init_md();
-const parser_t* init_mf();
-const parser_t* init_mg();
-const parser_t* init_minfo();
-const parser_t* init_mr();
-const parser_t* init_mx();
-const parser_t* init_null();
-const parser_t* init_ns();
-const parser_t* init_ptr();
-const parser_t* init_soa();
-const parser_t* init_txt();
-const parser_t* init_a();
-const parser_t* init_wks();
+const HParser* init_cname();
+const HParser* init_hinfo();
+const HParser* init_mb();
+const HParser* init_md();
+const HParser* init_mf();
+const HParser* init_mg();
+const HParser* init_minfo();
+const HParser* init_mr();
+const HParser* init_mx();
+const HParser* init_null();
+const HParser* init_ns();
+const HParser* init_ptr();
+const HParser* init_soa();
+const HParser* init_txt();
+const HParser* init_a();
+const HParser* init_wks();
 
 #endif

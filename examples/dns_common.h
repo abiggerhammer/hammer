@@ -3,7 +3,7 @@
 
 #include "../src/hammer.h"
 
-const parser_t* init_domain();
-const parser_t* init_character_string();
+const HParser* init_domain();
+const HParser* init_character_string();
 
 #endif
