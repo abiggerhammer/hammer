@@ -30,7 +30,7 @@ typedef int bool;
 
 typedef struct HParseState_ HParseState;
 
-typedef enum token_type {
+typedef enum HTokenType_ {
   TT_NONE,
   TT_BYTES,
   TT_SINT,
@@ -39,7 +39,7 @@ typedef enum token_type {
   TT_USER = 64,
   TT_ERR,
   TT_MAX
-} token_type_t;
+} HTokenType;
 
 typedef struct parsed_token parsed_token_t;
 
@@ -51,7 +51,7 @@ typedef struct counted_array {
 } counted_array_t;
 
 typedef struct parsed_token {
-  token_type_t token_type;
+  HTokenType token_type;
   union {
     struct {
       const uint8_t *token;
