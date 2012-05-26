@@ -28,9 +28,9 @@
 
 typedef int bool;
 
-typedef struct parse_state parse_state_t;
+typedef struct HParseState_ HParseState;
 
-typedef enum token_type {
+typedef enum HTokenType_ {
   TT_NONE,
   TT_BYTES,
   TT_SINT,
@@ -39,19 +39,17 @@ typedef enum token_type {
   TT_USER = 64,
   TT_ERR,
   TT_MAX
-} token_type_t;
+} HTokenType;
 
-typedef struct parsed_token parsed_token_t;
-
-typedef struct counted_array {
+typedef struct HCountedArray_ {
   size_t capacity;
   size_t used;
-  arena_t arena;
-  parsed_token_t **elements;
-} counted_array_t;
+  HArena * arena;
+  struct HParsedToken_ **elements;
+} HCountedArray;
 
-typedef struct parsed_token {
-  token_type_t token_type;
+typedef struct HParsedToken_ {
+  HTokenType token_type;
   union {
     struct {
       const uint8_t *token;
@@ -61,12 +59,12 @@ typedef struct parsed_token {
     uint64_t uint;
     double dbl;
     float flt;
-    counted_array_t *seq; // a sequence of parsed_token_t's
+    HCountedArray *seq; // a sequence of HParsedToken's
     void *user;
   };
   size_t index;
   char bit_offset;
-} parsed_token_t;
+} HParsedToken;
 
 /**
  * The result of a successful parse.
@@ -74,48 +72,48 @@ typedef struct parsed_token {
  * If a parse is successful but there's nothing there (i.e., if end_p 
  * succeeds) then there's a parse result but its ast is NULL.
  */
-typedef struct parse_result {
-  const parsed_token_t *ast;
+typedef struct HParseResult_ {
+  const HParsedToken *ast;
   long long bit_length;
-  arena_t arena;
-} parse_result_t;
+  HArena * arena;
+} HParseResult;
 
 /**
  * Type of an action to apply to an AST, used in the action() parser. 
- * It can be any (user-defined) function that takes a parse_result_t*
- * and returns a parsed_token_t*. (This is so that the user doesn't 
+ * It can be any (user-defined) function that takes a HParseResult*
+ * and returns a HParsedToken*. (This is so that the user doesn't 
  * have to worry about memory allocation; action() does that for you.)
- * Note that the tagged union in parsed_token_t* supports user-defined 
+ * Note that the tagged union in HParsedToken* supports user-defined 
  * types, so you can create your own token types (corresponding to, 
  * say, structs) and stuff values for them into the void* in the 
- * tagged union in parsed_token_t. 
+ * tagged union in HParsedToken. 
  */
-typedef const parsed_token_t* (*action_t)(const parse_result_t *p);
+typedef const HParsedToken* (*HAction)(const HParseResult *p);
 
 /**
  * Type of a boolean attribute-checking function, used in the 
  * attr_bool() parser. It can be any (user-defined) function that takes
- * a parse_result_t* and returns true or false. 
+ * a HParseResult* and returns true or false. 
  */
-typedef bool (*predicate_t)(parse_result_t *p);
+typedef bool (*HPredicate)(HParseResult *p);
 
-typedef struct parser {
-  parse_result_t* (*fn)(void *env, parse_state_t *state);
+typedef struct HParser_ {
+  HParseResult* (*fn)(void *env, HParseState *state);
   void *env;
-} parser_t;
+} HParser;
 
 /**
  * Top-level function to call a parser that has been built over some
  * piece of input (of known size).
  */
-parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t length);
+HParseResult* parse(const HParser* parser, const uint8_t* input, size_t length);
 
 /**
  * Given a string, returns a parser that parses that string value. 
  * 
  * Result token type: TT_BYTES
  */
-const parser_t* token(const uint8_t *str, const size_t len);
+const HParser* token(const uint8_t *str, const size_t len);
 
 /**
  * Given a single character, returns a parser that parses that 
@@ -123,7 +121,7 @@ const parser_t* token(const uint8_t *str, const size_t len);
  * 
  * Result token type: TT_UINT
  */
-const parser_t* ch(const uint8_t c);
+const HParser* ch(const uint8_t c);
 
 /**
  * Given two single-character bounds, lower and upper, returns a parser
@@ -132,14 +130,14 @@ const parser_t* ch(const uint8_t c);
  * 
  * Result token type: TT_UINT
  */
-const parser_t* ch_range(const uint8_t lower, const uint8_t upper);
+const HParser* ch_range(const uint8_t lower, const uint8_t upper);
 
 /**
  * Given an integer parser, p, and two integer bounds, lower and upper,
  * returns a parser that parses an integral value within the range 
  * [lower, upper] (inclusive).
  */
-const parser_t* int_range(const parser_t *p, const int64_t lower, const int64_t upper);
+const HParser* int_range(const HParser *p, const int64_t lower, const int64_t upper);
 
 /**
  * Returns a parser that parses the specified number of bits. sign == 
@@ -147,63 +145,63 @@ const parser_t* int_range(const parser_t *p, const int64_t lower, const int64_t 
  *
  * Result token type: TT_SINT if sign == true, TT_UINT if sign == false
  */
-const parser_t* bits(size_t len, bool sign);
+const HParser* bits(size_t len, bool sign);
 
 /**
  * Returns a parser that parses a signed 8-byte integer value. 
  *
  * Result token type: TT_SINT
  */
-const parser_t* int64();
+const HParser* int64();
 
 /**
  * Returns a parser that parses a signed 4-byte integer value. 
  *
  * Result token type: TT_SINT
  */
-const parser_t* int32();
+const HParser* int32();
 
 /**
  * Returns a parser that parses a signed 2-byte integer value. 
  *
  * Result token type: TT_SINT
  */
-const parser_t* int16();
+const HParser* int16();
 
 /**
  * Returns a parser that parses a signed 1-byte integer value. 
  *
  * Result token type: TT_SINT
  */
-const parser_t* int8();
+const HParser* int8();
 
 /**
  * Returns a parser that parses an unsigned 8-byte integer value. 
  *
  * Result token type: TT_UINT
  */
-const parser_t* uint64();
+const HParser* uint64();
 
 /**
  * Returns a parser that parses an unsigned 4-byte integer value. 
  *
  * Result token type: TT_UINT
  */
-const parser_t* uint32();
+const HParser* uint32();
 
 /**
  * Returns a parser that parses an unsigned 2-byte integer value. 
  *
  * Result token type: TT_UINT
  */
-const parser_t* uint16();
+const HParser* uint16();
 
 /**
  * Returns a parser that parses an unsigned 1-byte integer value. 
  *
  * Result token type: TT_UINT
  */
-const parser_t* uint8();
+const HParser* uint8();
 
 /**
  * Given another parser, p, returns a parser that skips any whitespace 
@@ -211,7 +209,7 @@ const parser_t* uint8();
  *
  * Result token type: p's result type
  */
-const parser_t* whitespace(const parser_t* p);
+const HParser* whitespace(const HParser* p);
 
 /**
  * Given another parser, p, and a function f, returns a parser that 
@@ -219,29 +217,29 @@ const parser_t* whitespace(const parser_t* p);
  *
  * Result token type: any
  */
-const parser_t* action(const parser_t* p, const action_t a);
+const HParser* action(const HParser* p, const HAction a);
 
 /**
  * Parse a single character *NOT* in the given charset. 
  *
  * Result token type: TT_UINT
  */
-const parser_t* not_in(const uint8_t *charset, int length);
+const HParser* not_in(const uint8_t *charset, int length);
 
 /**
  * A no-argument parser that succeeds if there is no more input to 
  * parse. 
  *
- * Result token type: None. The parse_result_t exists but its AST is NULL.
+ * Result token type: None. The HParseResult exists but its AST is NULL.
  */
-const parser_t* end_p();
+const HParser* end_p();
 
 /**
  * This parser always fails. 
  *
  * Result token type: NULL. Always.
  */
-const parser_t* nothing_p();
+const HParser* nothing_p();
 
 /**
  * Given a null-terminated list of parsers, apply each parser in order.
@@ -249,7 +247,7 @@ const parser_t* nothing_p();
  *
  * Result token type: TT_SEQUENCE
  */
-const parser_t* sequence(const parser_t* p, ...) __attribute__((sentinel));
+const HParser* sequence(const HParser* p, ...) __attribute__((sentinel));
 
 /**
  * Given an array of parsers, p_array, apply each parser in order. The 
@@ -258,7 +256,7 @@ const parser_t* sequence(const parser_t* p, ...) __attribute__((sentinel));
  *
  * Result token type: The type of the first successful parser's result.
  */
-const parser_t* choice(const parser_t* p, ...) __attribute__((sentinel));
+const HParser* choice(const HParser* p, ...) __attribute__((sentinel));
 
 /**
  * Given two parsers, p1 and p2, this parser succeeds in the following 
@@ -268,7 +266,7 @@ const parser_t* choice(const parser_t* p, ...) __attribute__((sentinel));
  *
  * Result token type: p1's result type.
  */
-const parser_t* butnot(const parser_t* p1, const parser_t* p2);
+const HParser* butnot(const HParser* p1, const HParser* p2);
 
 /**
  * Given two parsers, p1 and p2, this parser succeeds in the following 
@@ -278,7 +276,7 @@ const parser_t* butnot(const parser_t* p1, const parser_t* p2);
  *
  * Result token type: p1's result type.
  */
-const parser_t* difference(const parser_t* p1, const parser_t* p2);
+const HParser* difference(const HParser* p1, const HParser* p2);
 
 /**
  * Given two parsers, p1 and p2, this parser succeeds if *either* p1 or
@@ -286,7 +284,7 @@ const parser_t* difference(const parser_t* p1, const parser_t* p2);
  *
  * Result token type: The type of the result of whichever parser succeeded.
  */
-const parser_t* xor(const parser_t* p1, const parser_t* p2);
+const HParser* xor(const HParser* p1, const HParser* p2);
 
 /**
  * Given a parser, p, this parser succeeds for zero or more repetitions
@@ -294,7 +292,7 @@ const parser_t* xor(const parser_t* p1, const parser_t* p2);
  *
  * Result token type: TT_SEQUENCE
  */
-const parser_t* many(const parser_t* p);
+const HParser* many(const HParser* p);
 
 /**
  * Given a parser, p, this parser succeeds for one or more repetitions 
@@ -302,7 +300,7 @@ const parser_t* many(const parser_t* p);
  *
  * Result token type: TT_SEQUENCE
  */
-const parser_t* many1(const parser_t* p);
+const HParser* many1(const HParser* p);
 
 /**
  * Given a parser, p, this parser succeeds for exactly N repetitions 
@@ -310,7 +308,7 @@ const parser_t* many1(const parser_t* p);
  *
  * Result token type: TT_SEQUENCE
  */
-const parser_t* repeat_n(const parser_t* p, const size_t n);
+const HParser* repeat_n(const HParser* p, const size_t n);
 
 /**
  * Given a parser, p, this parser succeeds with the value p parsed or 
@@ -318,15 +316,15 @@ const parser_t* repeat_n(const parser_t* p, const size_t n);
  *
  * Result token type: If p succeeded, the type of its result; if not, TT_NONE.
  */
-const parser_t* optional(const parser_t* p);
+const HParser* optional(const HParser* p);
 
 /**
  * Given a parser, p, this parser succeeds if p succeeds, but doesn't 
  * include p's result in the result. 
  *
- * Result token type: None. The parse_result_t exists but its AST is NULL.
+ * Result token type: None. The HParseResult exists but its AST is NULL.
  */
-const parser_t* ignore(const parser_t* p);
+const HParser* ignore(const HParser* p);
 
 /**
  * Given a parser, p, and a parser for a separator, sep, this parser 
@@ -337,7 +335,7 @@ const parser_t* ignore(const parser_t* p);
  *
  * Result token type: TT_SEQUENCE
  */
-const parser_t* sepBy(const parser_t* p, const parser_t* sep);
+const HParser* sepBy(const HParser* p, const HParser* sep);
 
 /**
  * Given a parser, p, and a parser for a separator, sep, this parser matches a list of things that p can parse, separated by sep. Unlike sepBy, this ensures that the result has at least one element.
@@ -345,14 +343,14 @@ const parser_t* sepBy(const parser_t* p, const parser_t* sep);
  *
  * Result token type: TT_SEQUENCE
  */
-const parser_t* sepBy1(const parser_t* p, const parser_t* sep);
+const HParser* sepBy1(const HParser* p, const HParser* sep);
 
 /**
  * This parser always returns a zero length match, i.e., empty string. 
  *
- * Result token type: None. The parse_result_t exists but its AST is NULL.
+ * Result token type: None. The HParseResult exists but its AST is NULL.
  */
-const parser_t* epsilon_p();
+const HParser* epsilon_p();
 
 /**
  * This parser applies its first argument to read an unsigned integer
@@ -363,7 +361,7 @@ const parser_t* epsilon_p();
  *
  * Result token type: TT_SEQUENCE
  */
-const parser_t* length_value(const parser_t* length, const parser_t* value);
+const HParser* length_value(const HParser* length, const HParser* value);
 
 /**
  * This parser attaches a predicate function, which returns true or 
@@ -378,7 +376,7 @@ const parser_t* length_value(const parser_t* length, const parser_t* value);
  * 
  * Result token type: p's result type if pred succeeded, NULL otherwise.
  */
-const parser_t* attr_bool(const parser_t* p, predicate_t pred);
+const HParser* attr_bool(const HParser* p, HPredicate pred);
 
 /**
  * The 'and' parser asserts that a conditional syntax is satisfied, 
@@ -393,9 +391,9 @@ const parser_t* attr_bool(const parser_t* p, predicate_t pred);
  *
  * 'and' succeeds if p succeeds, and fails if p fails. 
  *
- * Result token type: None. The parse_result_t exists but its AST is NULL.
+ * Result token type: None. The HParseResult exists but its AST is NULL.
  */
-const parser_t* and(const parser_t* p);
+const HParser* and(const HParser* p);
 
 /**
  * The 'not' parser asserts that a conditional syntax is *not* 
@@ -413,9 +411,9 @@ const parser_t* and(const parser_t* p);
  * If the input string is "a+b", the first alternative is applied; if 
  * the input string is "a++b", the second alternative is applied.
  * 
- * Result token type: None. The parse_result_t exists but its AST is NULL.
+ * Result token type: None. The HParseResult exists but its AST is NULL.
  */
-const parser_t* not(const parser_t* p);
+const HParser* not(const HParser* p);
 
 /**
  * Create a parser that just calls out to another, as yet unknown, 
@@ -426,12 +424,12 @@ const parser_t* not(const parser_t* p);
  * Result token type: the type of whatever parser is bound to it with
  * bind_indirect().
  */
-parser_t *indirect();
+HParser *indirect();
 
 /**
  * Set the inner parser of an indirect. See comments on indirect for 
  * details.
  */
-void bind_indirect(parser_t* indirect, parser_t* inner);
+void bind_indirect(HParser* indirect, HParser* inner);
 
 #endif // #ifndef HAMMER_HAMMER__H

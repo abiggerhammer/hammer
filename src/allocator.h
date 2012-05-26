@@ -19,18 +19,18 @@
 #define HAMMER_ALLOCATOR__H__
 #include <sys/types.h>
 
-typedef struct arena* arena_t; // hidden implementation
+typedef struct HArena_ HArena ; // hidden implementation
 
-arena_t new_arena(size_t block_size); // pass 0 for default...
-void* arena_malloc(arena_t arena, size_t count) __attribute__(( malloc, alloc_size(2) ));
-void delete_arena(arena_t arena);
+HArena *new_arena(size_t block_size); // pass 0 for default...
+void* arena_malloc(HArena *arena, size_t count) __attribute__(( malloc, alloc_size(2) ));
+void delete_arena(HArena *arena);
 
 typedef struct {
   size_t used;
   size_t wasted;
-} arena_stats_t;
+} HArenaStats;
 
-void allocator_stats(arena_t arena, arena_stats_t *stats);
+void allocator_stats(HArena *arena, HArenaStats *stats);
 
 
 #endif // #ifndef LIB_ALLOCATOR__H__

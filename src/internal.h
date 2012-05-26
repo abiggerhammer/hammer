@@ -32,7 +32,7 @@
 #define false 0
 #define true 1
 
-typedef struct input_stream {
+typedef struct HInputStream_ {
   // This should be considered to be a really big value type.
   const uint8_t *input;
   size_t index;
@@ -40,23 +40,23 @@ typedef struct input_stream {
   char bit_offset;
   char endianness;
   char overrun;
-} input_stream_t;
+} HInputStream;
 
 /* The state of the parser.
  *
  * Members:
- *   cache - a hash table describing the state of the parse, including partial parse_results. It's a hash table from parser_cache_key_t to parser_cache_value_t. 
+ *   cache - a hash table describing the state of the parse, including partial HParseResult's. It's a hash table from HParserCacheKey to HParserCacheValue. 
  *   input_stream - the input stream at this state.
  *   arena - the arena that has been allocated for the parse this state is in.
- *   lr_stack - a stack of LRs, used in Warth's recursion
- *   recursion_heads - table of recursion heads. Keys are parse_cache_key_t's with only an input_state_t (parser can be NULL), values are head_t.
+ *   lr_stack - a stack of HLeftRec's, used in Warth's recursion
+ *   recursion_heads - table of recursion heads. Keys are HParserCacheKey's with only an HInputStream (parser can be NULL), values are HRecursionHead's.
  *
  */
   
-struct parse_state {
+struct HParseState_ {
   GHashTable *cache; 
-  input_stream_t input_stream;
-  arena_t arena;
+  HInputStream input_stream;
+  HArena * arena;
   GQueue *lr_stack;
   GHashTable *recursion_heads;
 };
@@ -64,35 +64,35 @@ struct parse_state {
 /* The (location, parser) tuple used to key the cache.
  */
 
-typedef struct parser_cache_key {
-  input_stream_t input_pos;
-  const parser_t *parser;
-} parser_cache_key_t;
+typedef struct HParserCacheKey_ {
+  HInputStream input_pos;
+  const HParser *parser;
+} HParserCacheKey;
 
 /* A value in the cache is either of value Left or Right (this is a 
  * holdover from Scala, which used Either here). Left corresponds to
- * LR_t, which is for left recursion; Right corresponds to 
- * parse_result_t.
+ * HLeftRec, which is for left recursion; Right corresponds to 
+ * HParseResult.
  */
 
-typedef enum parser_cache_value_type {
+typedef enum HParserCacheValueType_ {
   PC_LEFT,
   PC_RIGHT
-} parser_cache_value_type_t;
+} HParserCacheValueType;
 
 
 /* A recursion head.
  *
  * Members:
  *   head_parser - the parse rule that started this recursion
- *   involved_set - A list of rules (parser_t's) involved in the recursion
+ *   involved_set - A list of rules (HParser's) involved in the recursion
  *   eval_set - 
  */
-typedef struct head {
-  const parser_t *head_parser;
+typedef struct HRecursionHead_ {
+  const HParser *head_parser;
   GSList *involved_set;
   GSList *eval_set;
-} head_t;
+} HRecursionHead;
 
 
 /* A left recursion.
@@ -102,35 +102,35 @@ typedef struct head {
  *   rule -
  *   head -
  */
-typedef struct LR {
-  parse_result_t *seed;
-  const parser_t *rule;
-  head_t *head;
-} LR_t;
+typedef struct HLeftRec_ {
+  HParseResult *seed;
+  const HParser *rule;
+  HRecursionHead *head;
+} HLeftRec;
 
-/* Tagged union for values in the cache: either LR's (Left) or 
- * parse_result_t's (Right).
+/* Tagged union for values in the cache: either HLeftRec's (Left) or 
+ * HParseResult's (Right).
  */
-typedef struct parser_cache_value {
-  parser_cache_value_type_t value_type;
+typedef struct HParserCacheValue_t {
+  HParserCacheValueType value_type;
   union {
-    LR_t *left;
-    parse_result_t *right;
+    HLeftRec *left;
+    HParseResult *right;
   };
-} parser_cache_value_t;
+} HParserCacheValue;
 
-typedef unsigned int *charset;
+typedef unsigned int *HCharset;
 
-static inline charset new_charset() {
-  charset cs = g_new0(unsigned int, 256 / sizeof(unsigned int));
+static inline HCharset new_charset() {
+  HCharset cs = g_new0(unsigned int, 256 / sizeof(unsigned int));
   return cs;
 }
 
-static inline int charset_isset(charset cs, uint8_t pos) {
+static inline int charset_isset(HCharset cs, uint8_t pos) {
   return !!(cs[pos / sizeof(*cs)] & (1 << (pos % sizeof(*cs))));
 }
 
-static inline void charset_set(charset cs, uint8_t pos, int val) {
+static inline void charset_set(HCharset cs, uint8_t pos, int val) {
   cs[pos / sizeof(*cs)] =
     val
     ? cs[pos / sizeof(*cs)] |  (1 << (pos % sizeof(*cs)))
@@ -139,16 +139,16 @@ static inline void charset_set(charset cs, uint8_t pos, int val) {
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
 
-long long read_bits(input_stream_t* state, int count, char signed_p);
-parse_result_t* do_parse(const parser_t* parser, parse_state_t *state);
-void put_cached(parse_state_t *ps, const parser_t *p, parse_result_t *cached);
+long long read_bits(HInputStream* state, int count, char signed_p);
+HParseResult* do_parse(const HParser* parser, HParseState *state);
+void put_cached(HParseState *ps, const HParser *p, HParseResult *cached);
 guint djbhash(const uint8_t *buf, size_t len);
-char* write_result_unamb(const parsed_token_t* tok);
-void pprint(const parsed_token_t* tok, int indent, int delta);
+char* write_result_unamb(const HParsedToken* tok);
+void pprint(const HParsedToken* tok, int indent, int delta);
 
-counted_array_t *carray_new_sized(arena_t arena, size_t size);
-counted_array_t *carray_new(arena_t arena);
-void carray_append(counted_array_t *array, void* item);
+HCountedArray *carray_new_sized(HArena * arena, size_t size);
+HCountedArray *carray_new(HArena * arena);
+void carray_append(HCountedArray *array, void* item);
 
 #if 0
 #include <malloc.h>
