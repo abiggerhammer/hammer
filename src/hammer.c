@@ -37,7 +37,7 @@ guint djbhash(const uint8_t *buf, size_t len) {
   return hash;
 }
 
-parser_cache_value_t* recall(parser_cache_key_t *k, parse_state_t *state) {
+parser_cache_value_t* recall(parser_cache_key_t *k, HParseState *state) {
   parser_cache_value_t *cached = g_hash_table_lookup(state->cache, k);
   head_t *head = g_hash_table_lookup(state->recursion_heads, k);
   if (!head) { // No heads found
@@ -88,7 +88,7 @@ void setupLR(const parser_t *p, GQueue *stack, LR_t *rec_detect) {
  * future parse. 
  */
 
-parse_result_t* grow(parser_cache_key_t *k, parse_state_t *state, head_t *head) {
+parse_result_t* grow(parser_cache_key_t *k, HParseState *state, head_t *head) {
   // Store the head into the recursion_heads
   g_hash_table_replace(state->recursion_heads, k, head);
   parser_cache_value_t *old_cached = g_hash_table_lookup(state->cache, k);
@@ -128,7 +128,7 @@ parse_result_t* grow(parser_cache_key_t *k, parse_state_t *state, head_t *head) 
   }
 }
 
-parse_result_t* lr_answer(parser_cache_key_t *k, parse_state_t *state, LR_t *growable) {
+parse_result_t* lr_answer(parser_cache_key_t *k, HParseState *state, LR_t *growable) {
   if (growable->head) {
     if (growable->head->head_parser != k->parser) {
       // not the head rule, so not growing
@@ -150,7 +150,7 @@ parse_result_t* lr_answer(parser_cache_key_t *k, parse_state_t *state, LR_t *gro
 }
 
 /* Warth's recursion. Hi Alessandro! */
-parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
+parse_result_t* do_parse(const parser_t* parser, HParseState *state) {
   parser_cache_key_t *key = a_new(parser_cache_key_t, 1);
   key->input_pos = state->input_stream; key->parser = parser;
   parser_cache_value_t *m = recall(key, state);
@@ -215,7 +215,7 @@ parse_result_t* do_parse(const parser_t* parser, parse_state_t *state) {
 }
 
 /* Helper function, since these lines appear in every parser */
-parse_result_t* make_result(parse_state_t *state, parsed_token_t *tok) {
+parse_result_t* make_result(HParseState *state, parsed_token_t *tok) {
   parse_result_t *ret = a_new(parse_result_t, 1);
   ret->ast = tok;
   ret->arena = state->arena;
@@ -227,7 +227,7 @@ typedef struct {
   uint8_t len;
 } token_t;
 
- static parse_result_t* parse_unimplemented(void* env, parse_state_t *state) {
+ static parse_result_t* parse_unimplemented(void* env, HParseState *state) {
   (void) env;
   (void) state;
   static parsed_token_t token = {
@@ -249,7 +249,7 @@ struct bits_env {
   uint8_t signedp;
 };
 
-static parse_result_t* parse_bits(void* env, parse_state_t *state) {
+static parse_result_t* parse_bits(void* env, HParseState *state) {
   struct bits_env *env_ = env;
   parsed_token_t *result = a_new(parsed_token_t, 1);
   result->token_type = (env_->signedp ? TT_SINT : TT_UINT);
@@ -283,7 +283,7 @@ SIZED_BITS(uint, 16, false)
 SIZED_BITS(uint, 32, false)
 SIZED_BITS(uint, 64, false)
 
-static parse_result_t* parse_token(void *env, parse_state_t *state) {
+static parse_result_t* parse_token(void *env, HParseState *state) {
   token_t *t = (token_t*)env;
   for (int i=0; i<t->len; ++i) {
     uint8_t chr = (uint8_t)read_bits(&state->input_stream, 8, false);
@@ -304,7 +304,7 @@ const parser_t* token(const uint8_t *str, const size_t len) {
   return (const parser_t*)ret;
 }
 
-static parse_result_t* parse_ch(void* env, parse_state_t *state) {
+static parse_result_t* parse_ch(void* env, HParseState *state) {
   uint8_t c = (uint8_t)GPOINTER_TO_UINT(env);
   uint8_t r = (uint8_t)read_bits(&state->input_stream, 8, false);
   if (c == r) {
@@ -322,7 +322,7 @@ const parser_t* ch(const uint8_t c) {
   return (const parser_t*)ret;
 }
 
-static parse_result_t* parse_whitespace(void* env, parse_state_t *state) {
+static parse_result_t* parse_whitespace(void* env, HParseState *state) {
   char c;
   input_stream_t bak;
   do {
@@ -347,7 +347,7 @@ typedef struct {
   action_t action;
 } parse_action_t;
 
-static parse_result_t* parse_action(void *env, parse_state_t *state) {
+static parse_result_t* parse_action(void *env, HParseState *state) {
   parse_action_t *a = (parse_action_t*)env;
   if (a->p && a->action) {
     parse_result_t *tmp = do_parse(a->p, state);
@@ -368,7 +368,7 @@ const parser_t* action(const parser_t* p, const action_t a) {
   return res;
 }
 
-static parse_result_t* parse_charset(void *env, parse_state_t *state) {
+static parse_result_t* parse_charset(void *env, HParseState *state) {
   uint8_t in = read_bits(&state->input_stream, 8, false);
   charset cs = (charset)env;
 
@@ -395,7 +395,7 @@ typedef struct {
   int64_t upper;
 } range_t;
 
-static parse_result_t* parse_int_range(void *env, parse_state_t *state) {
+static parse_result_t* parse_int_range(void *env, HParseState *state) {
   range_t *r_env = (range_t*)env;
   parse_result_t *ret = do_parse(r_env->p, state);
   if (!ret || !ret->ast)
@@ -469,7 +469,7 @@ const parser_t* not_in(const uint8_t *options, int count) {
   return (const parser_t*)ret;
 }
 
-static parse_result_t* parse_end(void *env, parse_state_t *state) {
+static parse_result_t* parse_end(void *env, HParseState *state) {
   if (state->input_stream.index == state->input_stream.length) {
     parse_result_t *ret = a_new(parse_result_t, 1);
     ret->ast = NULL;
@@ -501,7 +501,7 @@ typedef struct {
   const parser_t **p_array;
 } sequence_t;
 
-static parse_result_t* parse_sequence(void *env, parse_state_t *state) {
+static parse_result_t* parse_sequence(void *env, HParseState *state) {
   sequence_t *s = (sequence_t*)env;
   counted_array_t *seq = carray_new_sized(state->arena, (s->len > 0) ? s->len : 4);
   for (size_t i=0; i<s->len; ++i) {
@@ -545,7 +545,7 @@ const parser_t* sequence(const parser_t *p, ...) {
   return ret;
 }
 
-static parse_result_t* parse_choice(void *env, parse_state_t *state) {
+static parse_result_t* parse_choice(void *env, HParseState *state) {
   sequence_t *s = (sequence_t*)env;
   input_stream_t backup = state->input_stream;
   for (size_t i=0; i<s->len; ++i) {
@@ -600,7 +600,7 @@ size_t token_length(parse_result_t *pr) {
   }
 }
 
-static parse_result_t* parse_butnot(void *env, parse_state_t *state) {
+static parse_result_t* parse_butnot(void *env, HParseState *state) {
   two_parsers_t *parsers = (two_parsers_t*)env;
   // cache the initial state of the input stream
   input_stream_t start_state = state->input_stream;
@@ -637,7 +637,7 @@ const parser_t* butnot(const parser_t* p1, const parser_t* p2) {
   return ret;
 }
 
-static parse_result_t* parse_difference(void *env, parse_state_t *state) {
+static parse_result_t* parse_difference(void *env, HParseState *state) {
   two_parsers_t *parsers = (two_parsers_t*)env;
   // cache the initial state of the input stream
   input_stream_t start_state = state->input_stream;
@@ -674,7 +674,7 @@ const parser_t* difference(const parser_t* p1, const parser_t* p2) {
   return ret;
 }
 
-static parse_result_t* parse_xor(void *env, parse_state_t *state) {
+static parse_result_t* parse_xor(void *env, HParseState *state) {
   two_parsers_t *parsers = (two_parsers_t*)env;
   // cache the initial state of the input stream
   input_stream_t start_state = state->input_stream;
@@ -713,7 +713,7 @@ typedef struct {
   bool min_p;
 } repeat_t;
 
-static parse_result_t *parse_many(void* env, parse_state_t *state) {
+static parse_result_t *parse_many(void* env, HParseState *state) {
   repeat_t *env_ = (repeat_t*) env;
   counted_array_t *seq = carray_new_sized(state->arena, (env_->count > 0 ? env_->count : 4));
   size_t count = 0;
@@ -786,7 +786,7 @@ const parser_t* repeat_n(const parser_t* p, const size_t n) {
   return res;
 }
 
-static parse_result_t* parse_ignore(void* env, parse_state_t* state) {
+static parse_result_t* parse_ignore(void* env, HParseState* state) {
   parse_result_t *res0 = do_parse((parser_t*)env, state);
   if (!res0)
     return NULL;
@@ -802,7 +802,7 @@ const parser_t* ignore(const parser_t* p) {
   return ret;
 }
 
-static parse_result_t* parse_optional(void* env, parse_state_t* state) {
+static parse_result_t* parse_optional(void* env, HParseState* state) {
   input_stream_t bak = state->input_stream;
   parse_result_t *res0 = do_parse((parser_t*)env, state);
   if (res0)
@@ -845,7 +845,7 @@ const parser_t* sepBy1(const parser_t* p, const parser_t* sep) {
   return res;
 }
 
-static parse_result_t* parse_epsilon(void* env, parse_state_t* state) {
+static parse_result_t* parse_epsilon(void* env, HParseState* state) {
   (void)env;
   parse_result_t* res = a_new(parse_result_t, 1);
   res->ast = NULL;
@@ -860,7 +860,7 @@ const parser_t* epsilon_p() {
   return res;
 }
 
-static parse_result_t* parse_indirect(void* env, parse_state_t* state) {
+static parse_result_t* parse_indirect(void* env, HParseState* state) {
   return do_parse(env, state);
 }
 void bind_indirect(parser_t* indirect, parser_t* inner) {
@@ -879,7 +879,7 @@ typedef struct {
   predicate_t pred;
 } attr_bool_t;
 
-static parse_result_t* parse_attr_bool(void *env, parse_state_t *state) {
+static parse_result_t* parse_attr_bool(void *env, HParseState *state) {
   attr_bool_t *a = (attr_bool_t*)env;
   parse_result_t *res = do_parse(a->p, state);
   if (res && res->ast) {
@@ -906,7 +906,7 @@ typedef struct {
   const parser_t *value;
 } lv_t;
 
-static parse_result_t* parse_length_value(void *env, parse_state_t *state) {
+static parse_result_t* parse_length_value(void *env, HParseState *state) {
   lv_t *lv = (lv_t*)env;
   parse_result_t *len = do_parse(lv->length, state);
   if (!len)
@@ -936,7 +936,7 @@ const parser_t* length_value(const parser_t* length, const parser_t* value) {
   return res;
 }
 
-static parse_result_t *parse_and(void* env, parse_state_t* state) {
+static parse_result_t *parse_and(void* env, HParseState* state) {
   input_stream_t bak = state->input_stream;
   parse_result_t *res = do_parse((parser_t*)env, state);
   state->input_stream = bak;
@@ -953,7 +953,7 @@ const parser_t* and(const parser_t* p) {
   return res;
 }
 
-static parse_result_t* parse_not(void* env, parse_state_t* state) {
+static parse_result_t* parse_not(void* env, HParseState* state) {
   input_stream_t bak = state->input_stream;
   if (do_parse((parser_t*)env, state))
     return NULL;
@@ -981,7 +981,7 @@ static gboolean cache_key_equal(gconstpointer key1, gconstpointer key2) {
 parse_result_t* parse(const parser_t* parser, const uint8_t* input, size_t length) { 
   // Set up a parse state...
   arena_t arena = new_arena(0);
-  parse_state_t *parse_state = a_new_(arena, parse_state_t, 1);
+  HParseState *parse_state = a_new_(arena, HParseState, 1);
   parse_state->cache = g_hash_table_new(cache_key_hash, // hash_func
 					cache_key_equal);// key_equal_func
   parse_state->input_stream.input = input;

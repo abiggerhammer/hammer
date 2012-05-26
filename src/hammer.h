@@ -28,7 +28,7 @@
 
 typedef int bool;
 
-typedef struct parse_state parse_state_t;
+typedef struct HParseState_ HParseState;
 
 typedef enum token_type {
   TT_NONE,
@@ -100,7 +100,7 @@ typedef const parsed_token_t* (*action_t)(const parse_result_t *p);
 typedef bool (*predicate_t)(parse_result_t *p);
 
 typedef struct parser {
-  parse_result_t* (*fn)(void *env, parse_state_t *state);
+  parse_result_t* (*fn)(void *env, HParseState *state);
   void *env;
 } parser_t;
 

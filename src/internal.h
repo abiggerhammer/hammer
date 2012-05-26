@@ -53,7 +53,7 @@ typedef struct input_stream {
  *
  */
   
-struct parse_state {
+struct HParseState_ {
   GHashTable *cache; 
   input_stream_t input_stream;
   arena_t arena;
@@ -140,8 +140,8 @@ static inline void charset_set(charset cs, uint8_t pos, int val) {
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
 
 long long read_bits(input_stream_t* state, int count, char signed_p);
-parse_result_t* do_parse(const parser_t* parser, parse_state_t *state);
-void put_cached(parse_state_t *ps, const parser_t *p, parse_result_t *cached);
+parse_result_t* do_parse(const parser_t* parser, HParseState *state);
+void put_cached(HParseState *ps, const parser_t *p, parse_result_t *cached);
 guint djbhash(const uint8_t *buf, size_t len);
 char* write_result_unamb(const parsed_token_t* tok);
 void pprint(const parsed_token_t* tok, int indent, int delta);
