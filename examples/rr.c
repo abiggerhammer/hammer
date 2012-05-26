@@ -10,9 +10,9 @@ const HParser* init_cname() {
   if (cname)
     return cname;
   
-  cname = sequence(init_domain(),
-		   end_p(),
-		   NULL);
+  cname = h_sequence(init_domain(),
+		     h_end_p(),
+		     NULL);
   
   return cname;
 }
@@ -24,10 +24,10 @@ const HParser* init_hinfo() {
 
   const HParser* cstr = init_character_string();
   
-  hinfo = sequence(cstr,
-		   cstr,
-		   end_p(),
-		   NULL);
+  hinfo = h_sequence(cstr,
+		     cstr,
+		     h_end_p(),
+		     NULL);
 
   return hinfo;
 }
@@ -37,9 +37,9 @@ const HParser* init_mb() {
   if (mb)
     return mb;
   
-  mb = sequence(init_domain(),
-		end_p(),
-		NULL);
+  mb = h_sequence(init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return mb;
 }
@@ -49,9 +49,9 @@ const HParser* init_md() {
   if (md)
     return md;
   
-  md = sequence(init_domain(),
-		end_p,
-		NULL);
+  md = h_sequence(init_domain(),
+		  h_end_p,
+		  NULL);
 
   return md;
 }
@@ -61,9 +61,9 @@ const HParser* init_mf() {
   if (mf)
     return mf;
   
-  mf = sequence(init_domain(),
-		end_p(),
-		NULL);
+  mf = h_sequence(init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return mf;
 }
@@ -73,9 +73,9 @@ const HParser* init_mg() {
   if (mg)
     return mg;
   
-  mg = sequence(init_domain(),
-		end_p(),
-		NULL);
+  mg = h_sequence(init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return mg;
 }
@@ -87,10 +87,10 @@ const HParser* init_minfo() {
 
   const HParser* domain = init_domain();
 
-  minfo = sequence(domain,
-		   domain,
-		   end_p(),
-		   NULL);
+  minfo = h_sequence(domain,
+		     domain,
+		     h_end_p(),
+		     NULL);
 
   return minfo;
 }
@@ -100,9 +100,9 @@ const HParser* init_mr() {
   if (mr)
     return mr;
   
-  mr = sequence(init_domain(),
-		end_p(),
-		NULL);
+  mr = h_sequence(init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return mr;
 }
@@ -112,15 +112,15 @@ const HParser* init_mx() {
   if (mx)
     return mx;
   
-  mx = sequence(uint16(),
-		init_domain(),
-		end_p(),
-		NULL);
+  mx = h_sequence(h_uint16(),
+		  init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return mx;
 }
 
-bool validate_null(parse_result_t *p) {
+bool validate_null(HParseResult *p) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
   return (65536 > p->ast->seq->used);
@@ -131,7 +131,7 @@ const HParser* init_null() {
   if (null_)
     return null_;
 
-  null_ = attr_bool(uint8(), validate_null);
+  null_ = h_attr_bool(h_many(h_uint8()), validate_null);
 
   return null_;
 }
@@ -141,9 +141,9 @@ const HParser* init_ns() {
   if (ns)
     return ns;
 
-  ns = sequence(init_domain(),
-		end_p(),
-		NULL);
+  ns = h_sequence(init_domain(),
+		  h_end_p(),
+		  NULL);
 
   return ns;
 }
@@ -153,9 +153,9 @@ const HParser* init_ptr() {
   if (ptr)
     return ptr;
   
-  ptr = sequence(init_domain(),
-		end_p(),
-		NULL);
+  ptr = h_sequence(init_domain(),
+		   h_end_p(),
+		   NULL);
 
   return ptr;
 }
@@ -167,15 +167,15 @@ const HParser* init_soa() {
 
   const HParser *domain = init_domain();
 
-  soa = sequence(domain,   // MNAME
-		 domain,   // RNAME
-		 uint32(), // SERIAL
-		 uint32(), // REFRESH
-		 uint32(), // RETRY
-		 uint32(), // EXPIRE
-		 uint32(), // MINIMUM
-		 end_p(),
-		 NULL);
+  soa = h_sequence(domain,   // MNAME
+		   domain,   // RNAME
+		   h_uint32(), // SERIAL
+		   h_uint32(), // REFRESH
+		   h_uint32(), // RETRY
+		   h_uint32(), // EXPIRE
+		   h_uint32(), // MINIMUM
+		   h_end_p(),
+		   NULL);
 
   return soa;
 }
@@ -185,9 +185,9 @@ const HParser* init_txt() {
   if (txt)
     return txt;
 
-  txt = sequence(many1(init_character_string()),
-		 end_p(),
-		 NULL);
+  txt = h_sequence(h_many1(init_character_string()),
+		   h_end_p(),
+		   NULL);
 
   return txt;
 }
@@ -197,9 +197,9 @@ const HParser* init_a() {
   if (a)
     return a;
 
-  a = sequence(uint32(),
-	       end_p(),
-	       NULL);
+  a = h_sequence(h_uint32(),
+		 h_end_p(),
+		 NULL);
 
   return a;
 }
@@ -209,11 +209,11 @@ const HParser* init_wks() {
   if (wks)
     return wks;
 
-  wks = sequence(uint32(),
-		 uint8(),
-		 many(uint8()),
-		 end_p(),
-		 NULL);
+  wks = h_sequence(h_uint32(),
+		   h_uint8(),
+		   h_many(h_uint8()),
+		   h_end_p(),
+		   NULL);
 
   return wks;
 }

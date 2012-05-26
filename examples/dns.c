@@ -40,12 +40,12 @@ struct dns_qname get_qname(const HParsedToken *t) {
   const HParsedToken *labels = t->seq->elements[0];
   struct dns_qname ret = {
     .qlen = labels->seq->used,
-    .labels = arena_malloc(t->seq->arena, sizeof(ret.labels)*ret.qlen)
+    .labels = h_arena_malloc(t->seq->arena, sizeof(ret.labels)*ret.qlen)
   };
   // i is which label we're on
   for (size_t i=0; i<labels->seq->used; ++i) {
     ret.labels[i].len = labels->seq->elements[i]->seq->used;
-    ret.labels[i].label = arena_malloc(t->seq->arena, sizeof(uint8_t)*ret.labels[i].len);
+    ret.labels[i].label = h_arena_malloc(t->seq->arena, sizeof(uint8_t)*ret.labels[i].len);
     // j is which char of the label we're on
     for (size_t j=0; j<ret.labels[i].len; ++j)
       ret.labels[i].label[j] = labels->seq->elements[i]->seq->elements[j]->uint;
@@ -53,14 +53,14 @@ struct dns_qname get_qname(const HParsedToken *t) {
   return ret;
 }
 
-char* get_name(const HParsedToken *t) {
+char* get_domain(const HParsedToken *t) {
   switch(t->token_type) {
   case TT_UINT:
     return " ";
   case TT_SEQUENCE:
     {
       // Sequence of subdomains separated by "."
-      
+      return NULL;
     }
   default:
     return NULL;
@@ -68,11 +68,15 @@ char* get_name(const HParsedToken *t) {
 
 }
 
+void set_rr(struct dns_rr rr, HCountedArray *rdata) {
+
+}
+
 const HParsedToken* pack_dns_struct(const HParseResult *p) {
-  HParsedToken *ret = arena_malloc(p->arena, sizeof(HParsedToken*));
+  HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken*));
   ret->token_type = TT_USER;
 
-  dns_message_t *msg = arena_malloc(p->arena, sizeof(dns_message_t*));
+  dns_message_t *msg = h_arena_malloc(p->arena, sizeof(dns_message_t*));
 
   HParsedToken *hdr = p->ast->seq->elements[0];
   struct dns_header header = {
@@ -92,7 +96,7 @@ const HParsedToken* pack_dns_struct(const HParseResult *p) {
   msg->header = header;
 
   HParsedToken *qs = p->ast->seq->elements[1];
-  struct dns_question *questions = arena_malloc(p->arena,
+  struct dns_question *questions = h_arena_malloc(p->arena,
 						sizeof(struct dns_question)*(header.question_count));
   for (size_t i=0; i<header.question_count; ++i) {
     // QNAME is a sequence of labels. In the parser, it's defined as
@@ -104,8 +108,8 @@ const HParsedToken* pack_dns_struct(const HParseResult *p) {
   msg->questions = questions;
 
   HParsedToken *rrs = p->ast->seq->elements[2];
-  struct dns_rr *answers = arena_malloc(p->arena,
-					sizeof(struct dns_rr)*(header.answer_count));
+  struct dns_rr *answers = h_arena_malloc(p->arena,
+					  sizeof(struct dns_rr)*(header.answer_count));
   for (size_t i=0; i<header.answer_count; ++i) {
     answers[i].name = get_domain(rrs[i].seq->elements[0]);
     answers[i].type = rrs[i].seq->elements[1]->uint;
@@ -116,7 +120,7 @@ const HParsedToken* pack_dns_struct(const HParseResult *p) {
   }
   msg->answers = answers;
 
-  struct dns_rr *authority = arena_malloc(p->arena,
+  struct dns_rr *authority = h_arena_malloc(p->arena,
 					  sizeof(struct dns_rr)*(header.authority_count));
   for (size_t i=0, j=header.answer_count; i<header.authority_count; ++i, ++j) {
     authority[i].name = get_domain(rrs[j].seq->elements[0]);
@@ -128,8 +132,8 @@ const HParsedToken* pack_dns_struct(const HParseResult *p) {
   }
   msg->authority = authority;
 
-  struct dns_rr *additional = arena_malloc(p->arena,
-					   sizeof(struct dns_rr)*(header.additional_count));
+  struct dns_rr *additional = h_arena_malloc(p->arena,
+					     sizeof(struct dns_rr)*(header.additional_count));
   for (size_t i=0, j=header.answer_count+header.authority_count; i<header.additional_count; ++i, ++j) {
     additional[i].name = get_domain(rrs[j].seq->elements[0]);
     additional[i].type = rrs[j].seq->elements[1]->uint;
@@ -151,56 +155,56 @@ const HParser* init_parser() {
 
   const HParser *domain = init_domain();
 
-  const HParser *dns_header = sequence(bits(16, false), // ID
-					bits(1, false),  // QR
-					bits(4, false),  // opcode
-					bits(1, false),  // AA
-					bits(1, false),  // TC
-					bits(1, false),  // RD
-					bits(1, false),  // RA
-					ignore(attr_bool(bits(3, false), is_zero)), // Z
-					bits(4, false),  // RCODE
-					uint16(), // QDCOUNT
-					uint16(), // ANCOUNT
-					uint16(), // NSCOUNT
-					uint16(), // ARCOUNT
-					NULL);
+  const HParser *dns_header = h_sequence(h_bits(16, false), // ID
+					 h_bits(1, false),  // QR
+					 h_bits(4, false),  // opcode
+					 h_bits(1, false),  // AA
+					 h_bits(1, false),  // TC
+					 h_bits(1, false),  // RD
+					 h_bits(1, false),  // RA
+					 h_ignore(h_attr_bool(h_bits(3, false), is_zero)), // Z
+					 h_bits(4, false),  // RCODE
+					 h_uint16(), // QDCOUNT
+					 h_uint16(), // ANCOUNT
+					 h_uint16(), // NSCOUNT
+					 h_uint16(), // ARCOUNT
+					 NULL);
 
-  const HParser *type = int_range(uint16(), 1, 16);
+  const HParser *type = h_int_range(h_uint16(), 1, 16);
 
-  const HParser *qtype = choice(type, 
-				 int_range(uint16(), 252, 255),
-				 NULL);
-
-  const HParser *class = int_range(uint16(), 1, 4);
-  
-  const HParser *qclass = choice(class,
-				  int_range(uint16(), 255, 255),
+  const HParser *qtype = h_choice(type, 
+				  h_int_range(h_uint16(), 252, 255),
 				  NULL);
 
-  const HParser *dns_question = sequence(sequence(many1(length_value(uint8(), 
-								      uint8())), 
-						  ch('\x00'),
-						  NULL),  // QNAME
-					  qtype,           // QTYPE
-					  qclass,          // QCLASS
-					  NULL);
+  const HParser *class = h_int_range(h_uint16(), 1, 4);
+  
+  const HParser *qclass = h_choice(class,
+				   h_int_range(h_uint16(), 255, 255),
+				   NULL);
+
+  const HParser *dns_question = h_sequence(h_sequence(h_many1(h_length_value(h_uint8(), 
+									     h_uint8())), 
+						      h_ch('\x00'),
+						      NULL),  // QNAME
+					   qtype,           // QTYPE
+					   qclass,          // QCLASS
+					   NULL);
  
 
-  const HParser *dns_rr = sequence(domain,                          // NAME
-				    type,                            // TYPE
-				    class,                           // CLASS
-				    uint32(),                        // TTL
-				    length_value(uint16(), uint8()), // RDLENGTH+RDATA
-				    NULL);
+  const HParser *dns_rr = h_sequence(domain,                          // NAME
+				     type,                            // TYPE
+				     class,                           // CLASS
+				     h_uint32(),                        // TTL
+				     h_length_value(h_uint16(), h_uint8()), // RDLENGTH+RDATA
+				     NULL);
 
 
-  dns_message = (HParser*)attr_bool(sequence(dns_header,
-					      many(dns_question),
-					      many(dns_rr),
-					      end_p(),
-					      NULL),
-				     validate_dns);
+  dns_message = (HParser*)h_attr_bool(h_sequence(dns_header,
+						 h_many(dns_question),
+						 h_many(dns_rr),
+						 h_end_p(),
+						 NULL),
+				      validate_dns);
 
   return dns_message;
 }
