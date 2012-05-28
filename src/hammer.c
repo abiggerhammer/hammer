@@ -420,6 +420,14 @@ static void test_action(void) {
   g_check_parse_ok(action_, "AB", 2, "(u0x41 u0x42)");
 }
 
+static void test_in(void) {
+  uint8_t options[3] = { 'a', 'b', 'c' };
+  const HParser *in_ = h_in(options, 3);
+  g_check_parse_ok(in_, "b", 1, "u0x62");
+  g_check_parse_failed(in_, "d", 1);
+
+}
+
 static void test_not_in(void) {
   uint8_t options[3] = { 'a', 'b', 'c' };
   const HParser *not_in_ = h_not_in(options, 3);
@@ -593,6 +601,7 @@ void register_parser_tests(void) {
 #endif
   g_test_add_func("/core/parser/whitespace", test_whitespace);
   g_test_add_func("/core/parser/action", test_action);
+  g_test_add_func("/core/parser/in", test_in);
   g_test_add_func("/core/parser/not_in", test_not_in);
   g_test_add_func("/core/parser/end_p", test_end_p);
   g_test_add_func("/core/parser/nothing_p", test_nothing_p);
