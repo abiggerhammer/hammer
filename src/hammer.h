@@ -225,6 +225,13 @@ const HParser* h_whitespace(const HParser* p);
 const HParser* h_action(const HParser* p, const HAction a);
 
 /**
+ * Parse a single character in the given charset. 
+ *
+ * Result token type: TT_UINT
+ */
+const HParser* h_in(const uint8_t *charset, size_t length);
+
+/**
  * Parse a single character *NOT* in the given charset. 
  *
  * Result token type: TT_UINT
