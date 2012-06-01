@@ -208,7 +208,14 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
       setupLR(parser, state, m->left);
       return m->left->seed; // BUG: this might not be correct
     } else {
-      return m->right;
+      HParseResult *res = m->right;
+
+      // skip over the previously-parsed input
+      long long offs = res->bit_length + state->input_stream.bit_offset;
+      state->input_stream.index += offs >> 3;
+      state->input_stream.bit_offset = offs & 7;
+
+      return res;
     }
   }
 }
