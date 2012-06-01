@@ -21,7 +21,8 @@ PARSERS := \
 	epsilon \
 	and \
 	not \
-	attr_bool
+	attr_bool \
+	indirect
 
 OUTPUTS := bitreader.o \
 	   hammer.o \
