@@ -435,7 +435,7 @@ HParser *h_indirect();
  * Set the inner parser of an indirect. See comments on indirect for 
  * details.
  */
-void h_bind_indirect(HParser* indirect, HParser* inner);
+void h_bind_indirect(HParser* indirect, const HParser* inner);
 
 // Some debugging aids
 /**
