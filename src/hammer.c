@@ -35,12 +35,41 @@ static guint djbhash(const uint8_t *buf, size_t len) {
 }
 
 // short-hand for constructing HCachedResult's
-static HCachedResult *cached_result(const HParseState *state, HParseResult *result)
-{
+static HCachedResult *cached_result(const HParseState *state, HParseResult *result) {
   HCachedResult *ret = a_new(HCachedResult, 1);
   ret->result = result;
   ret->input_stream = state->input_stream;
   return ret;
+}
+
+// Really library-internal tool to perform an uncached parse, and handle any common error-handling.
+static inline HParseResult* perform_lowlevel_parse(HParseState *state, const HParser *parser) {
+  HParseResult *tmp_res;
+  if (parser) {
+    HInputStream bak = state->input_stream;
+    tmp_res = parser->vtable->parse(parser->env, state);
+    if (tmp_res) {
+      tmp_res->arena = state->arena;
+      if (!state->input_stream.overrun) {
+	tmp_res->bit_length = ((state->input_stream.index - bak.index) << 3);
+	if (state->input_stream.endianness & BIT_BIG_ENDIAN)
+	  tmp_res->bit_length += state->input_stream.bit_offset - bak.bit_offset;
+	else
+	  tmp_res->bit_length += bak.bit_offset - state->input_stream.bit_offset;
+      } else
+	tmp_res->bit_length = 0;
+    }
+  } else
+    tmp_res = NULL;
+  if (state->input_stream.overrun)
+    return NULL; // overrun is always failure.
+#ifdef CONSISTENCY_CHECK
+  if (!tmp_res) {
+    state->input_stream = INVALID;
+    state->input_stream.input = key->input_pos.input;
+  }
+#endif
+  return tmp_res;
 }
 
 HParserCacheValue* recall(HParserCacheKey *k, HParseState *state) {
@@ -60,9 +89,7 @@ HParserCacheValue* recall(HParserCacheKey *k, HParseState *state) {
     if (g_slist_find(head->eval_set, k->parser)) {
       // Something is in the cache, and the key parser is in the eval set. Remove the key parser from the eval set of the head. 
       head->eval_set = g_slist_remove_all(head->eval_set, k->parser);
-      HParseResult *tmp_res = k->parser->vtable->parse(k->parser->env, state);
-      if (tmp_res)
-	tmp_res->arena = state->arena;
+      HParseResult *tmp_res = perform_lowlevel_parse(state, k->parser);
       // we know that cached has an entry here, modify it
       if (!cached)
 	cached = a_new(HParserCacheValue, 1);
@@ -106,13 +133,8 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
   
   // reset the eval_set of the head of the recursion at each beginning of growth
   head->eval_set = head->involved_set;
-  HParseResult *tmp_res;
-  if (k->parser) {
-    tmp_res = k->parser->vtable->parse(k->parser->env, state);
-    if (tmp_res)
-      tmp_res->arena = state->arena;
-  } else
-    tmp_res = NULL;
+  HParseResult *tmp_res = perform_lowlevel_parse(state, k->parser);
+
   if (tmp_res) {
     if ((old_res->ast->index < tmp_res->ast->index) || 
 	(old_res->ast->index == tmp_res->ast->index && old_res->ast->bit_offset < tmp_res->ast->bit_offset)) {
@@ -173,31 +195,7 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
     dummy->value_type = PC_LEFT; dummy->left = base;
     g_hash_table_replace(state->cache, key, dummy);
     // parse the input
-    HParseResult *tmp_res;
-    if (parser) {
-      HInputStream bak = state->input_stream;
-      tmp_res = parser->vtable->parse(parser->env, state);
-      if (tmp_res) {
-	tmp_res->arena = state->arena;
-	if (!state->input_stream.overrun) {
-	  tmp_res->bit_length = ((state->input_stream.index - bak.index) << 3);
-	  if (state->input_stream.endianness & BIT_BIG_ENDIAN)
-	    tmp_res->bit_length += state->input_stream.bit_offset - bak.bit_offset;
-	  else
-	    tmp_res->bit_length += bak.bit_offset - state->input_stream.bit_offset;
-	} else
-	  tmp_res->bit_length = 0;
-      }
-    } else
-      tmp_res = NULL;
-    if (state->input_stream.overrun)
-      return NULL; // overrun is always failure.
-#ifdef CONSISTENCY_CHECK
-    if (!tmp_res) {
-      state->input_stream = INVALID;
-      state->input_stream.input = key->input_pos.input;
-    }
-#endif
+    HParseResult *tmp_res = perform_lowlevel_parse(state, parser);
     // the base variable has passed equality tests with the cache
     g_queue_pop_head(state->lr_stack);
     // setupLR, used below, mutates the LR to have a head if appropriate, so we check to see if we have one
