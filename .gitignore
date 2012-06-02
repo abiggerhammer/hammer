@@ -4,4 +4,5 @@
 src/test_suite
 lib/hush
 examples/dns
+examples/base64
 TAGS
