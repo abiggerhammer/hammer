@@ -35,4 +35,4 @@ what the comments say.
 
 TODO: implement datastructure linearization func
 TODO: implement free func for parsers
-TODO: Reimplement GSequence et al for use with arena allocator. (*&%$#@ Glib doesn't allow per-datastructure allocators)
+TODO: Remove glib dependency (i.e., GQueue and GHashtable)

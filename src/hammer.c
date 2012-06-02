@@ -44,6 +44,7 @@ static HCachedResult *cached_result(const HParseState *state, HParseResult *resu
 
 // Really library-internal tool to perform an uncached parse, and handle any common error-handling.
 static inline HParseResult* perform_lowlevel_parse(HParseState *state, const HParser *parser) {
+  // TODO(thequux): these nested conditions are ugly. Factor this appropriately, so that it is clear which codes is executed when.
   HParseResult *tmp_res;
   if (parser) {
     HInputStream bak = state->input_stream;
