@@ -25,6 +25,7 @@ PARSERS := \
 
 OUTPUTS := bitreader.o \
 	   hammer.o \
+	   bitwriter.o \
 	   libhammer.a \
 	   pprint.o \
 	   allocator.o \
@@ -42,7 +43,7 @@ all: libhammer.a test_suite
 test_suite: test_suite.o libhammer.a
 	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
 
-libhammer.a: bitreader.o hammer.o pprint.o allocator.o datastructures.o \
+libhammer.a: bitreader.o hammer.o pprint.o allocator.o datastructures.o bitwriter.o \
 	$(PARSERS:%=parsers/%.o)
 
 bitreader.o: test_suite.h

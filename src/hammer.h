@@ -80,6 +80,12 @@ typedef struct HParseResult_ {
 } HParseResult;
 
 /**
+ * TODO: document me.
+ * Relevant functions: h_bit_writer_new, h_bit_writer_put, h_bit_writer_get_buffer, h_bit_writer_free
+ */
+typedef struct HBitWriter_ HBitWriter;
+
+/**
  * Type of an action to apply to an AST, used in the action() parser. 
  * It can be any (user-defined) function that takes a HParseResult*
  * and returns a HParsedToken*. (This is so that the user doesn't 
@@ -448,5 +454,27 @@ char* h_write_result_unamb(const HParsedToken* tok);
  * [indent] spaces, with [delta] spaces between levels.
  */
 void h_pprint(FILE* stream, const HParsedToken* tok, int indent, int delta);
+
+/**
+ * TODO: Document me
+ */
+HBitWriter *h_bit_writer_new(void);
+
+/**
+ * TODO: Document me
+ */
+void h_bit_writer_put(HBitWriter* w, unsigned long long data, size_t nbits);
+
+/**
+ * TODO: Document me
+ * Must not free [w] until you're done with the result.
+ * [len] is in bytes.
+ */
+uint8_t *h_bit_writer_get_buffer(HBitWriter* w, size_t *len);
+
+/**
+ * TODO: Document me
+ */
+void h_bit_writer_free(HBitWriter* w);
 
 #endif // #ifndef HAMMER_HAMMER__H
