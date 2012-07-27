@@ -2,6 +2,7 @@
 #include <assert.h>
 #include "hammer.h"
 #include "internal.h"
+#include "test_suite.h"
 
 // This file provides the logical inverse of bitreader.c
 struct HBitWriter_ {
@@ -104,3 +105,32 @@ void h_bit_writer_free(HBitWriter* w) {
 }
 
 // TESTS BELOW HERE
+typedef struct {
+  unsigned long long data;
+  size_t nbits;
+} bitwriter_test_elem; // should end with {0,0}
+
+void run_bitwriter_test(bitwriter_test_elem data[], char flags) {
+  size_t len;
+  const uint8_t *buf;
+  HBitWriter *w = h_bit_writer_new();
+  int i;
+  w->flags = flags;
+  for (i = 0; data[i].nbits; i++) {
+    h_bit_writer_put(w, data[i].data, data[i].nbits);
+  }
+
+  buf = h_bit_writer_get_buffer(w, &len);
+  HInputStream input = {
+    .input = buf,
+    .index = 0,
+    .length = len,
+    .bit_offset = (flags & BIT_BIG_ENDIAN) ? 8 : 0,
+    .endianness = flags,
+    .overrun = 0
+  };
+
+  for (i = 0; data[i].nbits; i++) {
+    g_check_cmpulonglong ((unsigned long long)h_read_bits(&input, data[i].nbits, FALSE), ==,  data[i].data);
+  }
+}
