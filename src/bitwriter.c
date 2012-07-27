@@ -145,27 +145,59 @@ static void test_bitwriter_ints(void) {
 }
 
 static void test_bitwriter_be(void) {
-
+  bitwriter_test_elem data[] = {
+    { 0x03, 3 },
+    { 0x52, 8 },
+    { 0x1A, 5 },
+    { 0, 0 }
+  };
+  run_bitwriter_test(data, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
 }
 
 static void test_bitwriter_le(void) {
-
+  bitwriter_test_elem data[] = {
+    { 0x02, 3 },
+    { 0x4D, 8 },
+    { 0x0B, 5 },
+    { 0, 0 }
+  };
+  run_bitwriter_test(data, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
 }
 
 static void test_largebits_be(void) {
-
+  bitwriter_test_elem data[] = {
+    { 0x352, 11 },
+    { 0x1A, 5 },
+    { 0, 0 }
+  };
+  run_bitwriter_test(data, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
 }
 
 static void test_largebits_le(void) {
-
+  bitwriter_test_elem data[] = {
+    { 0x26A, 11 },
+    { 0x0B, 5 },
+    { 0, 0 }
+  };
+  run_bitwriter_test(data, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
 }
 
 static void test_offset_largebits_be(void) {
-
+  bitwriter_test_elem data[] = {
+    { 0xD, 5 },
+    { 0x25A, 11 },
+    { 0, 0 }
+  };
+  run_bitwriter_test(data, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
 }
 
 static void test_offset_largebits_le(void) {
-
+  bitwriter_test_elem data[] = {
+    { 0xA, 5 },
+    { 0x2D3, 11 },
+    { 0, 0 }
+  };
+  run_bitwriter_test(data, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
 }
 
 void register_bitwriter_tests(void) {
