@@ -264,6 +264,10 @@ HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length
   return res;
 }
 
+void h_parse_result_free(HParseResult *result) {
+  h_delete_arena(result->arena);
+}
+
 #ifdef INCLUDE_TESTS
 
 #include "test_suite.h"

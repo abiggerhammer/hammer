@@ -437,6 +437,11 @@ HParser *h_indirect();
  */
 void h_bind_indirect(HParser* indirect, HParser* inner);
 
+/**
+ * Free the memory allocated to an HParseResult when it is no longer needed.
+ */
+void h_parse_result_free(HParseResult *result);
+
 // Some debugging aids
 /**
  * Format token into a compact unambiguous form. Useful for parser test cases.
