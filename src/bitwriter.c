@@ -95,7 +95,7 @@ const uint8_t *h_bit_writer_get_buffer(HBitWriter* w, size_t *len) {
   assert (w->bit_offset == 0); // BUG: change this to some sane behaviour
 
   *len = w->index;
-  return w->buf
+  return w->buf;
 }
 
 void h_bit_writer_free(HBitWriter* w) {
