@@ -104,6 +104,7 @@ void h_bit_writer_free(HBitWriter* w) {
   g_free(w);
 }
 
+#ifdef INCLUDE_TESTS
 // TESTS BELOW HERE
 typedef struct {
   unsigned long long data;
@@ -134,3 +135,43 @@ void run_bitwriter_test(bitwriter_test_elem data[], char flags) {
     g_check_cmpulonglong ((unsigned long long)h_read_bits(&input, data[i].nbits, FALSE), ==,  data[i].data);
   }
 }
+
+static void test_bitwriter_ints(void) {
+
+}
+
+static void test_bitwriter_be(void) {
+
+}
+
+static void test_bitwriter_le(void) {
+
+}
+
+static void test_largebits_be(void) {
+
+}
+
+static void test_largebits_le(void) {
+
+}
+
+static void test_offset_largebits_be(void) {
+
+}
+
+static void test_offset_largebits_le(void) {
+
+}
+
+void register_bitwriter_tests(void) {
+  g_test_add_func("/core/bitwriter/be", test_bitwriter_be);
+  g_test_add_func("/core/bitwriter/le", test_bitwriter_le);
+  g_test_add_func("/core/bitwriter/largebits-be", test_largebits_be);
+  g_test_add_func("/core/bitwriter/largebits-le", test_largebits_le);
+  g_test_add_func("/core/bitwriter/offset-largebits-be", test_offset_largebits_be);
+  g_test_add_func("/core/bitwriter/offset-largebits-le", test_offset_largebits_le);
+  g_test_add_func("/core/bitwriter/ints", test_bitwriter_ints);
+}
+
+#endif // #ifdef INCLUDE_TESTS
