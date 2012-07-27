@@ -137,7 +137,11 @@ void run_bitwriter_test(bitwriter_test_elem data[], char flags) {
 }
 
 static void test_bitwriter_ints(void) {
-
+  bitwriter_test_elem data[] = {
+    { -0x200000000, 64 },
+    { 0,0 }
+  };
+  run_bitwriter_test(data, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
 }
 
 static void test_bitwriter_be(void) {
