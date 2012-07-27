@@ -88,6 +88,19 @@ void h_bit_writer_put(HBitWriter* w, unsigned long long data, size_t nbits) {
 }
 
 
-uint8_t *h_bit_writer_get_buffer(HBitWriter* w, size_t *len);
+const uint8_t *h_bit_writer_get_buffer(HBitWriter* w, size_t *len) {
+  assert (len != NULL);
+  assert (w != NULL);
+  // Not entirely sure how to handle a non-integral number of bytes... make it an error for now
+  assert (w->bit_offset == 0); // BUG: change this to some sane behaviour
+
+  *len = w->index;
+  return w->buf
+}
+
+void h_bit_writer_free(HBitWriter* w) {
+  g_free(w->buf);
+  g_free(w);
+}
 
 // TESTS BELOW HERE
