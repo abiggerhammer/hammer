@@ -475,7 +475,7 @@ void h_bit_writer_put(HBitWriter* w, unsigned long long data, size_t nbits);
  * Must not free [w] until you're done with the result.
  * [len] is in bytes.
  */
-uint8_t *h_bit_writer_get_buffer(HBitWriter* w, size_t *len);
+const uint8_t *h_bit_writer_get_buffer(HBitWriter* w, size_t *len);
 
 /**
  * TODO: Document me
