@@ -103,4 +103,45 @@ void h_bit_writer_free(HBitWriter* w) {
   g_free(w);
 }
 
-// TESTS BELOW HERE
+#ifdef INCLUDE_TESTS
+
+static void test_bitwriter_ints(void) {
+
+}
+
+static void test_bitwriter_be(void) {
+
+}
+
+static void test_bitwriter_le(void) {
+
+}
+
+static void test_largebits_be(void) {
+
+}
+
+static void test_largebits_le(void) {
+
+}
+
+static void test_offset_largebits_be(void) {
+
+}
+
+static void test_offset_largebits_le(void) {
+
+}
+
+void register_bitwriter_tests(void) {
+  g_test_add_func("/core/bitwriter/be", test_bitwriter_be);
+  g_test_add_func("/core/bitwriter/le", test_bitwriter_le);
+  g_test_add_func("/core/bitwriter/largebits-be", test_largebits_be);
+  g_test_add_func("/core/bitwriter/largebits-le", test_largebits_le);
+  g_test_add_func("/core/bitwriter/offset-largebits-be", test_offset_largebits_be);
+  g_test_add_func("/core/bitwriter/offset-largebits-le", test_offset_largebits_le);
+  g_test_add_func("/core/bitwriter/ints", test_bitwriter_ints);
+}
+
+#endif // #ifdef INCLUDE_TESTS
+
