@@ -1,0 +1,388 @@
+\documentclass{beamer}
+
+\usetheme[secheader]{Boadilla}
+\usecolortheme{seahorse}
+
+\setbeamertemplate{footline}{https://github.com/UpstandingHackers/hammer}
+
+\title{Hammer: Smashing Binary Formats Into Bits}
+\author{mlp and tq}
+\date{July 27, 2012}
+\institute[2012]{Upstanding Hackers}
+\usepackage{fancyvrb}
+\usepackage{color}
+\usepackage[utf8]{inputenc}
+
+
+
+\makeatletter
+\def\PY@reset{\let\PY@it=\relax \let\PY@bf=\relax%
+    \let\PY@ul=\relax \let\PY@tc=\relax%
+    \let\PY@bc=\relax \let\PY@ff=\relax}
+\def\PY@tok#1{\csname PY@tok@#1\endcsname}
+\def\PY@toks#1+{\ifx\relax#1\empty\else%
+    \PY@tok{#1}\expandafter\PY@toks\fi}
+\def\PY@do#1{\PY@bc{\PY@tc{\PY@ul{%
+    \PY@it{\PY@bf{\PY@ff{#1}}}}}}}
+\def\PY#1#2{\PY@reset\PY@toks#1+\relax+\PY@do{#2}}
+
+\def\PY@tok@gd{\def\PY@tc##1{\textcolor[rgb]{0.63,0.00,0.00}{##1}}}
+\def\PY@tok@gu{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.50,0.00,0.50}{##1}}}
+\def\PY@tok@gt{\def\PY@tc##1{\textcolor[rgb]{0.00,0.25,0.82}{##1}}}
+\def\PY@tok@gs{\let\PY@bf=\textbf}
+\def\PY@tok@gr{\def\PY@tc##1{\textcolor[rgb]{1.00,0.00,0.00}{##1}}}
+\def\PY@tok@cm{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.25,0.50,0.50}{##1}}}
+\def\PY@tok@vg{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\def\PY@tok@m{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\def\PY@tok@mh{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\def\PY@tok@go{\def\PY@tc##1{\textcolor[rgb]{0.50,0.50,0.50}{##1}}}
+\def\PY@tok@ge{\let\PY@it=\textit}
+\def\PY@tok@vc{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\def\PY@tok@il{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\def\PY@tok@cs{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.25,0.50,0.50}{##1}}}
+\def\PY@tok@cp{\def\PY@tc##1{\textcolor[rgb]{0.74,0.48,0.00}{##1}}}
+\def\PY@tok@gi{\def\PY@tc##1{\textcolor[rgb]{0.00,0.63,0.00}{##1}}}
+\def\PY@tok@gh{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,0.50}{##1}}}
+\def\PY@tok@ni{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.60,0.60,0.60}{##1}}}
+\def\PY@tok@nl{\def\PY@tc##1{\textcolor[rgb]{0.63,0.63,0.00}{##1}}}
+\def\PY@tok@nn{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,1.00}{##1}}}
+\def\PY@tok@no{\def\PY@tc##1{\textcolor[rgb]{0.53,0.00,0.00}{##1}}}
+\def\PY@tok@na{\def\PY@tc##1{\textcolor[rgb]{0.49,0.56,0.16}{##1}}}
+\def\PY@tok@nb{\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\def\PY@tok@nc{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,1.00}{##1}}}
+\def\PY@tok@nd{\def\PY@tc##1{\textcolor[rgb]{0.67,0.13,1.00}{##1}}}
+\def\PY@tok@ne{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.82,0.25,0.23}{##1}}}
+\def\PY@tok@nf{\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,1.00}{##1}}}
+\def\PY@tok@si{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.73,0.40,0.53}{##1}}}
+\def\PY@tok@s2{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\def\PY@tok@vi{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\def\PY@tok@nt{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\def\PY@tok@nv{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\def\PY@tok@s1{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\def\PY@tok@sh{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\def\PY@tok@sc{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\def\PY@tok@sx{\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\def\PY@tok@bp{\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\def\PY@tok@c1{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.25,0.50,0.50}{##1}}}
+\def\PY@tok@kc{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\def\PY@tok@c{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.25,0.50,0.50}{##1}}}
+\def\PY@tok@mf{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\def\PY@tok@err{\def\PY@bc##1{\fcolorbox[rgb]{1.00,0.00,0.00}{1,1,1}{##1}}}
+\def\PY@tok@kd{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\def\PY@tok@ss{\def\PY@tc##1{\textcolor[rgb]{0.10,0.09,0.49}{##1}}}
+\def\PY@tok@sr{\def\PY@tc##1{\textcolor[rgb]{0.73,0.40,0.53}{##1}}}
+\def\PY@tok@mo{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\def\PY@tok@kn{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\def\PY@tok@mi{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\def\PY@tok@gp{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.00,0.50}{##1}}}
+\def\PY@tok@o{\def\PY@tc##1{\textcolor[rgb]{0.40,0.40,0.40}{##1}}}
+\def\PY@tok@kr{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\def\PY@tok@s{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\def\PY@tok@kp{\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\def\PY@tok@w{\def\PY@tc##1{\textcolor[rgb]{0.73,0.73,0.73}{##1}}}
+\def\PY@tok@kt{\def\PY@tc##1{\textcolor[rgb]{0.69,0.00,0.25}{##1}}}
+\def\PY@tok@ow{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.67,0.13,1.00}{##1}}}
+\def\PY@tok@sb{\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+\def\PY@tok@k{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.00,0.50,0.00}{##1}}}
+\def\PY@tok@se{\let\PY@bf=\textbf\def\PY@tc##1{\textcolor[rgb]{0.73,0.40,0.13}{##1}}}
+\def\PY@tok@sd{\let\PY@it=\textit\def\PY@tc##1{\textcolor[rgb]{0.73,0.13,0.13}{##1}}}
+
+\def\PYZbs{\char`\\}
+\def\PYZus{\char`\_}
+\def\PYZob{\char`\{}
+\def\PYZcb{\char`\}}
+\def\PYZca{\char`\^}
+\def\PYZsh{\char`\#}
+\def\PYZpc{\char`\%}
+\def\PYZdl{\char`\$}
+\def\PYZti{\char`\~}
+% for compatibility with earlier versions
+\def\PYZat{@}
+\def\PYZlb{[}
+\def\PYZrb{]}
+\makeatother
+
+\begin{document}
+
+\frame{\titlepage}
+
+\section[Outline]{}
+\frame{\tableofcontents}
+
+\section{Introduction}
+
+\frame{
+	\frametitle{The recursive-descent family}
+	\begin{itemize}
+		\item<1-> Recursive descent parsers
+			\begin{itemize}
+				\item Parsing like mom used to do it (if your mom is Jack Crenshaw)
+				\item Conceptually really simple
+				\item Can't do left recursion
+				\item Can have exponential runtime
+			\end{itemize}
+		\item<2-> Parsing expression grammars
+			\begin{itemize}
+				\item Look a lot like CFGs
+				\item Always deterministic (unambiguous)
+				\item Provide lookahead
+				\item Still can't do left recursion
+			\end{itemize}
+		\item<3-> Packrat parsers
+			\begin{itemize}
+				\item They're PEGs, but memoized
+				\item Can handle left-recursion!
+			\end{itemize}
+	\end{itemize}
+}
+
+\section{Binary Parsing}
+
+\frame{
+	\frametitle{Why binary parsing?}
+	\begin{itemize}
+		\item<1-> None of the existing tools do it well
+			\begin{itemize}
+				\item Limited to character streams
+				\item Endianness is a pain in the dick
+				\item So are bit-fields
+			\end{itemize}
+		\item<2-> Except bison, which nobody likes
+			\begin{itemize}
+				\item Interface sucks for everything except parsers/interpreters
+				\item Shift-reduce conflicts are confusing
+				\item Bit-fields still hard unless everything's nicely byte-aligned
+			\end{itemize}
+	\end{itemize}
+}
+
+\frame{
+	\frametitle{Requirements}
+	\begin{itemize}
+		\item Thread-safe and reentrant
+		\item Simple API
+		\item Fast
+		\item Correct
+	\end{itemize}
+}
+
+\section{Parser combinators}
+
+\frame{
+	\frametitle{Naming conventions}
+	\begin{itemize}
+		\item<1-> Types
+			\begin{itemize}
+				\item Start with \textbf{H} and are CamelCased
+				\item \texttt{HParser}, \texttt{HParsedToken}, etc
+			\end{itemize}
+		\item<2-> Functions
+			\begin{itemize}
+				\item Start with \textbf{h\_} and use underscores
+				\item \texttt{h\_parse()}, \texttt{h\_length\_value()}, etc
+			\end{itemize}
+	\end{itemize}
+}
+
+\begin{frame}[fragile]
+	\frametitle{Basic usage}
+	\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include "hammer.h"}
+
+\PY{k}{const} \PY{n}{HParsedToken}\PY{o}{*} \PY{n+nf}{build\PYZus{}my\PYZus{}struct}\PY{p}{(}\PY{k}{const} \PY{n}{HParseResult} \PY{o}{*}\PY{n}{p}\PY{p}{)} \PY{p}{\PYZob{}}
+  \PY{c+c1}{// ...}
+\PY{p}{\PYZcb{}}
+\PY{k+kt}{int} \PY{n+nf}{main}\PY{p}{(}\PY{k+kt}{int} \PY{n}{argc}\PY{p}{,} \PY{k+kt}{char}\PY{o}{*}\PY{o}{*} \PY{n}{argv}\PY{p}{)} \PY{p}{\PYZob{}}
+  \PY{c+c1}{// obtain data, and its length, from somewhere}
+  \PY{c+c1}{// Create a parser}
+  \PY{n}{HParser} \PY{o}{*}\PY{n}{parser} \PY{o}{=} \PY{n}{action}\PY{p}{(}\PY{p}{.}\PY{p}{.}\PY{p}{.}\PY{p}{,}
+                           \PY{n}{build\PYZus{}my\PYZus{}struct}\PY{p}{)}\PY{p}{;}
+  \PY{c+c1}{// Parse the data}
+  \PY{n}{HParseResult} \PY{o}{*}\PY{n}{result} \PY{o}{=} \PY{n}{h\PYZus{}parse}\PY{p}{(}\PY{n}{parser}\PY{p}{,} \PY{n}{data}\PY{p}{,} \PY{n}{length}\PY{p}{)}\PY{p}{;}
+  \PY{c+c1}{// Get your struct back from the result token and use it}
+  \PY{n}{do\PYZus{}something}\PY{p}{(}\PY{n}{result}\PY{o}{-}\PY{o}{>}\PY{n}{ast}\PY{o}{-}\PY{o}{>}\PY{n}{user}\PY{p}{)}\PY{p}{;}
+  \PY{k}{return} \PY{l+m+mi}{0}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\end{Verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+	\frametitle{Result types}
+	\begin{itemize}
+		\item<1-> HParseResult
+			\begin{itemize}
+				\item A tree of parsed tokens
+				\item The total number of bits parsed
+				\item A reference to the memory context for this parse
+			\end{itemize}
+		\item<2-> HParsedToken
+			\begin{itemize}
+				\item Token type: bytes, signed/unsigned int, sequence, user-defined
+				\item Token (a tagged union)
+				\item Byte index and bit offset
+			\end{itemize}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+	\frametitle{Primitives}
+	\begin{itemize}
+		\item<1-> Character and token parsers
+			\begin{itemize}
+				\item \texttt{h\_ch(const uint8\_t c)}, \\ \texttt{h\_token(const uint8\_t *str, size\_t len)}
+				\item \texttt{h\_ch\_range(const uint8\_t lower, const uint8\_t upper)}
+				\item \texttt{h\_not\_in(const uint8\_t charset, size\_t length)}
+			\end{itemize}
+		\item<2-> Integral parsers
+			\begin{itemize}
+				\item \texttt{h\_uint8()}, \texttt{h\_int64()}
+				\item \texttt{h\_bits(size\_t len, bool sign)}
+				\item \texttt{h\_int\_range(const HParser *p, const int64\_t lower, const int64\_t upper)}
+			\end{itemize}
+		\item<3-> End-of-input
+			\begin{itemize}
+				\item \texttt{h\_end\_p()}
+			\end{itemize}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+	\frametitle{Combining primitives}
+	\begin{itemize}
+		\item<1-> Sequential and alternative
+			\begin{itemize}
+				\item \texttt{h\_sequence(const HParser *p, ...)}
+				\item \texttt{h\_choice(const HParser *p, ...)}
+			\end{itemize}
+		\item<2-> Repetition
+			\begin{itemize}
+				\item \texttt{h\_many(const HParser *p)}
+				\item \texttt{h\_many1(const HParser *p)}
+				\item \texttt{h\_repeat\_n(const HParser *p, size\_t len)}
+			\end{itemize}
+		\item<3-> Optional
+			\begin{itemize}
+				\item \texttt{h\_optional(const HParser *p)}
+			\end{itemize}
+		\item<4-> Not Actually Appearing In This Parse Tree
+			\begin{itemize}
+				\item \texttt{h\_ignore(const HParser *p)}
+			\end{itemize}
+		\item<5-> Higher-order
+			\begin{itemize}
+				\item \texttt{h\_length\_value(const HParser *length, const HParser *value)}
+				\item \texttt{h\_and(const HParser *p)}, \texttt{h\_not(const HParser *p)}
+				\item \texttt{h\_indirect(const HParser *p)}
+			\end{itemize}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+	\frametitle{Doing things to combinations of primitives}
+	\begin{itemize}
+		\item<1-> \texttt{h\_attr\_bool(const HParser *p, const HPredicate pred)}
+		\item<2-> \texttt{h\_action(const HParser *p, const HAction a)}
+	\end{itemize}
+\end{frame}
+
+\section{A practical example}
+
+\begin{frame}[fragile]
+	\frametitle{Top-level DNS}
+	\begin{Verbatim}[commandchars=\\\{\}]
+	\PY{k}{const} \PY{n}{HParser} \PY{o}{*}\PY{n}{dns\PYZus{}message} \PY{o}{=} 
+	\PY{n}{h\PYZus{}action}\PY{p}{(}\PY{n}{h\PYZus{}attr\PYZus{}bool}\PY{p}{(}\PY{n}{h\PYZus{}sequence}\PY{p}{(}\PY{n}{dns\PYZus{}header}\PY{p}{,}
+                                \PY{n}{h\PYZus{}many}\PY{p}{(}\PY{n}{dns\PYZus{}question}\PY{p}{)}\PY{p}{,}
+                                \PY{n}{h\PYZus{}many}\PY{p}{(}\PY{n}{dns\PYZus{}rr}\PY{p}{)}\PY{p}{,}
+                                \PY{n}{h\PYZus{}end\PYZus{}p}\PY{p}{(}\PY{p}{)}\PY{p}{,}
+                                \PY{n+nb}{NULL}\PY{p}{)}\PY{p}{,}
+                     \PY{n}{validate\PYZus{}dns}\PY{p}{)}\PY{p}{,}
+         \PY{n}{pack\PYZus{}dns\PYZus{}struct}\PY{p}{)}\PY{p}{;}
+
+	\end{Verbatim}
+\end{frame}
+
+
+\begin{frame}[fragile]
+	\frametitle{DNS Questions}
+	\begin{Verbatim}[commandchars=\\\{\}]
+\PY{k}{const} \PY{n}{HParser} \PY{o}{*}\PY{n}{dns\PYZus{}question} \PY{o}{=} 
+\PY{n}{h\PYZus{}sequence}\PY{p}{(}\PY{n}{h\PYZus{}sequence}\PY{p}{(}\PY{n}{h\PYZus{}many1}\PY{p}{(}\PY{n}{h\PYZus{}length\PYZus{}value}\PY{p}{(}\PY{n}{h\PYZus{}int\PYZus{}range}\PY{p}{(}
+                                                   \PY{n}{h\PYZus{}uint8}\PY{p}{(}\PY{p}{)}\PY{p}{,}
+                                                   \PY{l+m+mi}{1}\PY{p}{,} 
+                                                   \PY{l+m+mi}{255}\PY{p}{)}\PY{p}{,}                               
+                                             \PY{n}{h\PYZus{}uint8}\PY{p}{(}\PY{p}{)}\PY{p}{)}\PY{p}{)}\PY{p}{,} 
+                      \PY{n}{h\PYZus{}ch}\PY{p}{(}\PY{l+s+sc}{'\PYZbs{}x00'}\PY{p}{)}\PY{p}{,}
+                      \PY{n+nb}{NULL}\PY{p}{)}\PY{p}{,}  \PY{c+c1}{// QNAME}
+           \PY{n}{qtype}\PY{p}{,}             \PY{c+c1}{// QTYPE}
+           \PY{n}{qclass}\PY{p}{,}            \PY{c+c1}{// QCLASS}
+           \PY{n+nb}{NULL}\PY{p}{)}\PY{p}{;}
+
+	\end{Verbatim}	
+\end{frame}
+
+\begin{frame}[fragile]
+	\frametitle{DNS RRs}
+	\begin{Verbatim}[commandchars=\\\{\}]
+  \PY{k}{const} \PY{n}{HParser} \PY{o}{*}\PY{n}{dns\PYZus{}rr} \PY{o}{=} 
+  \PY{n}{h\PYZus{}sequence}\PY{p}{(}\PY{n}{domain}\PY{p}{,}                          \PY{c+c1}{// NAME}
+             \PY{n}{type}\PY{p}{,}                            \PY{c+c1}{// TYPE}
+             \PY{n}{class}\PY{p}{,}                           \PY{c+c1}{// CLASS}
+             \PY{n}{h\PYZus{}uint32}\PY{p}{(}\PY{p}{)}\PY{p}{,}                      \PY{c+c1}{// TTL}
+              \PY{c+c1}{// RDLENGTH+RDATA}
+             \PY{n}{h\PYZus{}length\PYZus{}value}\PY{p}{(}\PY{n}{h\PYZus{}uint16}\PY{p}{(}\PY{p}{)}\PY{p}{,} \PY{n}{h\PYZus{}uint8}\PY{p}{(}\PY{p}{)}\PY{p}{)}\PY{p}{,}
+             \PY{n+nb}{NULL}\PY{p}{)}\PY{p}{;}
+
+	\end{Verbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+	\frametitle{Validating a DNS packet}
+	\begin{Verbatim}[commandchars=\\\{\}]
+	\PY{n}{bool} \PY{n+nf}{validate\PYZus{}dns}\PY{p}{(}\PY{n}{HParseResult} \PY{o}{*}\PY{n}{p}\PY{p}{)} \PY{p}{\PYZob{}}
+  \PY{k}{if} \PY{p}{(}\PY{n}{TT\PYZus{}SEQUENCE} \PY{o}{!}\PY{o}{=} \PY{n}{p}\PY{o}{-}\PY{o}{>}\PY{n}{ast}\PY{o}{-}\PY{o}{>}\PY{n}{token\PYZus{}type}\PY{p}{)}
+    \PY{k}{return} \PY{n+nb}{false}\PY{p}{;}
+  \PY{n}{HParsedToken} \PY{o}{*}\PY{o}{*}\PY{n}{elems} \PY{o}{=} \PY{n}{p}\PY{o}{-}\PY{o}{>}\PY{n}{ast}\PY{o}{-}\PY{o}{>}\PY{n}{seq}\PY{o}{-}\PY{o}{>}\PY{n}{elements}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{o}{-}\PY{o}{>}\PY{n}{seq}\PY{o}{-}\PY{o}{>}
+                         \PY{n}{elements}\PY{p}{;}
+  \PY{k+kt}{size\PYZus{}t} \PY{n}{qd} \PY{o}{=} \PY{n}{elems}\PY{p}{[}\PY{l+m+mi}{8}\PY{p}{]}\PY{o}{-}\PY{o}{>}\PY{n}{uint}\PY{p}{;}
+  \PY{k+kt}{size\PYZus{}t} \PY{n}{an} \PY{o}{=} \PY{n}{elems}\PY{p}{[}\PY{l+m+mi}{9}\PY{p}{]}\PY{o}{-}\PY{o}{>}\PY{n}{uint}\PY{p}{;}
+  \PY{k+kt}{size\PYZus{}t} \PY{n}{ns} \PY{o}{=} \PY{n}{elems}\PY{p}{[}\PY{l+m+mi}{10}\PY{p}{]}\PY{o}{-}\PY{o}{>}\PY{n}{uint}\PY{p}{;}
+  \PY{k+kt}{size\PYZus{}t} \PY{n}{ar} \PY{o}{=} \PY{n}{elems}\PY{p}{[}\PY{l+m+mi}{11}\PY{p}{]}\PY{o}{-}\PY{o}{>}\PY{n}{uint}\PY{p}{;}
+  \PY{n}{HParsedToken} \PY{o}{*}\PY{n}{questions} \PY{o}{=} \PY{n}{p}\PY{o}{-}\PY{o}{>}\PY{n}{ast}\PY{o}{-}\PY{o}{>}\PY{n}{seq}\PY{o}{-}\PY{o}{>}\PY{n}{elements}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]}\PY{p}{;}
+  \PY{k}{if} \PY{p}{(}\PY{n}{questions}\PY{o}{-}\PY{o}{>}\PY{n}{seq}\PY{o}{-}\PY{o}{>}\PY{n}{used} \PY{o}{!}\PY{o}{=} \PY{n}{qd}\PY{p}{)}
+    \PY{k}{return} \PY{n+nb}{false}\PY{p}{;}
+  \PY{n}{HParsedToken} \PY{o}{*}\PY{n}{rrs} \PY{o}{=} \PY{n}{p}\PY{o}{-}\PY{o}{>}\PY{n}{ast}\PY{o}{-}\PY{o}{>}\PY{n}{seq}\PY{o}{-}\PY{o}{>}\PY{n}{elements}\PY{p}{[}\PY{l+m+mi}{2}\PY{p}{]}\PY{p}{;}
+  \PY{k}{if} \PY{p}{(}\PY{n}{an}\PY{o}{+}\PY{n}{ns}\PY{o}{+}\PY{n}{ar} \PY{o}{!}\PY{o}{=} \PY{n}{rrs}\PY{o}{-}\PY{o}{>}\PY{n}{seq}\PY{o}{-}\PY{o}{>}\PY{n}{used}\PY{p}{)}
+    \PY{k}{return} \PY{n+nb}{false}\PY{p}{;}
+  \PY{k}{return} \PY{n+nb}{true}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+	\end{Verbatim}
+\end{frame}
+
+\section{Future work}
+
+\begin{frame}[fragile]
+	\frametitle{What's next?}
+	\begin{itemize}
+		\item More parsing backends
+		\begin{itemize}
+			\item LL(k)
+			\item GLR
+			\item LALR(8)
+			\item Derivatives
+		\end{itemize}
+		\item Benchmarking :)
+		\item Bindings for python, ruby, (your preferred language here)
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+	\frametitle{More to come!}
+	\begin{itemize}
+		\item Watch langsec-discuss@lists.langsec.org for further announcements
+		\item https://github.com/UpstandingHackers/hammer
+	\end{itemize}
+\end{frame}
+
+\end{document}
