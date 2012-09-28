@@ -32,14 +32,15 @@ typedef int bool;
 typedef struct HParseState_ HParseState;
 
 typedef enum HTokenType_ {
-  TT_NONE,
-  TT_BYTES,
-  TT_SINT,
-  TT_UINT,
-  TT_SEQUENCE,
+  // Before you change the explicit values of these, think of the poor bindings ;_;
+  TT_NONE = 1,
+  TT_BYTES = 2,
+  TT_SINT = 4,
+  TT_UINT = 8,
+  TT_SEQUENCE = 16,
+  TT_ERR = 32,
   TT_USER = 64,
-  TT_ERR,
-  TT_MAX
+  TT_MAX = 128 
 } HTokenType;
 
 typedef struct HCountedArray_ {
