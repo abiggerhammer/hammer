@@ -1,0 +1,12 @@
+Compilation:
+javac com/upstandinghackers/hammer/*.java
+
+Conversion to JNI headers:
+find -name "*.class" | sed -e 's/.class$//' | tr '/' '.' | cut -c 3- | xargs javah
+
+Not working:
+enums aren't converted at all, no idea why
+
+TODO:
+Implement the entire JNI side
+Testing
