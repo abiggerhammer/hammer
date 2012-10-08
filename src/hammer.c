@@ -79,7 +79,7 @@ HParserCacheValue* recall(HParserCacheKey *k, HParseState *state) {
   if (!head) { // No heads found
     return cached;
   } else { // Some heads found
-    if (!cached && head->head_parser != k->parser && !g_slist_find(head->involved_set, k->parser)) {
+    if (!cached && head->head_parser != k->parser && !h_slist_find(head->involved_set, k->parser)) {
       // Nothing in the cache, and the key parser is not involved
       HParseResult *tmp = a_new(HParseResult, 1);
       tmp->ast = NULL; tmp->arena = state->arena;
@@ -87,9 +87,9 @@ HParserCacheValue* recall(HParserCacheKey *k, HParseState *state) {
       ret->value_type = PC_RIGHT; ret->right = cached_result(state, tmp);
       return ret;
     }
-    if (g_slist_find(head->eval_set, k->parser)) {
+    if (h_slist_find(head->eval_set, k->parser)) {
       // Something is in the cache, and the key parser is in the eval set. Remove the key parser from the eval set of the head. 
-      head->eval_set = g_slist_remove_all(head->eval_set, k->parser);
+      head->eval_set = h_slist_remove_all(head->eval_set, k->parser);
       HParseResult *tmp_res = perform_lowlevel_parse(state, k->parser);
       // we know that cached has an entry here, modify it
       if (!cached)
@@ -112,11 +112,11 @@ void setupLR(const HParser *p, HParseState *state, HLeftRec *rec_detect) {
     some->head_parser = p; some->involved_set = NULL; some->eval_set = NULL;
     rec_detect->head = some;
   }
-  size_t i = 0;
-  HLeftRec *lr = g_queue_peek_nth(state->lr_stack, i);
+  assert(state->lr_stack->head != NULL);
+  HLeftRec *lr = state->lr_stack->head->elem;
   while (lr && lr->rule != p) {
     lr->head = rec_detect->head;
-    lr->head->involved_set = g_slist_prepend(lr->head->involved_set, (gpointer)lr->rule);
+    h_slist_push(lr->head->involved_set, (gpointer)lr->rule);
   }
 }
 
@@ -190,7 +190,7 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
     // It doesn't exist, so create a dummy result to cache
     HLeftRec *base = a_new(HLeftRec, 1);
     base->seed = NULL; base->rule = parser; base->head = NULL;
-    g_queue_push_head(state->lr_stack, base);
+    h_slist_push(state->lr_stack, base);
     // cache it
     HParserCacheValue *dummy = a_new(HParserCacheValue, 1);
     dummy->value_type = PC_LEFT; dummy->left = base;
@@ -198,7 +198,7 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
     // parse the input
     HParseResult *tmp_res = perform_lowlevel_parse(state, parser);
     // the base variable has passed equality tests with the cache
-    g_queue_pop_head(state->lr_stack);
+    h_slist_pop(state->lr_stack);
     // setupLR, used below, mutates the LR to have a head if appropriate, so we check to see if we have one
     if (NULL == base->head) {
       HParserCacheValue *right = a_new(HParserCacheValue, 1);
@@ -250,12 +250,12 @@ HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length
   parse_state->input_stream.overrun = 0;
   parse_state->input_stream.endianness = BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN;
   parse_state->input_stream.length = length;
-  parse_state->lr_stack = g_queue_new();
+  parse_state->lr_stack = h_slist_new(arena);
   parse_state->recursion_heads = g_hash_table_new(cache_key_hash,
 						  cache_key_equal);
   parse_state->arena = arena;
   HParseResult *res = h_do_parse(parser, parse_state);
-  g_queue_free(parse_state->lr_stack);
+  h_slist_free(parse_state->lr_stack);
   g_hash_table_destroy(parse_state->recursion_heads);
   // tear down the parse state
   g_hash_table_destroy(parse_state->cache);
