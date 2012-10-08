@@ -172,6 +172,33 @@ bool h_slist_find(HSlist *slist, const void* item);
 HSlist* h_slist_remove_all(HSlist *slist, const void* item);
 void h_slist_free(HSlist *slist);
 
+typedef unsigned int HHashValue;
+typedef HHashValue (*HHashFunc)(const void* key);
+typedef bool (*HEqualFunc)(const void* key1, const void* key2);
+
+typedef struct HHashTableEntry_ {
+  struct HHashTableEntry_ *next;
+  void* key;
+  void* value;
+  HHashValue hashval;
+} HHashTableEntry;
+
+typedef struct HHashTable_ {
+  HHashTableEntry *contents;
+  HHashFunc hashFunc;
+  HEqualFunc equalFunc;
+  int capacity;
+  int used;
+} HHashTable;
+
+HHashTable* h_hashtable_new(HArena *arena, );
+void* h_hashtable_get(HHashTable* ht, void* key);
+void h_hashtable_put(HHashTable* ht, void* key, void* value);
+int   h_hashtable_present(HHashTable* ht, void* key);
+void  h_hashtable_del(HHashTable* ht, void* key);
+void  h_hashtable_free(HHashTable* ht);
+
+
 #if 0
 #include <malloc.h>
 #define arena_malloc(a, s) malloc(s)
