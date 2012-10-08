@@ -3,6 +3,7 @@
 #include "allocator.h"
 #include <assert.h>
 #include <malloc.h>
+#include <string.h>
 // {{{ counted arrays
 
 
@@ -97,14 +98,14 @@ void h_slist_free(HSlist *slist) {
   h_arena_free(slist->arena, slist);
 }
 
-HHashTable* h_hashtable_new(HArena *arena) {
+HHashTable* h_hashtable_new(HArena *arena, HEqualFunc equalFunc, HHashFunc hashFunc) {
   HHashTable *ht = h_arena_malloc(arena, sizeof(HHashTable*));
   ht->hashFunc = hashFunc;
   ht->equalFunc = equalFunc;
   ht->capacity = 64; // to start; should be tuned later...
   ht->used = 0;
   ht->contents = h_arena_malloc(arena, sizeof(HHashTableEntry) * ht->capacity);
-  memset(ht->contents, sizeof(HHashTableEntry) * ht->capacity);
+  memset(ht->contents, 0, sizeof(HHashTableEntry) * ht->capacity);
   return ht;
 }
 
@@ -127,14 +128,14 @@ void* h_hashtable_get(HHashTable* ht, void* key) {
 
 void h_hashtable_put(HHashTable* ht, void* key, void* value) {
   // # Start with a rebalancing
-  h_hashtable_ensure_capacity(ht, ht->used + 1);
+  //h_hashtable_ensure_capacity(ht, ht->used + 1);
 
   HHashValue hashval = ht->hashFunc(key);
 #ifdef CONSISTENCY_CHECK
   assert((ht->capacity & (ht->capacity - 1)) == 0); // capacity is a power of 2
 #endif
 
-  hte = &ht->contents[hashval & (ht->capacity - 1)];
+  HHashTableEntry *hte = &ht->contents[hashval & (ht->capacity - 1)];
   if (hte->key != NULL) {
     do {
       if (hte->hashval == hashval && ht->equalFunc(key, hte->key))
@@ -195,7 +196,7 @@ void  h_hashtable_del(HHashTable* ht, void* key) {
   }
 }
 void  h_hashtable_free(HHashTable* ht) {
-  for (i = 0; i < ht->capacity; i++) {
+  for (size_t i = 0; i < ht->capacity; i++) {
     HHashTableEntry *hten, *hte = &ht->contents[i];
     // FIXME: Free key and value
     hte = hte->next;

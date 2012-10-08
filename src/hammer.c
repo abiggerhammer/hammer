@@ -74,8 +74,8 @@ static inline HParseResult* perform_lowlevel_parse(HParseState *state, const HPa
 }
 
 HParserCacheValue* recall(HParserCacheKey *k, HParseState *state) {
-  HParserCacheValue *cached = g_hash_table_lookup(state->cache, k);
-  HRecursionHead *head = g_hash_table_lookup(state->recursion_heads, k);
+  HParserCacheValue *cached = h_hashtable_get(state->cache, k);
+  HRecursionHead *head = h_hashtable_get(state->recursion_heads, k);
   if (!head) { // No heads found
     return cached;
   } else { // Some heads found
@@ -126,8 +126,8 @@ void setupLR(const HParser *p, HParseState *state, HLeftRec *rec_detect) {
 
 HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head) {
   // Store the head into the recursion_heads
-  g_hash_table_replace(state->recursion_heads, k, head);
-  HParserCacheValue *old_cached = g_hash_table_lookup(state->cache, k);
+  h_hashtable_put(state->recursion_heads, k, head);
+  HParserCacheValue *old_cached = h_hashtable_get(state->cache, k);
   if (!old_cached || PC_LEFT == old_cached->value_type)
     errx(1, "impossible match");
   HParseResult *old_res = old_cached->right->result;
@@ -141,12 +141,12 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
 	(old_res->ast->index == tmp_res->ast->index && old_res->ast->bit_offset < tmp_res->ast->bit_offset)) {
       HParserCacheValue *v = a_new(HParserCacheValue, 1);
       v->value_type = PC_RIGHT; v->right = cached_result(state, tmp_res);
-      g_hash_table_replace(state->cache, k, v);
+      h_hashtable_put(state->cache, k, v);
       return grow(k, state, head);
     } else {
       // we're done with growing, we can remove data from the recursion head
-      g_hash_table_remove(state->recursion_heads, k);
-      HParserCacheValue *cached = g_hash_table_lookup(state->cache, k);
+      h_hashtable_del(state->recursion_heads, k);
+      HParserCacheValue *cached = h_hashtable_get(state->cache, k);
       if (cached && PC_RIGHT == cached->value_type) {
 	return cached->right->result;
       } else {
@@ -154,7 +154,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
       }
     }
   } else {
-    g_hash_table_remove(state->recursion_heads, k);
+    h_hashtable_del(state->recursion_heads, k);
     return old_res;
   }
 }
@@ -169,7 +169,7 @@ HParseResult* lr_answer(HParserCacheKey *k, HParseState *state, HLeftRec *growab
       // update cache
       HParserCacheValue *v = a_new(HParserCacheValue, 1);
       v->value_type = PC_RIGHT; v->right = cached_result(state, growable->seed);
-      g_hash_table_replace(state->cache, k, v);
+      h_hashtable_put(state->cache, k, v);
       if (!growable->seed)
 	return NULL;
       else
@@ -194,7 +194,7 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
     // cache it
     HParserCacheValue *dummy = a_new(HParserCacheValue, 1);
     dummy->value_type = PC_LEFT; dummy->left = base;
-    g_hash_table_replace(state->cache, key, dummy);
+    h_hashtable_put(state->cache, key, dummy);
     // parse the input
     HParseResult *tmp_res = perform_lowlevel_parse(state, parser);
     // the base variable has passed equality tests with the cache
@@ -203,7 +203,7 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
     if (NULL == base->head) {
       HParserCacheValue *right = a_new(HParserCacheValue, 1);
       right->value_type = PC_RIGHT; right->right = cached_result(state, tmp_res);
-      g_hash_table_replace(state->cache, key, right);
+      h_hashtable_put(state->cache, key, right);
       return tmp_res;
     } else {
       base->seed = tmp_res;
@@ -242,8 +242,8 @@ HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length
   // Set up a parse state...
   HArena * arena = h_new_arena(0);
   HParseState *parse_state = a_new_(arena, HParseState, 1);
-  parse_state->cache = g_hash_table_new(cache_key_hash, // hash_func
-					cache_key_equal);// key_equal_func
+  parse_state->cache = h_hashtable_new(arena, cache_key_equal, // key_equal_func
+					      cache_key_hash); // hash_func
   parse_state->input_stream.input = input;
   parse_state->input_stream.index = 0;
   parse_state->input_stream.bit_offset = 8; // bit big endian
@@ -251,14 +251,14 @@ HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length
   parse_state->input_stream.endianness = BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN;
   parse_state->input_stream.length = length;
   parse_state->lr_stack = h_slist_new(arena);
-  parse_state->recursion_heads = g_hash_table_new(cache_key_hash,
-						  cache_key_equal);
+  parse_state->recursion_heads = h_hashtable_new(arena, cache_key_equal,
+						  cache_key_hash);
   parse_state->arena = arena;
   HParseResult *res = h_do_parse(parser, parse_state);
   h_slist_free(parse_state->lr_stack);
-  g_hash_table_destroy(parse_state->recursion_heads);
+  h_hashtable_free(parse_state->recursion_heads);
   // tear down the parse state
-  g_hash_table_destroy(parse_state->cache);
+  h_hashtable_free(parse_state->cache);
   if (!res)
     h_delete_arena(parse_state->arena);
 

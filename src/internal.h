@@ -52,6 +52,25 @@ typedef struct HSlist_ {
   struct HArena_ *arena;
 } HSlist;
 
+typedef unsigned int HHashValue;
+typedef HHashValue (*HHashFunc)(const void* key);
+typedef bool (*HEqualFunc)(const void* key1, const void* key2);
+
+typedef struct HHashTableEntry_ {
+  struct HHashTableEntry_ *next;
+  void* key;
+  void* value;
+  HHashValue hashval;
+} HHashTableEntry;
+
+typedef struct HHashTable_ {
+  HHashTableEntry *contents;
+  HHashFunc hashFunc;
+  HEqualFunc equalFunc;
+  size_t capacity;
+  size_t used;
+  HArena *arena;
+} HHashTable;
 
 /* The state of the parser.
  *
@@ -65,11 +84,11 @@ typedef struct HSlist_ {
  */
   
 struct HParseState_ {
-  GHashTable *cache; 
+  HHashTable *cache; 
   HInputStream input_stream;
   HArena * arena;
   HSlist *lr_stack;
-  GHashTable *recursion_heads;
+  HHashTable *recursion_heads;
 };
 
 /* The (location, parser) tuple used to key the cache.
@@ -172,26 +191,7 @@ bool h_slist_find(HSlist *slist, const void* item);
 HSlist* h_slist_remove_all(HSlist *slist, const void* item);
 void h_slist_free(HSlist *slist);
 
-typedef unsigned int HHashValue;
-typedef HHashValue (*HHashFunc)(const void* key);
-typedef bool (*HEqualFunc)(const void* key1, const void* key2);
-
-typedef struct HHashTableEntry_ {
-  struct HHashTableEntry_ *next;
-  void* key;
-  void* value;
-  HHashValue hashval;
-} HHashTableEntry;
-
-typedef struct HHashTable_ {
-  HHashTableEntry *contents;
-  HHashFunc hashFunc;
-  HEqualFunc equalFunc;
-  int capacity;
-  int used;
-} HHashTable;
-
-HHashTable* h_hashtable_new(HArena *arena, );
+HHashTable* h_hashtable_new(HArena *arena, HEqualFunc equalFunc, HHashFunc hashFunc);
 void* h_hashtable_get(HHashTable* ht, void* key);
 void h_hashtable_put(HHashTable* ht, void* key, void* value);
 int   h_hashtable_present(HHashTable* ht, void* key);
