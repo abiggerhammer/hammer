@@ -201,7 +201,7 @@ void  h_hashtable_free(HHashTable* ht);
 
 #if 0
 #include <malloc.h>
-#define arena_malloc(a, s) malloc(s)
+#define h_arena_malloc(a, s) malloc(s)
 #endif
 
 #endif // #ifndef HAMMER_INTERNAL__H

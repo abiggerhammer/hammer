@@ -99,13 +99,20 @@ void h_slist_free(HSlist *slist) {
 }
 
 HHashTable* h_hashtable_new(HArena *arena, HEqualFunc equalFunc, HHashFunc hashFunc) {
-  HHashTable *ht = h_arena_malloc(arena, sizeof(HHashTable*));
+  HHashTable *ht = h_arena_malloc(arena, sizeof(HHashTable));
   ht->hashFunc = hashFunc;
   ht->equalFunc = equalFunc;
   ht->capacity = 64; // to start; should be tuned later...
   ht->used = 0;
+  ht->arena = arena;
   ht->contents = h_arena_malloc(arena, sizeof(HHashTableEntry) * ht->capacity);
-  memset(ht->contents, 0, sizeof(HHashTableEntry) * ht->capacity);
+  for (size_t i = 0; i < ht->capacity; i++) {
+    ht->contents[i].key = NULL;
+    ht->contents[i].value = NULL;
+    ht->contents[i].next = NULL;
+    ht->contents[i].hashval = 0;
+  }
+  //memset(ht->contents, 0, sizeof(HHashTableEntry) * ht->capacity);
   return ht;
 }
 
@@ -115,7 +122,8 @@ void* h_hashtable_get(HHashTable* ht, void* key) {
   assert((ht->capacity & (ht->capacity - 1)) == 0); // capacity is a power of 2
 #endif
 
-  for (HHashTableEntry *hte = &ht->contents[hashval & (ht->capacity - 1)];
+  HHashTableEntry *hte = NULL;
+  for (hte = &ht->contents[hashval & (ht->capacity - 1)];
        hte != NULL;
        hte = hte->next) {
     if (hte->hashval != hashval)
@@ -140,13 +148,17 @@ void h_hashtable_put(HHashTable* ht, void* key, void* value) {
     do {
       if (hte->hashval == hashval && ht->equalFunc(key, hte->key))
 	goto insert_here;
-    } while (hte->next);
+      if (hte->next != NULL)
+	hte = hte->next;
+    } while (hte->next != NULL);
     // Add a new link...
     assert (hte->next == NULL);
     hte->next = h_arena_malloc(ht->arena, sizeof(HHashTableEntry));
     hte = hte->next;
     hte->next = NULL;
-  }
+    ht->used++;
+  } else
+    ht->used++;
 
  insert_here:
   hte->key = key;
