@@ -30,3 +30,36 @@ void h_carray_append(HCountedArray *array, void* item) {
   }
   array->elements[array->used++] = item;
 }
+
+// HSlist
+
+HSlist* h_slist_new(HArena *arena) {
+  HSlist *ret = h_arena_malloc(arena, sizeof(HSlist));
+  ret->head = NULL;
+  ret->arena = arena;
+  return ret;
+}
+
+void* h_slist_pop(HSlist *slist) {
+  HSlistNode *head = slist->head;
+  if (!head)
+    return NULL;
+  void* ret = head->elem;
+  slist->head = head->next;
+  h_arena_free(slist->arena, head);
+  return ret;
+}
+
+void h_slist_push(HSlist *slist, void* item) {
+  HSlistNode *hnode = h_arena_malloc(slist->arena, sizeof(HSlistNode));
+  hnode->elem = item;
+  hnode->next = slist->head;
+  // write memory barrier here.
+  slist->head = hnode;
+}
+
+void h_slist_free(HSlist *slist) {
+  while (slist->head != NULL)
+    h_slist_pop(slist);
+  h_arena_free(slist->arena, slist);
+}

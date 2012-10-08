@@ -154,6 +154,21 @@ HCountedArray *h_carray_new_sized(HArena * arena, size_t size);
 HCountedArray *h_carray_new(HArena * arena);
 void h_carray_append(HCountedArray *array, void* item);
 
+typedef struct HSlistNode_ {
+  void* elem;
+  struct HSlistNode_ *next;
+} HSlistNode;
+
+typedef struct HSlist_ {
+  HSlistNode *head;
+  struct HArena_ *arena;
+} HSlist;
+
+
+HSlist* h_slist_new(HArena *arena);
+void* h_slist_pop(HSlist *slist);
+void h_slist_push(HSlist *slist, void* item);
+void h_slist_free(HSlist *slist);
 
 #if 0
 #include <malloc.h>
