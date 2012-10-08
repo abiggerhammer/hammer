@@ -86,7 +86,11 @@ void* h_arena_malloc(HArena *arena, size_t size) {
     return link->rest;
   }
 }
-    
+
+void h_arena_free(HArena *arena, void* ptr) {
+  // To be used later...
+}
+
 void h_delete_arena(HArena *arena) {
   struct arena_link *link = arena->head;
   while (link) {
