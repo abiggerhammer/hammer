@@ -111,6 +111,8 @@ long long h_read_bits(HInputStream* state, int count, char signed_p) {
 
 #ifdef INCLUDE_TESTS
 
+#include <glib.h>
+
 #define MK_INPUT_STREAM(buf,len,endianness_)   \
   {					      \
     .input = (uint8_t*)buf,					\

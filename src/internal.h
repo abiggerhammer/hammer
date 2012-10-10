@@ -17,7 +17,6 @@
 
 #ifndef HAMMER_INTERNAL__H
 #define HAMMER_INTERNAL__H
-#include <glib.h>
 #include <err.h>
 #include "hammer.h"
 

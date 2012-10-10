@@ -26,8 +26,8 @@
 #include "allocator.h"
 #include "parsers/parser_internal.h"
 
-static guint djbhash(const uint8_t *buf, size_t len) {
-  guint hash = 5381;
+static uint32_t djbhash(const uint8_t *buf, size_t len) {
+  uint32_t hash = 5381;
   while (len--) {
     hash = hash * 33 + *buf++;
   }
@@ -116,7 +116,7 @@ void setupLR(const HParser *p, HParseState *state, HLeftRec *rec_detect) {
   HLeftRec *lr = state->lr_stack->head->elem;
   while (lr && lr->rule != p) {
     lr->head = rec_detect->head;
-    h_slist_push(lr->head->involved_set, (gpointer)lr->rule);
+    h_slist_push(lr->head->involved_set, (void*)lr->rule);
   }
 }
 
@@ -230,10 +230,10 @@ typedef struct {
 } HTwoParsers;
 
 
-static guint cache_key_hash(gconstpointer key) {
+static uint32_t cache_key_hash(const void* key) {
   return djbhash(key, sizeof(HParserCacheKey));
 }
-static gboolean cache_key_equal(gconstpointer key1, gconstpointer key2) {
+static bool cache_key_equal(const void* key1, const void* key2) {
   return memcmp(key1, key2, sizeof(HParserCacheKey)) == 0;
 }
 
@@ -274,7 +274,9 @@ void h_parse_result_free(HParseResult *result) {
 
 #ifdef INCLUDE_TESTS
 
+#include <glib.h>
 #include "test_suite.h"
+
 static void test_token(void) {
   const HParser *token_ = h_token((const uint8_t*)"95\xa2", 3);
 

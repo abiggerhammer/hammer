@@ -1,7 +1,7 @@
 #include "parser_internal.h"
 
 static HParseResult* parse_ch(void* env, HParseState *state) {
-  uint8_t c = (uint8_t)GPOINTER_TO_UINT(env);
+  uint8_t c = (uint8_t)(unsigned long)(env);
   uint8_t r = (uint8_t)h_read_bits(&state->input_stream, 8, false);
   if (c == r) {
     HParsedToken *tok = a_new(HParsedToken, 1);    
@@ -22,6 +22,6 @@ const HParser* h_ch(const uint8_t c) {
 const HParser* h_ch__m(HAllocator* mm__, const uint8_t c) {  
   HParser *ret = h_new(HParser, 1);
   ret->vtable = &ch_vt;
-  ret->env = GUINT_TO_POINTER(c);
+  ret->env = (void*)(unsigned long)(c);
   return (const HParser*)ret;
 }

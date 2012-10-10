@@ -17,9 +17,9 @@
 
 #define _GNU_SOURCE
 #include <stdio.h>
-#include <glib.h>
 #include <string.h>
 #include "hammer.h"
+#include "internal.h"
 #include <malloc.h>
 
 typedef struct pp_state {
@@ -69,20 +69,21 @@ void h_pprint(FILE* stream, const HParsedToken* tok, int indent, int delta) {
     fprintf(stream, "%*sUSER\n", indent, "");
     break;
   default:
-    g_assert_not_reached();
+    assert_message(0, "Should not reach here.");
   }
 }
 
 
 struct result_buf {
   char* output;
+  HAllocator *mm__;
   size_t len;
   size_t capacity;
 };
 
 static inline void ensure_capacity(struct result_buf *buf, int amt) {
   while (buf->len + amt >= buf->capacity)
-    buf->output = g_realloc(buf->output, buf->capacity *= 2);
+    buf->output = buf->mm__->realloc(buf->mm__, buf->output, buf->capacity *= 2);
 }
 
 static inline void append_buf(struct result_buf *buf, const char* input, int len) {
@@ -149,15 +150,19 @@ static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
     break;
   default:
     fprintf(stderr, "Unexpected token type %d\n", tok->token_type);
-    g_assert_not_reached();
+    assert_message(0, "Should not reach here.");
   }
 }
   
 
 char* h_write_result_unamb(const HParsedToken* tok) {
+  return h_write_result_unamb__m(&system_allocator, tok);
+}
+char* h_write_result_unamb__m(HAllocator* mm__, const HParsedToken* tok) {
   struct result_buf buf = {
-    .output = g_malloc0(16),
+    .output = mm__->alloc(mm__, 16),
     .len = 0,
+    .mm__ = mm__,
     .capacity = 16
   };
   unamb_sub(tok, &buf);

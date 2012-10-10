@@ -17,7 +17,6 @@
 
 #ifndef HAMMER_HAMMER__H
 #define HAMMER_HAMMER__H
-#include <glib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include "allocator.h"

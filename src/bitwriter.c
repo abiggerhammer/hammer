@@ -4,6 +4,9 @@
 #include "internal.h"
 #include "test_suite.h"
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 // This file provides the logical inverse of bitreader.c
 struct HBitWriter_ {
   uint8_t* buf;
@@ -109,6 +112,7 @@ void h_bit_writer_free(HBitWriter* w) {
 }
 
 #ifdef INCLUDE_TESTS
+#include <glib.h>
 // TESTS BELOW HERE
 typedef struct {
   unsigned long long data;

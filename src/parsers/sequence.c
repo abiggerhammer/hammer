@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include "parser_internal.h"
 
 typedef struct {
