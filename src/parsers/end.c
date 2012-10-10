@@ -14,8 +14,13 @@ static const HParserVtable end_vt = {
   .parse = parse_end,
 };
 
-const HParser* h_end_p() { 
-  HParser *ret = g_new(HParser, 1);
-  ret->vtable = &end_vt; ret->env = NULL;
+const HParser* h_end_p() {
+  return h_end_p__m(&system_allocator);
+}
+
+const HParser* h_end_p__m(HAllocator* mm__) { 
+  HParser *ret = h_new(HParser, 1);
+  ret->vtable = &end_vt;
+  ret->env = NULL;
   return (const HParser*)ret;
 }

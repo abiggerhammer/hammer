@@ -238,9 +238,12 @@ static gboolean cache_key_equal(gconstpointer key1, gconstpointer key2) {
 }
 
 
-HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length) { 
+HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length) {
+  return h_parse__m(&system_allocator, parser, input, length);
+}
+HParseResult* h_parse__m(HAllocator* mm__, const HParser* parser, const uint8_t* input, size_t length) { 
   // Set up a parse state...
-  HArena * arena = h_new_arena(0);
+  HArena * arena = h_new_arena(mm__, 0);
   HParseState *parse_state = a_new_(arena, HParseState, 1);
   parse_state->cache = h_hashtable_new(arena, cache_key_equal, // key_equal_func
 					      cache_key_hash); // hash_func

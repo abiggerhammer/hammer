@@ -23,10 +23,14 @@ static const HParserVtable action_vt = {
   .parse = parse_action,
 };
 
-const HParser* h_action(const HParser* p, const HAction a) { 
-  HParser *res = g_new(HParser, 1);
+const HParser* h_action(const HParser* p, const HAction a) {
+  return h_action__m(&system_allocator, p, a);
+}
+
+const HParser* h_action__m(HAllocator* mm__, const HParser* p, const HAction a) {
+  HParser *res = h_new(HParser, 1);
   res->vtable = &action_vt;
-  HParseAction *env = g_new(HParseAction, 1);
+  HParseAction *env = h_new(HParseAction, 1);
   env->p = p;
   env->action = a;
   res->env = (void*)env;

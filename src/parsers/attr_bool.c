@@ -21,10 +21,14 @@ static const HParserVtable attr_bool_vt = {
   .parse = parse_attr_bool,
 };
 
-const HParser* h_attr_bool(const HParser* p, HPredicate pred) { 
-  HParser *res = g_new(HParser, 1);
+
+const HParser* h_attr_bool(const HParser* p, HPredicate pred) {
+  return h_attr_bool__m(&system_allocator, p, pred);
+}
+const HParser* h_attr_bool__m(HAllocator* mm__, const HParser* p, HPredicate pred) { 
+  HParser *res = h_new(HParser, 1);
   res->vtable = &attr_bool_vt;
-  HAttrBool *env = g_new(HAttrBool, 1);
+  HAttrBool *env = h_new(HAttrBool, 1);
   env->p = p;
   env->pred = pred;
   res->env = (void*)env;

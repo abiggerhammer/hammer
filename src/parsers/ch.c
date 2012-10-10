@@ -15,8 +15,12 @@ static HParseResult* parse_ch(void* env, HParseState *state) {
 static const HParserVtable ch_vt = {
   .parse = parse_ch,
 };
-const HParser* h_ch(const uint8_t c) {  
-  HParser *ret = g_new(HParser, 1);
+
+const HParser* h_ch(const uint8_t c) {
+  return h_ch__m(&system_allocator, c);
+}
+const HParser* h_ch__m(HAllocator* mm__, const uint8_t c) {  
+  HParser *ret = h_new(HParser, 1);
   ret->vtable = &ch_vt;
   ret->env = GUINT_TO_POINTER(c);
   return (const HParser*)ret;

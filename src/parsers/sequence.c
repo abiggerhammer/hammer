@@ -27,20 +27,40 @@ static const HParserVtable sequence_vt = {
   .parse = parse_sequence,
 };
 
-const HParser* h_sequence(const HParser *p, ...) {
+const HParser* h_sequence(const HParser* p, ...) {
+  va_list ap;
+  va_start(ap, p);
+  const HParser* ret = h_sequence__mv(&system_allocator, p,  ap);
+  va_end(ap);
+  return ret;
+}
+
+const HParser* h_sequence__m(HAllocator* mm__, const HParser* p, ...) {
+  va_list ap;
+  va_start(ap, p);
+  const HParser* ret = h_sequence__mv(mm__, p,  ap);
+  va_end(ap);
+  return ret;
+}
+
+const HParser* h_sequence__v(const HParser* p, va_list ap) {
+  return h_sequence__mv(&system_allocator, p, ap);
+}
+
+const HParser* h_sequence__mv(HAllocator* mm__, const HParser *p, va_list ap_) {
   va_list ap;
   size_t len = 0;
   const HParser *arg;
-  va_start(ap, p);
+  va_copy(ap, ap_);
   do {
     len++;
     arg = va_arg(ap, const HParser *);
   } while (arg);
   va_end(ap);
-  HSequence *s = g_new(HSequence, 1);
-  s->p_array = g_new(const HParser *, len);
+  HSequence *s = h_new(HSequence, 1);
+  s->p_array = h_new(const HParser *, len);
 
-  va_start(ap, p);
+  va_copy(ap, ap_);
   s->p_array[0] = p;
   for (size_t i = 1; i < len; i++) {
     s->p_array[i] = va_arg(ap, const HParser *);
@@ -48,7 +68,7 @@ const HParser* h_sequence(const HParser *p, ...) {
   va_end(ap);
 
   s->len = len;
-  HParser *ret = g_new(HParser, 1);
+  HParser *ret = h_new(HParser, 1);
   ret->vtable = &sequence_vt; ret->env = (void*)s;
   return ret;
 }

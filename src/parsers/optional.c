@@ -16,9 +16,12 @@ static const HParserVtable optional_vt = {
 };
 
 const HParser* h_optional(const HParser* p) {
+  return h_optional__m(&system_allocator, p);
+}
+const HParser* h_optional__m(HAllocator* mm__, const HParser* p) {
   // TODO: re-add this
   //assert_message(p->vtable != &ignore_vt, "Thou shalt ignore an option, rather than the other way 'round.");
-  HParser *ret = g_new(HParser, 1);
+  HParser *ret = h_new(HParser, 1);
   ret->vtable = &optional_vt;
   ret->env = (void*)p;
   return ret;

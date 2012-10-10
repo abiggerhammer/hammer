@@ -7,6 +7,7 @@
 // This file provides the logical inverse of bitreader.c
 struct HBitWriter_ {
   uint8_t* buf;
+  HAllocator *mm__;
   size_t index;
   size_t capacity;
   char bit_offset; // unlike in bit_reader, this is always the number
@@ -16,10 +17,12 @@ struct HBitWriter_ {
 };
 
 // h_bit_writer_
-HBitWriter *h_bit_writer_new() {
-  HBitWriter *writer = g_new0(HBitWriter, 1);
-  writer->buf = g_malloc0(writer->capacity = 8);
-
+HBitWriter *h_bit_writer_new(HAllocator* mm__) {
+  HBitWriter *writer = h_new(HBitWriter, 1);
+  memset(writer, 0, sizeof(*writer));
+  writer->buf = mm__->alloc(mm__, writer->capacity = 8);
+  memset(writer->buf, 0, writer->capacity);
+  writer->mm__ = mm__;
   writer->flags = BYTE_BIG_ENDIAN | BIT_BIG_ENDIAN;
 
   return writer;
@@ -41,7 +44,7 @@ static void h_bit_writer_reserve(HBitWriter* w, size_t nbits) {
   int nbytes = (nbits + 7) / 8 + ((w->bit_offset != 0) ? 1 : 0);
   size_t old_capacity = w->capacity;
   while (w->index + nbytes >= w->capacity) {
-    w->buf = g_realloc(w->buf, w->capacity *= 2);
+    w->buf = w->mm__->realloc(w->mm__, w->buf, w->capacity *= 2);
   }
 
   if (old_capacity != w->capacity)
@@ -100,8 +103,9 @@ const uint8_t *h_bit_writer_get_buffer(HBitWriter* w, size_t *len) {
 }
 
 void h_bit_writer_free(HBitWriter* w) {
-  g_free(w->buf);
-  g_free(w);
+  HAllocator *mm__ = w->mm__;
+  h_free(w->buf);
+  h_free(w);
 }
 
 #ifdef INCLUDE_TESTS
@@ -114,7 +118,7 @@ typedef struct {
 void run_bitwriter_test(bitwriter_test_elem data[], char flags) {
   size_t len;
   const uint8_t *buf;
-  HBitWriter *w = h_bit_writer_new();
+  HBitWriter *w = h_bit_writer_new(&system_allocator);
   int i;
   w->flags = flags;
   for (i = 0; data[i].nbits; i++) {

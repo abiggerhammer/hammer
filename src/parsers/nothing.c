@@ -10,8 +10,11 @@ static const HParserVtable nothing_vt = {
   .parse = parse_nothing,
 };
 
-const HParser* h_nothing_p() { 
-  HParser *ret = g_new(HParser, 1);
+const HParser* h_nothing_p() {
+  return h_nothing_p__m(&system_allocator);
+}
+const HParser* h_nothing_p__m(HAllocator* mm__) { 
+  HParser *ret = h_new(HParser, 1);
   ret->vtable = &nothing_vt; ret->env = NULL;
   return (const HParser*)ret;
 }

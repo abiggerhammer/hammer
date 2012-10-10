@@ -20,18 +20,24 @@ static const HParserVtable bits_vt = {
   .parse = parse_bits,
 };
 const HParser* h_bits(size_t len, bool sign) {
-  struct bits_env *env = g_new(struct bits_env, 1);
+  return h_bits__m(&system_allocator, len, sign);
+}
+const HParser* h_bits__m(HAllocator* mm__, size_t len, bool sign) {
+  struct bits_env *env = h_new(struct bits_env, 1);
   env->length = len;
   env->signedp = sign;
-  HParser *res = g_new(HParser, 1);
+  HParser *res = h_new(HParser, 1);
   res->vtable = &bits_vt;
   res->env = env;
   return res;
 }
 
 #define SIZED_BITS(name_pre, len, signedp) \
-  const HParser* h_##name_pre##len () {	       \
-    return h_bits(len, signedp);	       \
+  const HParser* h_##name_pre##len () {				\
+    return h_bits__m(&system_allocator, len, signedp);		\
+  }								\
+  const HParser* h_##name_pre##len##__m(HAllocator* mm__) {	\
+    return h_bits__m(mm__, len, signedp);			\
   }
 SIZED_BITS(int, 8, true)
 SIZED_BITS(int, 16, true)

@@ -29,8 +29,27 @@
       errx(1, "Assertion failed (programmer error): %s", message);	\
   } while(0)
 #endif
+
+#define HAMMER_FN_IMPL_NOARGS(rtype_t, name) \
+  rtype_t name(void) {			     \
+    return name##__m(system_allocator);	     \
+  }					     \
+  rtype_t name##__m(HAllocator* mm__)
+// Functions with arguments are difficult to forward cleanly. Alas, we will need to forward them manually.
+
+#define h_new(type, count) ((type*)(mm__->alloc(mm__, sizeof(type)*(count))))
+#define h_free(addr) (mm__->free(mm__, (addr)))
+
 #define false 0
 #define true 1
+
+// This is going to be generally useful.
+static inline void h_generic_free(HAllocator *allocator, void* ptr) {
+  allocator->free(allocator, ptr);
+}
+
+HAllocator system_allocator;
+
 
 typedef struct HInputStream_ {
   // This should be considered to be a really big value type.
@@ -155,24 +174,6 @@ typedef struct HParserCacheValue_t {
   };
 } HParserCacheValue;
 
-typedef unsigned int *HCharset;
-
-static inline HCharset new_charset() {
-  HCharset cs = g_new0(unsigned int, 256 / sizeof(unsigned int));
-  return cs;
-}
-
-static inline int charset_isset(HCharset cs, uint8_t pos) {
-  return !!(cs[pos / sizeof(*cs)] & (1 << (pos % sizeof(*cs))));
-}
-
-static inline void charset_set(HCharset cs, uint8_t pos, int val) {
-  cs[pos / sizeof(*cs)] =
-    val
-    ? cs[pos / sizeof(*cs)] |  (1 << (pos % sizeof(*cs)))
-    : cs[pos / sizeof(*cs)] & ~(1 << (pos % sizeof(*cs)));
-}
-
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
 
 long long h_read_bits(HInputStream* state, int count, char signed_p);
@@ -197,7 +198,6 @@ void h_hashtable_put(HHashTable* ht, void* key, void* value);
 int   h_hashtable_present(HHashTable* ht, void* key);
 void  h_hashtable_del(HHashTable* ht, void* key);
 void  h_hashtable_free(HHashTable* ht);
-
 
 #if 0
 #include <malloc.h>
