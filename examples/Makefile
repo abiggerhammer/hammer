@@ -7,6 +7,9 @@ OUTPUTS := dns.o \
 TOPLEVEL := ../
 
 include ../common.mk
+CFLAGS += $(pkg-config --cflags glib-2.0)
+LDFLAGS += $(pkg-config --libs glib-2.0)
+
 
 
 all: dns base64

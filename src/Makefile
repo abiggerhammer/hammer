@@ -42,10 +42,7 @@ TOPLEVEL := ../
 include ../common.mk
 
 
-all: libhammer.a test_suite
-
-test_suite: test_suite.o libhammer.a
-	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
+all: libhammer.a
 
 libhammer.a: bitreader.o hammer.o pprint.o allocator.o datastructures.o bitwriter.o system_allocator.o \
 	$(PARSERS:%=parsers/%.o)
@@ -53,5 +50,12 @@ libhammer.a: bitreader.o hammer.o pprint.o allocator.o datastructures.o bitwrite
 bitreader.o: test_suite.h
 hammer.o: hammer.h
 
+ifneq ($(INCLUDE_TESTS),0)
+all: test_suite
+
 test: test_suite
 	./test_suite -v
+
+test_suite: test_suite.o libhammer.a
+	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
+endif

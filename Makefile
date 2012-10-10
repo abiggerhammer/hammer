@@ -5,6 +5,10 @@
 
 SUBDIRS = src examples
 
+include config.mk
+
+CONFIG_VARS= INCLUDE_TESTS
+
 .DEFAULT_GOAL := all
 
 %:
@@ -25,3 +29,6 @@ $(foreach dir,$(SUBDIRS),$(eval $(call SUBDIR_TEMPLATE,$(dir))))
 
 TAGS: $(shell find * -name "*.c")
 	etags $^
+
+config:
+	@printf "%30s %s\n" $(foreach var,$(CONFIG_VARS),$(var) $($(var)) )
