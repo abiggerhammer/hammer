@@ -109,6 +109,12 @@ struct HParseState_ {
   HHashTable *recursion_heads;
 };
 
+typedef struct HParserBackendVTable_ {
+  int (*compile)(HAllocator *mm__, HParser* parser, const void* params);
+  HParseResult* (*parse)(HAllocator *mm__, HParser* parser, HParseState* parse_state);
+} HParserBackendVTable;
+
+
 /* The (location, parser) tuple used to key the cache.
  */
 
@@ -172,6 +178,10 @@ typedef struct HParserCacheValue_t {
     HCachedResult *right;
   };
 } HParserCacheValue;
+
+// Backends {{{
+extern HParserBackendVTable h__packrat_backend_vtable;
+// }}}
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
 

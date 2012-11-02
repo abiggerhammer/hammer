@@ -30,6 +30,12 @@ typedef int bool;
 
 typedef struct HParseState_ HParseState;
 
+typedef enum HParserBackend_ {
+  PB_MIN = 0,
+  PB_PACKRAT = PB_MIN, // PB_MIN is always the default.
+  PB_MAX
+} HParserBackend;
+
 typedef enum HTokenType_ {
   TT_NONE,
   TT_BYTES,
@@ -111,6 +117,17 @@ typedef struct HParser_ {
   const HParserVtable *vtable;
   void *env;
 } HParser;
+
+// {{{ Stuff for benchmarking
+typedef struct HParserTestcase_ {
+  unsigned char* input;
+  size_t length;
+  char* output_unambiguous;
+} HParserTestcase;
+
+typedef struct HBenchmarkResults_ {
+} HBenchmarkResults;
+// }}}
 
 // {{{ Preprocessor definitions
 #define HAMMER_FN_DECL_NOARG(rtype_t, name)		\
@@ -520,6 +537,15 @@ HAMMER_FN_DECL(char*, h_write_result_unamb, const HParsedToken* tok);
 HAMMER_FN_DECL(void, h_pprint, FILE* stream, const HParsedToken* tok, int indent, int delta);
 
 /**
+ * Build parse tables for the given parser backend. See the
+ * documentation for the parser backend in question for information
+ * about the [params] parameter, or just pass in NULL for the defaults.
+ *
+ * Returns -1 if grammar cannot be compiled with the specified options; 0 otherwise.
+ */
+HAMMER_FN_DECL(int, h_compile, HParser* parser, HParserBackend backend, const void* params);
+
+/**
  * TODO: Document me
  */
 HBitWriter *h_bit_writer_new(HAllocator* mm__);
@@ -540,5 +566,11 @@ const uint8_t* h_bit_writer_get_buffer(HBitWriter* w, size_t *len);
  * TODO: Document me
  */
 void h_bit_writer_free(HBitWriter* w);
+
+// {{{ Benchmark functions
+HBenchmarkResults *h_benchmark(HParser* parser, HParserTestcase* testcases);
+void h_benchmark_report(FILE* stream, HBenchmarkResults* results);
+void h_benchmark_dump_optimized_code(FILE* stream, HBenchmarkResults* results);
+// }}}
 
 #endif // #ifndef HAMMER_HAMMER__H

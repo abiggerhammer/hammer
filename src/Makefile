@@ -25,17 +25,29 @@ PARSERS := \
 	attr_bool \
 	indirect
 
-OUTPUTS := bitreader.o \
-	   hammer.o \
-	   bitwriter.o \
-	   libhammer.a \
-	   pprint.o \
-	   allocator.o \
-	   datastructures.o \
-	   system_allocator.o \
+BACKENDS := \
+	packrat
+
+HAMMER_PARTS := \
+	bitreader.o \
+	hammer.o \
+	bitwriter.o \
+	pprint.o \
+	allocator.o \
+	datastructures.o \
+	system_allocator.o \
+	benchmark.o \
+	compile.o \
+	$(PARSERS:%=parsers/%.o) \
+	$(BACKENDS:%=backends/%.o)
+
+TESTS := t_benchmark.o
+
+OUTPUTS := libhammer.a \
 	   test_suite.o \
 	   test_suite \
-	   $(PARSERS:%=parsers/%.o)
+	   $(HAMMER_PARTS) \
+	   $(TESTS)
 
 TOPLEVEL := ../
 
@@ -44,8 +56,7 @@ include ../common.mk
 
 all: libhammer.a
 
-libhammer.a: bitreader.o hammer.o pprint.o allocator.o datastructures.o bitwriter.o system_allocator.o \
-	$(PARSERS:%=parsers/%.o)
+libhammer.a: $(HAMMER_PARTS)
 
 bitreader.o: test_suite.h
 hammer.o: hammer.h
@@ -56,6 +67,6 @@ all: test_suite
 test: test_suite
 	./test_suite -v
 
-test_suite: test_suite.o libhammer.a
+test_suite: test_suite.o $(TESTS) libhammer.a
 	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
 endif
