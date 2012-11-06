@@ -64,6 +64,9 @@ hammer.o: hammer.h
 ifneq ($(INCLUDE_TESTS),0)
 all: test_suite
 
+benchmark: t_benchmark.o libhammer.a
+	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
+
 test: test_suite
 	./test_suite -v
 

@@ -1,11 +1,11 @@
 #include "../internal.h"
 
-int h_packrat_compile(HAllocator* mm__, HParser* parser, const void* params) {
+int h_packrat_compile(HAllocator* mm__, const HParser* parser, const void* params) {
   return 0; // No compilation necessary, and everything should work
 	    // out of the box.
 }
 
-HParseResult *h_packrat_parse(HAllocator* mm__, HParser* parser, HParseState* parse_state) {
+HParseResult *h_packrat_parse(HAllocator* mm__, const HParser* parser, HParseState* parse_state) {
   return NULL; // TODO: fill this in.
 }
 
