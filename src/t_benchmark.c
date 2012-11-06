@@ -5,7 +5,8 @@ HParserTestcase testcases[] = {
   {(unsigned char*)"1,2,3", 5, "(u0x31 u0x32 u0x33)"},
   {(unsigned char*)"1,3,2", 5, "(u0x31 u0x33 u0x32)"},
   {(unsigned char*)"1,3", 3, "(u0x31 u0x33)"},
-  {(unsigned char*)"3", 1, "(u0x33)"}
+  {(unsigned char*)"3", 1, "(u0x33)"},
+  { NULL, 0, NULL }
 };
 
 void test_benchmark_1() {
@@ -13,5 +14,9 @@ void test_benchmark_1() {
 
   HBenchmarkResults *res = h_benchmark(parser, testcases);
   h_benchmark_report(stderr, res);
+}
 
+int main(int argc, char **argv) {
+  test_benchmark_1();
+  return 0;
 }

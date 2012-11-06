@@ -5,7 +5,8 @@
 
 /*
   Usage:
-  Create your parser (i.e., HParser*), and then call
+  Create your parser (i.e., const HParser*), and an array of test cases
+  (i.e., HParserTestcase[], terminated by { NULL, 0, NULL }) and then call
 
   HBenchmarkResults* results = h_benchmark(parser, testcases);
 

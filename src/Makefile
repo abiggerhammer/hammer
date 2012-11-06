@@ -70,6 +70,6 @@ benchmark: t_benchmark.o libhammer.a
 test: test_suite
 	./test_suite -v
 
-test_suite: test_suite.o $(TESTS) libhammer.a
+test_suite: test_suite.o libhammer.a
 	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
 endif
