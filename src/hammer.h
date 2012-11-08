@@ -125,7 +125,25 @@ typedef struct HParserTestcase_ {
   char* output_unambiguous;
 } HParserTestcase;
 
+typedef struct HCaseResult_ {
+  bool success;
+  union {
+    const char* actual_results; // on failure, filled in with the results of h_write_result_unamb
+    size_t parse_time; // on success, filled in with time for a single parse, in nsec
+  };
+} HCaseResult;
+
+typedef struct HBackendResults_ {
+  HParserBackend backend;
+  bool compile_success;
+  size_t n_testcases;
+  size_t failed_testcases; // actually a count...
+  HCaseResult *cases;
+} HBackendResults;
+
 typedef struct HBenchmarkResults_ {
+  size_t len;
+  HBackendResults *results;
 } HBenchmarkResults;
 // }}}
 
