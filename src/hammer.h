@@ -586,7 +586,7 @@ const uint8_t* h_bit_writer_get_buffer(HBitWriter* w, size_t *len);
 void h_bit_writer_free(HBitWriter* w);
 
 // {{{ Benchmark functions
-HBenchmarkResults *h_benchmark(const HParser* parser, HParserTestcase* testcases);
+HAMMER_FN_DECL(HBenchmarkResults *, h_benchmark, const HParser* parser, HParserTestcase* testcases);
 void h_benchmark_report(FILE* stream, HBenchmarkResults* results);
 void h_benchmark_dump_optimized_code(FILE* stream, HBenchmarkResults* results);
 // }}}

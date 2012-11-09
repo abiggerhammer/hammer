@@ -2,6 +2,7 @@
 #include <time.h>
 #include <string.h>
 #include "hammer.h"
+#include "internal.h"
 
 /*
   Usage:
@@ -20,21 +21,19 @@
 
 */
 
-#define false 0
-#define true 1
-
-#include <stdlib.h>
-
 HBenchmarkResults *h_benchmark(const HParser* parser, HParserTestcase* testcases) {
+  return h_benchmark__m(&system_allocator, parser, testcases);
+}
+
+HBenchmarkResults *h_benchmark__m(HAllocator* mm__, const HParser* parser, HParserTestcase* testcases) {
   // For now, just output the results to stderr
   HParserTestcase* tc = testcases;
   HParserBackend backend = PB_MIN;
-  HBenchmarkResults *ret = (HBenchmarkResults*)malloc(sizeof(HBenchmarkResults*));
+  HBenchmarkResults *ret = h_new(HBenchmarkResults, 1);
   ret->len = PB_MAX-PB_MIN;
-  ret->results = (HBackendResults*)malloc(ret->len * sizeof(HBackendResults*));
+  ret->results = h_new(HBackendResults, ret->len);
 
   for (backend = PB_MIN; backend < PB_MAX; backend++) {
-    fprintf(stderr, "Compiling for backend %d ... ", backend);
     ret->results[backend].backend = backend;
     // Step 1: Compile grammar for given parser...
     if (h_compile(parser, PB_MIN, NULL) == -1) {
@@ -78,7 +77,7 @@ HBenchmarkResults *h_benchmark(const HParser* parser, HParserTestcase* testcases
       continue;
     }
 
-    ret->results[backend].cases = (HCaseResult*)malloc(ret->results[backend].n_testcases * sizeof(HCaseResult*));
+    ret->results[backend].cases = h_new(HCaseResult, ret->results[backend].n_testcases);
     size_t cur_case = 0;
 
     for (tc = testcases; tc->input != NULL; tc++) {
@@ -99,13 +98,17 @@ HBenchmarkResults *h_benchmark(const HParser* parser, HParserTestcase* testcases
 	time_diff = (ts_end.tv_sec - ts_start.tv_sec) * 1000000000 + (ts_end.tv_nsec - ts_start.tv_nsec);
       } while (time_diff < 100000000);
       ret->results[backend].cases[cur_case].parse_time = (time_diff / count);
-      fprintf(stderr, "Case %d: %lld ns/parse\n", (int)(tc - testcases),  time_diff / count);
       cur_case++;
     }
   }
-  return NULL;
+  return ret;
 }
 
 void h_benchmark_report(FILE* stream, HBenchmarkResults* result) {
-  // TODO: fill in this function
+  for (size_t i=0; i<result->len; ++i) {
+    fprintf(stream, "Backend %ld ... \n", i);
+    for (size_t j=0; j<result->results[i].n_testcases; ++j) {
+      fprintf(stream, "Case %ld: %ld ns/parse\n", j,  result->results[i].cases[j].parse_time);
+    }
+  }
 }
