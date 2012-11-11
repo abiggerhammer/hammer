@@ -20,7 +20,7 @@ static HParseResult* parse_token(void *env, HParseState *state) {
   return make_result(state, tok);
 }
 
-const const HParserVtable token_vt = {
+const HParserVtable token_vt = {
   .parse = parse_token,
 };
 
