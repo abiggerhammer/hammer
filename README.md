@@ -27,8 +27,7 @@ Features
 
 Installing
 ==========
-Prerequisites
--------------
+### Prerequisites
 * pkg-config
 * glib-2.0 (for the test suite; everything else will build without glib)
 * make
