@@ -17,7 +17,7 @@
 
 #ifndef HAMMER_TEST_SUITE__H
 #define HAMMER_TEST_SUITE__H
-#include <malloc.h>
+#include <stdlib.h>
 
 // Equivalent to g_assert_*, but not using g_assert...
 #define g_check_inttype(fmt, typ, n1, op, n2) do {				\
