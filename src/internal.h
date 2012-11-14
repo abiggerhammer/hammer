@@ -179,6 +179,20 @@ typedef struct HParserCacheValue_t {
   };
 } HParserCacheValue;
 
+// This file provides the logical inverse of bitreader.c
+struct HBitWriter_ {
+  uint8_t* buf;
+  HAllocator *mm__;
+  size_t index;
+  size_t capacity;
+  char bit_offset; // unlike in bit_reader, this is always the number
+		   // of used bits in the current byte. i.e., 0 always
+		   // means that 8 bits are available for use.
+  char flags;
+};
+
+// }}}
+
 // Backends {{{
 extern HParserBackendVTable h__packrat_backend_vtable;
 // }}}

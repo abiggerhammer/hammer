@@ -2,13 +2,13 @@ Hammer is a parsing library. Like many modern parsing libraries, it provides a p
 
 Hammer is written in C, but will provide bindings for other languages. If you don't see a language you're interested in on the list, just ask.
 
-Hammer currently builds under Linux and OSX. (Windows is coming.)
+Hammer currently builds under Linux. (Windows and OSX are coming.)
 
 Features
 ========
 * Bit-oriented -- grammars can include single-bit flags or multi-bit constructs that span character boundaries, with no hassle
 * Thread-safe, reentrant
-* Benchmarking for parsing backends -- determine empirically which backend will be most time/space-efficient for your grammar
+* Benchmarking for parsing backends -- determine empirically which backend will be most time-efficient for your grammar
 * Parsing backends:
   * Packrat parsing
   * LL(k) (not yet implemented)
@@ -28,9 +28,13 @@ Features
 Installing
 ==========
 ### Prerequisites
-* pkg-config
-* glib-2.0 (for the test suite; everything else will build without glib)
 * make
+
+### Optional Dependencies
+* doxygen (for `make doc`)
+* pkg-config (for `make test`)
+* glib-2.0 (for `make test`)
+* glib-2.0-dev (for `make test`)
 
 To install, type `make`. To run the built-in test suite, type `make test`.
 
