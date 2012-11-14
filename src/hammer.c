@@ -17,7 +17,7 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <error.h>
+#include <err.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <string.h>
