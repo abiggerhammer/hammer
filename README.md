@@ -33,7 +33,7 @@ Installing
 ### Optional Dependencies
 * doxygen (for `make doc`)
 * pkg-config (for `make test`)
-* glib-2.0 (for `make test`)
+* glib-2.0 (>= 2.29) (for `make test`)
 * glib-2.0-dev (for `make test`)
 
 To install, type `make`. To run the built-in test suite, type `make test`.
