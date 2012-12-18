@@ -14,6 +14,8 @@ static HParseResult* parse_ch(void* env, HParseState *state) {
 
 static const HParserVtable ch_vt = {
   .parse = parse_ch,
+  .isValidRegular = h_true,
+  .isValidCF = h_true,
 };
 
 const HParser* h_ch(const uint8_t c) {

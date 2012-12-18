@@ -31,8 +31,16 @@ static HParseResult* parse_xor(void *env, HParseState *state) {
   }
 }
 
+static bool xor_isValidCF(void *env) {
+  HTwoParsers *tp = (HTwoParsers*)env;
+  return (tp->p1->vtable->isValidCF(tp->p1->env) &&
+	  tp->p2->vtable->isValidCF(tp->p2->env));
+}
+
 static const HParserVtable xor_vt = {
   .parse = parse_xor,
+  .isValidRegular = h_false,
+  .isValidCF = xor_isValidCF,
 };
 
 const HParser* h_xor(const HParser* p1, const HParser* p2) {

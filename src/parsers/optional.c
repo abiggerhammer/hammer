@@ -11,8 +11,20 @@ static HParseResult* parse_optional(void* env, HParseState* state) {
   return make_result(state, ast);
 }
 
+static bool opt_isValidRegular(void *env) {
+  HParser *p = (HParser*) env;
+  return p->vtable->isValidRegular(p->env);
+}
+
+static bool opt_isValidCF(void *env) {
+  HParser *p = (HParser*) env;
+  return p->vtable->isValidCF(p->env);
+}
+
 static const HParserVtable optional_vt = {
   .parse = parse_optional,
+  .isValidRegular = opt_isValidRegular,
+  .isValidCF = opt_isValidCF,
 };
 
 const HParser* h_optional(const HParser* p) {

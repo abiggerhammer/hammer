@@ -12,6 +12,8 @@ static HParseResult* parse_not(void* env, HParseState* state) {
 
 static const HParserVtable not_vt = {
   .parse = parse_not,
+  .isValidRegular = h_false,  /* see and.c for why */
+  .isValidCF = h_false,       /* also see and.c for why */
 };
 
 const HParser* h_not(const HParser* p) {

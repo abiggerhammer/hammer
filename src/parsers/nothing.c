@@ -8,6 +8,8 @@ static HParseResult* parse_nothing() {
 
 static const HParserVtable nothing_vt = {
   .parse = parse_nothing,
+  .isValidRegular = h_true,
+  .isValidCF = h_true,
 };
 
 const HParser* h_nothing_p() {

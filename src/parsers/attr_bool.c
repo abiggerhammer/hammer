@@ -17,8 +17,20 @@ static HParseResult* parse_attr_bool(void *env, HParseState *state) {
     return NULL;
 }
 
+static bool ab_isValidRegular(void *env) {
+  HAttrBool *ab = (HAttrBool*)env;
+  return ab->p->vtable->isValidRegular(ab->p->env);
+}
+
+static bool ab_isValidCF(void *env) {
+  HAttrBool *ab = (HAttrBool*)env;
+  return ab->p->vtable->isValidCF(ab->p->env);
+}
+
 static const HParserVtable attr_bool_vt = {
   .parse = parse_attr_bool,
+  .isValidRegular = ab_isValidRegular,
+  .isValidCF = ab_isValidCF,
 };
 
 

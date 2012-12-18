@@ -35,8 +35,16 @@ static HParseResult* parse_butnot(void *env, HParseState *state) {
   }
 }
 
+static bool bn_isValidCF(void *env) {
+  HTwoParsers *tp = (HTwoParsers*)env;
+  return (tp->p1->vtable->isValidCF(tp->p1->env) &&
+	  tp->p2->vtable->isValidCF(tp->p2->env));
+}
+
 static const HParserVtable butnot_vt = {
   .parse = parse_butnot,
+  .isValidRegular = h_false,
+  .isValidCF = bn_isValidCF,
 };
 
 const HParser* h_butnot(const HParser* p1, const HParser* p2) {

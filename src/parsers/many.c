@@ -44,8 +44,22 @@ static HParseResult *parse_many(void* env, HParseState *state) {
   return NULL;
 }
 
+static bool many_isValidRegular(void *env) {
+  HRepeat *repeat = (HRepeat*)env;
+  return (repeat->p->vtable->isValidRegular(repeat->p->env) &&
+	  repeat->sep->vtable->isValidRegular(repeat->sep->env));
+}
+
+static bool many_isValidCF(void *env) {
+  HRepeat *repeat = (HRepeat*)env;
+  return (repeat->p->vtable->isValidCF(repeat->p->env) &&
+	  repeat->sep->vtable->isValidCF(repeat->sep->env));
+}
+
 static const HParserVtable many_vt = {
   .parse = parse_many,
+  .isValidRegular = many_isValidRegular,
+  .isValidCF = many_isValidCF,
 };
 
 const HParser* h_many(const HParser* p) {
@@ -147,6 +161,8 @@ static HParseResult* parse_length_value(void *env, HParseState *state) {
 
 static const HParserVtable length_value_vt = {
   .parse = parse_length_value,
+  .isValidRegular = h_false,
+  .isValidCF = h_false,
 };
 
 const HParser* h_length_value(const HParser* length, const HParser* value) {

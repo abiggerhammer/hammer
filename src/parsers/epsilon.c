@@ -10,6 +10,8 @@ static HParseResult* parse_epsilon(void* env, HParseState* state) {
 
 static const HParserVtable epsilon_vt = {
   .parse = parse_epsilon,
+  .isValidRegular = h_true,
+  .isValidCF = h_true,
 };
 
 static const HParser epsilon_p = {
