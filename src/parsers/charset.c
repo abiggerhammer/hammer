@@ -34,6 +34,8 @@ static HParseResult* parse_charset(void *env, HParseState *state) {
 
 static const HParserVtable charset_vt = {
   .parse = parse_charset,
+  .isValidRegular = h_true,
+  .isValidCF = h_true,
 };
 
 const HParser* h_ch_range(const uint8_t lower, const uint8_t upper) {

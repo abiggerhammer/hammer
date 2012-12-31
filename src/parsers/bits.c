@@ -18,6 +18,8 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
 
 static const HParserVtable bits_vt = {
   .parse = parse_bits,
+  .isValidRegular = h_true,
+  .isValidCF = h_true,
 };
 const HParser* h_bits(size_t len, bool sign) {
   return h_bits__m(&system_allocator, len, sign);

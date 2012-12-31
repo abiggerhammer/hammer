@@ -21,8 +21,28 @@ static HParseResult* parse_choice(void *env, HParseState *state) {
   return NULL;
 }
 
+static bool choice_isValidRegular(void *env) {
+  HSequence *s = (HSequence*)env;
+  for (size_t i=0; i<s->len; ++i) {
+    if (!s->p_array[i]->vtable->isValidRegular(s->p_array[i]->env))
+      return false;
+  }
+  return true;
+}
+
+static bool choice_isValidCF(void *env) {
+  HSequence *s = (HSequence*)env;
+  for (size_t i=0; i<s->len; ++i) {
+    if (!s->p_array[i]->vtable->isValidCF(s->p_array[i]->env))
+      return false;
+  }
+  return true;
+}
+
 static const HParserVtable choice_vt = {
   .parse = parse_choice,
+  .isValidRegular = choice_isValidRegular,
+  .isValidCF = choice_isValidCF,
 };
 
 const HParser* h_choice(const HParser* p, ...) {

@@ -19,8 +19,20 @@ static HParseResult* parse_action(void *env, HParseState *state) {
     return NULL;
 }
 
+static bool action_isValidRegular(void *env) {
+  HParseAction *a = (HParseAction*)env;
+  return a->p->vtable->isValidRegular(a->p->env);
+}
+
+static bool action_isValidCF(void *env) {
+  HParseAction *a = (HParseAction*)env;
+  return a->p->vtable->isValidCF(a->p->env);
+}
+
 static const HParserVtable action_vt = {
   .parse = parse_action,
+  .isValidRegular = action_isValidRegular,
+  .isValidCF = action_isValidCF,
 };
 
 const HParser* h_action(const HParser* p, const HAction a) {

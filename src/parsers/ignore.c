@@ -10,8 +10,20 @@ static HParseResult* parse_ignore(void* env, HParseState* state) {
   return res;
 }
 
+static bool ignore_isValidRegular(void *env) {
+  HParser *p = (HParser*)env;
+  return (p->vtable->isValidRegular(p->env));
+}
+
+static bool ignore_isValidCF(void *env) {
+  HParser *p = (HParser*)env;
+  return (p->vtable->isValidCF(p->env));
+}
+
 static const HParserVtable ignore_vt = {
   .parse = parse_ignore,
+  .isValidRegular = ignore_isValidRegular,
+  .isValidCF = ignore_isValidCF,
 };
 
 const HParser* h_ignore(const HParser* p) {

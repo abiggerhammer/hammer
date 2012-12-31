@@ -22,6 +22,8 @@ static HParseResult* parse_token(void *env, HParseState *state) {
 
 const HParserVtable token_vt = {
   .parse = parse_token,
+  .isValidRegular = h_true,
+  .isValidCF = h_true,
 };
 
 const HParser* h_token(const uint8_t *str, const size_t len) {

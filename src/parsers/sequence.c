@@ -24,8 +24,28 @@ static HParseResult* parse_sequence(void *env, HParseState *state) {
   return make_result(state, tok);
 }
 
+static bool sequence_isValidRegular(void *env) {
+  HSequence *s = (HSequence*)env;
+  for (size_t i=0; i<s->len; ++i) {
+    if (!s->p_array[i]->vtable->isValidRegular(s->p_array[i]->env))
+      return false;
+  }
+  return true;
+}
+
+static bool sequence_isValidCF(void *env) {
+  HSequence *s = (HSequence*)env;
+  for (size_t i=0; i<s->len; ++i) {
+    if (!s->p_array[i]->vtable->isValidCF(s->p_array[i]->env))
+      return false;
+  }
+  return true;
+}
+
 static const HParserVtable sequence_vt = {
   .parse = parse_sequence,
+  .isValidRegular = sequence_isValidRegular,
+  .isValidCF = sequence_isValidCF,
 };
 
 const HParser* h_sequence(const HParser* p, ...) {

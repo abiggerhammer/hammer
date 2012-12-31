@@ -12,6 +12,8 @@ static HParseResult* parse_end(void *env, HParseState *state) {
 
 static const HParserVtable end_vt = {
   .parse = parse_end,
+  .isValidRegular = h_true,
+  .isValidCF = h_true,
 };
 
 const HParser* h_end_p() {

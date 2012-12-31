@@ -3,8 +3,17 @@
 static HParseResult* parse_indirect(void* env, HParseState* state) {
   return h_do_parse(env, state);
 }
+
+static bool indirect_isValidCF(void *env) {
+  HParser *p = (HParser*)env;
+  HParser *inner = (HParser*)p->env;
+  return inner->vtable->isValidCF(inner->env);
+}
+
 static const HParserVtable indirect_vt = {
   .parse = parse_indirect,
+  .isValidRegular = h_false,
+  .isValidCF = indirect_isValidCF,
 };
 
 void h_bind_indirect(HParser* indirect, const HParser* inner) {

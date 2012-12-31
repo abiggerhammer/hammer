@@ -7,7 +7,7 @@
 
 typedef struct {
   const HParser **parsers;
-  size_t count;         // how many parsers in 'ps'
+  size_t len;         // how many parsers in 'ps'
   size_t which;         // whose result to return
 } HIgnoreSeq;
 
@@ -15,7 +15,7 @@ static HParseResult* parse_ignoreseq(void* env, HParseState *state) {
   const HIgnoreSeq *seq = (HIgnoreSeq*)env;
   HParseResult *res = NULL;
 
-  for (size_t i=0; i < seq->count; ++i) {
+  for (size_t i=0; i < seq->len; ++i) {
     HParseResult *tmp = h_do_parse(seq->parsers[i], state);
     if (!tmp)
       return NULL;
@@ -26,8 +26,28 @@ static HParseResult* parse_ignoreseq(void* env, HParseState *state) {
   return res;
 }
 
+static bool is_isValidRegular(void *env) {
+  HIgnoreSeq *seq = (HIgnoreSeq*)env;
+  for (size_t i=0; i<seq->len; ++i) {
+    if (!seq->parsers[i]->vtable->isValidRegular(seq->parsers[i]->env))
+      return false;
+  }
+  return true;
+}
+
+static bool is_isValidCF(void *env) {
+  HIgnoreSeq *seq = (HIgnoreSeq*)env;
+  for (size_t i=0; i<seq->len; ++i) {
+    if (!seq->parsers[i]->vtable->isValidCF(seq->parsers[i]->env))
+      return false;
+  }
+  return true;
+}
+
 static const HParserVtable ignoreseq_vt = {
   .parse = parse_ignoreseq,
+  .isValidRegular = is_isValidRegular,
+  .isValidCF = is_isValidCF,
 };
 
 
@@ -40,7 +60,7 @@ static const HParser* h_leftright__m(HAllocator* mm__, const HParser* p, const H
   seq->parsers = h_new(const HParser*, 2);
   seq->parsers[0] = p;
   seq->parsers[1] = q;
-  seq->count = 2;
+  seq->len = 2;
   seq->which = which;
 
   HParser *ret = h_new(HParser, 1);
@@ -73,7 +93,7 @@ const HParser* h_middle__m(HAllocator* mm__, const HParser* p, const HParser* x,
   seq->parsers[0] = p;
   seq->parsers[1] = x;
   seq->parsers[2] = q;
-  seq->count = 3;
+  seq->len = 3;
   seq->which = 1;
 
   HParser *ret = h_new(HParser, 1);

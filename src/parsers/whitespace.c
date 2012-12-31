@@ -14,8 +14,20 @@ static HParseResult* parse_whitespace(void* env, HParseState *state) {
   return h_do_parse((HParser*)env, state);
 }
 
+static bool ws_isValidRegular(void *env) {
+  HParser *p = (HParser*)env;
+  return p->vtable->isValidRegular(p->env);
+}
+
+static bool ws_isValidCF(void *env) {
+  HParser *p = (HParser*)env;
+  return p->vtable->isValidCF(p->env);
+}
+
 static const HParserVtable whitespace_vt = {
   .parse = parse_whitespace,
+  .isValidRegular = ws_isValidRegular,
+  .isValidCF = ws_isValidCF,
 };
 
 const HParser* h_whitespace(const HParser* p) {

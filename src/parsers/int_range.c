@@ -30,6 +30,8 @@ static HParseResult* parse_int_range(void *env, HParseState *state) {
 
 static const HParserVtable int_range_vt = {
   .parse = parse_int_range,
+  .isValidRegular = h_true,
+  .isValidCF = h_true,
 };
 
 const HParser* h_int_range(const HParser *p, const int64_t lower, const int64_t upper) {
