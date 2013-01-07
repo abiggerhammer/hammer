@@ -26,8 +26,6 @@ void init_parser(void)
                                        h_optional(h_choice(base64_2,
                                                            base64_1, NULL)),
                                        NULL);
-        // why does this parse "A=="?!
-        // why does this parse "aaA=" but not "aA=="?!
 
     document = base64;
 }
