@@ -19,9 +19,13 @@ void init_parser(void)
         h_ch('Y'), h_ch('c'), h_ch('g'), h_ch('k'), h_ch('o'), h_ch('s'),
         h_ch('w'), h_ch('0'), h_ch('4'), h_ch('8'), NULL);
     const HParser *bsfdig_2bit = h_choice(h_ch('A'), h_ch('Q'), h_ch('g'), h_ch('w'), NULL);
+    const HParser *base64_3 = h_repeat_n(bsfdig, 4);
     const HParser *base64_2 = h_sequence(bsfdig, bsfdig, bsfdig_4bit, equals, NULL);
     const HParser *base64_1 = h_sequence(bsfdig, bsfdig_2bit, equals, equals, NULL);
-    const HParser *base64 = h_choice(base64_2, base64_1, NULL);
+    const HParser *base64 = h_sequence(h_many(base64_3),
+                                       h_optional(h_choice(base64_2,
+                                                           base64_1, NULL)),
+                                       NULL);
         // why does this parse "A=="?!
         // why does this parse "aaA=" but not "aA=="?!
 
