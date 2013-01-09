@@ -103,7 +103,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
   HParseResult *old_res = old_cached->right->result;
   
   // reset the eval_set of the head of the recursion at each beginning of growth
-  head->eval_set = head->involved_set;  // BUG: this must be a copy
+  head->eval_set = h_slist_copy(head->involved_set);
   HParseResult *tmp_res = perform_lowlevel_parse(state, k->parser);
 
   if (tmp_res) {
