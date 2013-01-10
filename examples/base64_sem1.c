@@ -125,14 +125,37 @@ const HParsedToken *act_base64_1(const HParseResult *p)
     return act_base64_n(1, p);
 }
 
-#if 0
+// Helper to concatenate two arrays.
+void carray_concat(HCountedArray *a, const HCountedArray *b)
+{
+    for(size_t i=0; i<b->used; i++)
+        h_carray_append(a, b->elements[i]);
+}
+
 const HParsedToken *act_base64(const HParseResult *p)
 {
-    // XXX
+    assert(p->ast->token_type == TT_SEQUENCE);
+    assert(p->ast->seq->used == 2);
+    assert(p->ast->seq->elements[0]->token_type == TT_SEQUENCE);
+
+    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
+    res->token_type = TT_SEQUENCE;
+    res->seq = h_carray_new(p->arena);
+
     // concatenate base64_3 blocks
-    // append trailing base64_2 or _1 block
+    HCountedArray *seq = p->ast->seq->elements[0]->seq;
+    for(size_t i=0; i<seq->used; i++) {
+        assert(seq->elements[i]->token_type == TT_SEQUENCE);
+        carray_concat(res->seq, seq->elements[i]->seq);
+    }
+
+    // append one trailing base64_2 or _1 block
+    const HParsedToken *tok = p->ast->seq->elements[1];
+    if(tok->token_type == TT_SEQUENCE)
+        carray_concat(res->seq, tok->seq);
+
+    return res;
 }
-#endif
 
 
 ///
@@ -157,7 +180,7 @@ const HParser *init_parser(void)
     H_ARULE(base64_3,     h_repeat_n(bsfdig, 4));
     H_ARULE(base64_2,     h_sequence(bsfdig, bsfdig, bsfdig_4bit, equals, NULL));
     H_ARULE(base64_1,     h_sequence(bsfdig, bsfdig_2bit, equals, equals, NULL));
-    H_RULE(base64,       h_sequence(h_many(base64_3),
+    H_ARULE(base64,       h_sequence(h_many(base64_3),
                                      h_optional(h_choice(base64_2,
                                                          base64_1, NULL)),
                                      NULL));
