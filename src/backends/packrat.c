@@ -83,10 +83,12 @@ void setupLR(const HParser *p, HParseState *state, HLeftRec *rec_detect) {
     rec_detect->head = some;
   }
   assert(state->lr_stack->head != NULL);
-  HLeftRec *lr = state->lr_stack->head->elem;
-  while (lr && lr->rule != p) {
+  HSlistNode *head = state->lr_stack->head;
+  HLeftRec *lr;
+  while (head && (lr = head->elem)->rule != p) {
     lr->head = rec_detect->head;
     h_slist_push(lr->head->involved_set, (void*)lr->rule);
+    head = head->next;
   }
 }
 
