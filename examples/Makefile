@@ -2,7 +2,9 @@
 OUTPUTS := dns.o \
 	   dns \
 	   base64.o \
-	   base64
+	   base64 \
+	   base64_sem1.o \
+	   base64_sem1
 
 TOPLEVEL := ../
 
@@ -12,7 +14,7 @@ LDFLAGS += $(pkg-config --libs glib-2.0)
 
 
 
-all: dns base64
+all: dns base64 base64_sem1
 
 dns: LDFLAGS:=-L../src -lhammer $(LDFLAGS)
 dns: dns.o rr.o dns_common.o
@@ -24,8 +26,8 @@ rr.o: ../src/hammer.h rr.h dns_common.h
 
 dns_common.o: ../src/hammer.h dns_common.h
 
-base64: LDFLAGS:=-L../src -lhammer $(LDFLAGS)
-base64: base64.o
+base64%: LDFLAGS:=-L../src -lhammer $(LDFLAGS)
+base64%: base64%.o
 	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
 
-base64.o: ../src/hammer.h
+base64%.o: ../src/hammer.h
