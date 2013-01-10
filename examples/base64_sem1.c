@@ -1,4 +1,5 @@
 #include "../src/hammer.h"
+#include "../src/internal.h"    // for h_carray functions (XXX ?!)
 #include <assert.h>
 
 
@@ -77,6 +78,81 @@ const HParsedToken *act_bsfdig(const HParseResult *p)
 
 #define act_document     act_index0
 
+// helper
+void carray_append_uint(HCountedArray *array, uint8_t value)
+{
+    HParsedToken *item = h_arena_malloc(array->arena, sizeof(HParsedToken));
+    item->token_type = TT_UINT;
+    item->uint = value;
+    h_carray_append(array, item);
+}
+
+const HParsedToken *act_base64_3(const HParseResult *p)
+{
+    assert(p->ast->token_type == TT_SEQUENCE);
+
+    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
+    res->token_type = TT_SEQUENCE;
+    res->seq = h_carray_new_sized(p->arena, 4);
+
+    HParsedToken **digits = p->ast->seq->elements;
+    uint32_t x = digits[0]->uint;
+    x <<= 6; x |= digits[1]->uint;
+    x <<= 6; x |= digits[2]->uint;
+    x <<= 6; x |= digits[3]->uint;
+
+    carray_append_uint(res->seq, (x >> 16) & 0xFF);
+    carray_append_uint(res->seq, (x >> 8) & 0xFF);
+    carray_append_uint(res->seq, x & 0xFF);
+
+    return res;
+}
+
+const HParsedToken *act_base64_2(const HParseResult *p)
+{
+    assert(p->ast->token_type == TT_SEQUENCE);
+
+    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
+    res->token_type = TT_SEQUENCE;
+    res->seq = h_carray_new_sized(p->arena, 4);
+
+    HParsedToken **digits = p->ast->seq->elements;
+    uint32_t x = digits[0]->uint;
+    x <<= 6; x |= digits[1]->uint;
+    x <<= 6; x |= digits[2]->uint;
+
+    carray_append_uint(res->seq, (x >> 10) & 0xFF);
+    carray_append_uint(res->seq, (x >> 2) & 0xFF);
+
+    return res;
+}
+
+const HParsedToken *act_base64_1(const HParseResult *p)
+{
+    assert(p->ast->token_type == TT_SEQUENCE);
+
+    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
+    res->token_type = TT_SEQUENCE;
+    res->seq = h_carray_new_sized(p->arena, 4);
+
+    HParsedToken **digits = p->ast->seq->elements;
+    uint32_t x = digits[0]->uint;
+    x <<= 6; x |= digits[1]->uint;
+
+    carray_append_uint(res->seq, (x >> 4) & 0xFF);
+
+    return res;
+}
+
+#if 0
+const HParsedToken *act_base64(const HParseResult *p)
+{
+    // XXX
+    // concatenate base64_3 blocks
+    // append trailing base64_2 or _1 block
+}
+#endif
+
 
 ///
 // Set up the parser with the grammar to be recognized.
@@ -97,10 +173,10 @@ const HParser *init_parser(void)
     H_ARULE(bsfdig,       h_choice(alpha, digit, plus, slash, NULL));
     H_ARULE(bsfdig_4bit,  h_in((uint8_t *)"AEIMQUYcgkosw048", 16));
     H_ARULE(bsfdig_2bit,  h_in((uint8_t *)"AQgw", 4));
-    H_RULE (base64_3,     h_repeat_n(bsfdig, 4));
-    H_RULE (base64_2,     h_sequence(bsfdig, bsfdig, bsfdig_4bit, equals, NULL));
-    H_RULE (base64_1,     h_sequence(bsfdig, bsfdig_2bit, equals, equals, NULL));
-    H_RULE (base64,       h_sequence(h_many(base64_3),
+    H_ARULE(base64_3,     h_repeat_n(bsfdig, 4));
+    H_ARULE(base64_2,     h_sequence(bsfdig, bsfdig, bsfdig_4bit, equals, NULL));
+    H_ARULE(base64_1,     h_sequence(bsfdig, bsfdig_2bit, equals, equals, NULL));
+    H_RULE(base64,       h_sequence(h_many(base64_3),
                                      h_optional(h_choice(base64_2,
                                                          base64_1, NULL)),
                                      NULL));
