@@ -78,70 +78,51 @@ const HParsedToken *act_bsfdig(const HParseResult *p)
 
 #define act_document     act_index0
 
-// helper
-void carray_append_uint(HCountedArray *array, uint8_t value)
+// General-form action to turn a block of base64 digits into bytes.
+const HParsedToken *act_base64_n(int n, const HParseResult *p)
 {
-    HParsedToken *item = h_arena_malloc(array->arena, sizeof(HParsedToken));
-    item->token_type = TT_UINT;
-    item->uint = value;
-    h_carray_append(array, item);
+    assert(p->ast->token_type == TT_SEQUENCE);
+
+    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
+    res->token_type = TT_SEQUENCE;
+    res->seq = h_carray_new_sized(p->arena, n);
+
+    HParsedToken **digits = p->ast->seq->elements;
+
+    uint32_t x = 0;
+    int bits = 0;
+    for(int i=0; i<n+1; i++) {
+        x <<= 6; x |= digits[i]->uint;
+        bits += 6;
+    }
+    x >>= bits%8;   // align, i.e. cut off extra bits
+
+    for(int i=0; i<n; i++) {
+        HParsedToken *item = h_arena_malloc(p->arena, sizeof(HParsedToken));
+        item->token_type = TT_UINT;
+        item->uint = x & 0xFF;
+
+        res->seq->elements[n-1-i] = item;   // output the last byte and
+        x >>= 8;                            // discard it
+    }
+    res->seq->used = n;
+
+    return res;
 }
 
 const HParsedToken *act_base64_3(const HParseResult *p)
 {
-    assert(p->ast->token_type == TT_SEQUENCE);
-
-    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
-    res->token_type = TT_SEQUENCE;
-    res->seq = h_carray_new_sized(p->arena, 4);
-
-    HParsedToken **digits = p->ast->seq->elements;
-    uint32_t x = digits[0]->uint;
-    x <<= 6; x |= digits[1]->uint;
-    x <<= 6; x |= digits[2]->uint;
-    x <<= 6; x |= digits[3]->uint;
-
-    carray_append_uint(res->seq, (x >> 16) & 0xFF);
-    carray_append_uint(res->seq, (x >> 8) & 0xFF);
-    carray_append_uint(res->seq, x & 0xFF);
-
-    return res;
+    return act_base64_n(3, p);
 }
 
 const HParsedToken *act_base64_2(const HParseResult *p)
 {
-    assert(p->ast->token_type == TT_SEQUENCE);
-
-    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
-    res->token_type = TT_SEQUENCE;
-    res->seq = h_carray_new_sized(p->arena, 4);
-
-    HParsedToken **digits = p->ast->seq->elements;
-    uint32_t x = digits[0]->uint;
-    x <<= 6; x |= digits[1]->uint;
-    x <<= 6; x |= digits[2]->uint;
-
-    carray_append_uint(res->seq, (x >> 10) & 0xFF);
-    carray_append_uint(res->seq, (x >> 2) & 0xFF);
-
-    return res;
+    return act_base64_n(2, p);
 }
 
 const HParsedToken *act_base64_1(const HParseResult *p)
 {
-    assert(p->ast->token_type == TT_SEQUENCE);
-
-    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
-    res->token_type = TT_SEQUENCE;
-    res->seq = h_carray_new_sized(p->arena, 4);
-
-    HParsedToken **digits = p->ast->seq->elements;
-    uint32_t x = digits[0]->uint;
-    x <<= 6; x |= digits[1]->uint;
-
-    carray_append_uint(res->seq, (x >> 4) & 0xFF);
-
-    return res;
+    return act_base64_n(1, p);
 }
 
 #if 0
