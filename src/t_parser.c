@@ -371,7 +371,7 @@ static void test_leftrec(void) {
   HParser *lr_ = h_indirect();
   h_bind_indirect(lr_, h_choice(h_sequence(lr_, a_, NULL), a_, NULL));
 
-  g_check_parse_ok(lr_, "a", 1, "(u0x61)");
+  g_check_parse_ok(lr_, "a", 1, "u0x61");
   g_check_parse_ok(lr_, "aa", 2, "(u0x61 u0x61)");
   g_check_parse_ok(lr_, "aaa", 3, "((u0x61 u0x61) u0x61)");
 }
