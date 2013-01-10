@@ -24,7 +24,7 @@ void init_parser(void)
                                                            base64_1, NULL)),
                                        NULL);
 
-    document = base64;
+    document = h_sequence(h_whitespace(base64), h_whitespace(h_end_p()), NULL);
 }
 
 
