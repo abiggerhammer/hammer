@@ -188,6 +188,10 @@ const HParser *init_parser(void)
     H_ARULE(ws,           h_many(space));
     H_ARULE(document,     h_sequence(ws, base64, ws, h_end_p(), NULL));
 
+    // BUG sometimes inputs that should just don't parse.
+    // It *seemed* to happen mostly with things like "bbbbaaaaBA==".
+    // Using less actions seemed to make it less likely.
+
     return document;
 }
 
