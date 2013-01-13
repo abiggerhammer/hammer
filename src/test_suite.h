@@ -52,6 +52,28 @@
     }							\
   } while(0)
 
+#define g_check_regular(lang) do {			\
+    if (!lang->isValidRegular(lang->env)) {		\
+      g_test_message("Language is not regular");	\
+      g_test_fail();					\
+    }							\
+  } while(0)
+
+#define g_check_contextfree(lang) do {			\
+    if (!lang->isValidCF(lang->env)) {			\
+      g_test_message("Language is not context-free");	\
+      g_test_fail();					\
+    }							\
+  } while(0)
+
+#define g_check_compilable(lang, backend, params) do {	\
+    if (!h_compile(lang, backend, params)) {		\
+      g_test_message("Language is not %s(%s)", #backend, params);	\
+      g_test_fail();					\
+    }							\
+  } while(0)
+
+  
 // TODO: replace uses of this with g_check_parse_failed
 #define g_check_failed(res) do {					\
     const HParseResult *result = (res);					\
@@ -97,6 +119,7 @@
 #define g_check_cmpulonglong(n1, op, n2) g_check_inttype("%llu", unsigned long long, n1, op, n2)
 #define g_check_cmpfloat(n1, op, n2) g_check_inttype("%g", float, n1, op, n2)
 #define g_check_cmpdouble(n1, op, n2) g_check_inttype("%g", double, n1, op, n2)
+
 
 
 #endif // #ifndef HAMMER_TEST_SUITE__H

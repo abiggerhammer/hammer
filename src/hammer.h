@@ -34,6 +34,10 @@ typedef struct HParseState_ HParseState;
 typedef enum HParserBackend_ {
   PB_MIN = 0,
   PB_PACKRAT = PB_MIN, // PB_MIN is always the default.
+  PB_LALR,	// Not Implemented
+  PB_LLk,	// Not Implemented
+  PB_GLR,	// Not Implemented
+  PB_REGULAR,	// Not Implemented
   PB_MAX
 } HParserBackend;
 
@@ -114,6 +118,7 @@ typedef struct HParserVtable_ {
   HParseResult* (*parse)(void *env, HParseState *state);
   bool (*isValidRegular)(void *env);
   bool (*isValidCF)(void *env);
+  
 } HParserVtable;
 
 typedef struct HParser_ {
