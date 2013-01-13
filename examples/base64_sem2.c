@@ -6,7 +6,7 @@
 //
 // Note how the grammar is defined by using the macros H_RULE and H_ARULE.
 // Those rules using ARULE get an attached action which must be declared (as
-// (a function of type HAction) with a standard name based on the rule name.
+// a function of type HAction) with a standard name based on the rule name.
 //
 // This variant of the example uses coarse-grained semantic actions,
 // transforming the entire parse tree in one big step. Compare base64_sem1.c
