@@ -4,7 +4,9 @@ OUTPUTS := dns.o \
 	   base64.o \
 	   base64 \
 	   base64_sem1.o \
-	   base64_sem1
+	   base64_sem1 \
+	   base64_sem2.o \
+	   base64_sem2
 
 TOPLEVEL := ../
 
@@ -14,7 +16,7 @@ LDFLAGS += $(pkg-config --libs glib-2.0)
 
 
 
-all: dns base64 base64_sem1
+all: dns base64 base64_sem1 base64_sem2
 
 dns: LDFLAGS:=-L../src -lhammer $(LDFLAGS)
 dns: dns.o rr.o dns_common.o
