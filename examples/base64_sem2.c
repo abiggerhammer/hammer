@@ -1,3 +1,18 @@
+// Example parser: Base64, with fine-grained semantic actions
+//
+// Demonstrates how to attach semantic actions to a grammar and transform the
+// parse tree into the desired semantic representation, in this case a sequence
+// of 8-bit values.
+//
+// Note how the grammar is defined by using the macros H_RULE and H_ARULE.
+// Those rules using ARULE get an attached action which must be declared (as
+// (a function of type HAction) with a standard name based on the rule name.
+//
+// This variant of the example uses coarse-grained semantic actions,
+// transforming the entire parse tree in one big step. Compare base64_sem1.c
+// for an alternative approach using a fine-grained piece-by-piece
+// transformation.
+
 #include "../src/hammer.h"
 #include "../src/internal.h"    // for h_carray functions (XXX ?!)
 #include <assert.h>
