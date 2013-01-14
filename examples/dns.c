@@ -287,7 +287,7 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
   }
 }
 
-const HParsedToken* act_dns_message(const HParseResult *p) {
+const HParsedToken* act_message(const HParseResult *p) {
   h_pprint(stdout, p->ast, 0, 2);
   HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
   ret->token_type = TT_DNS_MESSAGE;
@@ -370,58 +370,58 @@ const HParsedToken *act_ignore(const HParseResult *p)
   return NULL;
 }
 
-#define act_dns_hdzero act_ignore
+#define act_hdzero act_ignore
 
 const HParser* init_parser() {
   static const HParser *ret = NULL;
   if (ret)
     return ret;
 
-  H_RULE (domain,     init_domain());
-  H_ARULE(dns_hdzero, h_attr_bool(h_bits(3, false), is_zero));
-  H_RULE (dns_header, h_sequence(h_bits(16, false), // ID
-				 h_bits(1, false),  // QR
-				 h_bits(4, false),  // opcode
-				 h_bits(1, false),  // AA
-				 h_bits(1, false),  // TC
-				 h_bits(1, false),  // RD
-				 h_bits(1, false),  // RA
-				 dns_hdzero,        // Z
-				 h_bits(4, false),  // RCODE
-				 h_uint16(), // QDCOUNT
-				 h_uint16(), // ANCOUNT
-				 h_uint16(), // NSCOUNT
-				 h_uint16(), // ARCOUNT
-				 NULL));
-  H_RULE (type,       h_int_range(h_uint16(), 1, 16));
-  H_RULE (qtype,      h_choice(type, 
-			       h_int_range(h_uint16(), 252, 255),
+  H_RULE (domain,   init_domain());
+  H_ARULE(hdzero,   h_attr_bool(h_bits(3, false), is_zero));
+  H_RULE (header,   h_sequence(h_bits(16, false), // ID
+			       h_bits(1, false),  // QR
+			       h_bits(4, false),  // opcode
+			       h_bits(1, false),  // AA
+			       h_bits(1, false),  // TC
+			       h_bits(1, false),  // RD
+			       h_bits(1, false),  // RA
+			       hdzero,            // Z
+			       h_bits(4, false),  // RCODE
+			       h_uint16(),        // QDCOUNT
+			       h_uint16(),        // ANCOUNT
+			       h_uint16(),        // NSCOUNT
+			       h_uint16(),        // ARCOUNT
 			       NULL));
-  H_RULE (class,      h_int_range(h_uint16(), 1, 4));
-  H_RULE (qclass,     h_choice(class,
-			       h_int_range(h_uint16(), 255, 255),
+  H_RULE (type,     h_int_range(h_uint16(), 1, 16));
+  H_RULE (qtype,    h_choice(type, 
+			     h_int_range(h_uint16(), 252, 255),
+			     NULL));
+  H_RULE (class,    h_int_range(h_uint16(), 1, 4));
+  H_RULE (qclass,   h_choice(class,
+			     h_int_range(h_uint16(), 255, 255),
+			     NULL));
+  H_RULE (len,      h_int_range(h_uint8(), 1, 255));
+  H_RULE (label,    h_length_value(len, h_uint8())); 
+  H_RULE (qname,    h_sequence(h_many1(label),
+			       h_ch('\x00'),
 			       NULL));
-  H_RULE (dns_question, h_sequence(h_sequence(h_many1(h_length_value(h_int_range(h_uint8(), 1, 255), 
-								     h_uint8())), 
-					      h_ch('\x00'),
-					      NULL),  // QNAME
-				   qtype,             // QTYPE
-				   qclass,            // QCLASS
-				   NULL));
-  H_RULE (dns_rr,     h_sequence(domain,              // NAME
-				 type,                // TYPE
-				 class,               // CLASS
-				 h_uint32(),          // TTL
-				 h_length_value(h_uint16(), h_uint8()), // RDLENGTH+RDATA
-				 NULL));
-  H_ARULE(dns_message, h_attr_bool(h_sequence(dns_header,
-					      h_many(dns_question),
-					      h_many(dns_rr),
-					      h_end_p(),
-					      NULL),
-				   validate_dns));
+  H_RULE (question, h_sequence(qname, qtype, qclass, NULL));
+  H_RULE (rdata,    h_length_value(h_uint16(), h_uint8()));
+  H_RULE (rr,       h_sequence(domain,            // NAME
+			       type,              // TYPE
+			       class,             // CLASS
+			       h_uint32(),        // TTL
+			       rdata,             // RDLENGTH+RDATA
+			       NULL));
+  H_ARULE(message,  h_attr_bool(h_sequence(header,
+					   h_many(question),
+					   h_many(rr),
+					   h_end_p(),
+					   NULL),
+			        validate_dns));
 
-  ret = dns_message;
+  ret = message;
   return ret;
 }
 
