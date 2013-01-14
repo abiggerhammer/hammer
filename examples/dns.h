@@ -1,5 +1,13 @@
 #include "../src/hammer.h"
 
+enum DNSTokenType_ {
+  TT_DNS_MESSAGE = TT_USER,
+  TT_DNS_HEADER,
+  TT_DNS_QNAME,
+  TT_DNS_QUESTION,
+  TT_DNS_RR
+};
+
 struct dns_header {
   uint16_t id;
   bool qr, aa, tc, rd, ra;
@@ -9,6 +17,7 @@ struct dns_header {
   size_t authority_count;
   size_t additional_count;
 };
+
 struct dns_qname {
   size_t qlen;
   struct {
@@ -16,11 +25,13 @@ struct dns_qname {
     uint8_t *label;
   } *labels;
 };
+
 struct dns_question {
   struct dns_qname qname;
   uint16_t qtype;
   uint16_t qclass;
 };
+
 struct dns_rr {
   char* name;
   uint16_t type;

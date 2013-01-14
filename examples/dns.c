@@ -286,7 +286,7 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
 const HParsedToken* pack_dns_struct(const HParseResult *p) {
   h_pprint(stdout, p->ast, 0, 2);
   HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
-  ret->token_type = TT_USER;
+  ret->token_type = TT_DNS_MESSAGE;
 
   dns_message_t *msg = h_arena_malloc(p->arena, sizeof(dns_message_t));
 
