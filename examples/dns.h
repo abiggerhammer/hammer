@@ -3,6 +3,7 @@
 enum DNSTokenType_ {
   TT_dns_message = TT_USER,
   TT_dns_header,
+  TT_dns_label,
   TT_dns_qname,
   TT_dns_question,
   TT_dns_rr
@@ -18,21 +19,23 @@ typedef struct dns_header {
   size_t additional_count;
 } dns_header_t;
 
-struct dns_qname {
-  size_t qlen;
-  struct {
-    size_t len;
-    uint8_t *label;
-  } *labels;
-};
+typedef struct dns_label {
+  size_t len;
+  uint8_t *label;
+} dns_label_t;
 
-struct dns_question {
-  struct dns_qname qname;
+typedef struct dns_qname {
+  size_t qlen;
+  dns_label_t *labels;
+} dns_qname_t;
+
+typedef struct dns_question {
+  dns_qname_t qname;
   uint16_t qtype;
   uint16_t qclass;
-};
+} dns_question_t;
 
-struct dns_rr {
+typedef struct dns_rr {
   char* name;
   uint16_t type;
   uint16_t class;
@@ -81,12 +84,12 @@ struct dns_rr {
       uint8_t* bit_map;
     } wks;
   };
-};
+} dns_rr_t;
 
 typedef struct dns_message {
-  struct dns_header header;
-  struct dns_question *questions;
-  struct dns_rr *answers;
-  struct dns_rr *authority;
-  struct dns_rr *additional;
+  dns_header_t header;
+  dns_question_t *questions;
+  dns_rr_t *answers;
+  dns_rr_t *authority;
+  dns_rr_t *additional;
 } dns_message_t;

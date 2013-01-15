@@ -43,27 +43,6 @@ bool validate_dns(HParseResult *p) {
   return true;
 }
 
-struct dns_qname get_qname(const HParsedToken *t) {
-  // The qname parser parses at least 1 length-value pair, then a NULL.
-  // So, t->seq->elements[0] is a sequence of at least 1 such pair,
-  // and t->seq->elements[1] is the null.
-  const HParsedToken *labels = t->seq->elements[0];
-  struct dns_qname ret = {
-    .qlen = labels->seq->used,
-    .labels = h_arena_malloc(t->seq->arena, sizeof(*ret.labels)*labels->seq->used)
-  };
-  // i is which label we're on
-  for (size_t i=0; i<labels->seq->used; ++i) {
-    ret.labels[i].len = labels->seq->elements[i]->seq->used;
-    ret.labels[i].label = h_arena_malloc(t->seq->arena, ret.labels[i].len + 1);
-    // j is which char of the label we're on
-    for (size_t j=0; j<ret.labels[i].len; ++j)
-      ret.labels[i].label[j] = labels->seq->elements[i]->seq->elements[j]->uint;
-    ret.labels[i].label[ret.labels[i].len] = 0;
-  }
-  return ret;
-}
-
 char* get_domain(const HParsedToken *t) {
   switch(t->token_type) {
   case TT_UINT:
@@ -313,6 +292,43 @@ const HParsedToken* act_header(const HParseResult *p) {
   return ret;
 }
 
+const HParsedToken* act_label(const HParseResult *p) {
+  HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
+  ret->token_type = TT_dns_label;
+  ret->user = h_arena_malloc(p->arena, sizeof(dns_label_t));
+  dns_label_t *r = (dns_label_t *)ret->user;
+
+  r->len = p->ast->seq->used;
+  r->label = h_arena_malloc(p->arena, r->len + 1);
+  for (size_t i=0; i<r->len; ++i)
+    r->label[i] = p->ast->seq->elements[i]->uint;
+  r->label[r->len] = 0;
+
+  return ret;
+}
+
+const HParsedToken* act_question(const HParseResult *p) {
+  HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
+  ret->token_type = TT_dns_question;
+  ret->user = h_arena_malloc(p->arena, sizeof(dns_question_t));
+
+  dns_question_t *q = (dns_question_t *)ret->user;
+  HParsedToken **fields = p->ast->seq->elements;
+
+  // QNAME is a sequence of labels. Pack them into an array.
+  q->qname.qlen   = fields[0]->seq->used;
+  q->qname.labels = h_arena_malloc(p->arena, sizeof(dns_label_t)*q->qname.qlen);
+  for(size_t i=0; i<fields[0]->seq->used; i++) {
+    assert(fields[0]->seq->elements[i]->token_type == (HTokenType)TT_dns_label);
+    q->qname.labels[i] = *(dns_label_t *)fields[0]->seq->elements[i]->user;
+  }
+
+  q->qtype  = fields[1]->uint;
+  q->qclass = fields[2]->uint;
+
+  return ret;
+}
+
 const HParsedToken* act_message(const HParseResult *p) {
   h_pprint(stdout, p->ast, 0, 2);
   HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
@@ -326,13 +342,10 @@ const HParsedToken* act_message(const HParseResult *p) {
 
   HParsedToken *qs = p->ast->seq->elements[1];
   struct dns_question *questions = h_arena_malloc(p->arena,
-						sizeof(struct dns_question)*(header->question_count));
+						  sizeof(struct dns_question)*(header->question_count));
   for (size_t i=0; i<header->question_count; ++i) {
-    // QNAME is a sequence of labels. In the parser, it's defined as
-    // sequence(many1(length_value(...)), ch('\x00'), NULL).
-    questions[i].qname = get_qname(qs->seq->elements[i]->seq->elements[0]);
-    questions[i].qtype = qs->seq->elements[i]->seq->elements[1]->uint;
-    questions[i].qclass = qs->seq->elements[i]->seq->elements[2]->uint;
+    assert(qs->seq->elements[i]->token_type == (HTokenType)TT_dns_question);
+    questions[i] = *(dns_question_t *)qs->seq->elements[i]->user;
   }
   msg->questions = questions;
 
@@ -383,7 +396,32 @@ const HParsedToken *act_ignore(const HParseResult *p)
   return NULL;
 }
 
+// Helper to build HAction's that pick one index out of a sequence.
+const HParsedToken *act_index(int i, const HParseResult *p)
+{
+    if(!p) return NULL;
+
+    const HParsedToken *tok = p->ast;
+
+    if(!tok || tok->token_type != TT_SEQUENCE)
+        return NULL;
+
+    const HCountedArray *seq = tok->seq;
+    size_t n = seq->used;
+
+    if(i<0 || (size_t)i>=n)
+        return NULL;
+    else
+        return tok->seq->elements[i];
+}
+
+const HParsedToken *act_index0(const HParseResult *p)
+{
+    return act_index(0, p);
+}
+
 #define act_hdzero act_ignore
+#define act_qname  act_index0
 
 const HParser* init_parser() {
   static const HParser *ret = NULL;
@@ -415,11 +453,11 @@ const HParser* init_parser() {
 			     h_int_range(h_uint16(), 255, 255),
 			     NULL));
   H_RULE (len,      h_int_range(h_uint8(), 1, 255));
-  H_RULE (label,    h_length_value(len, h_uint8())); 
-  H_RULE (qname,    h_sequence(h_many1(label),
+  H_ARULE(label,    h_length_value(len, h_uint8())); 
+  H_ARULE(qname,    h_sequence(h_many1(label),
 			       h_ch('\x00'),
 			       NULL));
-  H_RULE (question, h_sequence(qname, qtype, qclass, NULL));
+  H_ARULE(question, h_sequence(qname, qtype, qclass, NULL));
   H_RULE (rdata,    h_length_value(h_uint16(), h_uint8()));
   H_RULE (rr,       h_sequence(domain,            // NAME
 			       type,              // TYPE
