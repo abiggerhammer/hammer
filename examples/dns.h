@@ -35,6 +35,43 @@ typedef struct dns_question {
   uint16_t qclass;
 } dns_question_t;
 
+typedef struct {
+  uint8_t* cpu;
+  uint8_t* os;
+} dns_rr_hinfo_t;
+
+typedef struct {
+  char* rmailbx;
+  char* emailbx;
+} dns_rr_minfo_t;
+
+typedef struct {
+  uint16_t preference;
+  char* exchange;
+} dns_rr_mx_t;
+
+typedef struct {
+  char* mname;
+  char* rname;
+  uint32_t serial;
+  uint32_t refresh;
+  uint32_t retry;
+  uint32_t expire;
+  uint32_t minimum;
+} dns_rr_soa_t;
+
+typedef struct {
+  size_t count;
+  uint8_t** txt_data;
+} dns_rr_txt_t;
+
+typedef struct {
+  uint32_t address;
+  uint8_t protocol;
+  size_t len;
+  uint8_t* bit_map;
+} dns_rr_wks_t;
+
 typedef struct dns_rr {
   char* name;
   uint16_t type;
@@ -42,47 +79,22 @@ typedef struct dns_rr {
   uint32_t ttl; // cmos is also acceptable.
   uint16_t rdlength;
   union {
-    char* cname;
-    struct {
-      uint8_t* cpu;
-      uint8_t* os;
-    } hinfo;
-    char* mb;
-    char* md;
-    char* mf;
-    char* mg;
-    struct {
-      char* rmailbx;
-      char* emailbx;
-    } minfo;
-    char* mr;
-    struct {
-      uint16_t preference;
-      char* exchange;
-    } mx;
-    uint8_t* null;
-    char* ns;
-    char* ptr;
-    struct {
-      char* mname;
-      char* rname;
-      uint32_t serial;
-      uint32_t refresh;
-      uint32_t retry;
-      uint32_t expire;
-      uint32_t minimum;
-    } soa;
-    struct {
-      size_t count;
-      uint8_t** txt_data;
-    } txt;
-    uint32_t a;
-    struct {
-      uint32_t address;
-      uint8_t protocol;
-      size_t len;
-      uint8_t* bit_map;
-    } wks;
+    uint32_t       a;
+    char*          ns;
+    char*          md;
+    char*          mf;
+    char*          cname;
+    dns_rr_soa_t   soa;
+    char*          mb;
+    char*          mg;
+    char*          mr;
+    uint8_t*       null;
+    dns_rr_wks_t   wks;
+    char*          ptr;
+    dns_rr_hinfo_t hinfo;
+    dns_rr_minfo_t minfo;
+    dns_rr_mx_t    mx;
+    dns_rr_txt_t   txt;
   };
 } dns_rr_t;
 
