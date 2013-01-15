@@ -335,8 +335,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_question *questions = h_arena_malloc(p->arena,
 						  sizeof(struct dns_question)*(header->question_count));
   for (size_t i=0; i<header->question_count; ++i) {
-    assert(qs->seq->elements[i]->token_type == (HTokenType)TT_dns_question);
-    questions[i] = *(dns_question_t *)qs->seq->elements[i]->user;
+    questions[i] = *H_SEQ_INDEX(dns_question, qs, i);
   }
   msg->questions = questions;
 
