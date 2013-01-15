@@ -2,6 +2,7 @@
 #include <netinet/in.h>
 #include <err.h>
 #include <string.h>
+#include <assert.h>
 #include "../src/hammer.h"
 #include "dns_common.h"
 #include "dns.h"
@@ -27,12 +28,12 @@ bool is_zero(HParseResult *p) {
 bool validate_dns(HParseResult *p) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
-  // The header holds the counts as its last 4 elements.
-  HParsedToken **elems = p->ast->seq->elements[0]->seq->elements;
-  size_t qd = elems[8]->uint;
-  size_t an = elems[9]->uint;
-  size_t ns = elems[10]->uint;
-  size_t ar = elems[11]->uint;
+  assert(p->ast->seq->elements[0]->token_type == (HTokenType)TT_dns_header);
+  dns_header_t *header = (dns_header_t *)p->ast->seq->elements[0]->user;
+  size_t qd = header->question_count;
+  size_t an = header->answer_count;
+  size_t ns = header->authority_count;
+  size_t ar = header->additional_count;
   HParsedToken *questions = p->ast->seq->elements[1];
   if (questions->seq->used != qd)
     return false;
@@ -287,34 +288,46 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
   }
 }
 
+const HParsedToken* act_header(const HParseResult *p) {
+  HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
+  ret->token_type = TT_dns_header;
+  ret->user = h_arena_malloc(p->arena, sizeof(dns_header_t));
+
+  HParsedToken **fields = p->ast->seq->elements;
+  dns_header_t header_ = {
+    .id     = fields[0]->uint,
+    .qr     = fields[1]->uint,
+    .opcode = fields[2]->uint,
+    .aa     = fields[3]->uint,
+    .tc     = fields[4]->uint,
+    .rd     = fields[5]->uint,
+    .ra     = fields[6]->uint,
+    .rcode  = fields[7]->uint,
+    .question_count   = fields[8]->uint,
+    .answer_count     = fields[9]->uint,
+    .authority_count  = fields[10]->uint,
+    .additional_count = fields[11]->uint
+  };
+  *(dns_header_t *)ret->user = header_;
+
+  return ret;
+}
+
 const HParsedToken* act_message(const HParseResult *p) {
   h_pprint(stdout, p->ast, 0, 2);
   HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
-  ret->token_type = TT_DNS_MESSAGE;
+  ret->token_type = TT_dns_message;
 
   dns_message_t *msg = h_arena_malloc(p->arena, sizeof(dns_message_t));
 
-  HParsedToken *hdr = p->ast->seq->elements[0];
-  struct dns_header header = {
-    .id = hdr->seq->elements[0]->uint,
-    .qr = hdr->seq->elements[1]->uint,
-    .opcode = hdr->seq->elements[2]->uint,
-    .aa = hdr->seq->elements[3]->uint,
-    .tc = hdr->seq->elements[4]->uint,
-    .rd = hdr->seq->elements[5]->uint,
-    .ra = hdr->seq->elements[6]->uint,
-    .rcode = hdr->seq->elements[7]->uint,
-    .question_count = hdr->seq->elements[8]->uint,
-    .answer_count = hdr->seq->elements[9]->uint,
-    .authority_count = hdr->seq->elements[10]->uint,
-    .additional_count = hdr->seq->elements[11]->uint
-  };
-  msg->header = header;
+  assert(p->ast->seq->elements[0]->token_type == (HTokenType)TT_dns_header);
+  dns_header_t *header = (dns_header_t *)p->ast->seq->elements[0]->user;
+  msg->header = *header;
 
   HParsedToken *qs = p->ast->seq->elements[1];
   struct dns_question *questions = h_arena_malloc(p->arena,
-						sizeof(struct dns_question)*(header.question_count));
-  for (size_t i=0; i<header.question_count; ++i) {
+						sizeof(struct dns_question)*(header->question_count));
+  for (size_t i=0; i<header->question_count; ++i) {
     // QNAME is a sequence of labels. In the parser, it's defined as
     // sequence(many1(length_value(...)), ch('\x00'), NULL).
     questions[i].qname = get_qname(qs->seq->elements[i]->seq->elements[0]);
@@ -325,8 +338,8 @@ const HParsedToken* act_message(const HParseResult *p) {
 
   HParsedToken *rrs = p->ast->seq->elements[2];
   struct dns_rr *answers = h_arena_malloc(p->arena,
-					  sizeof(struct dns_rr)*(header.answer_count));
-  for (size_t i=0; i<header.answer_count; ++i) {
+					  sizeof(struct dns_rr)*(header->answer_count));
+  for (size_t i=0; i<header->answer_count; ++i) {
     answers[i].name = get_domain(rrs[i].seq->elements[0]);
     answers[i].type = rrs[i].seq->elements[1]->uint;
     answers[i].class = rrs[i].seq->elements[2]->uint;
@@ -337,8 +350,8 @@ const HParsedToken* act_message(const HParseResult *p) {
   msg->answers = answers;
 
   struct dns_rr *authority = h_arena_malloc(p->arena,
-					  sizeof(struct dns_rr)*(header.authority_count));
-  for (size_t i=0, j=header.answer_count; i<header.authority_count; ++i, ++j) {
+					  sizeof(struct dns_rr)*(header->authority_count));
+  for (size_t i=0, j=header->answer_count; i<header->authority_count; ++i, ++j) {
     authority[i].name = get_domain(rrs[j].seq->elements[0]);
     authority[i].type = rrs[j].seq->elements[1]->uint;
     authority[i].class = rrs[j].seq->elements[2]->uint;
@@ -349,8 +362,8 @@ const HParsedToken* act_message(const HParseResult *p) {
   msg->authority = authority;
 
   struct dns_rr *additional = h_arena_malloc(p->arena,
-					     sizeof(struct dns_rr)*(header.additional_count));
-  for (size_t i=0, j=header.answer_count+header.authority_count; i<header.additional_count; ++i, ++j) {
+					     sizeof(struct dns_rr)*(header->additional_count));
+  for (size_t i=0, j=header->answer_count+header->authority_count; i<header->additional_count; ++i, ++j) {
     additional[i].name = get_domain(rrs[j].seq->elements[0]);
     additional[i].type = rrs[j].seq->elements[1]->uint;
     additional[i].class = rrs[j].seq->elements[2]->uint;
@@ -379,7 +392,7 @@ const HParser* init_parser() {
 
   H_RULE (domain,   init_domain());
   H_ARULE(hdzero,   h_attr_bool(h_bits(3, false), is_zero));
-  H_RULE (header,   h_sequence(h_bits(16, false), // ID
+  H_ARULE(header,   h_sequence(h_bits(16, false), // ID
 			       h_bits(1, false),  // QR
 			       h_bits(4, false),  // opcode
 			       h_bits(1, false),  // AA

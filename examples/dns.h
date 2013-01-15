@@ -1,14 +1,14 @@
 #include "../src/hammer.h"
 
 enum DNSTokenType_ {
-  TT_DNS_MESSAGE = TT_USER,
-  TT_DNS_HEADER,
-  TT_DNS_QNAME,
-  TT_DNS_QUESTION,
-  TT_DNS_RR
+  TT_dns_message = TT_USER,
+  TT_dns_header,
+  TT_dns_qname,
+  TT_dns_question,
+  TT_dns_rr
 };
 
-struct dns_header {
+typedef struct dns_header {
   uint16_t id;
   bool qr, aa, tc, rd, ra;
   char opcode, rcode;
@@ -16,7 +16,7 @@ struct dns_header {
   size_t answer_count;
   size_t authority_count;
   size_t additional_count;
-};
+} dns_header_t;
 
 struct dns_qname {
   size_t qlen;
