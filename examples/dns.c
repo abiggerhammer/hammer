@@ -331,10 +331,11 @@ const HParsedToken* act_question(const HParseResult *p) {
 
 const HParsedToken* act_message(const HParseResult *p) {
   h_pprint(stdout, p->ast, 0, 2);
+
   HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
   ret->token_type = TT_dns_message;
-
-  dns_message_t *msg = h_arena_malloc(p->arena, sizeof(dns_message_t));
+  ret->user = h_arena_malloc(p->arena, sizeof(dns_message_t));
+  dns_message_t *msg = ret->user;
 
   assert(p->ast->seq->elements[0]->token_type == (HTokenType)TT_dns_header);
   dns_header_t *header = (dns_header_t *)p->ast->seq->elements[0]->user;
@@ -386,7 +387,6 @@ const HParsedToken* act_message(const HParseResult *p) {
   }
   msg->additional = additional;
 
-  ret->user = (void*)msg;
   return ret;
 }
 
