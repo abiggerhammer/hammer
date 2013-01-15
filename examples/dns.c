@@ -167,176 +167,106 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
   for (size_t i=0; i<rdata->used; ++i)
     data[i] = rdata->elements[i]->uint;
 
+  // Mapping numeric RR types (as indices) to parsers
+  const HParser *parsers[] = {
+    NULL,          // there is no type 0
+    init_a(),      // 1
+    init_ns(),
+    init_md(),
+    init_mf(),
+    init_cname(),  // 5
+    init_soa(),
+    init_mb(),
+    init_mg(),
+    init_mr(),
+    init_null(),   // 10
+    init_wks(),
+    init_ptr(),
+    init_hinfo(),
+    init_minfo(),
+    init_mx(),     // 15
+    init_txt()
+  };
+
+  // Parse rdata if possible.
+  const HParseResult *r = NULL;
+  if (rr.type < sizeof(parsers)) {
+    const HParser *p = parsers[rr.type];
+    if (p)
+      r = h_parse(p, (const uint8_t*)data, rdata->used);
+  }
+	
   // If the RR doesn't parse, set its type to 0.
+  if (!r) 
+    rr.type = 0;
+
+  // Pack the parsed rdata into rr.
   switch(rr.type) {
   case 1: // A
-    {
-      const HParseResult *r = h_parse(init_a(), (const uint8_t*)data, rdata->used);
-      if (!r) 
-	rr.type = 0;
-      else 
-	rr.a = r->ast->seq->elements[0]->uint;
-      break;
-    }
+    rr.a = r->ast->seq->elements[0]->uint;
+    break;
   case 2: // NS
-    {
-      const HParseResult *r = h_parse(init_ns(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else
-	rr.ns = get_domain(r->ast->seq->elements[0]);
-      break;
-    }
+    rr.ns = get_domain(r->ast->seq->elements[0]);
+    break;
   case 3: // MD
-    {
-      const HParseResult *r = h_parse(init_md(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else
-	rr.md = get_domain(r->ast->seq->elements[0]);
-      break;
-    }
+    rr.md = get_domain(r->ast->seq->elements[0]);
+    break;
   case 4: // MF
-    {
-      const HParseResult *r = h_parse(init_mf(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else
-	rr.md = get_domain(r->ast->seq->elements[0]);
-      break;
-    }
+    rr.md = get_domain(r->ast->seq->elements[0]);
+    break;
   case 5: // CNAME
-    {
-      const HParseResult *r = h_parse(init_cname(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else
-	rr.cname = get_domain(r->ast->seq->elements[0]);
-      break;
-    }
+    rr.cname = get_domain(r->ast->seq->elements[0]);
+    break;
   case 6: // SOA
-    {
-      const HParseResult *r = h_parse(init_soa(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else {
-	rr.soa.mname = get_domain(r->ast->seq->elements[0]);
-	rr.soa.rname = get_domain(r->ast->seq->elements[1]);
-	rr.soa.serial = r->ast->seq->elements[2]->uint;
-	rr.soa.refresh = r->ast->seq->elements[3]->uint;
-	rr.soa.retry = r->ast->seq->elements[4]->uint;
-	rr.soa.expire = r->ast->seq->elements[5]->uint;
-	rr.soa.minimum = r->ast->seq->elements[6]->uint;
-      }
-      break;
-    }
+    rr.soa.mname = get_domain(r->ast->seq->elements[0]);
+    rr.soa.rname = get_domain(r->ast->seq->elements[1]);
+    rr.soa.serial = r->ast->seq->elements[2]->uint;
+    rr.soa.refresh = r->ast->seq->elements[3]->uint;
+    rr.soa.retry = r->ast->seq->elements[4]->uint;
+    rr.soa.expire = r->ast->seq->elements[5]->uint;
+    rr.soa.minimum = r->ast->seq->elements[6]->uint;
+    break;
   case 7: // MB
-    {
-      const HParseResult *r = h_parse(init_mb(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else
-	rr.mb = get_domain(r->ast->seq->elements[0]);
-      break;
-    }
+    rr.mb = get_domain(r->ast->seq->elements[0]);
+    break;
   case 8: // MG
-    {
-      const HParseResult *r = h_parse(init_mg(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else
-	rr.mg = get_domain(r->ast->seq->elements[0]);
-      break;
-    }
+    rr.mg = get_domain(r->ast->seq->elements[0]);
+    break;
   case 9: // MR
-    {
-      const HParseResult *r = h_parse(init_mr(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else
-	rr.mr = get_domain(r->ast->seq->elements[0]);
-      break;
-    }
+    rr.mr = get_domain(r->ast->seq->elements[0]);
+    break;
   case 10: // NULL
-    {
-      const HParseResult *r = h_parse(init_null(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else {
-	rr.null = h_arena_malloc(rdata->arena, sizeof(uint8_t)*r->ast->seq->used);
-	for (size_t i=0; i<r->ast->seq->used; ++i)
-	  rr.null[i] = r->ast->seq->elements[i]->uint;
-      }
-      break;
-    }
+    rr.null = h_arena_malloc(rdata->arena, sizeof(uint8_t)*r->ast->seq->used);
+    for (size_t i=0; i<r->ast->seq->used; ++i)
+      rr.null[i] = r->ast->seq->elements[i]->uint;
+    break;
   case 11: // WKS
-    {
-      const HParseResult *r = h_parse(init_wks(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else {
-	rr.wks.address = r->ast->seq->elements[0]->uint;
-	rr.wks.protocol = r->ast->seq->elements[1]->uint;
-	rr.wks.len = r->ast->seq->elements[2]->seq->used;
-	rr.wks.bit_map = h_arena_malloc(rdata->arena, sizeof(uint8_t)*r->ast->seq->elements[2]->seq->used);
-	for (size_t i=0; i<rr.wks.len; ++i)
-	  rr.wks.bit_map[i] = r->ast->seq->elements[2]->seq->elements[i]->uint;
-      }
-      break;
-    }
+    rr.wks.address = r->ast->seq->elements[0]->uint;
+    rr.wks.protocol = r->ast->seq->elements[1]->uint;
+    rr.wks.len = r->ast->seq->elements[2]->seq->used;
+    rr.wks.bit_map = h_arena_malloc(rdata->arena, sizeof(uint8_t)*r->ast->seq->elements[2]->seq->used);
+    for (size_t i=0; i<rr.wks.len; ++i)
+      rr.wks.bit_map[i] = r->ast->seq->elements[2]->seq->elements[i]->uint;
+    break;
   case 12: // PTR
-    {
-      const HParseResult *r = h_parse(init_ptr(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else
-	rr.ptr = get_domain(r->ast->seq->elements[0]);
-      break;
-    }
+    rr.ptr = get_domain(r->ast->seq->elements[0]);
+    break;
   case 13: // HINFO
-    {
-      const HParseResult *r = h_parse(init_hinfo(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else {
-	rr.hinfo.cpu = get_cs(r->ast->seq->elements[0]->seq);
-	rr.hinfo.os = get_cs(r->ast->seq->elements[1]->seq);
-      }
-      break;
-    }
+    rr.hinfo.cpu = get_cs(r->ast->seq->elements[0]->seq);
+    rr.hinfo.os = get_cs(r->ast->seq->elements[1]->seq);
+    break;
   case 14: // MINFO
-    {
-      const HParseResult *r = h_parse(init_minfo(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else {
-	rr.minfo.rmailbx = get_domain(r->ast->seq->elements[0]);
-	rr.minfo.emailbx = get_domain(r->ast->seq->elements[1]);
-      }
-      break;
-    }
+    rr.minfo.rmailbx = get_domain(r->ast->seq->elements[0]);
+    rr.minfo.emailbx = get_domain(r->ast->seq->elements[1]);
+    break;
   case 15: // MX
-    {
-      const HParseResult *r = h_parse(init_mx(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else {
-	rr.mx.preference = r->ast->seq->elements[0]->uint;
-	rr.mx.exchange = get_domain(r->ast->seq->elements[1]);
-      }
-      break;
-    }
+    rr.mx.preference = r->ast->seq->elements[0]->uint;
+    rr.mx.exchange = get_domain(r->ast->seq->elements[1]);
+    break;
   case 16: // TXT
-    {
-      const HParseResult *r = h_parse(init_txt(), (const uint8_t*)data, rdata->used);
-      if (!r)
-	rr.type = 0;
-      else {
-	rr.txt.count = r->ast->seq->elements[0]->seq->used;
-	rr.txt.txt_data = get_txt(r->ast->seq->elements[0]->seq);
-      }
-      break;
-    }
+    rr.txt.count = r->ast->seq->elements[0]->seq->used;
+    rr.txt.txt_data = get_txt(r->ast->seq->elements[0]->seq);
+    break;
   default:
     break;
   }
