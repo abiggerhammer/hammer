@@ -11,8 +11,78 @@
 #define false 0
 #define true 1
 
+
+///
+// API Additions
+///
+
 #define H_RULE(rule, def) const HParser *rule = def
 #define H_ARULE(rule, def) const HParser *rule = h_action(def, act_ ## rule)
+
+// The action equivalent of h_ignore.
+const HParsedToken *act_ignore(const HParseResult *p)
+{
+  return NULL;
+}
+
+// Helper to build HAction's that pick one index out of a sequence.
+const HParsedToken *act_index(int i, const HParseResult *p)
+{
+    if(!p) return NULL;
+
+    const HParsedToken *tok = p->ast;
+
+    if(!tok || tok->token_type != TT_SEQUENCE)
+        return NULL;
+
+    const HCountedArray *seq = tok->seq;
+    size_t n = seq->used;
+
+    if(i<0 || (size_t)i>=n)
+        return NULL;
+    else
+        return tok->seq->elements[i];
+}
+
+const HParsedToken *act_index0(const HParseResult *p)
+{
+    return act_index(0, p);
+}
+
+HParsedToken *h_make_token(HArena *arena, HTokenType type, void *value) {
+  HParsedToken *ret = h_arena_malloc(arena, sizeof(HParsedToken));
+  ret->token_type = type;
+  ret->user = value;
+  return ret;
+}
+
+#define H_MAKE(TYP) \
+  ((TYP ## _t *) h_arena_malloc(p->arena, sizeof(TYP ## _t)))
+
+#define H_MAKE_TOKEN(TYP, VAL) \
+  h_make_token(p->arena, TT_ ## TYP, VAL)
+
+HParsedToken *h_carray_index(const HCountedArray *a, size_t i) {
+  assert(i < a->used);
+  return a->elements[i];
+}
+
+HParsedToken *h_seq_index(const HParsedToken *p, size_t i) {
+  assert(p->token_type == TT_SEQUENCE);
+  return h_carray_index(p->seq, i);
+}
+
+void *h_seq_index_user(HTokenType type, const HParsedToken *p, size_t i) {
+  HParsedToken *elem = h_seq_index(p, i);
+  assert(elem->token_type == (HTokenType)type);
+  return elem->user;
+}
+
+#define H_SEQ_INDEX(TYP, SEQ, IDX) \
+  ((TYP ## _t *) h_seq_index_user(TT_ ## TYP, SEQ, IDX))
+
+#define H_FIELD(TYP, IDX) \
+  H_SEQ_INDEX(TYP, p->ast, IDX)
 
 
 bool is_zero(HParseResult *p) {
@@ -20,6 +90,11 @@ bool is_zero(HParseResult *p) {
     return false;
   return (0 == p->ast->uint);
 }
+
+
+///
+// Semantic Actions
+///
 
 /**
  * Every DNS message should have QDCOUNT entries in the question
@@ -268,10 +343,6 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
 }
 
 const HParsedToken* act_header(const HParseResult *p) {
-  HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
-  ret->token_type = TT_dns_header;
-  ret->user = h_arena_malloc(p->arena, sizeof(dns_header_t));
-
   HParsedToken **fields = p->ast->seq->elements;
   dns_header_t header_ = {
     .id     = fields[0]->uint,
@@ -287,16 +358,15 @@ const HParsedToken* act_header(const HParseResult *p) {
     .authority_count  = fields[10]->uint,
     .additional_count = fields[11]->uint
   };
-  *(dns_header_t *)ret->user = header_;
 
-  return ret;
+  dns_header_t *header = H_MAKE(dns_header);
+  *header = header_;
+
+  return H_MAKE_TOKEN(dns_header, header);
 }
 
 const HParsedToken* act_label(const HParseResult *p) {
-  HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
-  ret->token_type = TT_dns_label;
-  ret->user = h_arena_malloc(p->arena, sizeof(dns_label_t));
-  dns_label_t *r = (dns_label_t *)ret->user;
+  dns_label_t *r = H_MAKE(dns_label);
 
   r->len = p->ast->seq->used;
   r->label = h_arena_malloc(p->arena, r->len + 1);
@@ -304,41 +374,31 @@ const HParsedToken* act_label(const HParseResult *p) {
     r->label[i] = p->ast->seq->elements[i]->uint;
   r->label[r->len] = 0;
 
-  return ret;
+  return H_MAKE_TOKEN(dns_label, r);
 }
 
 const HParsedToken* act_question(const HParseResult *p) {
-  HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
-  ret->token_type = TT_dns_question;
-  ret->user = h_arena_malloc(p->arena, sizeof(dns_question_t));
-
-  dns_question_t *q = (dns_question_t *)ret->user;
+  dns_question_t *q = H_MAKE(dns_question);
   HParsedToken **fields = p->ast->seq->elements;
 
   // QNAME is a sequence of labels. Pack them into an array.
   q->qname.qlen   = fields[0]->seq->used;
   q->qname.labels = h_arena_malloc(p->arena, sizeof(dns_label_t)*q->qname.qlen);
   for(size_t i=0; i<fields[0]->seq->used; i++) {
-    assert(fields[0]->seq->elements[i]->token_type == (HTokenType)TT_dns_label);
-    q->qname.labels[i] = *(dns_label_t *)fields[0]->seq->elements[i]->user;
+    q->qname.labels[i] = *H_SEQ_INDEX(dns_label, fields[0], i);
   }
 
   q->qtype  = fields[1]->uint;
   q->qclass = fields[2]->uint;
 
-  return ret;
+  return H_MAKE_TOKEN(dns_question, q);
 }
 
 const HParsedToken* act_message(const HParseResult *p) {
   h_pprint(stdout, p->ast, 0, 2);
+  dns_message_t *msg = H_MAKE(dns_message);
 
-  HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
-  ret->token_type = TT_dns_message;
-  ret->user = h_arena_malloc(p->arena, sizeof(dns_message_t));
-  dns_message_t *msg = ret->user;
-
-  assert(p->ast->seq->elements[0]->token_type == (HTokenType)TT_dns_header);
-  dns_header_t *header = (dns_header_t *)p->ast->seq->elements[0]->user;
+  dns_header_t *header = H_FIELD(dns_header, 0);
   msg->header = *header;
 
   HParsedToken *qs = p->ast->seq->elements[1];
@@ -387,41 +447,16 @@ const HParsedToken* act_message(const HParseResult *p) {
   }
   msg->additional = additional;
 
-  return ret;
-}
-
-// The action equivalent of h_ignore.
-const HParsedToken *act_ignore(const HParseResult *p)
-{
-  return NULL;
-}
-
-// Helper to build HAction's that pick one index out of a sequence.
-const HParsedToken *act_index(int i, const HParseResult *p)
-{
-    if(!p) return NULL;
-
-    const HParsedToken *tok = p->ast;
-
-    if(!tok || tok->token_type != TT_SEQUENCE)
-        return NULL;
-
-    const HCountedArray *seq = tok->seq;
-    size_t n = seq->used;
-
-    if(i<0 || (size_t)i>=n)
-        return NULL;
-    else
-        return tok->seq->elements[i];
-}
-
-const HParsedToken *act_index0(const HParseResult *p)
-{
-    return act_index(0, p);
+  return H_MAKE_TOKEN(dns_message, msg);
 }
 
 #define act_hdzero act_ignore
 #define act_qname  act_index0
+
+
+///
+// Parser / Grammar
+///
 
 const HParser* init_parser() {
   static const HParser *ret = NULL;
@@ -475,6 +510,11 @@ const HParser* init_parser() {
   ret = message;
   return ret;
 }
+
+
+///
+// Program Logic for a Dummy DNS Server
+///
 
 int start_listening() {
   // return: fd
