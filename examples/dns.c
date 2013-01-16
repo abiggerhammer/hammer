@@ -2,7 +2,6 @@
 #include <netinet/in.h>
 #include <err.h>
 #include <string.h>
-#include <assert.h>
 #include "../src/hammer.h"
 #include "dns_common.h"
 #include "dns.h"
@@ -29,8 +28,7 @@ bool is_zero(HParseResult *p) {
 bool validate_dns(HParseResult *p) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
-  assert(p->ast->seq->elements[0]->token_type == (HTokenType)TT_dns_header);
-  dns_header_t *header = (dns_header_t *)p->ast->seq->elements[0]->user;
+  dns_header_t *header = H_FIELD(dns_header, 0);
   size_t qd = header->question_count;
   size_t an = header->answer_count;
   size_t ns = header->authority_count;
