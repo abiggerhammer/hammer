@@ -15,30 +15,41 @@ bool validate_label(HParseResult *p) {
 }
 
 const HParsedToken* act_domain(const HParseResult *p) {
+  const HParsedToken *ret = NULL;
+  char *arr = NULL;
+
   switch(p->ast->token_type) {
   case TT_UINT:
-    return H_MAKE_TOKEN(dns_domain, " ");
+    arr = " ";
+    break;
   case TT_SEQUENCE:
-    {
-      // Sequence of subdomains separated by "."
-      // Each subdomain is a label, which can be no more than 63 chars.
-      char *ret = h_arena_malloc(p->arena, 64*p->ast->seq->used);
-      size_t count = 0;
-      for (size_t i=0; i<p->ast->seq->used; ++i) {
-	HParsedToken *tmp = p->ast->seq->elements[i];
-	for (size_t j=0; j<tmp->seq->used; ++j) {
-	  ret[count] = tmp->seq->elements[i]->uint;
-	  ++count;
-	}
-	ret[count] = '.';
+    // Sequence of subdomains separated by "."
+    // Each subdomain is a label, which can be no more than 63 chars.
+    arr = h_arena_malloc(p->arena, 64*p->ast->seq->used);
+    size_t count = 0;
+    for (size_t i=0; i<p->ast->seq->used; ++i) {
+      HParsedToken *tmp = p->ast->seq->elements[i];
+      for (size_t j=0; j<tmp->seq->used; ++j) {
+	arr[count] = tmp->seq->elements[i]->uint;
 	++count;
       }
-      ret[count-1] = '\x00';
-      return H_MAKE_TOKEN(dns_domain, ret);
+      arr[count] = '.';
+      ++count;
     }
+    arr[count-1] = '\x00';
+    break;
   default:
-    return NULL;
+    arr = NULL;
+    ret = NULL;
   }
+
+  if(arr) {
+    dns_domain_t *val = H_MAKE(dns_domain);  // dns_domain_t is char*
+    *val = arr;
+    ret = H_MAKE_TOKEN(dns_domain, val);
+  }
+
+  return ret;
 }
 
 const HParser* init_domain() {

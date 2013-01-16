@@ -92,83 +92,83 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
   };
 
   // Parse rdata if possible.
-  const HParseResult *r = NULL;
+  const HParseResult *p = NULL;
   if (rr.type < sizeof(parsers)) {
-    const HParser *p = parsers[rr.type];
-    if (p)
-      r = h_parse(p, (const uint8_t*)data, rdata->used);
+    const HParser *parser = parsers[rr.type];
+    if (parser)
+      p = h_parse(parser, (const uint8_t*)data, rdata->used);
   }
 	
   // If the RR doesn't parse, set its type to 0.
-  if (!r) 
+  if (!p) 
     rr.type = 0;
 
   // Pack the parsed rdata into rr.
   switch(rr.type) {
   case 1: // A
-    rr.a = r->ast->seq->elements[0]->uint;
+    rr.a = p->ast->seq->elements[0]->uint;
     break;
   case 2: // NS
-    rr.ns = get_domain(r->ast->seq->elements[0]);
+    rr.ns = *H_FIELD(dns_domain, 0);
     break;
   case 3: // MD
-    rr.md = get_domain(r->ast->seq->elements[0]);
+    rr.md = *H_FIELD(dns_domain, 0);
     break;
   case 4: // MF
-    rr.md = get_domain(r->ast->seq->elements[0]);
+    rr.md = *H_FIELD(dns_domain, 0);
     break;
   case 5: // CNAME
-    rr.cname = get_domain(r->ast->seq->elements[0]);
+    rr.cname = *H_FIELD(dns_domain, 0);
     break;
   case 6: // SOA
-    rr.soa.mname = get_domain(r->ast->seq->elements[0]);
-    rr.soa.rname = get_domain(r->ast->seq->elements[1]);
-    rr.soa.serial = r->ast->seq->elements[2]->uint;
-    rr.soa.refresh = r->ast->seq->elements[3]->uint;
-    rr.soa.retry = r->ast->seq->elements[4]->uint;
-    rr.soa.expire = r->ast->seq->elements[5]->uint;
-    rr.soa.minimum = r->ast->seq->elements[6]->uint;
+    rr.soa.mname = *H_FIELD(dns_domain, 0);
+    rr.soa.rname = *H_FIELD(dns_domain, 1);
+    rr.soa.serial = p->ast->seq->elements[2]->uint;
+    rr.soa.refresh = p->ast->seq->elements[3]->uint;
+    rr.soa.retry = p->ast->seq->elements[4]->uint;
+    rr.soa.expire = p->ast->seq->elements[5]->uint;
+    rr.soa.minimum = p->ast->seq->elements[6]->uint;
     break;
   case 7: // MB
-    rr.mb = get_domain(r->ast->seq->elements[0]);
+    rr.mb = *H_FIELD(dns_domain, 0);
     break;
   case 8: // MG
-    rr.mg = get_domain(r->ast->seq->elements[0]);
+    rr.mg = *H_FIELD(dns_domain, 0);
     break;
   case 9: // MR
-    rr.mr = get_domain(r->ast->seq->elements[0]);
+    rr.mr = *H_FIELD(dns_domain, 0);
     break;
   case 10: // NULL
-    rr.null = h_arena_malloc(rdata->arena, sizeof(uint8_t)*r->ast->seq->used);
-    for (size_t i=0; i<r->ast->seq->used; ++i)
-      rr.null[i] = r->ast->seq->elements[i]->uint;
+    rr.null = h_arena_malloc(rdata->arena, sizeof(uint8_t)*p->ast->seq->used);
+    for (size_t i=0; i<p->ast->seq->used; ++i)
+      rr.null[i] = p->ast->seq->elements[i]->uint;
     break;
   case 11: // WKS
-    rr.wks.address = r->ast->seq->elements[0]->uint;
-    rr.wks.protocol = r->ast->seq->elements[1]->uint;
-    rr.wks.len = r->ast->seq->elements[2]->seq->used;
-    rr.wks.bit_map = h_arena_malloc(rdata->arena, sizeof(uint8_t)*r->ast->seq->elements[2]->seq->used);
+    rr.wks.address = p->ast->seq->elements[0]->uint;
+    rr.wks.protocol = p->ast->seq->elements[1]->uint;
+    rr.wks.len = p->ast->seq->elements[2]->seq->used;
+    rr.wks.bit_map = h_arena_malloc(rdata->arena, sizeof(uint8_t)*p->ast->seq->elements[2]->seq->used);
     for (size_t i=0; i<rr.wks.len; ++i)
-      rr.wks.bit_map[i] = r->ast->seq->elements[2]->seq->elements[i]->uint;
+      rr.wks.bit_map[i] = p->ast->seq->elements[2]->seq->elements[i]->uint;
     break;
   case 12: // PTR
-    rr.ptr = get_domain(r->ast->seq->elements[0]);
+    rr.ptr = *H_FIELD(dns_domain, 0);
     break;
   case 13: // HINFO
-    rr.hinfo.cpu = get_cs(r->ast->seq->elements[0]->seq);
-    rr.hinfo.os = get_cs(r->ast->seq->elements[1]->seq);
+    rr.hinfo.cpu = get_cs(p->ast->seq->elements[0]->seq);
+    rr.hinfo.os = get_cs(p->ast->seq->elements[1]->seq);
     break;
   case 14: // MINFO
-    rr.minfo.rmailbx = get_domain(r->ast->seq->elements[0]);
-    rr.minfo.emailbx = get_domain(r->ast->seq->elements[1]);
+    rr.minfo.rmailbx = *H_FIELD(dns_domain, 0);
+    rr.minfo.emailbx = *H_FIELD(dns_domain, 1);
     break;
   case 15: // MX
-    rr.mx.preference = r->ast->seq->elements[0]->uint;
-    rr.mx.exchange = get_domain(r->ast->seq->elements[1]);
+    rr.mx.preference = p->ast->seq->elements[0]->uint;
+    rr.mx.exchange = *H_FIELD(dns_domain, 1);
     break;
   case 16: // TXT
-    rr.txt.count = r->ast->seq->elements[0]->seq->used;
-    rr.txt.txt_data = get_txt(r->ast->seq->elements[0]->seq);
+    rr.txt.count = p->ast->seq->elements[0]->seq->used;
+    rr.txt.txt_data = get_txt(p->ast->seq->elements[0]->seq);
     break;
   default:
     break;
