@@ -42,12 +42,6 @@ bool validate_dns(HParseResult *p) {
   return true;
 }
 
-char* get_domain(const HParsedToken *t) {
-  assert(t != NULL);
-  assert(t->token_type == (HTokenType)TT_dns_domain);
-  return t->user;
-}
-
 uint8_t* get_cs(const HCountedArray *arr) {
   uint8_t *ret = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->used);
   for (size_t i=0; i<arr->used; ++i)
@@ -246,7 +240,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_rr *answers = h_arena_malloc(p->arena,
 					  sizeof(struct dns_rr)*(header->answer_count));
   for (size_t i=0; i<header->answer_count; ++i) {
-    answers[i].name = get_domain(rrs[i].seq->elements[0]);
+    answers[i].name = *H_SEQ_INDEX(dns_domain, rrs+i, 0);
     answers[i].type = rrs[i].seq->elements[1]->uint;
     answers[i].class = rrs[i].seq->elements[2]->uint;
     answers[i].ttl = rrs[i].seq->elements[3]->uint;
@@ -258,7 +252,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_rr *authority = h_arena_malloc(p->arena,
 					  sizeof(struct dns_rr)*(header->authority_count));
   for (size_t i=0, j=header->answer_count; i<header->authority_count; ++i, ++j) {
-    authority[i].name = get_domain(rrs[j].seq->elements[0]);
+    authority[i].name = *H_SEQ_INDEX(dns_domain, rrs+j, 0);
     authority[i].type = rrs[j].seq->elements[1]->uint;
     authority[i].class = rrs[j].seq->elements[2]->uint;
     authority[i].ttl = rrs[j].seq->elements[3]->uint;
@@ -270,7 +264,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_rr *additional = h_arena_malloc(p->arena,
 					     sizeof(struct dns_rr)*(header->additional_count));
   for (size_t i=0, j=header->answer_count+header->authority_count; i<header->additional_count; ++i, ++j) {
-    additional[i].name = get_domain(rrs[j].seq->elements[0]);
+    additional[i].name = *H_SEQ_INDEX(dns_domain, rrs+j, 0);
     additional[i].type = rrs[j].seq->elements[1]->uint;
     additional[i].class = rrs[j].seq->elements[2]->uint;
     additional[i].ttl = rrs[j].seq->elements[3]->uint;
