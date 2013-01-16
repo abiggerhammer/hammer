@@ -1,5 +1,6 @@
 #include "../src/hammer.h"
 #include "dns_common.h"
+#include "dns.h"
 
 #define false 0
 #define true 1
@@ -13,6 +14,32 @@ bool validate_label(HParseResult *p) {
   return (64 > p->ast->seq->used);
 }
 
+const HParsedToken* act_domain(const HParseResult *p) {
+  switch(p->ast->token_type) {
+  case TT_UINT:
+    return H_MAKE_TOKEN(dns_domain, " ");
+  case TT_SEQUENCE:
+    {
+      // Sequence of subdomains separated by "."
+      // Each subdomain is a label, which can be no more than 63 chars.
+      char *ret = h_arena_malloc(p->arena, 64*p->ast->seq->used);
+      size_t count = 0;
+      for (size_t i=0; i<p->ast->seq->used; ++i) {
+	HParsedToken *tmp = p->ast->seq->elements[i];
+	for (size_t j=0; j<tmp->seq->used; ++j) {
+	  ret[count] = tmp->seq->elements[i]->uint;
+	  ++count;
+	}
+	ret[count] = '.';
+	++count;
+      }
+      ret[count-1] = '\x00';
+      return H_MAKE_TOKEN(dns_domain, ret);
+    }
+  default:
+    return NULL;
+  }
+}
 
 const HParser* init_domain() {
   static const HParser *ret = NULL;
@@ -29,7 +56,7 @@ const HParser* init_domain() {
 					    NULL),
 			         validate_label));
   H_RULE (subdomain, h_sepBy1(label, h_ch('.')));
-  H_RULE (domain,    h_choice(subdomain, h_ch(' '), NULL));
+  H_ARULE(domain,    h_choice(subdomain, h_ch(' '), NULL));
 
   ret = domain;
   return ret;

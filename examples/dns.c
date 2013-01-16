@@ -43,30 +43,9 @@ bool validate_dns(HParseResult *p) {
 }
 
 char* get_domain(const HParsedToken *t) {
-  switch(t->token_type) {
-  case TT_UINT:
-    return " ";
-  case TT_SEQUENCE:
-    {
-      // Sequence of subdomains separated by "."
-      // Each subdomain is a label, which can be no more than 63 chars.
-      char *ret = h_arena_malloc(t->seq->arena, 64*t->seq->used);
-      size_t count = 0;
-      for (size_t i=0; i<t->seq->used; ++i) {
-	HParsedToken *tmp = t->seq->elements[i];
-	for (size_t j=0; j<tmp->seq->used; ++j) {
-	  ret[count] = tmp->seq->elements[i]->uint;
-	  ++count;
-	}
-	ret[count] = '.';
-	++count;
-      }
-      ret[count-1] = '\x00';
-      return ret;
-    }
-  default:
-    return NULL;
-  }
+  assert(t != NULL);
+  assert(t->token_type == (HTokenType)TT_dns_domain);
+  return t->user;
 }
 
 uint8_t* get_cs(const HCountedArray *arr) {

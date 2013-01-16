@@ -6,7 +6,8 @@ enum DNSTokenType_ {
   TT_dns_label,
   TT_dns_qname,
   TT_dns_question,
-  TT_dns_rr
+  TT_dns_rr,
+  TT_dns_domain
 };
 
 typedef struct dns_header {
@@ -97,6 +98,8 @@ typedef struct dns_rr {
     dns_rr_txt_t   txt;
   };
 } dns_rr_t;
+
+typedef char *dns_domain_t;
 
 typedef struct dns_message {
   dns_header_t header;
