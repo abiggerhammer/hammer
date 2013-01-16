@@ -204,6 +204,21 @@ const HParsedToken* act_label(const HParseResult *p) {
   return H_MAKE_TOKEN(dns_label_t, r);
 }
 
+const HParsedToken* act_rr(const HParseResult *p) {
+  dns_rr_t *rr = H_MAKE(dns_rr_t);
+
+  rr->name     = *H_FIELD(dns_domain_t, 0);
+  rr->type     = p->ast->seq->elements[1]->uint;
+  rr->class    = p->ast->seq->elements[2]->uint;
+  rr->ttl      = p->ast->seq->elements[3]->uint;
+  rr->rdlength = p->ast->seq->elements[4]->seq->used;
+
+  // Parse and pack RDATA.
+  set_rr(*rr, p->ast->seq->elements[4]->seq);	   
+
+  return H_MAKE_TOKEN(dns_rr_t, rr);
+}
+
 const HParsedToken* act_question(const HParseResult *p) {
   dns_question_t *q = H_MAKE(dns_question_t);
   HParsedToken **fields = p->ast->seq->elements;
@@ -225,9 +240,11 @@ const HParsedToken* act_message(const HParseResult *p) {
   h_pprint(stdout, p->ast, 0, 2);
   dns_message_t *msg = H_MAKE(dns_message_t);
 
+  // Copy header into message struct.
   dns_header_t *header = H_FIELD(dns_header_t, 0);
   msg->header = *header;
 
+  // Copy questions into message struct.
   HParsedToken *qs = p->ast->seq->elements[1];
   struct dns_question *questions = h_arena_malloc(p->arena,
 						  sizeof(struct dns_question)*(header->question_count));
@@ -236,40 +253,28 @@ const HParsedToken* act_message(const HParseResult *p) {
   }
   msg->questions = questions;
 
+  // Copy answer RRs into message struct.
   HParsedToken *rrs = p->ast->seq->elements[2];
   struct dns_rr *answers = h_arena_malloc(p->arena,
 					  sizeof(struct dns_rr)*(header->answer_count));
   for (size_t i=0; i<header->answer_count; ++i) {
-    answers[i].name = *H_SEQ_INDEX(dns_domain_t, rrs+i, 0);
-    answers[i].type = rrs[i].seq->elements[1]->uint;
-    answers[i].class = rrs[i].seq->elements[2]->uint;
-    answers[i].ttl = rrs[i].seq->elements[3]->uint;
-    answers[i].rdlength = rrs[i].seq->elements[4]->seq->used;
-    set_rr(answers[i], rrs[i].seq->elements[4]->seq);	   
+    answers[i] = *H_SEQ_INDEX(dns_rr_t, rrs, i);
   }
   msg->answers = answers;
 
+  // Copy authority RRs into message struct.
   struct dns_rr *authority = h_arena_malloc(p->arena,
 					  sizeof(struct dns_rr)*(header->authority_count));
   for (size_t i=0, j=header->answer_count; i<header->authority_count; ++i, ++j) {
-    authority[i].name = *H_SEQ_INDEX(dns_domain_t, rrs+j, 0);
-    authority[i].type = rrs[j].seq->elements[1]->uint;
-    authority[i].class = rrs[j].seq->elements[2]->uint;
-    authority[i].ttl = rrs[j].seq->elements[3]->uint;
-    authority[i].rdlength = rrs[j].seq->elements[4]->seq->used;
-    set_rr(authority[i], rrs[j].seq->elements[4]->seq);
+    authority[i] = *H_SEQ_INDEX(dns_rr_t, rrs, j);
   }
   msg->authority = authority;
 
+  // Copy additional RRs into message struct.
   struct dns_rr *additional = h_arena_malloc(p->arena,
 					     sizeof(struct dns_rr)*(header->additional_count));
   for (size_t i=0, j=header->answer_count+header->authority_count; i<header->additional_count; ++i, ++j) {
-    additional[i].name = *H_SEQ_INDEX(dns_domain_t, rrs+j, 0);
-    additional[i].type = rrs[j].seq->elements[1]->uint;
-    additional[i].class = rrs[j].seq->elements[2]->uint;
-    additional[i].ttl = rrs[j].seq->elements[3]->uint;
-    additional[i].rdlength = rrs[j].seq->elements[4]->seq->used;
-    set_rr(additional[i], rrs[j].seq->elements[4]->seq);
+    additional[i] = *H_SEQ_INDEX(dns_rr_t, rrs, j);
   }
   msg->additional = additional;
 
@@ -320,7 +325,7 @@ const HParser* init_parser() {
 			       NULL));
   H_ARULE(question, h_sequence(qname, qtype, qclass, NULL));
   H_RULE (rdata,    h_length_value(h_uint16(), h_uint8()));
-  H_RULE (rr,       h_sequence(domain,            // NAME
+  H_ARULE (rr,      h_sequence(domain,            // NAME
 			       type,              // TYPE
 			       class,             // CLASS
 			       h_uint32(),        // TTL
