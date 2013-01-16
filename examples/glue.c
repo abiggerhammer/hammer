@@ -39,12 +39,6 @@ HParsedToken *h_make_token(HArena *arena, HTokenType type, void *value)
   return ret;
 }
 
-#define H_MAKE(TYP) \
-  ((TYP ## _t *) h_arena_malloc(p->arena, sizeof(TYP ## _t)))
-
-#define H_MAKE_TOKEN(TYP, VAL) \
-  h_make_token(p->arena, TT_ ## TYP, VAL)
-
 HParsedToken *h_carray_index(const HCountedArray *a, size_t i)
 {
   assert(i < a->used);
