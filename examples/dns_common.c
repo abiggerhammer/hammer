@@ -44,13 +44,15 @@ const HParsedToken* act_domain(const HParseResult *p) {
   }
 
   if(arr) {
-    dns_domain_t *val = H_MAKE(dns_domain);  // dns_domain_t is char*
+    dns_domain_t *val = H_MAKE(dns_domain_t);  // dns_domain_t is char*
     *val = arr;
-    ret = H_MAKE_TOKEN(dns_domain, val);
+    ret = H_MAKE_TOKEN(dns_domain_t, val);
   }
 
   return ret;
 }
+
+#define act_label_ act_flatten
 
 const HParser* init_domain() {
   static const HParser *ret = NULL;
@@ -60,12 +62,12 @@ const HParser* init_domain() {
   H_RULE (letter,    h_choice(h_ch_range('a','z'), h_ch_range('A','Z'), NULL));
   H_RULE (let_dig,   h_choice(letter, h_ch_range('0','9'), NULL));
   H_RULE (ldh_str,   h_many1(h_choice(let_dig, h_ch('-'), NULL)));
-  H_RULE (label,     h_attr_bool(h_sequence(letter,
-					    h_optional(h_sequence(h_optional(ldh_str),
-								  let_dig,
-								  NULL)),
-					    NULL),
-			         validate_label));
+  H_ARULE(label_,    h_sequence(letter,
+				h_optional(h_sequence(h_optional(ldh_str),
+						      let_dig,
+						      NULL)),
+				NULL));
+  H_RULE (label,     h_attr_bool(label_, validate_label));
   H_RULE (subdomain, h_sepBy1(label, h_ch('.')));
   H_ARULE(domain,    h_choice(subdomain, h_ch(' '), NULL));
 

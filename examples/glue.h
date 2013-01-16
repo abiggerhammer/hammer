@@ -14,8 +14,15 @@
 const HParsedToken *act_ignore(const HParseResult *p);
 const HParsedToken *act_index(int i, const HParseResult *p);
 const HParsedToken *act_index0(const HParseResult *p);
+const HParsedToken *act_flatten(const HParseResult *p);
+
+const HParsedToken *h_token_flatten(HArena *arena, const HParsedToken *p);
+
+void h_seq_snoc(HParsedToken *xs, const HParsedToken *x);
+void h_seq_append(HParsedToken *xs, const HParsedToken *ys);
 
 HParsedToken *h_make_token(HArena *arena, HTokenType type, void *value);
+HParsedToken *h_make_token_seq(HArena *arena);
 
 #define H_MAKE(TYP) \
   ((TYP *) h_arena_malloc(p->arena, sizeof(TYP)))
