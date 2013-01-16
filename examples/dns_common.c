@@ -15,50 +15,24 @@ bool validate_label(HParseResult *p) {
 
 
 const HParser* init_domain() {
-  static const HParser *domain = NULL;
-  if (domain)
-    return domain;
+  static const HParser *ret = NULL;
+  if (ret)
+    return ret;
 
-  const HParser *letter = h_choice(h_ch_range('a', 'z'),
-				   h_ch_range('A', 'Z'),
-				   NULL);
+  H_RULE (letter,    h_choice(h_ch_range('a','z'), h_ch_range('A','Z'), NULL));
+  H_RULE (let_dig,   h_choice(letter, h_ch_range('0','9'), NULL));
+  H_RULE (ldh_str,   h_many1(h_choice(let_dig, h_ch('-'), NULL)));
+  H_RULE (label,     h_attr_bool(h_sequence(letter,
+					    h_optional(h_sequence(h_optional(ldh_str),
+								  let_dig,
+								  NULL)),
+					    NULL),
+			         validate_label));
+  H_RULE (subdomain, h_sepBy1(label, h_ch('.')));
+  H_RULE (domain,    h_choice(subdomain, h_ch(' '), NULL));
 
-  const HParser *let_dig = h_choice(letter,
-				    h_ch_range('0', '9'),
-				    NULL);
-
-  const HParser *ldh_str = h_many1(h_choice(let_dig,
-					    h_ch('-'),
-					    NULL));
-
-  const HParser *label = h_attr_bool(h_sequence(letter,
-						h_optional(h_sequence(h_optional(ldh_str),
-								      let_dig,
-								      NULL)),
-						NULL),
-				     validate_label);
-
-  /**
-   * You could write it like this ...
-   *   HParser *indirect_subdomain = h_indirect();
-   *   const HParser *subdomain = h_choice(label,
-   *				           h_sequence(indirect_subdomain,
-   *					              h_ch('.'),
-   *					              label,
-   *					              NULL),
-   *				           NULL);
-   *   h_bind_indirect(indirect_subdomain, subdomain);
-   *
-   * ... but this is easier and equivalent
-   */
-
-  const HParser *subdomain = h_sepBy1(label, h_ch('.'));
-
-  domain = h_choice(subdomain, 
-		    h_ch(' '), 
-		    NULL); 
-
-  return domain;
+  ret = domain;
+  return ret;
 }
 
 const HParser* init_character_string() {
