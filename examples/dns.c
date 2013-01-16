@@ -28,7 +28,7 @@ bool is_zero(HParseResult *p) {
 bool validate_dns(HParseResult *p) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
-  dns_header_t *header = H_FIELD(dns_header, 0);
+  dns_header_t *header = H_FIELD(dns_header_t, 0);
   size_t qd = header->question_count;
   size_t an = header->answer_count;
   size_t ns = header->authority_count;
@@ -103,20 +103,20 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
     rr.a = p->ast->seq->elements[0]->uint;
     break;
   case 2: // NS
-    rr.ns = *H_FIELD(dns_domain, 0);
+    rr.ns = *H_FIELD(dns_domain_t, 0);
     break;
   case 3: // MD
-    rr.md = *H_FIELD(dns_domain, 0);
+    rr.md = *H_FIELD(dns_domain_t, 0);
     break;
   case 4: // MF
-    rr.md = *H_FIELD(dns_domain, 0);
+    rr.md = *H_FIELD(dns_domain_t, 0);
     break;
   case 5: // CNAME
-    rr.cname = *H_FIELD(dns_domain, 0);
+    rr.cname = *H_FIELD(dns_domain_t, 0);
     break;
   case 6: // SOA
-    rr.soa.mname = *H_FIELD(dns_domain, 0);
-    rr.soa.rname = *H_FIELD(dns_domain, 1);
+    rr.soa.mname = *H_FIELD(dns_domain_t, 0);
+    rr.soa.rname = *H_FIELD(dns_domain_t, 1);
     rr.soa.serial = p->ast->seq->elements[2]->uint;
     rr.soa.refresh = p->ast->seq->elements[3]->uint;
     rr.soa.retry = p->ast->seq->elements[4]->uint;
@@ -124,13 +124,13 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
     rr.soa.minimum = p->ast->seq->elements[6]->uint;
     break;
   case 7: // MB
-    rr.mb = *H_FIELD(dns_domain, 0);
+    rr.mb = *H_FIELD(dns_domain_t, 0);
     break;
   case 8: // MG
-    rr.mg = *H_FIELD(dns_domain, 0);
+    rr.mg = *H_FIELD(dns_domain_t, 0);
     break;
   case 9: // MR
-    rr.mr = *H_FIELD(dns_domain, 0);
+    rr.mr = *H_FIELD(dns_domain_t, 0);
     break;
   case 10: // NULL
     rr.null = h_arena_malloc(rdata->arena, sizeof(uint8_t)*p->ast->seq->used);
@@ -146,19 +146,19 @@ void set_rr(struct dns_rr rr, HCountedArray *rdata) {
       rr.wks.bit_map[i] = p->ast->seq->elements[2]->seq->elements[i]->uint;
     break;
   case 12: // PTR
-    rr.ptr = *H_FIELD(dns_domain, 0);
+    rr.ptr = *H_FIELD(dns_domain_t, 0);
     break;
   case 13: // HINFO
     rr.hinfo.cpu = get_cs(p->ast->seq->elements[0]->seq);
     rr.hinfo.os = get_cs(p->ast->seq->elements[1]->seq);
     break;
   case 14: // MINFO
-    rr.minfo.rmailbx = *H_FIELD(dns_domain, 0);
-    rr.minfo.emailbx = *H_FIELD(dns_domain, 1);
+    rr.minfo.rmailbx = *H_FIELD(dns_domain_t, 0);
+    rr.minfo.emailbx = *H_FIELD(dns_domain_t, 1);
     break;
   case 15: // MX
     rr.mx.preference = p->ast->seq->elements[0]->uint;
-    rr.mx.exchange = *H_FIELD(dns_domain, 1);
+    rr.mx.exchange = *H_FIELD(dns_domain_t, 1);
     break;
   case 16: // TXT
     rr.txt.count = p->ast->seq->elements[0]->seq->used;
@@ -186,14 +186,14 @@ const HParsedToken* act_header(const HParseResult *p) {
     .additional_count = fields[11]->uint
   };
 
-  dns_header_t *header = H_MAKE(dns_header);
+  dns_header_t *header = H_MAKE(dns_header_t);
   *header = header_;
 
-  return H_MAKE_TOKEN(dns_header, header);
+  return H_MAKE_TOKEN(dns_header_t, header);
 }
 
 const HParsedToken* act_label(const HParseResult *p) {
-  dns_label_t *r = H_MAKE(dns_label);
+  dns_label_t *r = H_MAKE(dns_label_t);
 
   r->len = p->ast->seq->used;
   r->label = h_arena_malloc(p->arena, r->len + 1);
@@ -201,38 +201,38 @@ const HParsedToken* act_label(const HParseResult *p) {
     r->label[i] = p->ast->seq->elements[i]->uint;
   r->label[r->len] = 0;
 
-  return H_MAKE_TOKEN(dns_label, r);
+  return H_MAKE_TOKEN(dns_label_t, r);
 }
 
 const HParsedToken* act_question(const HParseResult *p) {
-  dns_question_t *q = H_MAKE(dns_question);
+  dns_question_t *q = H_MAKE(dns_question_t);
   HParsedToken **fields = p->ast->seq->elements;
 
   // QNAME is a sequence of labels. Pack them into an array.
   q->qname.qlen   = fields[0]->seq->used;
   q->qname.labels = h_arena_malloc(p->arena, sizeof(dns_label_t)*q->qname.qlen);
   for(size_t i=0; i<fields[0]->seq->used; i++) {
-    q->qname.labels[i] = *H_SEQ_INDEX(dns_label, fields[0], i);
+    q->qname.labels[i] = *H_SEQ_INDEX(dns_label_t, fields[0], i);
   }
 
   q->qtype  = fields[1]->uint;
   q->qclass = fields[2]->uint;
 
-  return H_MAKE_TOKEN(dns_question, q);
+  return H_MAKE_TOKEN(dns_question_t, q);
 }
 
 const HParsedToken* act_message(const HParseResult *p) {
   h_pprint(stdout, p->ast, 0, 2);
-  dns_message_t *msg = H_MAKE(dns_message);
+  dns_message_t *msg = H_MAKE(dns_message_t);
 
-  dns_header_t *header = H_FIELD(dns_header, 0);
+  dns_header_t *header = H_FIELD(dns_header_t, 0);
   msg->header = *header;
 
   HParsedToken *qs = p->ast->seq->elements[1];
   struct dns_question *questions = h_arena_malloc(p->arena,
 						  sizeof(struct dns_question)*(header->question_count));
   for (size_t i=0; i<header->question_count; ++i) {
-    questions[i] = *H_SEQ_INDEX(dns_question, qs, i);
+    questions[i] = *H_SEQ_INDEX(dns_question_t, qs, i);
   }
   msg->questions = questions;
 
@@ -240,7 +240,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_rr *answers = h_arena_malloc(p->arena,
 					  sizeof(struct dns_rr)*(header->answer_count));
   for (size_t i=0; i<header->answer_count; ++i) {
-    answers[i].name = *H_SEQ_INDEX(dns_domain, rrs+i, 0);
+    answers[i].name = *H_SEQ_INDEX(dns_domain_t, rrs+i, 0);
     answers[i].type = rrs[i].seq->elements[1]->uint;
     answers[i].class = rrs[i].seq->elements[2]->uint;
     answers[i].ttl = rrs[i].seq->elements[3]->uint;
@@ -252,7 +252,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_rr *authority = h_arena_malloc(p->arena,
 					  sizeof(struct dns_rr)*(header->authority_count));
   for (size_t i=0, j=header->answer_count; i<header->authority_count; ++i, ++j) {
-    authority[i].name = *H_SEQ_INDEX(dns_domain, rrs+j, 0);
+    authority[i].name = *H_SEQ_INDEX(dns_domain_t, rrs+j, 0);
     authority[i].type = rrs[j].seq->elements[1]->uint;
     authority[i].class = rrs[j].seq->elements[2]->uint;
     authority[i].ttl = rrs[j].seq->elements[3]->uint;
@@ -264,7 +264,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_rr *additional = h_arena_malloc(p->arena,
 					     sizeof(struct dns_rr)*(header->additional_count));
   for (size_t i=0, j=header->answer_count+header->authority_count; i<header->additional_count; ++i, ++j) {
-    additional[i].name = *H_SEQ_INDEX(dns_domain, rrs+j, 0);
+    additional[i].name = *H_SEQ_INDEX(dns_domain_t, rrs+j, 0);
     additional[i].type = rrs[j].seq->elements[1]->uint;
     additional[i].class = rrs[j].seq->elements[2]->uint;
     additional[i].ttl = rrs[j].seq->elements[3]->uint;
@@ -273,7 +273,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   }
   msg->additional = additional;
 
-  return H_MAKE_TOKEN(dns_message, msg);
+  return H_MAKE_TOKEN(dns_message_t, msg);
 }
 
 #define act_hdzero act_ignore

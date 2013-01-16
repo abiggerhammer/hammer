@@ -1,13 +1,13 @@
 #include "../src/hammer.h"
 
 enum DNSTokenType_ {
-  TT_dns_message = TT_USER,
-  TT_dns_header,
-  TT_dns_label,
-  TT_dns_qname,
-  TT_dns_question,
-  TT_dns_rr,
-  TT_dns_domain
+  TT_dns_message_t = TT_USER,
+  TT_dns_header_t,
+  TT_dns_label_t,
+  TT_dns_qname_t,
+  TT_dns_question_t,
+  TT_dns_rr_t,
+  TT_dns_domain_t
 };
 
 typedef struct dns_header {
