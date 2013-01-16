@@ -5,6 +5,39 @@
 #define false 0
 #define true 1
 
+#define RDATA_TYPE_MAX 16
+const HParser* init_rdata(uint16_t type) {
+  static const HParser *parsers[RDATA_TYPE_MAX+1];
+  static int inited = 0;
+
+  if (type > RDATA_TYPE_MAX)
+    return NULL;
+  
+  if (inited)
+    return parsers[type];
+
+  parsers[ 0] = NULL;            // there is no type 0
+  parsers[ 1] = init_a();
+  parsers[ 2] = init_ns();
+  parsers[ 3] = init_md();
+  parsers[ 4] = init_mf();
+  parsers[ 5] = init_cname();
+  parsers[ 6] = init_soa();
+  parsers[ 7] = init_mb();
+  parsers[ 8] = init_mg();
+  parsers[ 9] = init_mr();
+  parsers[10] = init_null();
+  parsers[11] = init_wks();
+  parsers[12] = init_ptr();
+  parsers[13] = init_hinfo();
+  parsers[14] = init_minfo();
+  parsers[15] = init_mx();
+  parsers[16] = init_txt();
+
+  inited = 1;
+  return parsers[type];
+}
+  
 const HParser* init_cname() {
   static const HParser *cname = NULL;
   if (cname)

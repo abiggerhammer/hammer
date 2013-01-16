@@ -3,6 +3,8 @@
 
 #include "../src/hammer.h"
 
+const HParser* init_rdata(uint16_t type);
+
 const HParser* init_cname();
 const HParser* init_hinfo();
 const HParser* init_mb();

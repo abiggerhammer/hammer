@@ -59,39 +59,16 @@ uint8_t** get_txt(const HCountedArray *arr) {
   return ret;
 }
 
-void set_rr(struct dns_rr rr, HCountedArray *rdata) {
+void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
   uint8_t *data = h_arena_malloc(rdata->arena, sizeof(uint8_t)*rdata->used);
   for (size_t i=0; i<rdata->used; ++i)
     data[i] = rdata->elements[i]->uint;
 
-  // Mapping numeric RR types (as indices) to parsers
-  const HParser *parsers[] = {
-    NULL,          // there is no type 0
-    init_a(),      // 1
-    init_ns(),
-    init_md(),
-    init_mf(),
-    init_cname(),  // 5
-    init_soa(),
-    init_mb(),
-    init_mg(),
-    init_mr(),
-    init_null(),   // 10
-    init_wks(),
-    init_ptr(),
-    init_hinfo(),
-    init_minfo(),
-    init_mx(),     // 15
-    init_txt()
-  };
-
-  // Parse rdata if possible.
+  // Parse RDATA if possible.
   const HParseResult *p = NULL;
-  if (rr.type < sizeof(parsers)) {
-    const HParser *parser = parsers[rr.type];
-    if (parser)
-      p = h_parse(parser, (const uint8_t*)data, rdata->used);
-  }
+  const HParser *parser = init_rdata(rr.type);
+  if (parser)
+    p = h_parse(parser, (const uint8_t*)data, rdata->used);
 	
   // If the RR doesn't parse, set its type to 0.
   if (!p) 
@@ -214,7 +191,7 @@ const HParsedToken* act_rr(const HParseResult *p) {
   rr->rdlength = p->ast->seq->elements[4]->seq->used;
 
   // Parse and pack RDATA.
-  set_rr(*rr, p->ast->seq->elements[4]->seq);	   
+  set_rdata(*rr, p->ast->seq->elements[4]->seq);	   
 
   return H_MAKE_TOKEN(dns_rr_t, rr);
 }
