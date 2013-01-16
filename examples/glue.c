@@ -53,6 +53,7 @@ HParsedToken *h_carray_index(const HCountedArray *a, size_t i)
 
 HParsedToken *h_seq_index(const HParsedToken *p, size_t i)
 {
+  assert(p != NULL);
   assert(p->token_type == TT_SEQUENCE);
   return h_carray_index(p->seq, i);
 }
