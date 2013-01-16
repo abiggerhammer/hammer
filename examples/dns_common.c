@@ -13,6 +13,7 @@ bool validate_label(HParseResult *p) {
   return (64 > p->ast->seq->used);
 }
 
+
 const HParser* init_domain() {
   static const HParser *domain = NULL;
   if (domain)
