@@ -64,58 +64,52 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
   // Pack the parsed rdata into rr.
   switch(rr.type) {
   case 1: // A
-    rr.a = p->ast->seq->elements[0]->uint;
+    rr.a     = p->ast->seq->elements[0]->uint;
     break;
   case 2: // NS
-    rr.ns = *(dns_domain_t *)p->ast->user;
+    rr.ns    = *(dns_domain_t *)p->ast->user;
     break;
   case 3: // MD
-    rr.md = *(dns_domain_t *)p->ast->user;
+    rr.md    = *(dns_domain_t *)p->ast->user;
     break;
   case 4: // MF
-    rr.md = *(dns_domain_t *)p->ast->user;
+    rr.md    = *(dns_domain_t *)p->ast->user;
     break;
   case 5: // CNAME
     rr.cname = *(dns_domain_t *)p->ast->user;
     break;
   case 6: // SOA
-    rr.soa = *(dns_rr_soa_t *)p->ast->user;
+    rr.soa   = *(dns_rr_soa_t *)p->ast->user;
     break;
   case 7: // MB
-    rr.mb = *(dns_domain_t *)p->ast->user;
+    rr.mb    = *(dns_domain_t *)p->ast->user;
     break;
   case 8: // MG
-    rr.mg = *(dns_domain_t *)p->ast->user;
+    rr.mg    = *(dns_domain_t *)p->ast->user;
     break;
   case 9: // MR
-    rr.mr = *(dns_domain_t *)p->ast->user;
+    rr.mr    = *(dns_domain_t *)p->ast->user;
     break;
   case 10: // NULL
-    rr.null = h_arena_malloc(rdata->arena, sizeof(uint8_t)*p->ast->seq->used);
-    for (size_t i=0; i<p->ast->seq->used; ++i)
-      rr.null[i] = p->ast->seq->elements[i]->uint;
-    // XXX Where is the length stored!?
+    rr.null  = *(dns_rr_null_t *)p->ast->user;
     break;
   case 11: // WKS
-    rr.wks = *(dns_rr_wks_t *)p->ast->user;
+    rr.wks   = *(dns_rr_wks_t *)p->ast->user;
     break;
   case 12: // PTR
-    rr.ptr = *(dns_domain_t *)p->ast->user;
+    rr.ptr   = *(dns_domain_t *)p->ast->user;
     break;
   case 13: // HINFO
-    rr.hinfo.cpu = *H_FIELD(dns_cstr_t, 0);
-    rr.hinfo.os  = *H_FIELD(dns_cstr_t, 1);
+    rr.hinfo = *(dns_rr_hinfo_t *)p->ast->user;
     break;
   case 14: // MINFO
-    rr.minfo.rmailbx = *H_FIELD(dns_domain_t, 0);
-    rr.minfo.emailbx = *H_FIELD(dns_domain_t, 1);
+    rr.minfo = *(dns_rr_minfo_t *)p->ast->user;
     break;
   case 15: // MX
-    rr.mx.preference = p->ast->seq->elements[0]->uint;
-    rr.mx.exchange = *H_FIELD(dns_domain_t, 1);
+    rr.mx    = *(dns_rr_mx_t *)p->ast->user;
     break;
   case 16: // TXT
-    rr.txt = *(dns_rr_txt_t *)p->ast->user;
+    rr.txt   = *(dns_rr_txt_t *)p->ast->user;
     break;
   default:
     break;

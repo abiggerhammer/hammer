@@ -6,10 +6,26 @@
 #define false 0
 #define true 1
 
+
+///
+// Validations and Semantic Actions
+///
+
 bool validate_null(HParseResult *p) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
   return (65536 > p->ast->seq->used);
+}
+
+const HParsedToken *act_null(const HParseResult *p) {
+  dns_rr_null_t *null = H_MAKE(dns_rr_null_t);
+
+  size_t len = p->ast->seq->used;
+  uint8_t *buf = h_arena_malloc(p->arena, sizeof(uint8_t)*len);
+  for (size_t i=0; i<len; ++i)
+    buf[i] = p->ast->seq->elements[i]->uint;
+
+  return H_MAKE_TOKEN(dns_rr_null_t, null);
 }
 
 const HParsedToken *act_txt(const HParseResult *p) {
@@ -69,6 +85,38 @@ const HParsedToken* act_wks(const HParseResult *p) {
 
   return H_MAKE_TOKEN(dns_rr_wks_t, wks);
 }
+
+const HParsedToken* act_hinfo(const HParseResult *p) {
+  dns_rr_hinfo_t *hinfo = H_MAKE(dns_rr_hinfo_t);
+
+  hinfo->cpu = *H_FIELD(dns_cstr_t, 0);
+  hinfo->os  = *H_FIELD(dns_cstr_t, 1);
+
+  return H_MAKE_TOKEN(dns_rr_hinfo_t, hinfo);
+}
+
+const HParsedToken* act_minfo(const HParseResult *p) {
+  dns_rr_minfo_t *minfo = H_MAKE(dns_rr_minfo_t);
+
+  minfo->rmailbx = *H_FIELD(dns_domain_t, 0);
+  minfo->emailbx = *H_FIELD(dns_domain_t, 1);
+
+  return H_MAKE_TOKEN(dns_rr_minfo_t, minfo);
+}
+
+const HParsedToken* act_mx(const HParseResult *p) {
+  dns_rr_mx_t *mx = H_MAKE(dns_rr_mx_t);
+
+  mx->preference = p->ast->seq->elements[0]->uint;
+  mx->exchange   = *H_FIELD(dns_domain_t, 1);
+
+  return H_MAKE_TOKEN(dns_rr_mx_t, mx);
+}
+
+
+///
+// Parsers for all types of RDATA
+///
 
 #define RDATA_TYPE_MAX 16
 const HParser* init_rdata(uint16_t type) {

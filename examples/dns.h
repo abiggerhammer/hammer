@@ -13,6 +13,7 @@ enum DNSTokenType_ {
   TT_dns_rr_mx_t,
   TT_dns_rr_soa_t,
   TT_dns_rr_wks_t,
+  TT_dns_rr_null_t,
   TT_dns_domain_t,
   TT_dns_cstr_t
 };
@@ -83,6 +84,8 @@ typedef struct {
   uint8_t* bit_map;
 } dns_rr_wks_t;
 
+typedef uint8_t *dns_rr_null_t;
+
 typedef struct dns_rr {
   char* name;
   uint16_t type;
@@ -99,7 +102,7 @@ typedef struct dns_rr {
     char*          mb;
     char*          mg;
     char*          mr;
-    uint8_t*       null;
+    dns_rr_null_t  null;
     dns_rr_wks_t   wks;
     char*          ptr;
     dns_rr_hinfo_t hinfo;
