@@ -79,13 +79,7 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
     rr.cname = *(dns_domain_t *)p->ast->user;
     break;
   case 6: // SOA
-    rr.soa.mname = *H_FIELD(dns_domain_t, 0);
-    rr.soa.rname = *H_FIELD(dns_domain_t, 1);
-    rr.soa.serial = p->ast->seq->elements[2]->uint;
-    rr.soa.refresh = p->ast->seq->elements[3]->uint;
-    rr.soa.retry = p->ast->seq->elements[4]->uint;
-    rr.soa.expire = p->ast->seq->elements[5]->uint;
-    rr.soa.minimum = p->ast->seq->elements[6]->uint;
+    rr.soa = *(dns_rr_soa_t *)p->ast->user;
     break;
   case 7: // MB
     rr.mb = *(dns_domain_t *)p->ast->user;
@@ -100,6 +94,7 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
     rr.null = h_arena_malloc(rdata->arena, sizeof(uint8_t)*p->ast->seq->used);
     for (size_t i=0; i<p->ast->seq->used; ++i)
       rr.null[i] = p->ast->seq->elements[i]->uint;
+    // XXX Where is the length stored!?
     break;
   case 11: // WKS
     rr.wks.address = p->ast->seq->elements[0]->uint;

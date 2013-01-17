@@ -43,6 +43,20 @@ const HParsedToken* act_cstr(const HParseResult *p) {
   return H_MAKE_TOKEN(dns_cstr_t, cs);
 }
 
+const HParsedToken* act_soa(const HParseResult *p) {
+  dns_rr_soa_t *soa = H_MAKE(dns_rr_soa_t);
+
+  soa->mname   = *H_FIELD(dns_domain_t, 0);
+  soa->rname   = *H_FIELD(dns_domain_t, 1);
+  soa->serial  = p->ast->seq->elements[2]->uint;
+  soa->refresh = p->ast->seq->elements[3]->uint;
+  soa->retry   = p->ast->seq->elements[4]->uint;
+  soa->expire  = p->ast->seq->elements[5]->uint;
+  soa->minimum = p->ast->seq->elements[6]->uint;
+
+  return H_MAKE_TOKEN(dns_rr_soa_t, soa);
+}
+
 #define RDATA_TYPE_MAX 16
 const HParser* init_rdata(uint16_t type) {
   static const HParser *parsers[RDATA_TYPE_MAX+1];
@@ -63,7 +77,7 @@ const HParser* init_rdata(uint16_t type) {
   H_RULE (md,     domain);
   H_RULE (mf,     domain);
   H_RULE (cname,  domain);
-  H_RULE (soa,    h_sequence(domain,     // MNAME
+  H_ARULE(soa,    h_sequence(domain,     // MNAME
 			     domain,     // RNAME
 			     h_uint32(), // SERIAL
 			     h_uint32(), // REFRESH
