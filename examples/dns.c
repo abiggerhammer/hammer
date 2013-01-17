@@ -64,56 +64,23 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
 
   // Pack the parsed rdata into rr.
   switch(rr.type) {
-  case 1: // A
-    rr.a     = p->ast->seq->elements[0]->uint;
-    break;
-  case 2: // NS
-    rr.ns    = *(dns_domain_t *)p->ast->user;
-    break;
-  case 3: // MD
-    rr.md    = *(dns_domain_t *)p->ast->user;
-    break;
-  case 4: // MF
-    rr.md    = *(dns_domain_t *)p->ast->user;
-    break;
-  case 5: // CNAME
-    rr.cname = *(dns_domain_t *)p->ast->user;
-    break;
-  case 6: // SOA
-    rr.soa   = *(dns_rr_soa_t *)p->ast->user;
-    break;
-  case 7: // MB
-    rr.mb    = *(dns_domain_t *)p->ast->user;
-    break;
-  case 8: // MG
-    rr.mg    = *(dns_domain_t *)p->ast->user;
-    break;
-  case 9: // MR
-    rr.mr    = *(dns_domain_t *)p->ast->user;
-    break;
-  case 10: // NULL
-    rr.null  = *(dns_rr_null_t *)p->ast->user;
-    break;
-  case 11: // WKS
-    rr.wks   = *(dns_rr_wks_t *)p->ast->user;
-    break;
-  case 12: // PTR
-    rr.ptr   = *(dns_domain_t *)p->ast->user;
-    break;
-  case 13: // HINFO
-    rr.hinfo = *(dns_rr_hinfo_t *)p->ast->user;
-    break;
-  case 14: // MINFO
-    rr.minfo = *(dns_rr_minfo_t *)p->ast->user;
-    break;
-  case 15: // MX
-    rr.mx    = *(dns_rr_mx_t *)p->ast->user;
-    break;
-  case 16: // TXT
-    rr.txt   = *(dns_rr_txt_t *)p->ast->user;
-    break;
-  default:
-    break;
+  case 1:  rr.a     = p->ast->seq->elements[0]->uint;  break;
+  case 2:  rr.ns    = *(dns_domain_t   *)p->ast->user; break;
+  case 3:  rr.md    = *(dns_domain_t   *)p->ast->user; break;
+  case 4:  rr.md    = *(dns_domain_t   *)p->ast->user; break;
+  case 5:  rr.cname = *(dns_domain_t   *)p->ast->user; break;
+  case 6:  rr.soa   = *(dns_rr_soa_t   *)p->ast->user; break;
+  case 7:  rr.mb    = *(dns_domain_t   *)p->ast->user; break;
+  case 8:  rr.mg    = *(dns_domain_t   *)p->ast->user; break;
+  case 9:  rr.mr    = *(dns_domain_t   *)p->ast->user; break;
+  case 10: rr.null  = *(dns_rr_null_t  *)p->ast->user; break;
+  case 11: rr.wks   = *(dns_rr_wks_t   *)p->ast->user; break;
+  case 12: rr.ptr   = *(dns_domain_t   *)p->ast->user; break;
+  case 13: rr.hinfo = *(dns_rr_hinfo_t *)p->ast->user; break;
+  case 14: rr.minfo = *(dns_rr_minfo_t *)p->ast->user; break;
+  case 15: rr.mx    = *(dns_rr_mx_t    *)p->ast->user; break;
+  case 16: rr.txt   = *(dns_rr_txt_t   *)p->ast->user; break;
+  default:                                             break;
   }
 }
 
