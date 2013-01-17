@@ -7,6 +7,12 @@ enum DNSTokenType_ {
   TT_dns_qname_t,
   TT_dns_question_t,
   TT_dns_rr_t,
+  TT_dns_rr_txt_t,
+  TT_dns_rr_hinfo_t,
+  TT_dns_rr_minfo_t,
+  TT_dns_rr_mx_t,
+  TT_dns_rr_soa_t,
+  TT_dns_rr_wks_t,
   TT_dns_domain_t
 };
 

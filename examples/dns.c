@@ -53,16 +53,6 @@ uint8_t* get_cs(const HCountedArray *arr) {
   return ret;
 }
 
-uint8_t** get_txt(const HCountedArray *arr) {
-  uint8_t **ret = h_arena_malloc(arr->arena, sizeof(uint8_t*)*arr->used);
-  for (size_t i=0; i<arr->used; ++i) {
-    uint8_t *tmp = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->elements[i]->seq->used);
-    for (size_t j=0; j<arr->elements[i]->seq->used; ++j)
-      tmp[j] = arr->elements[i]->seq->elements[j]->uint;
-  }
-  return ret;
-}
-
 void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
   uint8_t *data = h_arena_malloc(rdata->arena, sizeof(uint8_t)*rdata->used);
   for (size_t i=0; i<rdata->used; ++i)
@@ -142,8 +132,7 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
     rr.mx.exchange = *H_FIELD(dns_domain_t, 1);
     break;
   case 16: // TXT
-    rr.txt.count = p->ast->seq->elements[0]->seq->used;
-    rr.txt.txt_data = get_txt(p->ast->seq->elements[0]->seq);
+    rr.txt = *(dns_rr_txt_t *)p->ast;
     break;
   default:
     break;
@@ -348,7 +337,7 @@ int start_listening() {
 
 const int TYPE_MAX = 16;
 typedef const char* cstr;
-const char* TYPE_STR[17] = {
+static const char* TYPE_STR[17] = {
   "nil", "A", "NS", "MD",
   "MF", "CNAME", "SOA", "MB",
   "MG", "MR", "NULL", "WKS",

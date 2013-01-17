@@ -1,5 +1,6 @@
 #include "../src/hammer.h"
 #include "dns_common.h"
+#include "dns.h"
 #include "rr.h"
 
 #define false 0
@@ -9,6 +10,24 @@ bool validate_null(HParseResult *p) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
   return (65536 > p->ast->seq->used);
+}
+
+const HParsedToken *act_txt(const HParseResult *p) {
+  dns_rr_txt_t *txt = H_MAKE(dns_rr_txt_t);
+
+  const HCountedArray *arr = p->ast->seq->elements[0]->seq;
+  uint8_t **ret = h_arena_malloc(arr->arena, sizeof(uint8_t*)*arr->used);
+  for (size_t i=0; i<arr->used; ++i) {
+    uint8_t *tmp = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->elements[i]->seq->used);
+    for (size_t j=0; j<arr->elements[i]->seq->used; ++j)
+      tmp[j] = arr->elements[i]->seq->elements[j]->uint;
+    ret[i] = tmp;
+  }
+
+  txt->count = p->ast->seq->elements[0]->seq->used;
+  txt->txt_data = ret;
+
+  return H_MAKE_TOKEN(dns_rr_txt_t, txt);
 }
 
 #define RDATA_TYPE_MAX 16
@@ -51,7 +70,7 @@ const HParser* init_rdata(uint16_t type) {
   H_RULE (hinfo,  h_sequence(cstr, cstr, NULL));
   H_RULE (minfo,  h_sequence(domain, domain, NULL));
   H_RULE (mx,     h_sequence(h_uint16(), domain, NULL));
-  H_RULE (txt,    h_many1(cstr));
+  H_ARULE(txt,    h_many1(cstr));
 
 
   parsers[ 0] = NULL;            // there is no type 0
