@@ -16,6 +16,8 @@ bool validate_label(HParseResult *p) {
   return (64 > p->ast->seq->used);
 }
 
+#define act_label h_act_flatten
+
 const HParsedToken* act_domain(const HParseResult *p) {
   const HParsedToken *ret = NULL;
   char *arr = NULL;
@@ -54,24 +56,21 @@ const HParsedToken* act_domain(const HParseResult *p) {
   return ret;
 }
 
-#define act_label_ h_act_flatten
-
 const HParser* init_domain() {
   static const HParser *ret = NULL;
   if (ret)
     return ret;
 
-  H_RULE (letter,    h_choice(h_ch_range('a','z'), h_ch_range('A','Z'), NULL));
-  H_RULE (let_dig,   h_choice(letter, h_ch_range('0','9'), NULL));
-  H_RULE (ldh_str,   h_many1(h_choice(let_dig, h_ch('-'), NULL)));
-  H_ARULE(label_,    h_sequence(letter,
-				h_optional(h_sequence(h_optional(ldh_str),
-						      let_dig,
-						      NULL)),
-				NULL));
-  H_RULE (label,     h_attr_bool(label_, validate_label));
-  H_RULE (subdomain, h_sepBy1(label, h_ch('.')));
-  H_ARULE(domain,    h_choice(subdomain, h_ch(' '), NULL));
+  H_RULE  (letter,    h_choice(h_ch_range('a','z'), h_ch_range('A','Z'), NULL));
+  H_RULE  (let_dig,   h_choice(letter, h_ch_range('0','9'), NULL));
+  H_RULE  (ldh_str,   h_many1(h_choice(let_dig, h_ch('-'), NULL)));
+  H_VARULE(label,     h_sequence(letter,
+				 h_optional(h_sequence(h_optional(ldh_str),
+						       let_dig,
+						       NULL)),
+				 NULL));
+  H_RULE  (subdomain, h_sepBy1(label, h_ch('.')));
+  H_ARULE (domain,    h_choice(subdomain, h_ch(' '), NULL));
 
   ret = domain;
   return ret;

@@ -42,7 +42,7 @@ const HParser* init_rdata(uint16_t type) {
   H_RULE (mb,     domain);
   H_RULE (mg,     domain);
   H_RULE (mr,     domain);
-  H_RULE (null_,  h_attr_bool(h_many(h_uint8()), validate_null));
+  H_VRULE(null,   h_many(h_uint8()));
   H_RULE (wks,    h_sequence(h_uint32(),
 			     h_uint8(),
 			     h_many(h_uint8()),
@@ -64,7 +64,7 @@ const HParser* init_rdata(uint16_t type) {
   parsers[ 7] = mb;
   parsers[ 8] = mg;
   parsers[ 9] = mr;
-  parsers[10] = null_;
+  parsers[10] = null;
   parsers[11] = wks;
   parsers[12] = ptr;
   parsers[13] = hinfo;
