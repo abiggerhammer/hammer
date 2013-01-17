@@ -57,6 +57,19 @@ const HParsedToken* act_soa(const HParseResult *p) {
   return H_MAKE_TOKEN(dns_rr_soa_t, soa);
 }
 
+const HParsedToken* act_wks(const HParseResult *p) {
+  dns_rr_wks_t *wks = H_MAKE(dns_rr_wks_t);
+
+  wks->address  = p->ast->seq->elements[0]->uint;
+  wks->protocol = p->ast->seq->elements[1]->uint;
+  wks->len      = p->ast->seq->elements[2]->seq->used;
+  wks->bit_map  = h_arena_malloc(p->arena, sizeof(uint8_t)*wks->len);
+  for (size_t i=0; i<wks->len; ++i)
+    wks->bit_map[i] = p->ast->seq->elements[2]->seq->elements[i]->uint;
+
+  return H_MAKE_TOKEN(dns_rr_wks_t, wks);
+}
+
 #define RDATA_TYPE_MAX 16
 const HParser* init_rdata(uint16_t type) {
   static const HParser *parsers[RDATA_TYPE_MAX+1];

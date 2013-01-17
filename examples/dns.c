@@ -97,12 +97,7 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
     // XXX Where is the length stored!?
     break;
   case 11: // WKS
-    rr.wks.address = p->ast->seq->elements[0]->uint;
-    rr.wks.protocol = p->ast->seq->elements[1]->uint;
-    rr.wks.len = p->ast->seq->elements[2]->seq->used;
-    rr.wks.bit_map = h_arena_malloc(rdata->arena, sizeof(uint8_t)*p->ast->seq->elements[2]->seq->used);
-    for (size_t i=0; i<rr.wks.len; ++i)
-      rr.wks.bit_map[i] = p->ast->seq->elements[2]->seq->elements[i]->uint;
+    rr.wks = *(dns_rr_wks_t *)p->ast->user;
     break;
   case 12: // PTR
     rr.ptr = *(dns_domain_t *)p->ast->user;
