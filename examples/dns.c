@@ -46,6 +46,7 @@ bool validate_message(HParseResult *p) {
 // Semantic Actions
 ///
 
+// Helper: Parse and pack the RDATA field of a Resource Record.
 void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
   uint8_t *data = h_arena_malloc(rdata->arena, sizeof(uint8_t)*rdata->used);
   for (size_t i=0; i<rdata->used; ++i)
