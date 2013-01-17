@@ -69,7 +69,7 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
   const HParser *parser = init_rdata(rr.type);
   if (parser)
     p = h_parse(parser, (const uint8_t*)data, rdata->used);
-	
+
   // If the RR doesn't parse, set its type to 0.
   if (!p) 
     rr.type = 0;
