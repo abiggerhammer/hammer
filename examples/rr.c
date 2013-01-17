@@ -15,7 +15,7 @@ bool validate_null(HParseResult *p) {
 const HParsedToken *act_txt(const HParseResult *p) {
   dns_rr_txt_t *txt = H_MAKE(dns_rr_txt_t);
 
-  const HCountedArray *arr = p->ast->seq->elements[0]->seq;
+  const HCountedArray *arr = p->ast->seq;
   uint8_t **ret = h_arena_malloc(arr->arena, sizeof(uint8_t*)*arr->used);
   for (size_t i=0; i<arr->used; ++i) {
     uint8_t *tmp = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->elements[i]->seq->used);
@@ -28,6 +28,19 @@ const HParsedToken *act_txt(const HParseResult *p) {
   txt->txt_data = ret;
 
   return H_MAKE_TOKEN(dns_rr_txt_t, txt);
+}
+
+const HParsedToken* act_cstr(const HParseResult *p) {
+  dns_cstr_t *cs = H_MAKE(dns_cstr_t);
+
+  const HCountedArray *arr = p->ast->seq;
+  uint8_t *ret = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->used);
+  for (size_t i=0; i<arr->used; ++i)
+    ret[i] = arr->elements[i]->uint;
+  assert(ret[arr->used-1] == '\0'); // XXX Is this right?! If so, shouldn't it be a validation?
+  *cs = ret;
+
+  return H_MAKE_TOKEN(dns_cstr_t, cs);
 }
 
 #define RDATA_TYPE_MAX 16
@@ -43,7 +56,7 @@ const HParser* init_rdata(uint16_t type) {
 
 
   H_RULE (domain, init_domain());
-  H_RULE (cstr,   init_character_string());
+  H_ARULE(cstr,   init_character_string());
 
   H_RULE (a,      h_uint32());
   H_RULE (ns,     domain);

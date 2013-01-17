@@ -13,8 +13,12 @@ enum DNSTokenType_ {
   TT_dns_rr_mx_t,
   TT_dns_rr_soa_t,
   TT_dns_rr_wks_t,
-  TT_dns_domain_t
+  TT_dns_domain_t,
+  TT_dns_cstr_t
 };
+
+typedef char *dns_domain_t;
+typedef uint8_t *dns_cstr_t;
 
 typedef struct dns_header {
   uint16_t id;
@@ -43,8 +47,8 @@ typedef struct dns_question {
 } dns_question_t;
 
 typedef struct {
-  uint8_t* cpu;
-  uint8_t* os;
+  dns_cstr_t cpu;
+  dns_cstr_t os;
 } dns_rr_hinfo_t;
 
 typedef struct {
@@ -104,8 +108,6 @@ typedef struct dns_rr {
     dns_rr_txt_t   txt;
   };
 } dns_rr_t;
-
-typedef char *dns_domain_t;
 
 typedef struct dns_message {
   dns_header_t header;

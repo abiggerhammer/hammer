@@ -46,13 +46,6 @@ bool validate_message(HParseResult *p) {
 // Semantic Actions
 ///
 
-uint8_t* get_cs(const HCountedArray *arr) {
-  uint8_t *ret = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->used);
-  for (size_t i=0; i<arr->used; ++i)
-    ret[i] = arr->elements[i]->uint;
-  return ret;
-}
-
 void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
   uint8_t *data = h_arena_malloc(rdata->arena, sizeof(uint8_t)*rdata->used);
   for (size_t i=0; i<rdata->used; ++i)
@@ -120,8 +113,8 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
     rr.ptr = *(dns_domain_t *)p->ast->user;
     break;
   case 13: // HINFO
-    rr.hinfo.cpu = get_cs(p->ast->seq->elements[0]->seq);
-    rr.hinfo.os = get_cs(p->ast->seq->elements[1]->seq);
+    rr.hinfo.cpu = *H_FIELD(dns_cstr_t, 0);
+    rr.hinfo.os  = *H_FIELD(dns_cstr_t, 1);
     break;
   case 14: // MINFO
     rr.minfo.rmailbx = *H_FIELD(dns_domain_t, 0);
