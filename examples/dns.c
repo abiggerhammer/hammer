@@ -74,16 +74,16 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
     rr.a = p->ast->seq->elements[0]->uint;
     break;
   case 2: // NS
-    rr.ns = *H_FIELD(dns_domain_t, 0);
+    rr.ns = *(dns_domain_t *)p->ast->user;
     break;
   case 3: // MD
-    rr.md = *H_FIELD(dns_domain_t, 0);
+    rr.md = *(dns_domain_t *)p->ast->user;
     break;
   case 4: // MF
-    rr.md = *H_FIELD(dns_domain_t, 0);
+    rr.md = *(dns_domain_t *)p->ast->user;
     break;
   case 5: // CNAME
-    rr.cname = *H_FIELD(dns_domain_t, 0);
+    rr.cname = *(dns_domain_t *)p->ast->user;
     break;
   case 6: // SOA
     rr.soa.mname = *H_FIELD(dns_domain_t, 0);
@@ -95,13 +95,13 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
     rr.soa.minimum = p->ast->seq->elements[6]->uint;
     break;
   case 7: // MB
-    rr.mb = *H_FIELD(dns_domain_t, 0);
+    rr.mb = *(dns_domain_t *)p->ast->user;
     break;
   case 8: // MG
-    rr.mg = *H_FIELD(dns_domain_t, 0);
+    rr.mg = *(dns_domain_t *)p->ast->user;
     break;
   case 9: // MR
-    rr.mr = *H_FIELD(dns_domain_t, 0);
+    rr.mr = *(dns_domain_t *)p->ast->user;
     break;
   case 10: // NULL
     rr.null = h_arena_malloc(rdata->arena, sizeof(uint8_t)*p->ast->seq->used);
@@ -117,7 +117,7 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
       rr.wks.bit_map[i] = p->ast->seq->elements[2]->seq->elements[i]->uint;
     break;
   case 12: // PTR
-    rr.ptr = *H_FIELD(dns_domain_t, 0);
+    rr.ptr = *(dns_domain_t *)p->ast->user;
     break;
   case 13: // HINFO
     rr.hinfo.cpu = get_cs(p->ast->seq->elements[0]->seq);
@@ -132,7 +132,7 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
     rr.mx.exchange = *H_FIELD(dns_domain_t, 1);
     break;
   case 16: // TXT
-    rr.txt = *(dns_rr_txt_t *)p->ast;
+    rr.txt = *(dns_rr_txt_t *)p->ast->user;
     break;
   default:
     break;
