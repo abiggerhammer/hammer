@@ -10,6 +10,12 @@
 
 #define H_RULE(rule, def) const HParser *rule = def
 #define H_ARULE(rule, def) const HParser *rule = h_action(def, act_ ## rule)
+#define H_VRULE(rule, def) const HParser *rule = \
+  h_attr_bool(def, validate_ ## rule)
+#define H_VARULE(rule, def) const HParser *rule = \
+  h_attr_bool(h_action(def, act_ ## rule), validate_ ## rule)
+#define H_AVRULE(rule, def) const HParser *rule = \
+  h_action(h_attr_bool(def, validate_ ## rule), act_ ## rule)
 
 const HParsedToken *act_ignore(const HParseResult *p);
 const HParsedToken *act_index(int i, const HParseResult *p);

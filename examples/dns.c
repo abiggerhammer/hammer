@@ -12,10 +12,10 @@
 
 
 ///
-// Semantic Actions and Validations
+// Validations
 ///
 
-bool is_zero(HParseResult *p) {
+bool validate_hdzero(HParseResult *p) {
   if (TT_UINT != p->ast->token_type)
     return false;
   return (0 == p->ast->uint);
@@ -25,7 +25,7 @@ bool is_zero(HParseResult *p) {
  * Every DNS message should have QDCOUNT entries in the question
  * section, and ANCOUNT+NSCOUNT+ARCOUNT resource records.
  */
-bool validate_dns(HParseResult *p) {
+bool validate_message(HParseResult *p) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
   dns_header_t *header = H_FIELD(dns_header_t, 0);
@@ -41,6 +41,10 @@ bool validate_dns(HParseResult *p) {
     return false;
   return true;
 }
+
+///
+// Semantic Actions
+///
 
 uint8_t* get_cs(const HCountedArray *arr) {
   uint8_t *ret = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->used);
@@ -271,49 +275,48 @@ const HParser* init_parser() {
   if (ret)
     return ret;
 
-  H_RULE (domain,   init_domain());
-  H_ARULE(hdzero,   h_attr_bool(h_bits(3, false), is_zero));
-  H_ARULE(header,   h_sequence(h_bits(16, false), // ID
-			       h_bits(1, false),  // QR
-			       h_bits(4, false),  // opcode
-			       h_bits(1, false),  // AA
-			       h_bits(1, false),  // TC
-			       h_bits(1, false),  // RD
-			       h_bits(1, false),  // RA
-			       hdzero,            // Z
-			       h_bits(4, false),  // RCODE
-			       h_uint16(),        // QDCOUNT
-			       h_uint16(),        // ANCOUNT
-			       h_uint16(),        // NSCOUNT
-			       h_uint16(),        // ARCOUNT
-			       NULL));
-  H_RULE (type,     h_int_range(h_uint16(), 1, 16));
-  H_RULE (qtype,    h_choice(type, 
-			     h_int_range(h_uint16(), 252, 255),
-			     NULL));
-  H_RULE (class,    h_int_range(h_uint16(), 1, 4));
-  H_RULE (qclass,   h_choice(class,
-			     h_int_range(h_uint16(), 255, 255),
-			     NULL));
-  H_RULE (len,      h_int_range(h_uint8(), 1, 255));
-  H_ARULE(label,    h_length_value(len, h_uint8())); 
-  H_ARULE(qname,    h_sequence(h_many1(label),
-			       h_ch('\x00'),
-			       NULL));
-  H_ARULE(question, h_sequence(qname, qtype, qclass, NULL));
-  H_RULE (rdata,    h_length_value(h_uint16(), h_uint8()));
-  H_ARULE (rr,      h_sequence(domain,            // NAME
-			       type,              // TYPE
-			       class,             // CLASS
-			       h_uint32(),        // TTL
-			       rdata,             // RDLENGTH+RDATA
-			       NULL));
-  H_ARULE(message,  h_attr_bool(h_sequence(header,
-					   h_many(question),
-					   h_many(rr),
-					   h_end_p(),
-					   NULL),
-			        validate_dns));
+  H_RULE  (domain,   init_domain());
+  H_AVRULE(hdzero,   h_bits(3, false));
+  H_ARULE (header,   h_sequence(h_bits(16, false), // ID
+				h_bits(1, false),  // QR
+				h_bits(4, false),  // opcode
+				h_bits(1, false),  // AA
+				h_bits(1, false),  // TC
+				h_bits(1, false),  // RD
+				h_bits(1, false),  // RA
+				hdzero,            // Z
+				h_bits(4, false),  // RCODE
+				h_uint16(),        // QDCOUNT
+				h_uint16(),        // ANCOUNT
+				h_uint16(),        // NSCOUNT
+				h_uint16(),        // ARCOUNT
+				NULL));
+  H_RULE  (type,     h_int_range(h_uint16(), 1, 16));
+  H_RULE  (qtype,    h_choice(type, 
+			      h_int_range(h_uint16(), 252, 255),
+			      NULL));
+  H_RULE  (class,    h_int_range(h_uint16(), 1, 4));
+  H_RULE  (qclass,   h_choice(class,
+			      h_int_range(h_uint16(), 255, 255),
+			      NULL));
+  H_RULE  (len,      h_int_range(h_uint8(), 1, 255));
+  H_ARULE (label,    h_length_value(len, h_uint8())); 
+  H_ARULE (qname,    h_sequence(h_many1(label),
+				h_ch('\x00'),
+				NULL));
+  H_ARULE (question, h_sequence(qname, qtype, qclass, NULL));
+  H_RULE  (rdata,    h_length_value(h_uint16(), h_uint8()));
+  H_ARULE (rr,       h_sequence(domain,            // NAME
+				type,              // TYPE
+				class,             // CLASS
+				h_uint32(),        // TTL
+				rdata,             // RDLENGTH+RDATA
+				NULL));
+  H_AVRULE(message,  h_sequence(header,
+				h_many(question),
+				h_many(rr),
+				h_end_p(),
+				NULL));
 
   ret = message;
   return ret;
