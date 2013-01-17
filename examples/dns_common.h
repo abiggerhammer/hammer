@@ -7,4 +7,6 @@
 const HParser* init_domain();
 const HParser* init_character_string();
 
+const HParsedToken* act_index0(const HParseResult *p);
+
 #endif

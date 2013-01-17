@@ -5,6 +5,8 @@
 #define false 0
 #define true 1
 
+H_ACT_APPLY(act_index0, h_act_index, 0)
+
 /**
  * A label can't be more than 63 characters.
  */
@@ -52,7 +54,7 @@ const HParsedToken* act_domain(const HParseResult *p) {
   return ret;
 }
 
-#define act_label_ act_flatten
+#define act_label_ h_act_flatten
 
 const HParser* init_domain() {
   static const HParser *ret = NULL;

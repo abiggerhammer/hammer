@@ -17,10 +17,16 @@
 #define H_AVRULE(rule, def) const HParser *rule = \
   h_action(h_attr_bool(def, validate_ ## rule), act_ ## rule)
 
-const HParsedToken *act_ignore(const HParseResult *p);
-const HParsedToken *act_index(int i, const HParseResult *p);
-const HParsedToken *act_index0(const HParseResult *p);
-const HParsedToken *act_flatten(const HParseResult *p);
+const HParsedToken *h_act_ignore(const HParseResult *p);
+const HParsedToken *h_act_index(int i, const HParseResult *p);
+const HParsedToken *h_act_flatten(const HParseResult *p);
+
+// Define 'myaction' as a specialization of 'paction' by supplying the leading
+// parameters.
+#define H_ACT_APPLY(myaction, paction, ...) \
+  const HParsedToken *myaction(const HParseResult *p) { \
+    return paction(__VA_ARGS__, p); \
+  }
 
 const HParsedToken *h_token_flatten(HArena *arena, const HParsedToken *p);
 

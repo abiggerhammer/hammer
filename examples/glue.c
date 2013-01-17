@@ -3,13 +3,13 @@
 
 
 // The action equivalent of h_ignore.
-const HParsedToken *act_ignore(const HParseResult *p)
+const HParsedToken *h_act_ignore(const HParseResult *p)
 {
   return NULL;
 }
 
 // Helper to build HAction's that pick one index out of a sequence.
-const HParsedToken *act_index(int i, const HParseResult *p)
+const HParsedToken *h_act_index(int i, const HParseResult *p)
 {
     if(!p) return NULL;
 
@@ -25,11 +25,6 @@ const HParsedToken *act_index(int i, const HParseResult *p)
         return NULL;
     else
         return tok->seq->elements[i];
-}
-
-const HParsedToken *act_index0(const HParseResult *p)
-{
-    return act_index(0, p);
 }
 
 void h_seq_snoc(HParsedToken *xs, const HParsedToken *x)
@@ -75,7 +70,7 @@ const HParsedToken *h_token_flatten(HArena *arena, const HParsedToken *p)
 }
 
 // Action version of h_token_flatten.
-const HParsedToken *act_flatten(const HParseResult *p) {
+const HParsedToken *h_act_flatten(const HParseResult *p) {
   return h_token_flatten(p->arena, p->ast);
 }
 

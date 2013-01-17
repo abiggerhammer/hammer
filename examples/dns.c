@@ -262,8 +262,9 @@ const HParsedToken* act_message(const HParseResult *p) {
   return H_MAKE_TOKEN(dns_message_t, msg);
 }
 
-#define act_hdzero act_ignore
+#define act_hdzero h_act_ignore
 #define act_qname  act_index0
+
 
 
 ///
