@@ -62,7 +62,7 @@ const HParsedToken *h_seq_flatten(HArena *arena, const HParsedToken *p);
 void h_seq_snoc(HParsedToken *xs, const HParsedToken *x);
 void h_seq_append(HParsedToken *xs, const HParsedToken *ys);
 
-HParsedToken *h_carray_index(const HCountedArray *a, size_t i);
+HParsedToken *h_carray_index(const HCountedArray *a, size_t i); // XXX -> internal
 HParsedToken *h_seq_index(const HParsedToken *p, size_t i);
 void *h_seq_index_user(HTokenType type, const HParsedToken *p, size_t i);
 
