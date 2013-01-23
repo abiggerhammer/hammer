@@ -105,7 +105,7 @@ const HParsedToken* act_header(const HParseResult *p) {
   dns_header_t *header = H_ALLOC(dns_header_t);
   *header = header_;
 
-  return H_MAKE_TOKEN(dns_header_t, header);
+  return H_MAKE(dns_header_t, header);
 }
 
 const HParsedToken* act_label(const HParseResult *p) {
@@ -117,7 +117,7 @@ const HParsedToken* act_label(const HParseResult *p) {
     r->label[i] = p->ast->seq->elements[i]->uint;
   r->label[r->len] = 0;
 
-  return H_MAKE_TOKEN(dns_label_t, r);
+  return H_MAKE(dns_label_t, r);
 }
 
 const HParsedToken* act_rr(const HParseResult *p) {
@@ -132,7 +132,7 @@ const HParsedToken* act_rr(const HParseResult *p) {
   // Parse and pack RDATA.
   set_rdata(*rr, p->ast->seq->elements[4]->seq);	   
 
-  return H_MAKE_TOKEN(dns_rr_t, rr);
+  return H_MAKE(dns_rr_t, rr);
 }
 
 const HParsedToken* act_question(const HParseResult *p) {
@@ -149,7 +149,7 @@ const HParsedToken* act_question(const HParseResult *p) {
   q->qtype  = fields[1]->uint;
   q->qclass = fields[2]->uint;
 
-  return H_MAKE_TOKEN(dns_question_t, q);
+  return H_MAKE(dns_question_t, q);
 }
 
 const HParsedToken* act_message(const HParseResult *p) {
@@ -194,7 +194,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   }
   msg->additional = additional;
 
-  return H_MAKE_TOKEN(dns_message_t, msg);
+  return H_MAKE(dns_message_t, msg);
 }
 
 #define act_hdzero h_act_ignore

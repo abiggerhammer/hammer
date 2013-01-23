@@ -45,19 +45,19 @@ const HParsedToken *h_act_flatten(const HParseResult *p);
 
 // Token constructors...
 
-HParsedToken *h_make_token(HArena *arena, HTokenType type, void *value);
-HParsedToken *h_make_token_seq(HArena *arena);
+HParsedToken *h_make(HArena *arena, HTokenType type, void *value);
+HParsedToken *h_make_seq(HArena *arena);
 
 #define H_ALLOC(TYP) \
   ((TYP *) h_arena_malloc(p->arena, sizeof(TYP)))
 
-#define H_MAKE_TOKEN(TYP, VAL) \
-  h_make_token(p->arena, TT_ ## TYP, VAL)
+#define H_MAKE(TYP, VAL) \
+  h_make(p->arena, TT_ ## TYP, VAL)
 
 // Sequences...
 
 // Flatten nested sequences into one.
-const HParsedToken *h_token_flatten(HArena *arena, const HParsedToken *p);
+const HParsedToken *h_seq_flatten(HArena *arena, const HParsedToken *p);
 
 void h_seq_snoc(HParsedToken *xs, const HParsedToken *x);
 void h_seq_append(HParsedToken *xs, const HParsedToken *ys);

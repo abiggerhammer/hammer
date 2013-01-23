@@ -25,7 +25,7 @@ const HParsedToken *act_null(const HParseResult *p) {
   for (size_t i=0; i<len; ++i)
     buf[i] = p->ast->seq->elements[i]->uint;
 
-  return H_MAKE_TOKEN(dns_rr_null_t, null);
+  return H_MAKE(dns_rr_null_t, null);
 }
 
 const HParsedToken *act_txt(const HParseResult *p) {
@@ -43,7 +43,7 @@ const HParsedToken *act_txt(const HParseResult *p) {
   txt->count = p->ast->seq->elements[0]->seq->used;
   txt->txt_data = ret;
 
-  return H_MAKE_TOKEN(dns_rr_txt_t, txt);
+  return H_MAKE(dns_rr_txt_t, txt);
 }
 
 const HParsedToken* act_cstr(const HParseResult *p) {
@@ -56,7 +56,7 @@ const HParsedToken* act_cstr(const HParseResult *p) {
   assert(ret[arr->used-1] == '\0'); // XXX Is this right?! If so, shouldn't it be a validation?
   *cs = ret;
 
-  return H_MAKE_TOKEN(dns_cstr_t, cs);
+  return H_MAKE(dns_cstr_t, cs);
 }
 
 const HParsedToken* act_soa(const HParseResult *p) {
@@ -70,7 +70,7 @@ const HParsedToken* act_soa(const HParseResult *p) {
   soa->expire  = p->ast->seq->elements[5]->uint;
   soa->minimum = p->ast->seq->elements[6]->uint;
 
-  return H_MAKE_TOKEN(dns_rr_soa_t, soa);
+  return H_MAKE(dns_rr_soa_t, soa);
 }
 
 const HParsedToken* act_wks(const HParseResult *p) {
@@ -83,7 +83,7 @@ const HParsedToken* act_wks(const HParseResult *p) {
   for (size_t i=0; i<wks->len; ++i)
     wks->bit_map[i] = p->ast->seq->elements[2]->seq->elements[i]->uint;
 
-  return H_MAKE_TOKEN(dns_rr_wks_t, wks);
+  return H_MAKE(dns_rr_wks_t, wks);
 }
 
 const HParsedToken* act_hinfo(const HParseResult *p) {
@@ -92,7 +92,7 @@ const HParsedToken* act_hinfo(const HParseResult *p) {
   hinfo->cpu = *H_FIELD(dns_cstr_t, 0);
   hinfo->os  = *H_FIELD(dns_cstr_t, 1);
 
-  return H_MAKE_TOKEN(dns_rr_hinfo_t, hinfo);
+  return H_MAKE(dns_rr_hinfo_t, hinfo);
 }
 
 const HParsedToken* act_minfo(const HParseResult *p) {
@@ -101,7 +101,7 @@ const HParsedToken* act_minfo(const HParseResult *p) {
   minfo->rmailbx = *H_FIELD(dns_domain_t, 0);
   minfo->emailbx = *H_FIELD(dns_domain_t, 1);
 
-  return H_MAKE_TOKEN(dns_rr_minfo_t, minfo);
+  return H_MAKE(dns_rr_minfo_t, minfo);
 }
 
 const HParsedToken* act_mx(const HParseResult *p) {
@@ -110,7 +110,7 @@ const HParsedToken* act_mx(const HParseResult *p) {
   mx->preference = p->ast->seq->elements[0]->uint;
   mx->exchange   = *H_FIELD(dns_domain_t, 1);
 
-  return H_MAKE_TOKEN(dns_rr_mx_t, mx);
+  return H_MAKE(dns_rr_mx_t, mx);
 }
 
 

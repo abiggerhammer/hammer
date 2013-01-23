@@ -48,16 +48,16 @@ void h_seq_append(HParsedToken *xs, const HParsedToken *ys)
 
 // Flatten nested sequences. Always returns a sequence.
 // If input element is not a sequence, returns it as a singleton sequence.
-const HParsedToken *h_token_flatten(HArena *arena, const HParsedToken *p)
+const HParsedToken *h_seq_flatten(HArena *arena, const HParsedToken *p)
 {
   assert(p != NULL);
 
-  HParsedToken *ret = h_make_token_seq(arena);
+  HParsedToken *ret = h_make_seq(arena);
   switch(p->token_type) {
   case TT_SEQUENCE:
     // Flatten and append all.
     for(size_t i; i<p->seq->used; i++) {
-	  h_seq_append(ret, h_token_flatten(arena, h_seq_index(p, i)));
+	  h_seq_append(ret, h_seq_flatten(arena, h_seq_index(p, i)));
 	}
 	break;
   default:
@@ -69,26 +69,26 @@ const HParsedToken *h_token_flatten(HArena *arena, const HParsedToken *p)
   return ret;
 }
 
-// Action version of h_token_flatten.
+// Action version of h_seq_flatten.
 const HParsedToken *h_act_flatten(const HParseResult *p) {
-  return h_token_flatten(p->arena, p->ast);
+  return h_seq_flatten(p->arena, p->ast);
 }
 
-HParsedToken *h_make_token_(HArena *arena, HTokenType type)
+HParsedToken *h_make_(HArena *arena, HTokenType type)
 {
   HParsedToken *ret = h_arena_malloc(arena, sizeof(HParsedToken));
   ret->token_type = type;
   return ret;
 }
 
-HParsedToken *h_make_token_seq(HArena *arena)
+HParsedToken *h_make_seq(HArena *arena)
 {
-  return h_make_token_(arena, TT_SEQUENCE);
+  return h_make_(arena, TT_SEQUENCE);
 }
 
-HParsedToken *h_make_token(HArena *arena, HTokenType type, void *value)
+HParsedToken *h_make(HArena *arena, HTokenType type, void *value)
 {
-  HParsedToken *ret = h_make_token_(arena, type);
+  HParsedToken *ret = h_make_(arena, type);
   ret->user = value;
   return ret;
 }
