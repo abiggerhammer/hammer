@@ -74,10 +74,19 @@ const HParsedToken *h_act_flatten(const HParseResult *p) {
   return h_seq_flatten(p->arena, p->ast);
 }
 
+// Low-level helper for the h_make family.
 HParsedToken *h_make_(HArena *arena, HTokenType type)
 {
   HParsedToken *ret = h_arena_malloc(arena, sizeof(HParsedToken));
   ret->token_type = type;
+  return ret;
+}
+
+HParsedToken *h_make(HArena *arena, HTokenType type, void *value)
+{
+  assert(type >= TT_USER);
+  HParsedToken *ret = h_make_(arena, type);
+  ret->user = value;
   return ret;
 }
 
@@ -88,13 +97,29 @@ HParsedToken *h_make_seq(HArena *arena)
   return ret;
 }
 
-HParsedToken *h_make(HArena *arena, HTokenType type, void *value)
+HParsedToken *h_make_bytes(HArena *arena, size_t len)
 {
-  HParsedToken *ret = h_make_(arena, type);
-  ret->user = value;
+  HParsedToken *ret = h_make_(arena, TT_BYTES);
+  ret->bytes.len = len;
+  ret->bytes.token = h_arena_malloc(arena, len);
   return ret;
 }
 
+HParsedToken *h_make_sint(HArena *arena, int64_t val)
+{
+  HParsedToken *ret = h_make_(arena, TT_SINT);
+  ret->sint = val;
+  return ret;
+}
+
+HParsedToken *h_make_uint(HArena *arena, uint64_t val)
+{
+  HParsedToken *ret = h_make_(arena, TT_UINT);
+  ret->uint = val;
+  return ret;
+}
+
+// XXX -> internal
 HParsedToken *h_carray_index(const HCountedArray *a, size_t i)
 {
   assert(i < a->used);
