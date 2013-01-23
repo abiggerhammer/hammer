@@ -1,12 +1,17 @@
+//
+// API additions for writing grammar and semantic actions more concisely
+//
+
 #ifndef HAMMER_EXAMPLES_GLUE__H
 #define HAMMER_EXAMPLES_GLUE__H
 
 #include <assert.h>
 #include "../src/hammer.h"
 
-///
-// API Additions
-///
+
+//
+// Grammar specification
+//
 
 #define H_RULE(rule, def) const HParser *rule = def
 #define H_ARULE(rule, def) const HParser *rule = h_action(def, act_ ## rule)
@@ -16,6 +21,11 @@
   h_attr_bool(h_action(def, act_ ## rule), validate_ ## rule)
 #define H_AVRULE(rule, def) const HParser *rule = \
   h_action(h_attr_bool(def, validate_ ## rule), act_ ## rule)
+
+
+//
+// Pre-fab semantic actions
+//
 
 const HParsedToken *h_act_ignore(const HParseResult *p);
 const HParsedToken *h_act_index(int i, const HParseResult *p);
@@ -28,10 +38,12 @@ const HParsedToken *h_act_flatten(const HParseResult *p);
     return paction(__VA_ARGS__, p); \
   }
 
-const HParsedToken *h_token_flatten(HArena *arena, const HParsedToken *p);
 
-void h_seq_snoc(HParsedToken *xs, const HParsedToken *x);
-void h_seq_append(HParsedToken *xs, const HParsedToken *ys);
+//
+// Working with HParsedTokens
+//
+
+// Token constructors...
 
 HParsedToken *h_make_token(HArena *arena, HTokenType type, void *value);
 HParsedToken *h_make_token_seq(HArena *arena);
@@ -42,6 +54,14 @@ HParsedToken *h_make_token_seq(HArena *arena);
 #define H_MAKE_TOKEN(TYP, VAL) \
   h_make_token(p->arena, TT_ ## TYP, VAL)
 
+// Sequences...
+
+// Flatten nested sequences into one.
+const HParsedToken *h_token_flatten(HArena *arena, const HParsedToken *p);
+
+void h_seq_snoc(HParsedToken *xs, const HParsedToken *x);
+void h_seq_append(HParsedToken *xs, const HParsedToken *ys);
+
 HParsedToken *h_carray_index(const HCountedArray *a, size_t i);
 HParsedToken *h_seq_index(const HParsedToken *p, size_t i);
 void *h_seq_index_user(HTokenType type, const HParsedToken *p, size_t i);
@@ -51,5 +71,6 @@ void *h_seq_index_user(HTokenType type, const HParsedToken *p, size_t i);
 
 #define H_FIELD(TYP, IDX) \
   H_SEQ_INDEX(TYP, p->ast, IDX)
+
 
 #endif
