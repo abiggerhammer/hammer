@@ -42,6 +42,7 @@ bool validate_message(HParseResult *p) {
   return true;
 }
 
+
 ///
 // Semantic Actions
 ///
@@ -200,9 +201,8 @@ const HParsedToken* act_message(const HParseResult *p) {
 #define act_qname  act_index0
 
 
-
 ///
-// Parser / Grammar
+// Grammar
 ///
 
 const HParser* init_parser() {
@@ -259,7 +259,7 @@ const HParser* init_parser() {
 
 
 ///
-// Program Logic for a Dummy DNS Server
+// Main Program for a Dummy DNS Server
 ///
 
 int start_listening() {
