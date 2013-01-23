@@ -48,7 +48,7 @@ const HParsedToken *h_act_flatten(const HParseResult *p);
 HParsedToken *h_make_token(HArena *arena, HTokenType type, void *value);
 HParsedToken *h_make_token_seq(HArena *arena);
 
-#define H_MAKE(TYP) \
+#define H_ALLOC(TYP) \
   ((TYP *) h_arena_malloc(p->arena, sizeof(TYP)))
 
 #define H_MAKE_TOKEN(TYP, VAL) \

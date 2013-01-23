@@ -48,7 +48,7 @@ const HParsedToken* act_domain(const HParseResult *p) {
   }
 
   if(arr) {
-    dns_domain_t *val = H_MAKE(dns_domain_t);  // dns_domain_t is char*
+    dns_domain_t *val = H_ALLOC(dns_domain_t);  // dns_domain_t is char*
     *val = arr;
     ret = H_MAKE_TOKEN(dns_domain_t, val);
   }

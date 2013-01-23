@@ -18,7 +18,7 @@ bool validate_null(HParseResult *p) {
 }
 
 const HParsedToken *act_null(const HParseResult *p) {
-  dns_rr_null_t *null = H_MAKE(dns_rr_null_t);
+  dns_rr_null_t *null = H_ALLOC(dns_rr_null_t);
 
   size_t len = p->ast->seq->used;
   uint8_t *buf = h_arena_malloc(p->arena, sizeof(uint8_t)*len);
@@ -29,7 +29,7 @@ const HParsedToken *act_null(const HParseResult *p) {
 }
 
 const HParsedToken *act_txt(const HParseResult *p) {
-  dns_rr_txt_t *txt = H_MAKE(dns_rr_txt_t);
+  dns_rr_txt_t *txt = H_ALLOC(dns_rr_txt_t);
 
   const HCountedArray *arr = p->ast->seq;
   uint8_t **ret = h_arena_malloc(arr->arena, sizeof(uint8_t*)*arr->used);
@@ -47,7 +47,7 @@ const HParsedToken *act_txt(const HParseResult *p) {
 }
 
 const HParsedToken* act_cstr(const HParseResult *p) {
-  dns_cstr_t *cs = H_MAKE(dns_cstr_t);
+  dns_cstr_t *cs = H_ALLOC(dns_cstr_t);
 
   const HCountedArray *arr = p->ast->seq;
   uint8_t *ret = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->used);
@@ -60,7 +60,7 @@ const HParsedToken* act_cstr(const HParseResult *p) {
 }
 
 const HParsedToken* act_soa(const HParseResult *p) {
-  dns_rr_soa_t *soa = H_MAKE(dns_rr_soa_t);
+  dns_rr_soa_t *soa = H_ALLOC(dns_rr_soa_t);
 
   soa->mname   = *H_FIELD(dns_domain_t, 0);
   soa->rname   = *H_FIELD(dns_domain_t, 1);
@@ -74,7 +74,7 @@ const HParsedToken* act_soa(const HParseResult *p) {
 }
 
 const HParsedToken* act_wks(const HParseResult *p) {
-  dns_rr_wks_t *wks = H_MAKE(dns_rr_wks_t);
+  dns_rr_wks_t *wks = H_ALLOC(dns_rr_wks_t);
 
   wks->address  = p->ast->seq->elements[0]->uint;
   wks->protocol = p->ast->seq->elements[1]->uint;
@@ -87,7 +87,7 @@ const HParsedToken* act_wks(const HParseResult *p) {
 }
 
 const HParsedToken* act_hinfo(const HParseResult *p) {
-  dns_rr_hinfo_t *hinfo = H_MAKE(dns_rr_hinfo_t);
+  dns_rr_hinfo_t *hinfo = H_ALLOC(dns_rr_hinfo_t);
 
   hinfo->cpu = *H_FIELD(dns_cstr_t, 0);
   hinfo->os  = *H_FIELD(dns_cstr_t, 1);
@@ -96,7 +96,7 @@ const HParsedToken* act_hinfo(const HParseResult *p) {
 }
 
 const HParsedToken* act_minfo(const HParseResult *p) {
-  dns_rr_minfo_t *minfo = H_MAKE(dns_rr_minfo_t);
+  dns_rr_minfo_t *minfo = H_ALLOC(dns_rr_minfo_t);
 
   minfo->rmailbx = *H_FIELD(dns_domain_t, 0);
   minfo->emailbx = *H_FIELD(dns_domain_t, 1);
@@ -105,7 +105,7 @@ const HParsedToken* act_minfo(const HParseResult *p) {
 }
 
 const HParsedToken* act_mx(const HParseResult *p) {
-  dns_rr_mx_t *mx = H_MAKE(dns_rr_mx_t);
+  dns_rr_mx_t *mx = H_ALLOC(dns_rr_mx_t);
 
   mx->preference = p->ast->seq->elements[0]->uint;
   mx->exchange   = *H_FIELD(dns_domain_t, 1);

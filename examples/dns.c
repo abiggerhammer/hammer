@@ -102,14 +102,14 @@ const HParsedToken* act_header(const HParseResult *p) {
     .additional_count = fields[11]->uint
   };
 
-  dns_header_t *header = H_MAKE(dns_header_t);
+  dns_header_t *header = H_ALLOC(dns_header_t);
   *header = header_;
 
   return H_MAKE_TOKEN(dns_header_t, header);
 }
 
 const HParsedToken* act_label(const HParseResult *p) {
-  dns_label_t *r = H_MAKE(dns_label_t);
+  dns_label_t *r = H_ALLOC(dns_label_t);
 
   r->len = p->ast->seq->used;
   r->label = h_arena_malloc(p->arena, r->len + 1);
@@ -121,7 +121,7 @@ const HParsedToken* act_label(const HParseResult *p) {
 }
 
 const HParsedToken* act_rr(const HParseResult *p) {
-  dns_rr_t *rr = H_MAKE(dns_rr_t);
+  dns_rr_t *rr = H_ALLOC(dns_rr_t);
 
   rr->name     = *H_FIELD(dns_domain_t, 0);
   rr->type     = p->ast->seq->elements[1]->uint;
@@ -136,7 +136,7 @@ const HParsedToken* act_rr(const HParseResult *p) {
 }
 
 const HParsedToken* act_question(const HParseResult *p) {
-  dns_question_t *q = H_MAKE(dns_question_t);
+  dns_question_t *q = H_ALLOC(dns_question_t);
   HParsedToken **fields = p->ast->seq->elements;
 
   // QNAME is a sequence of labels. Pack them into an array.
@@ -154,7 +154,7 @@ const HParsedToken* act_question(const HParseResult *p) {
 
 const HParsedToken* act_message(const HParseResult *p) {
   h_pprint(stdout, p->ast, 0, 2);
-  dns_message_t *msg = H_MAKE(dns_message_t);
+  dns_message_t *msg = H_ALLOC(dns_message_t);
 
   // Copy header into message struct.
   dns_header_t *header = H_FIELD(dns_header_t, 0);
