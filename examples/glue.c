@@ -83,7 +83,9 @@ HParsedToken *h_make_(HArena *arena, HTokenType type)
 
 HParsedToken *h_make_seq(HArena *arena)
 {
-  return h_make_(arena, TT_SEQUENCE);
+  HParsedToken *ret = h_make_(arena, TT_SEQUENCE);
+  ret->seq = h_carray_new(arena);
+  return ret;
 }
 
 HParsedToken *h_make(HArena *arena, HTokenType type, void *value)
