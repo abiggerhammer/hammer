@@ -50,12 +50,12 @@ const HParsedToken *h_act_flatten(const HParseResult *p);
 // Token constructors...
 
 HParsedToken *h_make(HArena *arena, HTokenType type, void *value);
-HParsedToken *h_make_seq(HArena *arena);
+HParsedToken *h_make_seq(HArena *arena);  // Makes empty sequence.
 
 // Standard short-hand to make a user-type token.
 #define H_MAKE(TYP, VAL) h_make(p->arena, TT_ ## TYP, VAL)
 
-// Sequences...
+// Sequence access...
 
 // Access a sequence element by index.
 HParsedToken *h_seq_index_token(const HParsedToken *p, size_t i);
@@ -67,16 +67,18 @@ HParsedToken *h_seq_index_token(const HParsedToken *p, size_t i);
 // Standard short-hand to access a user-type field on a sequence token.
 #define H_FIELD(TYP, IDX)  H_SEQ_INDEX(TYP, p->ast, IDX)
 
+// Lower-level helper for H_SEQ_INDEX.
+void *h_seq_index(HTokenType type, const HParsedToken *p, size_t i);
+HParsedToken *h_carray_index(const HCountedArray *a, size_t i); // XXX -> internal
+
+// Sequence modification...
+
 // Append elements to a sequence.
 void h_seq_snoc(HParsedToken *xs, const HParsedToken *x);     // append one
 void h_seq_append(HParsedToken *xs, const HParsedToken *ys);  // append many
 
 // Flatten nested sequences into one.
 const HParsedToken *h_seq_flatten(HArena *arena, const HParsedToken *p);
-
-// Helpers for implementing H_SEQ_INDEX.
-void *h_seq_index(HTokenType type, const HParsedToken *p, size_t i); // XXX helper
-HParsedToken *h_carray_index(const HCountedArray *a, size_t i); // XXX -> internal
 
 
 #endif
