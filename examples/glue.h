@@ -91,8 +91,12 @@ void *         h_seq_index_user (HTokenType type, const HParsedToken *p, size_t 
 #define H_INDEX(TYP, SEQ, IDX) \
   ((TYP *) h_seq_index_user(TT_ ## TYP, SEQ, IDX))
 
-// Standard short-hand to access and cast a user-type field on a sequence token.
+// Standard short-hand to access and cast elements on a sequence token.
 #define H_FIELD(TYP, IDX)  H_INDEX(TYP, p->ast, IDX)
+#define H_FIELD_SEQ(IDX)   h_seq_index_seq(p->ast, IDX)
+#define H_FIELD_BYTES(IDX) h_seq_index_bytes(p->ast, IDX)
+#define H_FIELD_SINT(IDX)  h_seq_index_sint(p->ast, IDX)
+#define H_FIELD_UINT(IDX)  h_seq_index_uint(p->ast, IDX)
 
 // Lower-level helper for h_seq_index.
 HParsedToken *h_carray_index(const HCountedArray *a, size_t i); // XXX -> internal
