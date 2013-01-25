@@ -67,21 +67,21 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
   // Pack the parsed rdata into rr.
   switch(rr.type) {
   case 1:  rr.a     = h_cast_uint(p->ast);             break;
-  case 2:  rr.ns    = *(dns_domain_t   *)p->ast->user; break;
-  case 3:  rr.md    = *(dns_domain_t   *)p->ast->user; break;
-  case 4:  rr.md    = *(dns_domain_t   *)p->ast->user; break;
-  case 5:  rr.cname = *(dns_domain_t   *)p->ast->user; break;
-  case 6:  rr.soa   = *(dns_rr_soa_t   *)p->ast->user; break;
-  case 7:  rr.mb    = *(dns_domain_t   *)p->ast->user; break;
-  case 8:  rr.mg    = *(dns_domain_t   *)p->ast->user; break;
-  case 9:  rr.mr    = *(dns_domain_t   *)p->ast->user; break;
-  case 10: rr.null  = *(dns_rr_null_t  *)p->ast->user; break;
-  case 11: rr.wks   = *(dns_rr_wks_t   *)p->ast->user; break;
-  case 12: rr.ptr   = *(dns_domain_t   *)p->ast->user; break;
-  case 13: rr.hinfo = *(dns_rr_hinfo_t *)p->ast->user; break;
-  case 14: rr.minfo = *(dns_rr_minfo_t *)p->ast->user; break;
-  case 15: rr.mx    = *(dns_rr_mx_t    *)p->ast->user; break;
-  case 16: rr.txt   = *(dns_rr_txt_t   *)p->ast->user; break;
+  case 2:  rr.ns    = *H_CAST(dns_domain_t,   p->ast); break;
+  case 3:  rr.md    = *H_CAST(dns_domain_t,   p->ast); break;
+  case 4:  rr.md    = *H_CAST(dns_domain_t,   p->ast); break;
+  case 5:  rr.cname = *H_CAST(dns_domain_t,   p->ast); break;
+  case 6:  rr.soa   = *H_CAST(dns_rr_soa_t,   p->ast); break;
+  case 7:  rr.mb    = *H_CAST(dns_domain_t,   p->ast); break;
+  case 8:  rr.mg    = *H_CAST(dns_domain_t,   p->ast); break;
+  case 9:  rr.mr    = *H_CAST(dns_domain_t,   p->ast); break;
+  case 10: rr.null  = *H_CAST(dns_rr_null_t,  p->ast); break;
+  case 11: rr.wks   = *H_CAST(dns_rr_wks_t,   p->ast); break;
+  case 12: rr.ptr   = *H_CAST(dns_domain_t,   p->ast); break;
+  case 13: rr.hinfo = *H_CAST(dns_rr_hinfo_t, p->ast); break;
+  case 14: rr.minfo = *H_CAST(dns_rr_minfo_t, p->ast); break;
+  case 15: rr.mx    = *H_CAST(dns_rr_mx_t,    p->ast); break;
+  case 16: rr.txt   = *H_CAST(dns_rr_txt_t,   p->ast); break;
   default:                                             break;
   }
 }
