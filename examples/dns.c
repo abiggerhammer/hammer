@@ -28,17 +28,18 @@ bool validate_hdzero(HParseResult *p) {
 bool validate_message(HParseResult *p) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
+
   dns_header_t *header = H_FIELD(dns_header_t, 0);
   size_t qd = header->question_count;
   size_t an = header->answer_count;
   size_t ns = header->authority_count;
   size_t ar = header->additional_count;
-  HParsedToken *questions = p->ast->seq->elements[1];
-  if (questions->seq->used != qd)
+
+  if (H_FIELD_SEQ(1)->used != qd)
     return false;
-  HParsedToken *rrs = p->ast->seq->elements[2];
-  if (an+ns+ar != rrs->seq->used)
+  if (an+ns+ar != H_FIELD_SEQ(2)->used)
     return false;
+
   return true;
 }
 
@@ -51,7 +52,7 @@ bool validate_message(HParseResult *p) {
 void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
   uint8_t *data = h_arena_malloc(rdata->arena, sizeof(uint8_t)*rdata->used);
   for (size_t i=0; i<rdata->used; ++i)
-    data[i] = rdata->elements[i]->uint;
+    data[i] = h_cast_uint(rdata->elements[i]);
 
   // Parse RDATA if possible.
   const HParseResult *p = NULL;
