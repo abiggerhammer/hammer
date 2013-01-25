@@ -61,16 +61,24 @@ HParsedToken *h_make_uint(HArena *arena, uint64_t val);
 #define H_MAKE_SINT(VAL)  h_make_sint(p->arena, VAL)
 #define H_MAKE_UINT(VAL)  h_make_uint(p->arena, VAL)
 
-// Extract type-specific value back from HParsedTokens...
+// Extract (cast) type-specific value back from HParsedTokens...
 
-void *         h_cast      (HTokenType type, const HParsedToken *p);
-HCountedArray *h_cast_seq  (const HParsedToken *p);
-HBytes         h_cast_bytes(const HParsedToken *p);
-int64_t        h_cast_sint (const HParsedToken *p);
-uint64_t       h_cast_uint (const HParsedToken *p);
+// Pass-through assertion that a given token has the expected type.
+#define h_assert_type(T,P)  (assert(P->token_type == (HTokenType)T), P)
 
-// Standard short-hand to cast to a user type.
-#define H_CAST(TYP, TOK)  ((TYP *) h_cast(TT_ ## TYP, TOK))
+// Convenience short-hand forms of h_assert_type.
+#define H_ASSERT(TYP, TOK)   h_assert_type(TT_ ## TYP, TOK)
+#define H_ASSERT_SEQ(TOK)    h_assert_type(TT_SEQUENCE, TOK)
+#define H_ASSERT_BYTES(TOK)  h_assert_type(TT_BYTES, TOK)
+#define H_ASSERT_SINT(TOK)   h_assert_type(TT_SINT, TOK)
+#define H_ASSERT_UINT(TOK)   h_assert_type(TT_UINT, TOK)
+
+// Assert expected type and return contained value.
+#define H_CAST(TYP, TOK)   ((TYP *) H_ASSERT(TYP, TOK)->user)
+#define H_CAST_SEQ(TOK)    (H_ASSERT_SEQ(TOK)->seq)
+#define H_CAST_BYTES(TOK)  (H_ASSERT_BYTES(TOK)->bytes)
+#define H_CAST_SINT(TOK)   (H_ASSERT_SINT(TOK)->sint)
+#define H_CAST_UINT(TOK)   (H_ASSERT_UINT(TOK)->uint)
 
 // Sequence access...
 
@@ -88,12 +96,11 @@ HParsedToken *h_seq_index_path(const HParsedToken *p, size_t i, ...);
 HParsedToken *h_seq_index_vpath(const HParsedToken *p, size_t i, va_list va);
 
 // Convenience macros combining (nested) index access and h_cast.
-#define H_INDEX(TYP, SEQ, ...) \
-  ((TYP *) h_cast(TT_ ## TYP, H_INDEX_TOKEN(SEQ, __VA_ARGS__)))
-#define H_INDEX_SEQ(SEQ, ...)    h_cast_seq(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
-#define H_INDEX_BYTES(SEQ, ...)  h_cast_bytes(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
-#define H_INDEX_SINT(SEQ, ...)   h_cast_sint(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
-#define H_INDEX_UINT(SEQ, ...)   h_cast_uint(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
+#define H_INDEX(TYP, SEQ, ...)   H_CAST(TYP, H_INDEX_TOKEN(SEQ, __VA_ARGS__))
+#define H_INDEX_SEQ(SEQ, ...)    H_CAST_SEQ(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
+#define H_INDEX_BYTES(SEQ, ...)  H_CAST_BYTES(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
+#define H_INDEX_SINT(SEQ, ...)   H_CAST_SINT(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
+#define H_INDEX_UINT(SEQ, ...)   H_CAST_UINT(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
 #define H_INDEX_TOKEN(SEQ, ...)  h_seq_index_path(SEQ, __VA_ARGS__, -1)
 
 // Standard short-hand to access and cast elements on a sequence token.

@@ -52,7 +52,7 @@ bool validate_message(HParseResult *p) {
 void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
   uint8_t *data = h_arena_malloc(rdata->arena, sizeof(uint8_t)*rdata->used);
   for (size_t i=0; i<rdata->used; ++i)
-    data[i] = h_cast_uint(rdata->elements[i]);
+    data[i] = H_CAST_UINT(rdata->elements[i]);
 
   // Parse RDATA if possible.
   const HParseResult *p = NULL;
@@ -66,7 +66,7 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
 
   // Pack the parsed rdata into rr.
   switch(rr.type) {
-  case 1:  rr.a     = h_cast_uint(p->ast);             break;
+  case 1:  rr.a     = H_CAST_UINT(p->ast);             break;
   case 2:  rr.ns    = *H_CAST(dns_domain_t,   p->ast); break;
   case 3:  rr.md    = *H_CAST(dns_domain_t,   p->ast); break;
   case 4:  rr.md    = *H_CAST(dns_domain_t,   p->ast); break;
@@ -89,18 +89,18 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
 const HParsedToken* act_header(const HParseResult *p) {
   HParsedToken **fields = h_seq_elements(p->ast);
   dns_header_t header_ = {
-    .id     = h_cast_uint(fields[0]),
-    .qr     = h_cast_uint(fields[1]),
-    .opcode = h_cast_uint(fields[2]),
-    .aa     = h_cast_uint(fields[3]),
-    .tc     = h_cast_uint(fields[4]),
-    .rd     = h_cast_uint(fields[5]),
-    .ra     = h_cast_uint(fields[6]),
-    .rcode  = h_cast_uint(fields[7]),
-    .question_count   = h_cast_uint(fields[8]),
-    .answer_count     = h_cast_uint(fields[9]),
-    .authority_count  = h_cast_uint(fields[10]),
-    .additional_count = h_cast_uint(fields[11])
+    .id     = H_CAST_UINT(fields[0]),
+    .qr     = H_CAST_UINT(fields[1]),
+    .opcode = H_CAST_UINT(fields[2]),
+    .aa     = H_CAST_UINT(fields[3]),
+    .tc     = H_CAST_UINT(fields[4]),
+    .rd     = H_CAST_UINT(fields[5]),
+    .ra     = H_CAST_UINT(fields[6]),
+    .rcode  = H_CAST_UINT(fields[7]),
+    .question_count   = H_CAST_UINT(fields[8]),
+    .answer_count     = H_CAST_UINT(fields[9]),
+    .authority_count  = H_CAST_UINT(fields[10]),
+    .additional_count = H_CAST_UINT(fields[11])
   };
 
   dns_header_t *header = H_ALLOC(dns_header_t);
@@ -147,8 +147,8 @@ const HParsedToken* act_question(const HParseResult *p) {
     q->qname.labels[i] = *H_INDEX(dns_label_t, fields[0], i);
   }
 
-  q->qtype  = h_cast_uint(fields[1]);
-  q->qclass = h_cast_uint(fields[2]);
+  q->qtype  = H_CAST_UINT(fields[1]);
+  q->qclass = H_CAST_UINT(fields[2]);
 
   return H_MAKE(dns_question_t, q);
 }

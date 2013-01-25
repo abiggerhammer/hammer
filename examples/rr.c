@@ -31,7 +31,7 @@ const HParsedToken *act_null(const HParseResult *p) {
 const HParsedToken *act_txt(const HParseResult *p) {
   dns_rr_txt_t *txt = H_ALLOC(dns_rr_txt_t);
 
-  const HCountedArray *arr = h_cast_seq(p->ast);
+  const HCountedArray *arr = H_CAST_SEQ(p->ast);
   uint8_t **ret = h_arena_malloc(arr->arena, sizeof(uint8_t*)*arr->used);
   for (size_t i=0; i<arr->used; ++i) {
     size_t len = h_seq_len(arr->elements[i]);
@@ -50,10 +50,10 @@ const HParsedToken *act_txt(const HParseResult *p) {
 const HParsedToken* act_cstr(const HParseResult *p) {
   dns_cstr_t *cs = H_ALLOC(dns_cstr_t);
 
-  const HCountedArray *arr = h_cast_seq(p->ast);
+  const HCountedArray *arr = H_CAST_SEQ(p->ast);
   uint8_t *ret = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->used);
   for (size_t i=0; i<arr->used; ++i)
-    ret[i] = h_cast_uint(arr->elements[i]);
+    ret[i] = H_CAST_UINT(arr->elements[i]);
   assert(ret[arr->used-1] == '\0'); // XXX Is this right?! If so, shouldn't it be a validation?
   *cs = ret;
 
