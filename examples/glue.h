@@ -74,6 +74,9 @@ uint64_t       h_cast_uint (const HParsedToken *p);
 
 // Sequence access...
 
+// Return the length of a sequence.
+size_t h_seq_len(const HParsedToken *p);
+
 // Access a sequence element by index.
 HParsedToken * h_seq_index(const HParsedToken *p, size_t i);
 
