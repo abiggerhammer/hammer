@@ -125,7 +125,7 @@ void * h_cast(HTokenType type, const HParsedToken *p)
   return p->user;
 }
 
-HCountedArray *h_cast_seq (const HParsedToken *p)
+HCountedArray *h_cast_seq(const HParsedToken *p)
 {
   assert(p->token_type == TT_SEQUENCE);
   return p->seq;
@@ -137,13 +137,13 @@ HBytes h_cast_bytes(const HParsedToken *p)
   return p->bytes;
 }
 
-int64_t h_cast_sint (const HParsedToken *p)
+int64_t h_cast_sint(const HParsedToken *p)
 {
   assert(p->token_type == TT_SINT);
   return p->sint;
 }
 
-uint64_t h_cast_uint (const HParsedToken *p)
+uint64_t h_cast_uint(const HParsedToken *p)
 {
   assert(p->token_type == TT_UINT);
   return p->uint;
@@ -163,9 +163,27 @@ HParsedToken *h_seq_index(const HParsedToken *p, size_t i)
   return h_carray_index(p->seq, i);
 }
 
+HCountedArray *h_seq_index_seq(const HParsedToken *p, size_t i)
+{
+  return h_cast_seq(h_seq_index(p, i));
+}
+
+HBytes h_seq_index_bytes(const HParsedToken *p, size_t i)
+{
+  return h_cast_bytes(h_seq_index(p, i));
+}
+
+int64_t h_seq_index_sint(const HParsedToken *p, size_t i)
+{
+  return h_cast_sint(h_seq_index(p, i));
+}
+
+uint64_t h_seq_index_uint(const HParsedToken *p, size_t i)
+{
+  return h_cast_uint(h_seq_index(p, i));
+}
+
 void *h_seq_index_user(HTokenType type, const HParsedToken *p, size_t i)
 {
-  HParsedToken *elem = h_seq_index(p, i);
-  assert(elem->token_type == (HTokenType)type);
-  return elem->user;
+  return h_cast(type, h_seq_index(p, i));
 }
