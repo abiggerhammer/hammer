@@ -20,10 +20,10 @@ bool validate_null(HParseResult *p) {
 const HParsedToken *act_null(const HParseResult *p) {
   dns_rr_null_t *null = H_ALLOC(dns_rr_null_t);
 
-  size_t len = p->ast->seq->used;
+  size_t len = h_seq_len(p->ast);
   uint8_t *buf = h_arena_malloc(p->arena, sizeof(uint8_t)*len);
   for (size_t i=0; i<len; ++i)
-    buf[i] = p->ast->seq->elements[i]->uint;
+    buf[i] = H_FIELD_UINT(i);
 
   return H_MAKE(dns_rr_null_t, null);
 }
@@ -31,16 +31,17 @@ const HParsedToken *act_null(const HParseResult *p) {
 const HParsedToken *act_txt(const HParseResult *p) {
   dns_rr_txt_t *txt = H_ALLOC(dns_rr_txt_t);
 
-  const HCountedArray *arr = p->ast->seq;
+  const HCountedArray *arr = h_cast_seq(p->ast);
   uint8_t **ret = h_arena_malloc(arr->arena, sizeof(uint8_t*)*arr->used);
   for (size_t i=0; i<arr->used; ++i) {
-    uint8_t *tmp = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->elements[i]->seq->used);
-    for (size_t j=0; j<arr->elements[i]->seq->used; ++j)
-      tmp[j] = arr->elements[i]->seq->elements[j]->uint;
+    size_t len = h_seq_len(arr->elements[i]);
+    uint8_t *tmp = h_arena_malloc(arr->arena, sizeof(uint8_t)*len);
+    for (size_t j=0; j<len; ++j)
+      tmp[j] = h_seq_index_uint(arr->elements[i], j);
     ret[i] = tmp;
   }
 
-  txt->count = p->ast->seq->elements[0]->seq->used;
+  txt->count = arr->used;
   txt->txt_data = ret;
 
   return H_MAKE(dns_rr_txt_t, txt);
@@ -49,10 +50,10 @@ const HParsedToken *act_txt(const HParseResult *p) {
 const HParsedToken* act_cstr(const HParseResult *p) {
   dns_cstr_t *cs = H_ALLOC(dns_cstr_t);
 
-  const HCountedArray *arr = p->ast->seq;
+  const HCountedArray *arr = h_cast_seq(p->ast);
   uint8_t *ret = h_arena_malloc(arr->arena, sizeof(uint8_t)*arr->used);
   for (size_t i=0; i<arr->used; ++i)
-    ret[i] = arr->elements[i]->uint;
+    ret[i] = h_cast_uint(arr->elements[i]);
   assert(ret[arr->used-1] == '\0'); // XXX Is this right?! If so, shouldn't it be a validation?
   *cs = ret;
 
@@ -64,11 +65,11 @@ const HParsedToken* act_soa(const HParseResult *p) {
 
   soa->mname   = *H_FIELD(dns_domain_t, 0);
   soa->rname   = *H_FIELD(dns_domain_t, 1);
-  soa->serial  = p->ast->seq->elements[2]->uint;
-  soa->refresh = p->ast->seq->elements[3]->uint;
-  soa->retry   = p->ast->seq->elements[4]->uint;
-  soa->expire  = p->ast->seq->elements[5]->uint;
-  soa->minimum = p->ast->seq->elements[6]->uint;
+  soa->serial  = H_FIELD_UINT(2);
+  soa->refresh = H_FIELD_UINT(3);
+  soa->retry   = H_FIELD_UINT(4);
+  soa->expire  = H_FIELD_UINT(5);
+  soa->minimum = H_FIELD_UINT(6);
 
   return H_MAKE(dns_rr_soa_t, soa);
 }
@@ -76,12 +77,12 @@ const HParsedToken* act_soa(const HParseResult *p) {
 const HParsedToken* act_wks(const HParseResult *p) {
   dns_rr_wks_t *wks = H_ALLOC(dns_rr_wks_t);
 
-  wks->address  = p->ast->seq->elements[0]->uint;
-  wks->protocol = p->ast->seq->elements[1]->uint;
-  wks->len      = p->ast->seq->elements[2]->seq->used;
+  wks->address  = H_FIELD_UINT(0);
+  wks->protocol = H_FIELD_UINT(1);
+  wks->len      = H_FIELD_SEQ(2)->used;
   wks->bit_map  = h_arena_malloc(p->arena, sizeof(uint8_t)*wks->len);
   for (size_t i=0; i<wks->len; ++i)
-    wks->bit_map[i] = p->ast->seq->elements[2]->seq->elements[i]->uint;
+    wks->bit_map[i] = h_seq_index_uint(h_seq_index(p->ast, 2), i);
 
   return H_MAKE(dns_rr_wks_t, wks);
 }
@@ -107,7 +108,7 @@ const HParsedToken* act_minfo(const HParseResult *p) {
 const HParsedToken* act_mx(const HParseResult *p) {
   dns_rr_mx_t *mx = H_ALLOC(dns_rr_mx_t);
 
-  mx->preference = p->ast->seq->elements[0]->uint;
+  mx->preference = H_FIELD_UINT(0);
   mx->exchange   = *H_FIELD(dns_domain_t, 1);
 
   return H_MAKE(dns_rr_mx_t, mx);
