@@ -135,50 +135,26 @@ HParsedToken *h_seq_index(const HParsedToken *p, size_t i)
   return h_carray_index(p->seq, i);
 }
 
-HParsedToken *h_seq_index_path(HParsedToken *p, ...)
+HParsedToken *h_seq_index_path(const HParsedToken *p, size_t i, ...)
 {
   va_list va;
 
-  va_start(va, p);
-  p = h_seq_index_vpath(p, va);
+  va_start(va, i);
+  HParsedToken *ret = h_seq_index_vpath(p, i, va);
   va_end(va);
 
-  return p;
+  return ret;
 }
 
-HParsedToken *h_seq_index_vpath(HParsedToken *p, va_list va)
+HParsedToken *h_seq_index_vpath(const HParsedToken *p, size_t i, va_list va)
 {
-  int i;
+  HParsedToken *ret = h_seq_index(p, i);
+  int j;
 
-  while((i = va_arg(va, int)) >= 0)
-    p = h_seq_index(p, i);
+  while((j = va_arg(va, int)) >= 0)
+    ret = h_seq_index(p, j);
 
-  return p;
-}
-
-HCountedArray *h_seq_index_seq(const HParsedToken *p, size_t i)
-{
-  return h_cast_seq(h_seq_index(p, i));
-}
-
-HBytes h_seq_index_bytes(const HParsedToken *p, size_t i)
-{
-  return h_cast_bytes(h_seq_index(p, i));
-}
-
-int64_t h_seq_index_sint(const HParsedToken *p, size_t i)
-{
-  return h_cast_sint(h_seq_index(p, i));
-}
-
-uint64_t h_seq_index_uint(const HParsedToken *p, size_t i)
-{
-  return h_cast_uint(h_seq_index(p, i));
-}
-
-void *h_seq_index_user(HTokenType type, const HParsedToken *p, size_t i)
-{
-  return h_cast(type, h_seq_index(p, i));
+  return ret;
 }
 
 void h_seq_snoc(HParsedToken *xs, const HParsedToken *x)

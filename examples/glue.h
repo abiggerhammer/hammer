@@ -84,26 +84,24 @@ HParsedToken **h_seq_elements(const HParsedToken *p);
 HParsedToken *h_seq_index(const HParsedToken *p, size_t i);
 
 // Access an element in a nested sequence by a path of indices.
-HParsedToken *h_seq_index_path(HParsedToken *p, ...);
-HParsedToken *h_seq_index_vpath(HParsedToken *p, va_list va);
+HParsedToken *h_seq_index_path(const HParsedToken *p, size_t i, ...);
+HParsedToken *h_seq_index_vpath(const HParsedToken *p, size_t i, va_list va);
 
-// Convenience functions combining index access and h_cast_*.
-HCountedArray *h_seq_index_seq  (const HParsedToken *p, size_t i);
-HBytes         h_seq_index_bytes(const HParsedToken *p, size_t i);
-int64_t        h_seq_index_sint (const HParsedToken *p, size_t i);
-uint64_t       h_seq_index_uint (const HParsedToken *p, size_t i);
-void *         h_seq_index_user (HTokenType type, const HParsedToken *p, size_t i);
-
-// Standard short-hand to access and cast a user-type sequence element.
+// Convenience macros combining (nested) index access and h_cast.
 #define H_INDEX(TYP, SEQ, ...) \
-  ((TYP *) h_cast(TT_ ## TYP, h_seq_index_path(SEQ, __VA_ARGS__, -1)))
+  ((TYP *) h_cast(TT_ ## TYP, H_INDEX_TOKEN(SEQ, __VA_ARGS__)))
+#define H_INDEX_SEQ(SEQ, ...)    h_cast_seq(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
+#define H_INDEX_BYTES(SEQ, ...)  h_cast_bytes(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
+#define H_INDEX_SINT(SEQ, ...)   h_cast_sint(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
+#define H_INDEX_UINT(SEQ, ...)   h_cast_uint(H_INDEX_TOKEN(SEQ, __VA_ARGS__))
+#define H_INDEX_TOKEN(SEQ, ...)  h_seq_index_path(SEQ, __VA_ARGS__, -1)
 
 // Standard short-hand to access and cast elements on a sequence token.
 #define H_FIELD(TYP, ...)  H_INDEX(TYP, p->ast, __VA_ARGS__)
-#define H_FIELD_SEQ(IDX)   h_seq_index_seq(p->ast, IDX)
-#define H_FIELD_BYTES(IDX) h_seq_index_bytes(p->ast, IDX)
-#define H_FIELD_SINT(IDX)  h_seq_index_sint(p->ast, IDX)
-#define H_FIELD_UINT(IDX)  h_seq_index_uint(p->ast, IDX)
+#define H_FIELD_SEQ(...)   H_INDEX_SEQ(p->ast, __VA_ARGS__)
+#define H_FIELD_BYTES(...) H_INDEX_BYTES(p->ast, __VA_ARGS__)
+#define H_FIELD_SINT(...)  H_INDEX_SINT(p->ast, __VA_ARGS__)
+#define H_FIELD_UINT(...)  H_INDEX_UINT(p->ast, __VA_ARGS__)
 
 // Lower-level helper for h_seq_index.
 HParsedToken *h_carray_index(const HCountedArray *a, size_t i); // XXX -> internal

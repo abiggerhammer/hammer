@@ -37,7 +37,7 @@ const HParsedToken *act_txt(const HParseResult *p) {
     size_t len = h_seq_len(arr->elements[i]);
     uint8_t *tmp = h_arena_malloc(arr->arena, sizeof(uint8_t)*len);
     for (size_t j=0; j<len; ++j)
-      tmp[j] = h_seq_index_uint(arr->elements[i], j);
+      tmp[j] = H_INDEX_UINT(arr->elements[i], j);
     ret[i] = tmp;
   }
 
@@ -82,7 +82,7 @@ const HParsedToken* act_wks(const HParseResult *p) {
   wks->len      = H_FIELD_SEQ(2)->used;
   wks->bit_map  = h_arena_malloc(p->arena, sizeof(uint8_t)*wks->len);
   for (size_t i=0; i<wks->len; ++i)
-    wks->bit_map[i] = h_seq_index_uint(h_seq_index(p->ast, 2), i);
+    wks->bit_map[i] = H_INDEX_UINT(p->ast, 2, i);
 
   return H_MAKE(dns_rr_wks_t, wks);
 }
