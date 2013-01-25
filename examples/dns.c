@@ -181,7 +181,7 @@ const HParsedToken* act_message(const HParseResult *p) {
 
   // Copy authority RRs into message struct.
   struct dns_rr *authority = h_arena_malloc(p->arena,
-					  sizeof(struct dns_rr)*(header->authority_count));
+					    sizeof(struct dns_rr)*(header->authority_count));
   for (size_t i=0, j=header->answer_count; i<header->authority_count; ++i, ++j) {
     authority[i] = *H_INDEX(dns_rr_t, rrs, j);
   }
