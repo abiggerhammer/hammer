@@ -97,9 +97,7 @@ HParsedToken *h_carray_index(const HCountedArray *a, size_t i); // XXX -> intern
 // Sequence modification...
 
 // Add elements to a sequence.
-void h_seq_cons(const HParsedToken *x, HParsedToken *xs);     // prepend one
 void h_seq_snoc(HParsedToken *xs, const HParsedToken *x);     // append one
-void h_seq_prepend(const HParsedToken *xs, HParsedToken *ys); // prepend many
 void h_seq_append(HParsedToken *xs, const HParsedToken *ys);  // append many
 
 // XXX TODO: Remove elements from a sequence.
