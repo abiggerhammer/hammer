@@ -27,48 +27,6 @@ const HParsedToken *h_act_index(int i, const HParseResult *p)
         return tok->seq->elements[i];
 }
 
-void h_seq_snoc(HParsedToken *xs, const HParsedToken *x)
-{
-  assert(xs != NULL);
-  assert(xs->token_type == TT_SEQUENCE);
-
-  h_carray_append(xs->seq, (void *)x);
-}
-
-void h_seq_append(HParsedToken *xs, const HParsedToken *ys)
-{
-  assert(xs != NULL);
-  assert(xs->token_type == TT_SEQUENCE);
-  assert(ys != NULL);
-  assert(ys->token_type == TT_SEQUENCE);
-
-  for(size_t i; i<ys->seq->used; i++)
-	h_carray_append(xs->seq, ys->seq->elements[i]);
-}
-
-// Flatten nested sequences. Always returns a sequence.
-// If input element is not a sequence, returns it as a singleton sequence.
-const HParsedToken *h_seq_flatten(HArena *arena, const HParsedToken *p)
-{
-  assert(p != NULL);
-
-  HParsedToken *ret = h_make_seq(arena);
-  switch(p->token_type) {
-  case TT_SEQUENCE:
-    // Flatten and append all.
-    for(size_t i; i<p->seq->used; i++) {
-	  h_seq_append(ret, h_seq_flatten(arena, h_seq_index(p, i)));
-	}
-	break;
-  default:
-    // Make singleton sequence.
-    h_seq_snoc(ret, p);
-	break;
-  }
-
-  return ret;
-}
-
 // Action version of h_seq_flatten.
 const HParsedToken *h_act_flatten(const HParseResult *p) {
   return h_seq_flatten(p->arena, p->ast);
@@ -186,4 +144,46 @@ uint64_t h_seq_index_uint(const HParsedToken *p, size_t i)
 void *h_seq_index_user(HTokenType type, const HParsedToken *p, size_t i)
 {
   return h_cast(type, h_seq_index(p, i));
+}
+
+void h_seq_snoc(HParsedToken *xs, const HParsedToken *x)
+{
+  assert(xs != NULL);
+  assert(xs->token_type == TT_SEQUENCE);
+
+  h_carray_append(xs->seq, (HParsedToken *)x);
+}
+
+void h_seq_append(HParsedToken *xs, const HParsedToken *ys)
+{
+  assert(xs != NULL);
+  assert(xs->token_type == TT_SEQUENCE);
+  assert(ys != NULL);
+  assert(ys->token_type == TT_SEQUENCE);
+
+  for(size_t i; i<ys->seq->used; i++)
+    h_carray_append(xs->seq, ys->seq->elements[i]);
+}
+
+// Flatten nested sequences. Always returns a sequence.
+// If input element is not a sequence, returns it as a singleton sequence.
+const HParsedToken *h_seq_flatten(HArena *arena, const HParsedToken *p)
+{
+  assert(p != NULL);
+
+  HParsedToken *ret = h_make_seq(arena);
+  switch(p->token_type) {
+  case TT_SEQUENCE:
+    // Flatten and append all.
+    for(size_t i; i<p->seq->used; i++) {
+      h_seq_append(ret, h_seq_flatten(arena, h_seq_index(p, i)));
+    }
+    break;
+  default:
+    // Make singleton sequence.
+    h_seq_snoc(ret, p);
+    break;
+  }
+
+  return ret;
 }
