@@ -66,7 +66,7 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
 
   // Pack the parsed rdata into rr.
   switch(rr.type) {
-  case 1:  rr.a     = p->ast->seq->elements[0]->uint;  break;
+  case 1:  rr.a     = h_cast_uint(p->ast);             break;
   case 2:  rr.ns    = *(dns_domain_t   *)p->ast->user; break;
   case 3:  rr.md    = *(dns_domain_t   *)p->ast->user; break;
   case 4:  rr.md    = *(dns_domain_t   *)p->ast->user; break;
