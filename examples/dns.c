@@ -87,20 +87,20 @@ void set_rdata(struct dns_rr rr, HCountedArray *rdata) {
 }
 
 const HParsedToken* act_header(const HParseResult *p) {
-  HParsedToken **fields = p->ast->seq->elements;
+  HParsedToken **fields = h_seq_elements(p->ast);
   dns_header_t header_ = {
-    .id     = fields[0]->uint,
-    .qr     = fields[1]->uint,
-    .opcode = fields[2]->uint,
-    .aa     = fields[3]->uint,
-    .tc     = fields[4]->uint,
-    .rd     = fields[5]->uint,
-    .ra     = fields[6]->uint,
-    .rcode  = fields[7]->uint,
-    .question_count   = fields[8]->uint,
-    .answer_count     = fields[9]->uint,
-    .authority_count  = fields[10]->uint,
-    .additional_count = fields[11]->uint
+    .id     = h_cast_uint(fields[0]),
+    .qr     = h_cast_uint(fields[1]),
+    .opcode = h_cast_uint(fields[2]),
+    .aa     = h_cast_uint(fields[3]),
+    .tc     = h_cast_uint(fields[4]),
+    .rd     = h_cast_uint(fields[5]),
+    .ra     = h_cast_uint(fields[6]),
+    .rcode  = h_cast_uint(fields[7]),
+    .question_count   = h_cast_uint(fields[8]),
+    .answer_count     = h_cast_uint(fields[9]),
+    .authority_count  = h_cast_uint(fields[10]),
+    .additional_count = h_cast_uint(fields[11])
   };
 
   dns_header_t *header = H_ALLOC(dns_header_t);
@@ -112,10 +112,10 @@ const HParsedToken* act_header(const HParseResult *p) {
 const HParsedToken* act_label(const HParseResult *p) {
   dns_label_t *r = H_ALLOC(dns_label_t);
 
-  r->len = p->ast->seq->used;
+  r->len = h_seq_len(p->ast);
   r->label = h_arena_malloc(p->arena, r->len + 1);
   for (size_t i=0; i<r->len; ++i)
-    r->label[i] = p->ast->seq->elements[i]->uint;
+    r->label[i] = H_FIELD_UINT(i);
   r->label[r->len] = 0;
 
   return H_MAKE(dns_label_t, r);
@@ -125,30 +125,30 @@ const HParsedToken* act_rr(const HParseResult *p) {
   dns_rr_t *rr = H_ALLOC(dns_rr_t);
 
   rr->name     = *H_FIELD(dns_domain_t, 0);
-  rr->type     = p->ast->seq->elements[1]->uint;
-  rr->class    = p->ast->seq->elements[2]->uint;
-  rr->ttl      = p->ast->seq->elements[3]->uint;
-  rr->rdlength = p->ast->seq->elements[4]->seq->used;
+  rr->type     = H_FIELD_UINT(1);
+  rr->class    = H_FIELD_UINT(2);
+  rr->ttl      = H_FIELD_UINT(3);
+  rr->rdlength = H_FIELD_SEQ(4)->used;
 
   // Parse and pack RDATA.
-  set_rdata(*rr, p->ast->seq->elements[4]->seq);	   
+  set_rdata(*rr, H_FIELD_SEQ(4));
 
   return H_MAKE(dns_rr_t, rr);
 }
 
 const HParsedToken* act_question(const HParseResult *p) {
   dns_question_t *q = H_ALLOC(dns_question_t);
-  HParsedToken **fields = p->ast->seq->elements;
+  HParsedToken **fields = h_seq_elements(p->ast);
 
   // QNAME is a sequence of labels. Pack them into an array.
-  q->qname.qlen   = fields[0]->seq->used;
+  q->qname.qlen   = h_seq_len(fields[0]);
   q->qname.labels = h_arena_malloc(p->arena, sizeof(dns_label_t)*q->qname.qlen);
-  for(size_t i=0; i<fields[0]->seq->used; i++) {
+  for(size_t i=0; i<q->qname.qlen; i++) {
     q->qname.labels[i] = *H_INDEX(dns_label_t, fields[0], i);
   }
 
-  q->qtype  = fields[1]->uint;
-  q->qclass = fields[2]->uint;
+  q->qtype  = h_cast_uint(fields[1]);
+  q->qclass = h_cast_uint(fields[2]);
 
   return H_MAKE(dns_question_t, q);
 }
@@ -162,7 +162,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   msg->header = *header;
 
   // Copy questions into message struct.
-  HParsedToken *qs = p->ast->seq->elements[1];
+  HParsedToken *qs = h_seq_index(p->ast, 1);
   struct dns_question *questions = h_arena_malloc(p->arena,
 						  sizeof(struct dns_question)*(header->question_count));
   for (size_t i=0; i<header->question_count; ++i) {
@@ -171,7 +171,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   msg->questions = questions;
 
   // Copy answer RRs into message struct.
-  HParsedToken *rrs = p->ast->seq->elements[2];
+  HParsedToken *rrs = h_seq_index(p->ast, 2);
   struct dns_rr *answers = h_arena_malloc(p->arena,
 					  sizeof(struct dns_rr)*(header->answer_count));
   for (size_t i=0; i<header->answer_count; ++i) {
