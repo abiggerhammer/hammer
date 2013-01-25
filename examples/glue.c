@@ -121,6 +121,13 @@ size_t h_seq_len(const HParsedToken *p)
   return p->seq->used;
 }
 
+HParsedToken **h_seq_elements(const HParsedToken *p)
+{
+  assert(p != NULL);
+  assert(p->token_type == TT_SEQUENCE);
+  return p->seq->elements;
+}
+
 HParsedToken *h_seq_index(const HParsedToken *p, size_t i)
 {
   assert(p != NULL);
