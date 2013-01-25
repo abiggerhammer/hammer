@@ -83,6 +83,10 @@ HParsedToken **h_seq_elements(const HParsedToken *p);
 // Access a sequence element by index.
 HParsedToken *h_seq_index(const HParsedToken *p, size_t i);
 
+// Access an element in a nested sequence by a path of indices.
+HParsedToken *h_seq_index_path(HParsedToken *p, ...);
+HParsedToken *h_seq_index_vpath(HParsedToken *p, va_list va);
+
 // Convenience functions combining index access and h_cast_*.
 HCountedArray *h_seq_index_seq  (const HParsedToken *p, size_t i);
 HBytes         h_seq_index_bytes(const HParsedToken *p, size_t i);
@@ -91,11 +95,11 @@ uint64_t       h_seq_index_uint (const HParsedToken *p, size_t i);
 void *         h_seq_index_user (HTokenType type, const HParsedToken *p, size_t i);
 
 // Standard short-hand to access and cast a user-type sequence element.
-#define H_INDEX(TYP, SEQ, IDX) \
-  ((TYP *) h_seq_index_user(TT_ ## TYP, SEQ, IDX))
+#define H_INDEX(TYP, SEQ, ...) \
+  ((TYP *) h_cast(TT_ ## TYP, h_seq_index_path(SEQ, __VA_ARGS__, -1)))
 
 // Standard short-hand to access and cast elements on a sequence token.
-#define H_FIELD(TYP, IDX)  H_INDEX(TYP, p->ast, IDX)
+#define H_FIELD(TYP, ...)  H_INDEX(TYP, p->ast, __VA_ARGS__)
 #define H_FIELD_SEQ(IDX)   h_seq_index_seq(p->ast, IDX)
 #define H_FIELD_BYTES(IDX) h_seq_index_bytes(p->ast, IDX)
 #define H_FIELD_SINT(IDX)  h_seq_index_sint(p->ast, IDX)

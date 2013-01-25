@@ -135,6 +135,27 @@ HParsedToken *h_seq_index(const HParsedToken *p, size_t i)
   return h_carray_index(p->seq, i);
 }
 
+HParsedToken *h_seq_index_path(HParsedToken *p, ...)
+{
+  va_list va;
+
+  va_start(va, p);
+  p = h_seq_index_vpath(p, va);
+  va_end(va);
+
+  return p;
+}
+
+HParsedToken *h_seq_index_vpath(HParsedToken *p, va_list va)
+{
+  int i;
+
+  while((i = va_arg(va, int)) >= 0)
+    p = h_seq_index(p, i);
+
+  return p;
+}
+
 HCountedArray *h_seq_index_seq(const HParsedToken *p, size_t i)
 {
   return h_cast_seq(h_seq_index(p, i));
