@@ -57,7 +57,7 @@ const HParsedToken *h_seq_flatten(HArena *arena, const HParsedToken *p)
   case TT_SEQUENCE:
     // Flatten and append all.
     for(size_t i; i<p->seq->used; i++) {
-	  h_seq_append(ret, h_seq_flatten(arena, h_seq_index_token(p, i)));
+	  h_seq_append(ret, h_seq_flatten(arena, h_seq_index(p, i)));
 	}
 	break;
   default:
@@ -126,16 +126,16 @@ HParsedToken *h_carray_index(const HCountedArray *a, size_t i)
   return a->elements[i];
 }
 
-HParsedToken *h_seq_index_token(const HParsedToken *p, size_t i)
+HParsedToken *h_seq_index(const HParsedToken *p, size_t i)
 {
   assert(p != NULL);
   assert(p->token_type == TT_SEQUENCE);
   return h_carray_index(p->seq, i);
 }
 
-void *h_seq_index(HTokenType type, const HParsedToken *p, size_t i)
+void *h_seq_index_user(HTokenType type, const HParsedToken *p, size_t i)
 {
-  HParsedToken *elem = h_seq_index_token(p, i);
+  HParsedToken *elem = h_seq_index(p, i);
   assert(elem->token_type == (HTokenType)type);
   return elem->user;
 }

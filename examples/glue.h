@@ -44,8 +44,7 @@ const HParsedToken *h_act_flatten(const HParseResult *p);
 //
 
 // Standard short-hand for arena-allocating a variable in a semantic action.
-#define H_ALLOC(TYP) \
-  ((TYP *) h_arena_malloc(p->arena, sizeof(TYP)))
+#define H_ALLOC(TYP)  ((TYP *) h_arena_malloc(p->arena, sizeof(TYP)))
 
 // Token constructors...
 
@@ -62,27 +61,48 @@ HParsedToken *h_make_uint(HArena *arena, uint64_t val);
 #define H_MAKE_SINT(VAL)  h_make_sint(p->arena, VAL)
 #define H_MAKE_UINT(VAL)  h_make_uint(p->arena, VAL)
 
+// Extract type-specific value back from HParsedTokens...
+
+void *         h_cast      (HTokenType type, const HParsedToken *p);
+HCountedArray *h_cast_seq  (const HParsedToken *p);
+HBytes         h_cast_bytes(const HParsedToken *p);
+int64_t        h_cast_sint (const HParsedToken *p);
+uint64_t       h_cast_uint (const HParsedToken *p);
+
+// Standard short-hand to cast to a user type.
+#define H_CAST(TYP, TOK)  ((TYP *) h_cast(TT_ ## TYP, TOK))
+
 // Sequence access...
 
 // Access a sequence element by index.
-HParsedToken *h_seq_index_token(const HParsedToken *p, size_t i);
+HParsedToken * h_seq_index(const HParsedToken *p, size_t i);
 
-// Access a user-type element of a sequence by index.
-#define H_SEQ_INDEX(TYP, SEQ, IDX) \
-  ((TYP *) h_seq_index(TT_ ## TYP, SEQ, IDX))
+// Convenience functions combining index access and h_cast_*.
+HCountedArray *h_seq_index_seq  (const HParsedToken *p, size_t i);
+HBytes         h_seq_index_bytes(const HParsedToken *p, size_t i);
+int64_t        h_seq_index_sint (const HParsedToken *p, size_t i);
+uint64_t       h_seq_index_uint (const HParsedToken *p, size_t i);
+void *         h_seq_index_user (HTokenType type, const HParsedToken *p, size_t i);
 
-// Standard short-hand to access a user-type field on a sequence token.
-#define H_FIELD(TYP, IDX)  H_SEQ_INDEX(TYP, p->ast, IDX)
+// Standard short-hand to access and cast a user-type sequence element.
+#define H_INDEX(TYP, SEQ, IDX) \
+  ((TYP *) h_seq_index_user(TT_ ## TYP, SEQ, IDX))
 
-// Lower-level helper for H_SEQ_INDEX.
-void *h_seq_index(HTokenType type, const HParsedToken *p, size_t i);
+// Standard short-hand to access and cast a user-type field on a sequence token.
+#define H_FIELD(TYP, IDX)  H_INDEX(TYP, p->ast, IDX)
+
+// Lower-level helper for h_seq_index.
 HParsedToken *h_carray_index(const HCountedArray *a, size_t i); // XXX -> internal
 
 // Sequence modification...
 
-// Append elements to a sequence.
+// Add elements to a sequence.
+void h_seq_cons(const HParsedToken *x, HParsedToken *xs);     // prepend one
 void h_seq_snoc(HParsedToken *xs, const HParsedToken *x);     // append one
+void h_seq_prepend(const HParsedToken *xs, HParsedToken *ys); // prepend many
 void h_seq_append(HParsedToken *xs, const HParsedToken *ys);  // append many
+
+// XXX TODO: Remove elements from a sequence.
 
 // Flatten nested sequences into one.
 const HParsedToken *h_seq_flatten(HArena *arena, const HParsedToken *p);

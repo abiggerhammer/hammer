@@ -143,7 +143,7 @@ const HParsedToken* act_question(const HParseResult *p) {
   q->qname.qlen   = fields[0]->seq->used;
   q->qname.labels = h_arena_malloc(p->arena, sizeof(dns_label_t)*q->qname.qlen);
   for(size_t i=0; i<fields[0]->seq->used; i++) {
-    q->qname.labels[i] = *H_SEQ_INDEX(dns_label_t, fields[0], i);
+    q->qname.labels[i] = *H_INDEX(dns_label_t, fields[0], i);
   }
 
   q->qtype  = fields[1]->uint;
@@ -165,7 +165,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_question *questions = h_arena_malloc(p->arena,
 						  sizeof(struct dns_question)*(header->question_count));
   for (size_t i=0; i<header->question_count; ++i) {
-    questions[i] = *H_SEQ_INDEX(dns_question_t, qs, i);
+    questions[i] = *H_INDEX(dns_question_t, qs, i);
   }
   msg->questions = questions;
 
@@ -174,7 +174,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_rr *answers = h_arena_malloc(p->arena,
 					  sizeof(struct dns_rr)*(header->answer_count));
   for (size_t i=0; i<header->answer_count; ++i) {
-    answers[i] = *H_SEQ_INDEX(dns_rr_t, rrs, i);
+    answers[i] = *H_INDEX(dns_rr_t, rrs, i);
   }
   msg->answers = answers;
 
@@ -182,7 +182,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_rr *authority = h_arena_malloc(p->arena,
 					  sizeof(struct dns_rr)*(header->authority_count));
   for (size_t i=0, j=header->answer_count; i<header->authority_count; ++i, ++j) {
-    authority[i] = *H_SEQ_INDEX(dns_rr_t, rrs, j);
+    authority[i] = *H_INDEX(dns_rr_t, rrs, j);
   }
   msg->authority = authority;
 
@@ -190,7 +190,7 @@ const HParsedToken* act_message(const HParseResult *p) {
   struct dns_rr *additional = h_arena_malloc(p->arena,
 					     sizeof(struct dns_rr)*(header->additional_count));
   for (size_t i=0, j=header->answer_count+header->authority_count; i<header->additional_count; ++i, ++j) {
-    additional[i] = *H_SEQ_INDEX(dns_rr_t, rrs, j);
+    additional[i] = *H_INDEX(dns_rr_t, rrs, j);
   }
   msg->additional = additional;
 
