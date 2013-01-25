@@ -119,6 +119,36 @@ HParsedToken *h_make_uint(HArena *arena, uint64_t val)
   return ret;
 }
 
+void * h_cast(HTokenType type, const HParsedToken *p)
+{
+  assert(p->token_type == type);
+  return p->user;
+}
+
+HCountedArray *h_cast_seq (const HParsedToken *p)
+{
+  assert(p->token_type == TT_SEQUENCE);
+  return p->seq;
+}
+
+HBytes h_cast_bytes(const HParsedToken *p)
+{
+  assert(p->token_type == TT_BYTES);
+  return p->bytes;
+}
+
+int64_t h_cast_sint (const HParsedToken *p)
+{
+  assert(p->token_type == TT_SINT);
+  return p->sint;
+}
+
+uint64_t h_cast_uint (const HParsedToken *p)
+{
+  assert(p->token_type == TT_UINT);
+  return p->uint;
+}
+
 // XXX -> internal
 HParsedToken *h_carray_index(const HCountedArray *a, size_t i)
 {
