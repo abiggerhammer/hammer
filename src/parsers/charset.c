@@ -1,24 +1,6 @@
 #include <string.h>
+#include "../internal.h"
 #include "parser_internal.h"
-
-typedef unsigned int *HCharset;
-
-static inline HCharset new_charset(HAllocator* mm__) {
-  HCharset cs = h_new(unsigned int, 256 / sizeof(unsigned int));
-  memset(cs, 0, 256);
-  return cs;
-}
-
-static inline int charset_isset(HCharset cs, uint8_t pos) {
-  return !!(cs[pos / sizeof(*cs)] & (1 << (pos % sizeof(*cs))));
-}
-
-static inline void charset_set(HCharset cs, uint8_t pos, int val) {
-  cs[pos / sizeof(*cs)] =
-    val
-    ? cs[pos / sizeof(*cs)] |  (1 << (pos % sizeof(*cs)))
-    : cs[pos / sizeof(*cs)] & ~(1 << (pos % sizeof(*cs)));
-}
 
 static HParseResult* parse_charset(void *env, HParseState *state) {
   uint8_t in = h_read_bits(&state->input_stream, 8, false);
@@ -32,10 +14,19 @@ static HParseResult* parse_charset(void *env, HParseState *state) {
     return NULL;
 }
 
+static HCFChoice* desugar_charset(HAllocator *mm__, void *env) {
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  ret->type = HCF_CHARSET;
+  ret->charset = (HCharset)env;
+  ret->action = NULL;
+  return ret;
+}
+
 static const HParserVtable charset_vt = {
   .parse = parse_charset,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .desugar = desugar_charset,
 };
 
 const HParser* h_ch_range(const uint8_t lower, const uint8_t upper) {

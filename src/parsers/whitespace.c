@@ -14,6 +14,31 @@ static HParseResult* parse_whitespace(void* env, HParseState *state) {
   return h_do_parse((HParser*)env, state);
 }
 
+static HCFChoice* desugar_whitespace(HAllocator *mm__, void *env) {
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  ret->type = HCF_CHOICE;
+  ret->seq = h_new(HCFSequence*, 3);
+  HCFSequence *nonempty = h_new(HCFSequence, 1);
+  nonempty->items = h_new(HCFChoice*, 3);
+  nonempty->items[0] = h_new(HCFChoice, 1);
+  nonempty->items[0]->type = HCF_CHARSET;
+  nonempty->items[0]->charset = new_charset(mm__);
+  charset_set(nonempty->items[0]->charset, '\t', 1);
+  charset_set(nonempty->items[0]->charset, ' ', 1);
+  charset_set(nonempty->items[0]->charset, '\n', 1);
+  charset_set(nonempty->items[0]->charset, '\r', 1);
+  nonempty->items[1] = ret; // yay circular pointer!
+  nonempty->items[2] = NULL;
+  ret->seq[0] = nonempty;
+  HCFSequence *empty = h_new(HCFSequence, 1);
+  empty->items = h_new(HCFChoice*, 1);
+  empty->items[0] = NULL;
+  ret->seq[1] = empty;
+  ret->seq[2] = NULL;
+  ret->action = NULL;
+  return ret;
+}
+
 static bool ws_isValidRegular(void *env) {
   HParser *p = (HParser*)env;
   return p->vtable->isValidRegular(p->env);
@@ -28,6 +53,7 @@ static const HParserVtable whitespace_vt = {
   .parse = parse_whitespace,
   .isValidRegular = ws_isValidRegular,
   .isValidCF = ws_isValidCF,
+  .desugar = desugar_whitespace,
 };
 
 const HParser* h_whitespace(const HParser* p) {

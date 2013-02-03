@@ -39,10 +39,26 @@ static bool choice_isValidCF(void *env) {
   return true;
 }
 
+static HCFChoice* desugar_choice(HAllocator *mm__, void *env) {
+  HSequence *s = (HSequence*)env;
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  ret->type = HCF_CHOICE;
+  ret->seq = h_new(HCFSequence*, 1+s->len);
+  for (size_t i=0; i<s->len; ++i) {
+    ret->seq[i] = h_new(HCFSequence, 1);
+    ret->seq[i]->items = h_new(HCFChoice*, 2);
+    ret->seq[i]->items[0] = s->p_array[i]->vtable->desugar(mm__, s->p_array[i]->env);
+    ret->seq[i]->items[1] = NULL;
+  }
+  ret->seq[s->len] = NULL;
+  return ret;
+}
+
 static const HParserVtable choice_vt = {
   .parse = parse_choice,
   .isValidRegular = choice_isValidRegular,
   .isValidCF = choice_isValidCF,
+  .desugar = desugar_choice,
 };
 
 const HParser* h_choice(const HParser* p, ...) {

@@ -8,10 +8,21 @@ static HParseResult* parse_epsilon(void* env, HParseState* state) {
   return res;
 }
 
+static HCFChoice* desugar_epsilon(HAllocator *mm__, void *env) {
+  static HCFSequence res_seq = {NULL};
+  static HCFChoice res_ch = {
+    .type = HCF_CHOICE,
+    .seq = &res_seq
+  };
+
+  return &res_ch;
+}
+
 static const HParserVtable epsilon_vt = {
   .parse = parse_epsilon,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .desugar = desugar_epsilon,
 };
 
 static const HParser epsilon_p = {

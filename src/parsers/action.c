@@ -19,6 +19,21 @@ static HParseResult* parse_action(void *env, HParseState *state) {
     return NULL;
 }
 
+static HCFChoice* desugar_action(HAllocator *mm__, void *env) {
+  HParseAction *a = (HParseAction*)env;
+  HCFSequence *seq = h_new(HCFSequence, 1);
+  seq->items = h_new(HCFChoice*, 2);
+  seq->items[0] = a->p->vtable->desugar(mm__, a->p->env);
+  seq->items[1] = NULL;
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  ret->type = HCF_CHOICE;
+  ret->seq = h_new(HCFSequence*, 2);
+  ret->seq[0] = seq;
+  ret->seq[1] = NULL;
+  ret->action = a->action;
+  return ret;
+}
+
 static bool action_isValidRegular(void *env) {
   HParseAction *a = (HParseAction*)env;
   return a->p->vtable->isValidRegular(a->p->env);
@@ -33,6 +48,7 @@ static const HParserVtable action_vt = {
   .parse = parse_action,
   .isValidRegular = action_isValidRegular,
   .isValidCF = action_isValidCF,
+  .desugar = desugar_action,
 };
 
 const HParser* h_action(const HParser* p, const HAction a) {

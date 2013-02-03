@@ -23,5 +23,7 @@ static inline size_t token_length(HParseResult *pr) {
   }
 }
 
+static inline bool h_true(void *env) { return true; }
+static inline bool h_false(void *env) { return false; }
 
 #endif // HAMMER_PARSE_INTERNAL__H

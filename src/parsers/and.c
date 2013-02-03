@@ -9,6 +9,11 @@ static HParseResult *parse_and(void* env, HParseState* state) {
   return NULL;
 }
 
+static const HCFChoice* desugar_and(HAllocator *mm__, void *env) {
+  assert_message(0, "Not context-free, can't be desugared");
+  return NULL;
+}
+
 static const HParserVtable and_vt = {
   .parse = parse_and,
   .isValidRegular = h_false, /* TODO: strictly speaking this should be regular,
@@ -16,6 +21,7 @@ static const HParserVtable and_vt = {
 				to get right, so we're leaving it for a future
 				revision. --mlp, 18/12/12 */
   .isValidCF = h_false,      /* despite TODO above, this remains false. */
+  .desugar = desugar_and,
 };
 
 

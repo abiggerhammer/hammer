@@ -16,10 +16,36 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
   return make_result(state, result);
 }
 
+static HCFChoice* desugar_bits(HAllocator *mm__, void *env) {
+  struct bits_env *bits = (struct bits_env*)env;
+  if (0 != bits->length % 8)
+    return NULL; // can't handle non-byte-aligned for now
+  HCFSequence *seq = h_new(HCFSequence, 1);
+  seq->items = h_new(HCFChoice*, bits->length/8);
+  HCharset match_all = new_charset(mm__);
+  HCFChoice *match_all_choice = h_new(HCFChoice, 1);
+  match_all_choice->type = HCF_CHARSET;
+  match_all_choice->charset = match_all;
+  match_all_choice->action = NULL;
+  for (int i = 0; i < 256; i++)
+    charset_set(match_all, i, 1);
+  for (size_t i=0; i<bits->length/8; ++i) {
+    seq->items[i] = match_all_choice;
+  }
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  ret->type = HCF_CHOICE;
+  ret->seq = h_new(HCFSequence*, 2);
+  ret->seq[0] = seq;
+  ret->seq[1] = NULL;
+  ret->action = NULL;
+  return ret;
+}
+
 static const HParserVtable bits_vt = {
   .parse = parse_bits,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .desugar = desugar_bits,
 };
 const HParser* h_bits(size_t len, bool sign) {
   return h_bits__m(&system_allocator, len, sign);

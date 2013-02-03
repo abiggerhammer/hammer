@@ -10,10 +10,18 @@ static HParseResult* parse_end(void *env, HParseState *state) {
   }
 }
 
+static const HCFChoice* desugar_end(HAllocator *mm__, void *env) {
+  static HCFChoice ret = {
+    .type = HCF_END
+  };
+  return &ret;
+}
+
 static const HParserVtable end_vt = {
   .parse = parse_end,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .desugar = desugar_end,
 };
 
 const HParser* h_end_p() {

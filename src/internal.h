@@ -18,6 +18,7 @@
 #ifndef HAMMER_INTERNAL__H
 #define HAMMER_INTERNAL__H
 #include <err.h>
+#include <string.h>
 #include "hammer.h"
 
 #ifdef NDEBUG
@@ -69,6 +70,25 @@ typedef struct HSlist_ {
   HSlistNode *head;
   struct HArena_ *arena;
 } HSlist;
+
+typedef unsigned int *HCharset;
+
+static inline HCharset new_charset(HAllocator* mm__) {
+  HCharset cs = h_new(unsigned int, 256 / sizeof(unsigned int));
+  memset(cs, 0, 256);
+  return cs;
+}
+
+static inline int charset_isset(HCharset cs, uint8_t pos) {
+  return !!(cs[pos / sizeof(*cs)] & (1 << (pos % sizeof(*cs))));
+}
+
+static inline void charset_set(HCharset cs, uint8_t pos, int val) {
+  cs[pos / sizeof(*cs)] =
+    val
+    ? cs[pos / sizeof(*cs)] |  (1 << (pos % sizeof(*cs)))
+    : cs[pos / sizeof(*cs)] & ~(1 << (pos % sizeof(*cs)));
+}
 
 typedef unsigned int HHashValue;
 typedef HHashValue (*HHashFunc)(const void* key);
@@ -221,6 +241,34 @@ void h_hashtable_put(HHashTable* ht, void* key, void* value);
 int   h_hashtable_present(HHashTable* ht, void* key);
 void  h_hashtable_del(HHashTable* ht, void* key);
 void  h_hashtable_free(HHashTable* ht);
+
+typedef struct HCFSequence_ HCFSequence;
+
+typedef struct HCFChoice_ {
+  enum {
+    HCF_END,
+    HCF_CHOICE,
+    HCF_CHARSET,
+    HCF_CHAR
+  } type;
+  union {
+    HCharset charset;
+    HCFSequence** seq;
+    uint8_t chr;
+  };
+  HAction action;
+} HCFChoice;
+
+struct HCFSequence_ {
+  HCFChoice **items; // last one is NULL
+};
+
+struct HParserVtable_ {
+  HParseResult* (*parse)(void *env, HParseState *state);
+  bool (*isValidRegular)(void *env);
+  bool (*isValidCF)(void *env);
+  HCFChoice* (*desugar)(HAllocator *mm__, void *env);
+};
 
 #if 0
 #include <stdlib.h>

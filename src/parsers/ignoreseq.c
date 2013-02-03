@@ -26,6 +26,23 @@ static HParseResult* parse_ignoreseq(void* env, HParseState *state) {
   return res;
 }
 
+static HCFChoice* desugar_ignoreseq(HAllocator *mm__, void *env) {
+  HIgnoreSeq *seq = (HIgnoreSeq*)env;
+  HCFSequence *hseq = h_new(HCFSequence, 1);
+  hseq->items = h_new(HCFChoice*, 1+seq->len);
+  for (size_t i=0; i<seq->len; ++i) {
+    hseq->items[i] = seq->parsers[i]->vtable->desugar(mm__, seq->parsers[i]->env);
+  }
+  hseq->items[seq->len] = NULL;
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  ret->type = HCF_CHOICE;
+  ret->seq = h_new(HCFSequence*, 2);
+  ret->seq[0] = hseq;
+  ret->seq[1] = NULL;
+  ret->action = NULL;
+  return ret;
+}
+
 static bool is_isValidRegular(void *env) {
   HIgnoreSeq *seq = (HIgnoreSeq*)env;
   for (size_t i=0; i<seq->len; ++i) {
@@ -48,6 +65,7 @@ static const HParserVtable ignoreseq_vt = {
   .parse = parse_ignoreseq,
   .isValidRegular = is_isValidRegular,
   .isValidCF = is_isValidCF,
+  .desugar = desugar_ignoreseq,
 };
 
 
