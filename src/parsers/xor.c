@@ -37,10 +37,15 @@ static bool xor_isValidCF(void *env) {
 	  tp->p2->vtable->isValidCF(tp->p2->env));
 }
 
+static HCFChoice* desugar_xor(HAllocator *mm__, void *env) {
+
+}
+
 static const HParserVtable xor_vt = {
   .parse = parse_xor,
   .isValidRegular = h_false,
   .isValidCF = xor_isValidCF,
+  .desugar = desugar_xor,
 };
 
 const HParser* h_xor(const HParser* p1, const HParser* p2) {

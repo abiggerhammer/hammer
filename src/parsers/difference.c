@@ -40,10 +40,15 @@ static bool diff_isValidCF(void *env) {
 	  tp->p2->vtable->isValidCF(tp->p2->env));
 }
 
+static HCFChoice* desugar_difference(HAllocator *mm__, void *env) {
+
+}
+
 static HParserVtable difference_vt = {
   .parse = parse_difference,
   .isValidRegular = h_false,
   .isValidCF = diff_isValidCF,
+  .desugar = desugar_difference,
 };
 
 const HParser* h_difference(const HParser* p1, const HParser* p2) {

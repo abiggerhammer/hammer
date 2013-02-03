@@ -41,10 +41,15 @@ static bool bn_isValidCF(void *env) {
 	  tp->p2->vtable->isValidCF(tp->p2->env));
 }
 
+static HCFChoice* desugar_butnot(HAllocator *mm__, void *env) {
+
+}
+
 static const HParserVtable butnot_vt = {
   .parse = parse_butnot,
   .isValidRegular = h_false,
   .isValidCF = bn_isValidCF,
+  .desugar = desugar_butnot,
 };
 
 const HParser* h_butnot(const HParser* p1, const HParser* p2) {

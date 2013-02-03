@@ -10,10 +10,15 @@ static bool indirect_isValidCF(void *env) {
   return inner->vtable->isValidCF(inner->env);
 }
 
+static HCFChoice desugar_indirect(HAllocator *mm__, void *env) {
+
+}
+
 static const HParserVtable indirect_vt = {
   .parse = parse_indirect,
   .isValidRegular = h_false,
   .isValidCF = indirect_isValidCF,
+  .desugar = desugar_indirect,
 };
 
 void h_bind_indirect(HParser* indirect, const HParser* inner) {

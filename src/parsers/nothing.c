@@ -6,10 +6,20 @@ static HParseResult* parse_nothing() {
   return NULL;
 }
 
+static HCFChoice *desugar_nothing(HAllocator *mm__, void *env) {
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  ret->type = HCF_CHOICE;
+  ret->seq = h_new(HCFSequence*, 1);
+  ret->seq[0] = NULL;
+  ret->action = NULL;
+  return ret;
+}
+
 static const HParserVtable nothing_vt = {
   .parse = parse_nothing,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .desugar = desugar_nothing,
 };
 
 const HParser* h_nothing_p() {

@@ -10,7 +10,7 @@ static HParseResult* parse_end(void *env, HParseState *state) {
   }
 }
 
-static const HCFChoice* desugar_end(HAllocator *mm__, void *env) {
+static HCFChoice* desugar_end(HAllocator *mm__, void *env) {
   static HCFChoice ret = {
     .type = HCF_END
   };

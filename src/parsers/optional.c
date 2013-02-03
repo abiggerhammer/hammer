@@ -21,10 +21,15 @@ static bool opt_isValidCF(void *env) {
   return p->vtable->isValidCF(p->env);
 }
 
+static HCFChoice* desugar_optional(HAllocator *mm__, void *env) {
+
+}
+
 static const HParserVtable optional_vt = {
   .parse = parse_optional,
   .isValidRegular = opt_isValidRegular,
   .isValidCF = opt_isValidCF,
+  .desugar = desugar_optional,
 };
 
 const HParser* h_optional(const HParser* p) {

@@ -27,10 +27,15 @@ static bool ab_isValidCF(void *env) {
   return ab->p->vtable->isValidCF(ab->p->env);
 }
 
+static HCFChoice* desugar_ab(HAllocator *mm__, void *env) {
+
+}
+
 static const HParserVtable attr_bool_vt = {
   .parse = parse_attr_bool,
   .isValidRegular = ab_isValidRegular,
   .isValidCF = ab_isValidCF,
+  .desugar = desugar_ab,
 };
 
 

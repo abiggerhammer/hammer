@@ -56,10 +56,15 @@ static bool many_isValidCF(void *env) {
 	  repeat->sep->vtable->isValidCF(repeat->sep->env));
 }
 
+static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
+
+}
+
 static const HParserVtable many_vt = {
   .parse = parse_many,
   .isValidRegular = many_isValidRegular,
   .isValidCF = many_isValidCF,
+  .desugar = desugar_many,
 };
 
 const HParser* h_many(const HParser* p) {

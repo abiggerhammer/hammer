@@ -40,38 +40,84 @@ HCFChoice* gen_int_range(HAllocator *mm__, uint64_t low, uint64_t high, uint8_t 
     return cs;
   }
   else if (1 < bytes) {
-    HCFChoice *root = h_new(HCFChoice, 1);
-    root->type = HCF_CHOICE;
-    root->seq = h_new(HCFSequence*, 4);
-    root->seq[0] = h_new(HCFSequence, 1);
-    root->seq[0]->items = h_new(HCFChoice*, 2);
-    root->seq[0]->items[0] = gen_int_range(mm__, low, high, FIXME);
-    root->seq[0]->items[1] = NULL;
-    root->seq[1] = h_new(HCFSequence, 1);
-    root->seq[1]->items = h_new(HCFChoice*, 2);
-    root->seq[1]->items[0] = h_new(HCFChoice, 1);
-    /* do something with root->seq[1]->items[0] */
-    root->seq[1]->items[1] = NULL;
-    root->seq[2] = h_new(HCFSequence, 1);
-    root->seq[2]->items = h_new(HCFChoice*, 2);
-    root->seq[2]->items[0] = gen_int_range(mm__, low, high, FIXME);
-    root->seq[2]->items[1] = NULL;
-    root->seq[3] = NULL;
-    root->action = NULL;
-    return root;
+    uint8_t low_head, hi_head;
+    low_head = ((low >> (8*(bytes - 1))) & 0xFF);
+    hi_head = ((high >> (8*(bytes - 1))) & 0xFF);
+    if (low_head != hi_head) {
+      HCFChoice *root = h_new(HCFChoice, 1);
+      root->type = HCF_CHOICE;
+      root->seq = h_new(HCFSequence*, 4);
+      root->seq[0] = h_new(HCFSequence, 1);
+      root->seq[0]->items = h_new(HCFChoice*, 3);
+      root->seq[0]->items[0] = h_new(HCFChoice, 1);
+      root->seq[0]->items[0]->type = HCF_CHAR;
+      root->seq[0]->items[0]->chr = low_head;
+      root->seq[0]->items[0]->action = NULL;
+      root->seq[0]->items[1] = gen_int_range(mm__, low & ((1 << (8 * (bytes - 1))) - 1), ((1 << (8*(bytes-1)))-1), bytes-1);
+      root->seq[0]->items[2] = NULL;
+      root->seq[1] = h_new(HCFSequence, 1);
+      root->seq[1]->items = h_new(HCFChoice*, bytes+1);
+      root->seq[1]->items[0] = h_new(HCFChoice, 2);
+      root->seq[1]->items[0]->type = HCF_CHARSET;
+      root->seq[1]->items[0]->charset = new_charset(mm__);
+      root->seq[1]->items[0]->action = NULL;
+      root->seq[1]->items[1] = root->seq[1]->items[0] + 1;
+      root->seq[1]->items[1]->type = HCF_CHARSET;
+      root->seq[1]->items[1]->charset = new_charset(mm__);
+      for (int i = 0; i < 256; i++) {
+	charset_set(root->seq[1]->items[0]->charset, i, (i > low_head && i < hi_head));
+	charset_set(root->seq[1]->items[1]->charset, i, 1);
+      }
+      root->seq[1]->items[1]->action = NULL;
+      for (int i = 2; i < bytes; i++)
+	root->seq[1]->items[i] = root->seq[1]->items[1];
+      root->seq[1]->items[bytes] = NULL;
+      root->seq[2] = h_new(HCFSequence, 1);
+      root->seq[2]->items = h_new(HCFChoice*, 3);
+      root->seq[2]->items[0] = h_new(HCFChoice, 1);
+      root->seq[2]->items[0]->type = HCF_CHAR;
+      root->seq[2]->items[0]->type = hi_head;
+      root->seq[2]->items[0]->action = NULL;
+      root->seq[2]->items[1] = gen_int_range(mm__, 0, high & ((1 << (8 * (bytes - 1))) - 1), bytes-1);
+      root->seq[2]->items[2] = NULL;
+      root->seq[3] = NULL;
+      root->action = NULL;
+      return root;
+    } else {
+      HCFChoice *root = h_new(HCFChoice, 1);
+      root->type = HCF_CHOICE;
+      root->seq = h_new(HCFSequence*, 2);
+      root->seq[0] = h_new(HCFSequence, 1);
+      root->seq[0]->items = h_new(HCFChoice*, 3);
+      root->seq[0]->items[0] = h_new(HCFChoice, 1);
+      root->seq[0]->items[0]->type = HCF_CHAR;
+      root->seq[0]->items[0]->chr = low_head;
+      root->seq[0]->items[0]->action = NULL;
+      root->seq[0]->items[1] = gen_int_range(mm__,
+					     low & ((1 << (8 * (bytes - 1))) - 1),
+					     high & ((1 << (8 * (bytes - 1))) - 1),
+					     bytes - 1);
+      root->seq[0]->items[2] = NULL;
+      root->seq[1] = NULL;
+      root->action = NULL;
+      return root;
+    }
   }
   else { // idk why this would ever be <1, but whatever
     return NULL; 
   }
 }
 
+struct bits_env {
+  uint8_t length;
+  uint8_t signedp;
+};
+
 static HCFChoice* desugar_int_range(HAllocator *mm__, void *env) {
   HRange *r = (HRange*)env;
-  HCFChoice *ret = h_new(HCFChoice, 1);
-  ret->type = HCF_CHOICE;
-  uint8_t bytes = r->p->env->length / 8;
-  HCFSequence *seq = h_new(HCFSequence, 1);
-  
+  struct bits_env* be = (struct bits_env*)r->p->env;
+  uint8_t bytes = be->length / 8;
+  return gen_int_range(mm__, r->lower, r->upper, bytes);
 }
 
 static const HParserVtable int_range_vt = {
