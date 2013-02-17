@@ -142,7 +142,7 @@ void h_seq_append(HParsedToken *xs, const HParsedToken *ys)
   assert(ys != NULL);
   assert(ys->token_type == TT_SEQUENCE);
 
-  for(size_t i; i<ys->seq->used; i++)
+  for(size_t i=0; i<ys->seq->used; i++)
     h_carray_append(xs->seq, ys->seq->elements[i]);
 }
 
