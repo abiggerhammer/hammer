@@ -25,12 +25,10 @@
 
 const HParsedToken *act_bsfdig(const HParseResult *p)
 {
-    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
+    HParsedToken *res = H_MAKE_UINT(0);
 
-    assert(p->ast->token_type == TT_UINT);
-    uint8_t c = p->ast->uint;
+    uint8_t c = H_CAST_UINT(p->ast);
 
-    res->token_type = TT_UINT;
     if(c >= 0x40 && c <= 0x5A) // A-Z
         res->uint = c - 0x41;
     else if(c >= 0x60 && c <= 0x7A) // a-z
@@ -58,13 +56,11 @@ H_ACT_APPLY(act_index0, h_act_index, 0);
 // General-form action to turn a block of base64 digits into bytes.
 const HParsedToken *act_base64_n(int n, const HParseResult *p)
 {
-    assert(p->ast->token_type == TT_SEQUENCE);
-
     HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
     res->token_type = TT_SEQUENCE;
     res->seq = h_carray_new_sized(p->arena, n);
 
-    HParsedToken **digits = p->ast->seq->elements;
+    HParsedToken **digits = h_seq_elements(p->ast);
 
     uint32_t x = 0;
     int bits = 0;
@@ -75,9 +71,7 @@ const HParsedToken *act_base64_n(int n, const HParseResult *p)
     x >>= bits%8;   // align, i.e. cut off extra bits
 
     for(int i=0; i<n; i++) {
-        HParsedToken *item = h_arena_malloc(p->arena, sizeof(HParsedToken));
-        item->token_type = TT_UINT;
-        item->uint = x & 0xFF;
+        HParsedToken *item = H_MAKE_UINT(x & 0xFF);
 
         res->seq->elements[n-1-i] = item;   // output the last byte and
         x >>= 8;                            // discard it
@@ -91,34 +85,23 @@ H_ACT_APPLY(act_base64_3, act_base64_n, 3);
 H_ACT_APPLY(act_base64_2, act_base64_n, 2);
 H_ACT_APPLY(act_base64_1, act_base64_n, 1);
 
-// Helper to concatenate two arrays.
-void carray_concat(HCountedArray *a, const HCountedArray *b)
-{
-    for(size_t i=0; i<b->used; i++)
-        h_carray_append(a, b->elements[i]);
-}
-
 const HParsedToken *act_base64(const HParseResult *p)
 {
     assert(p->ast->token_type == TT_SEQUENCE);
     assert(p->ast->seq->used == 2);
     assert(p->ast->seq->elements[0]->token_type == TT_SEQUENCE);
 
-    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
-    res->token_type = TT_SEQUENCE;
-    res->seq = h_carray_new(p->arena);
+    HParsedToken *res = H_MAKE_SEQ();
 
     // concatenate base64_3 blocks
-    HCountedArray *seq = p->ast->seq->elements[0]->seq;
-    for(size_t i=0; i<seq->used; i++) {
-        assert(seq->elements[i]->token_type == TT_SEQUENCE);
-        carray_concat(res->seq, seq->elements[i]->seq);
-    }
+    HCountedArray *seq = H_FIELD_SEQ(0);
+    for(size_t i=0; i<seq->used; i++)
+        h_seq_append(res, seq->elements[i]);
 
     // append one trailing base64_2 or _1 block
-    const HParsedToken *tok = p->ast->seq->elements[1];
+    const HParsedToken *tok = h_seq_index(p->ast, 1);
     if(tok->token_type == TT_SEQUENCE)
-        carray_concat(res->seq, tok->seq);
+        h_seq_append(res, tok);
 
     return res;
 }
