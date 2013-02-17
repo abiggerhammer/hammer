@@ -14,7 +14,6 @@
 
 #include "../src/hammer.h"
 #include "../src/glue.h"
-#include "../src/internal.h"    // for h_carray functions (XXX ?!)
 #include <assert.h>
 
 
