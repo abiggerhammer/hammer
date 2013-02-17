@@ -56,9 +56,7 @@ H_ACT_APPLY(act_index0, h_act_index, 0);
 // General-form action to turn a block of base64 digits into bytes.
 const HParsedToken *act_base64_n(int n, const HParseResult *p)
 {
-    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
-    res->token_type = TT_SEQUENCE;
-    res->seq = h_carray_new_sized(p->arena, n);
+    HParsedToken *res = H_MAKE_SEQN(n);
 
     HParsedToken **digits = h_seq_elements(p->ast);
 
