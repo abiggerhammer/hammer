@@ -14,48 +14,9 @@
 // transformation.
 
 #include "../src/hammer.h"
+#include "../src/glue.h"
 #include "../src/internal.h"    // for h_carray functions (XXX ?!)
 #include <assert.h>
-
-
-#define H_RULE(rule, def) const HParser *rule = def
-#define H_ARULE(rule, def) const HParser *rule = h_action(def, act_ ## rule)
-
-
-///
-// Semantic action helpers.
-// These might be candidates for inclusion in the library.
-///
-
-// The action equivalent of h_ignore.
-const HParsedToken *act_ignore(const HParseResult *p)
-{
-    return NULL;
-}
-
-// Helper to build HAction's that pick one index out of a sequence.
-const HParsedToken *act_index(int i, const HParseResult *p)
-{
-    if(!p) return NULL;
-
-    const HParsedToken *tok = p->ast;
-
-    if(!tok || tok->token_type != TT_SEQUENCE)
-        return NULL;
-
-    const HCountedArray *seq = tok->seq;
-    size_t n = seq->used;
-
-    if(i<0 || (size_t)i>=n)
-        return NULL;
-    else
-        return tok->seq->elements[i];
-}
-
-const HParsedToken *act_index0(const HParseResult *p)
-{
-    return act_index(0, p);
-}
 
 
 ///
@@ -150,7 +111,9 @@ const HParsedToken *act_base64(const HParseResult *p)
     return res;
 }
 
-#define act_ws           act_ignore
+H_ACT_APPLY(act_index0, h_act_index, 0);
+
+#define act_ws           h_act_ignore
 #define act_document     act_index0
 
 

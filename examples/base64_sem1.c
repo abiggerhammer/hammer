@@ -13,48 +13,9 @@
 // base64_sem2.c for an alternative approach using a single top-level action.
 
 #include "../src/hammer.h"
+#include "../src/glue.h"
 #include "../src/internal.h"    // for h_carray functions (XXX ?!)
 #include <assert.h>
-
-
-#define H_RULE(rule, def) const HParser *rule = def
-#define H_ARULE(rule, def) const HParser *rule = h_action(def, act_ ## rule)
-
-
-///
-// Semantic action helpers.
-// These might be candidates for inclusion in the library.
-///
-
-// The action equivalent of h_ignore.
-const HParsedToken *act_ignore(const HParseResult *p)
-{
-    return NULL;
-}
-
-// Helper to build HAction's that pick one index out of a sequence.
-const HParsedToken *act_index(int i, const HParseResult *p)
-{
-    if(!p) return NULL;
-
-    const HParsedToken *tok = p->ast;
-
-    if(!tok || tok->token_type != TT_SEQUENCE)
-        return NULL;
-
-    const HCountedArray *seq = tok->seq;
-    size_t n = seq->used;
-
-    if(i<0 || (size_t)i>=n)
-        return NULL;
-    else
-        return tok->seq->elements[i];
-}
-
-const HParsedToken *act_index0(const HParseResult *p)
-{
-    return act_index(0, p);
-}
 
 
 ///
@@ -84,11 +45,13 @@ const HParsedToken *act_bsfdig(const HParseResult *p)
     return res;
 }
 
+H_ACT_APPLY(act_index0, h_act_index, 0);
+
 #define act_bsfdig_4bit  act_bsfdig
 #define act_bsfdig_2bit  act_bsfdig
 
-#define act_equals       act_ignore
-#define act_ws           act_ignore
+#define act_equals       h_act_ignore
+#define act_ws           h_act_ignore
 
 #define act_document     act_index0
 
@@ -124,20 +87,9 @@ const HParsedToken *act_base64_n(int n, const HParseResult *p)
     return res;
 }
 
-const HParsedToken *act_base64_3(const HParseResult *p)
-{
-    return act_base64_n(3, p);
-}
-
-const HParsedToken *act_base64_2(const HParseResult *p)
-{
-    return act_base64_n(2, p);
-}
-
-const HParsedToken *act_base64_1(const HParseResult *p)
-{
-    return act_base64_n(1, p);
-}
+H_ACT_APPLY(act_base64_3, act_base64_n, 3);
+H_ACT_APPLY(act_base64_2, act_base64_n, 2);
+H_ACT_APPLY(act_base64_1, act_base64_n, 1);
 
 // Helper to concatenate two arrays.
 void carray_concat(HCountedArray *a, const HCountedArray *b)
