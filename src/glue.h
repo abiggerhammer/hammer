@@ -21,11 +21,11 @@
 // See the leading comment blocks on the sections below for more details.
 //
 
-#ifndef HAMMER_EXAMPLES_GLUE__H
-#define HAMMER_EXAMPLES_GLUE__H
+#ifndef HAMMER_GLUE__H
+#define HAMMER_GLUE__H
 
 #include <assert.h>
-#include "../src/hammer.h"
+#include "hammer.h"
 
 
 //
