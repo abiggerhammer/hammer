@@ -15,7 +15,6 @@
 
 #include "../src/hammer.h"
 #include "../src/glue.h"
-#include "../src/internal.h"    // for h_carray functions (XXX ?!)
 #include <assert.h>
 
 
@@ -47,13 +46,7 @@ uint8_t bsfdig_value(const HParsedToken *p)
 }
 
 // helper: append a byte value to a sequence
-void seq_append_byte(HCountedArray *a, uint8_t b)
-{
-    HParsedToken *item = h_arena_malloc(a->arena, sizeof(HParsedToken));
-    item->token_type = TT_UINT;
-    item->uint = b;
-    h_carray_append(a, item);
-}
+#define seq_append_byte(res, b) h_seq_snoc(res, H_MAKE_UINT(b))
 
 const HParsedToken *act_base64(const HParseResult *p)
 {
@@ -75,9 +68,7 @@ const HParsedToken *act_base64(const HParseResult *p)
         b64_1 = NULL;
 
     // allocate result sequence
-    HParsedToken *res = h_arena_malloc(p->arena, sizeof(HParsedToken));
-    res->token_type = TT_SEQUENCE;
-    res->seq = h_carray_new(p->arena);
+    HParsedToken *res = H_MAKE_SEQ();
 
     // concatenate base64_3 blocks
     for(size_t i=0; i<b64_3->seq->used; i++) {
@@ -88,9 +79,9 @@ const HParsedToken *act_base64(const HParseResult *p)
         x <<= 6; x |= bsfdig_value(digits[1]);
         x <<= 6; x |= bsfdig_value(digits[2]);
         x <<= 6; x |= bsfdig_value(digits[3]);
-        seq_append_byte(res->seq, (x >> 16) & 0xFF);
-        seq_append_byte(res->seq, (x >> 8) & 0xFF);
-        seq_append_byte(res->seq, x & 0xFF);
+        seq_append_byte(res, (x >> 16) & 0xFF);
+        seq_append_byte(res, (x >> 8) & 0xFF);
+        seq_append_byte(res, x & 0xFF);
     }
 
     // append one trailing base64_2 or _1 block
@@ -99,13 +90,13 @@ const HParsedToken *act_base64(const HParseResult *p)
         uint32_t x = bsfdig_value(digits[0]);
         x <<= 6; x |= bsfdig_value(digits[1]);
         x <<= 6; x |= bsfdig_value(digits[2]);
-        seq_append_byte(res->seq, (x >> 10) & 0xFF);
-        seq_append_byte(res->seq, (x >> 2) & 0xFF);
+        seq_append_byte(res, (x >> 10) & 0xFF);
+        seq_append_byte(res, (x >> 2) & 0xFF);
     } else if(b64_1) {
         HParsedToken **digits = b64_1->seq->elements;
         uint32_t x = bsfdig_value(digits[0]);
         x <<= 6; x |= bsfdig_value(digits[1]);
-        seq_append_byte(res->seq, (x >> 4) & 0xFF);
+        seq_append_byte(res, (x >> 4) & 0xFF);
     }
 
     return res;
