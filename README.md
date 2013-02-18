@@ -48,3 +48,7 @@ Examples
 The `examples/` directory contains some simple examples, currently including:
 * base64
 * DNS
+
+Community
+=========
+Please join us at `#hammer` on `irc.upstandinghackers.com` if you have any questions or just want to talk about parsing. 
