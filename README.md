@@ -51,4 +51,8 @@ The `examples/` directory contains some simple examples, currently including:
 
 Community
 =========
-Please join us at `#hammer` on `irc.upstandinghackers.com` if you have any questions or just want to talk about parsing. 
+Please join us at `#hammer` on `irc.upstandinghackers.com` if you have any questions or just want to talk about parsing.
+
+Contact
+=======
+You can also email us at <hammer@upstandinghackers.com>.
