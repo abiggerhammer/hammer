@@ -22,13 +22,30 @@ static bool ab_isValidRegular(void *env) {
   return ab->p->vtable->isValidRegular(ab->p->env);
 }
 
+/* Strictly speaking, this does not adhere to the definition of context-free.
+   However, for the purpose of making it easier to handle weird constraints on
+   fields, we've decided to allow boolean attribute validation at parse time
+   for now. We might change our minds later. */
+
 static bool ab_isValidCF(void *env) {
   HAttrBool *ab = (HAttrBool*)env;
   return ab->p->vtable->isValidCF(ab->p->env);
 }
 
 static HCFChoice* desugar_ab(HAllocator *mm__, void *env) {
-
+  HAttrBool *a = (HAttrBool*)env;
+  HCFSequence *seq = h_new(HCFSequence, 1);
+  seq->items = h_new(HCFChoice*, 2);
+  seq->items[0] = a->p->vtable->desugar(mm__, a->p->env);
+  seq->items[1] = NULL;
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  ret->type = HCF_CHOICE;
+  ret->seq = h_new(HCFSequence*, 2);
+  ret->seq[0] = seq;
+  ret->seq[1] = NULL;
+  /* TODO: need to process this as an HPredicate */
+  ret->action = a->action;
+  return ret;
 }
 
 static const HParserVtable attr_bool_vt = {

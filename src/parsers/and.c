@@ -9,7 +9,7 @@ static HParseResult *parse_and(void* env, HParseState* state) {
   return NULL;
 }
 
-static const HCFChoice* desugar_and(HAllocator *mm__, void *env) {
+static HCFChoice* desugar_and(HAllocator *mm__, void *env) {
   assert_message(0, "Not context-free, can't be desugared");
   return NULL;
 }

@@ -9,11 +9,13 @@ static HParseResult* parse_epsilon(void* env, HParseState* state) {
 }
 
 static HCFChoice* desugar_epsilon(HAllocator *mm__, void *env) {
-  static HCFSequence res_seq = {NULL};
+  static HCFChoice *res_seq_l[] = {NULL};
+  static HCFSequence res_seq = {res_seq_l};
+  static HCFSequence *res_ch_l[] = {&res_seq, NULL};
   static HCFChoice res_ch = {
     .type = HCF_CHOICE,
-    .seq = &res_seq,
-    .action = NULL;
+    .seq = res_ch_l,
+    .action = NULL
   };
 
   return &res_ch;

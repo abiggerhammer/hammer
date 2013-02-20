@@ -10,8 +10,8 @@ static HParseResult* parse_not(void* env, HParseState* state) {
   }
 }
 
-static const HCFChoice* desugar_not(HAllocator *mm__, void *env) {
-  assert_message(0, "Not context-free, can't be desugared");
+static HCFChoice* desugar_not(HAllocator *mm__, void *env) {
+  assert_message(0, "'h_not' is not context-free, can't be desugared");
   return NULL;
 }
 

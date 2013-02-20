@@ -22,7 +22,8 @@ static bool opt_isValidCF(void *env) {
 }
 
 static HCFChoice* desugar_optional(HAllocator *mm__, void *env) {
-
+  HParser *p = (HParser*) env;
+  return p->vtable->desugar(mm__, p->env);
 }
 
 static const HParserVtable optional_vt = {

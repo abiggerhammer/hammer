@@ -21,7 +21,8 @@ static bool ignore_isValidCF(void *env) {
 }
 
 static HCFChoice* desugar_ignore(HAllocator *mm__, void *env) {
-
+  HParser *p = (HParser*)env;
+  return (p->vtable->desugar(mm__, p->env));
 }
 
 static const HParserVtable ignore_vt = {

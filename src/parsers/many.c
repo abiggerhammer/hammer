@@ -57,7 +57,6 @@ static bool many_isValidCF(void *env) {
 }
 
 static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
-
 }
 
 static const HParserVtable many_vt = {
@@ -164,10 +163,16 @@ static HParseResult* parse_length_value(void *env, HParseState *state) {
   return parse_many(&repeat, state);
 }
 
+static HCFChoice* desugar_length_value(HAllocator *mm__, void *env) {
+  assert_message(0, "'h_length_value' is not context-free, can't be desugared");
+  return NULL;
+}
+
 static const HParserVtable length_value_vt = {
   .parse = parse_length_value,
   .isValidRegular = h_false,
   .isValidCF = h_false,
+  .desugar = desugar_length_value,
 };
 
 const HParser* h_length_value(const HParser* length, const HParser* value) {

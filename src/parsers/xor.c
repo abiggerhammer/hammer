@@ -31,20 +31,15 @@ static HParseResult* parse_xor(void *env, HParseState *state) {
   }
 }
 
-static bool xor_isValidCF(void *env) {
-  HTwoParsers *tp = (HTwoParsers*)env;
-  return (tp->p1->vtable->isValidCF(tp->p1->env) &&
-	  tp->p2->vtable->isValidCF(tp->p2->env));
-}
-
 static HCFChoice* desugar_xor(HAllocator *mm__, void *env) {
-
+  assert_message(0, "'h_xor' is not context-free, can't be desugared");
+  return NULL;
 }
 
 static const HParserVtable xor_vt = {
   .parse = parse_xor,
   .isValidRegular = h_false,
-  .isValidCF = xor_isValidCF,
+  .isValidCF = h_false,
   .desugar = desugar_xor,
 };
 

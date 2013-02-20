@@ -12,11 +12,16 @@ static HParseResult* parse_unimplemented(void* env, HParseState *state) {
   return &result;
 }
 
+static HCFChoice* desugar_unimplemented(HAllocator *mm__, void *env) {
+  assert_message(0, "'h_unimplemented' is not context-free, can't be desugared");
+  return NULL;
+}
+
 static const HParserVtable unimplemented_vt = {
   .parse = parse_unimplemented,
   .isValidRegular = h_false,
   .isValidCF = h_false,
-  .desugar = NULL,
+  .desugar = desugar_unimplemented,
 };
 
 static HParser unimplemented = {
