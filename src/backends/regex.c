@@ -24,12 +24,16 @@ typedef struct HRVMThread_ {
   HRVMTrace *trace;
   uint16_t ip;
 } HRVMThread;
-    
+
+// TODO(thequux): This function could really use a refactoring, at the
+// very least, to split the two VMs.
 void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t len) {
   HArena *arena = h_new_arena(mm__, 0);
   HRVMTrace **heads_p = a_new(HRVMTrace*, prog->length),
-    **heads_n = a_new(HRVMTrace*, prog->length), **heads_t;
+    **heads_n = a_new(HRVMTrace*, prog->length),
+    **heads_t;
 
+  HRVMTrace *ret_trace;
   
   uint8_t *insn_seen = a_new(uint8_t, prog->length); // 0 -> not seen, 1->processed, 2->queued
   HRVMThread *ip_queue = a_new(HRVMThread, prog->length);
@@ -61,7 +65,7 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
     }
     memset(insn_seen, 0, prog->length); // no insns seen yet
     if (!live_threads)
-      return NULL;
+      goto match_fail;
     live_threads = 0;
     for (ip_s = 0; ip_s < prog->length; ip_s++) {
       ipq_top = 1;
@@ -79,8 +83,9 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
 	arg = prog->insns[THREAD.ip].arg;
 	switch(prog->insns[THREAD.ip].op) {
 	case RVM_ACCEPT:
-	  // TODO: save current SVM pos, and jump to end
-	  abort();
+	  PUSH_SVM(SVM_ACCEPT, 0);
+	  ret_trace = THREAD.trace;
+	  goto run_trace;
 	case RVM_MATCH:
 	  // Doesn't actually validate the "must be followed by MATCH
 	  // or STEP. It should. Preproc perhaps?
@@ -130,9 +135,35 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
       next_insn:
 	
       }
-      
-      
-      
-      
+    }
+  }
+  // No accept was reached.
+ match_fail:
+  h_delete_arena(arena);
+  return NULL;
   
+ run_trace:
+  // Invert the direction of the trace linked list.
+
+  
+  ret_trace = invert_trace(ret_trace);
+  HParseResult *ret = run_trace(ret_trace, input, length);
+  // ret is in its own arena
+  h_delete_arena(arena);
+  return ret;
+}
+
+HRVMTrace *invert_trace(HRVMTrace *trace) {
+  HRVMTrace *next, *last = NULL;
+  if (!trace)
+    return NULL;
+  if (!trace->next)
+    return trace;
+  do {
+    HRVMTrace *next = trace->next;
+    trace->next = last;
+    last = trace;
+    trace = next;
+  } while (trace->next);
+  return trace;
 }
