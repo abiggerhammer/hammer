@@ -112,10 +112,13 @@ typedef bool (*HPredicate)(HParseResult *p);
 
 typedef struct HParserVtable_ HParserVtable;
 
+typedef struct HCFChoice_ HCFChoice; // forward declaration
+
 typedef struct HParser_ {
   const HParserVtable *vtable;
   void *env;
   void *data; /* e.g., parse tables */
+  HCFChoice *desugared; /* if the parser can be desugared, its desugared form */
 } HParser;
 
 // {{{ Stuff for benchmarking
