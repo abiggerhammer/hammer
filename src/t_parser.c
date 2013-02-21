@@ -273,6 +273,8 @@ static void test_xor(void) {
 
 static void test_many(void) {
   const HParser *many_ = h_many(h_choice(h_ch('a'), h_ch('b'), NULL));
+
+  g_check_parse_ok(many_, "", 0, "()");
   g_check_parse_ok(many_, "adef", 4, "(u0x61)");
   g_check_parse_ok(many_, "bdef", 4, "(u0x62)");
   g_check_parse_ok(many_, "aabbabadef", 10, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
@@ -282,6 +284,7 @@ static void test_many(void) {
 static void test_many1(void) {
   const HParser *many1_ = h_many1(h_choice(h_ch('a'), h_ch('b'), NULL));
 
+  g_check_parse_failed(many1_, "", 0);
   g_check_parse_ok(many1_, "adef", 4, "(u0x61)");
   g_check_parse_ok(many1_, "bdef", 4, "(u0x62)");
   g_check_parse_ok(many1_, "aabbabadef", 10, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
@@ -314,6 +317,16 @@ static void test_ignore(void) {
   g_check_parse_failed(ignore_, "ac", 2);
 }
 
+static void test_sepBy(void) {
+  const HParser *sepBy_ = h_sepBy(h_choice(h_ch('1'), h_ch('2'), h_ch('3'), NULL), h_ch(','));
+
+  g_check_parse_ok(sepBy_, "1,2,3", 5, "(u0x31 u0x32 u0x33)");
+  g_check_parse_ok(sepBy_, "1,3,2", 5, "(u0x31 u0x33 u0x32)");
+  g_check_parse_ok(sepBy_, "1,3", 3, "(u0x31 u0x33)");
+  g_check_parse_ok(sepBy_, "3", 1, "(u0x33)");
+  g_check_parse_ok(sepBy_, "", 0, "()");
+}
+
 static void test_sepBy1(void) {
   const HParser *sepBy1_ = h_sepBy1(h_choice(h_ch('1'), h_ch('2'), h_ch('3'), NULL), h_ch(','));
 
@@ -321,6 +334,7 @@ static void test_sepBy1(void) {
   g_check_parse_ok(sepBy1_, "1,3,2", 5, "(u0x31 u0x33 u0x32)");
   g_check_parse_ok(sepBy1_, "1,3", 3, "(u0x31 u0x33)");
   g_check_parse_ok(sepBy1_, "3", 1, "(u0x33)");
+  g_check_parse_failed(sepBy1_, "", 0);
 }
 
 static void test_epsilon_p(void) {
@@ -395,6 +409,7 @@ void register_parser_tests(void) {
   g_test_add_func("/core/parser/many1", test_many1);
   g_test_add_func("/core/parser/repeat_n", test_repeat_n);
   g_test_add_func("/core/parser/optional", test_optional);
+  g_test_add_func("/core/parser/sepBy", test_sepBy);
   g_test_add_func("/core/parser/sepBy1", test_sepBy1);
   g_test_add_func("/core/parser/epsilon_p", test_epsilon_p);
   g_test_add_func("/core/parser/attr_bool", test_attr_bool);
