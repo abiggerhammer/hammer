@@ -112,7 +112,7 @@ typedef bool (*HPredicate)(HParseResult *p);
 
 typedef struct HParserVtable_ HParserVtable;
 
-typedef struct HCFChoice_ HCFChoice; // forward declaration
+typedef struct HCFChoice_ HCFChoice;
 
 typedef struct HParser_ {
   const HParserVtable *vtable;
