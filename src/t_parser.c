@@ -347,8 +347,19 @@ static void test_epsilon_p(void) {
   g_check_parse_ok(epsilon_p_3, "a", 1, "(u0x61)");
 }
 
-static void test_attr_bool(void) {
+bool validate_test_ab(HParseResult *p) {
+  if (TT_SEQUENCE != p->ast->token_type) 
+    return false;
+  return (p->ast->seq->elements[0]->bytes.token == p->ast->seq->elements[1]->bytes.token);
+}
 
+static void test_attr_bool(void) {
+  const HParser *ab_ = h_attr_bool(h_many1(h_choice(h_ch('a'), h_ch('b'), NULL)),
+				   validate_test_ab);
+
+  g_check_parse_ok(ab_, "aa", 2, "(u0x61 u0x61)");
+  g_check_parse_ok(ab_, "bb", 2, "(u0x62 u0x62)");
+  g_check_parse_failed(ab_, "ab", 2);
 }
 
 static void test_and(void) {
