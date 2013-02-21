@@ -350,7 +350,11 @@ static void test_epsilon_p(void) {
 bool validate_test_ab(HParseResult *p) {
   if (TT_SEQUENCE != p->ast->token_type) 
     return false;
-  return (p->ast->seq->elements[0]->bytes.token == p->ast->seq->elements[1]->bytes.token);
+  if (TT_UINT != p->ast->seq->elements[0]->token_type)
+    return false;
+  if (TT_UINT != p->ast->seq->elements[1]->token_type)
+    return false;
+  return (p->ast->seq->elements[0]->uint == p->ast->seq->elements[1]->uint);
 }
 
 static void test_attr_bool(void) {
