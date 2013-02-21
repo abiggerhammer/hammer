@@ -57,6 +57,60 @@ static bool many_isValidCF(void *env) {
 }
 
 static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
+  HRepeat *repeat = (HRepeat*)env;
+  /* many(A) =>
+         Ma  -> A Mar
+             -> \epsilon (but not if many1/sepBy1 is used) 
+         Mar -> Sep A Mar
+             -> \epsilon
+  */
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  ret->type = HCF_CHOICE;
+  if (repeat->min_p)
+    ret->seq = h_new(HCFSequence*, 2); /* choice of 1 sequence, A Mar */
+  else
+    ret->seq = h_new(HCFSequence*, 3); /* choice of 2 sequences, A Mar | epsilon */
+  ret->seq[0] = h_new(HCFSequence, 1);
+  ret->seq[0]->items = h_new(HCFChoice*, 2);
+  
+  /* create first subrule */
+  HCFChoice *ma = h_new(HCFChoice, 3);
+  ma->type = HCF_CHOICE;
+  ma->seq[0]->items[0] = repeat->p->vtable->desugar(mm__, repeat->p->env);
+
+  /* create second subrule */
+  HCFChoice *mar = h_new(HCFChoice, 3);
+  mar->type = HCF_CHOICE;
+  mar->seq = h_new(HCFSequence*, 2);
+  mar->seq[0] = h_new(HCFSequence, 1);
+  mar->seq[0]->items = h_new(HCFChoice*, 4);
+  mar->seq[0]->items[0] = repeat->sep->vtable->desugar(mm__, repeat->sep->env);
+  mar->seq[0]->items[1] = repeat->p->vtable->desugar(mm__, repeat->p->env);
+  mar->seq[0]->items[2] = mar; // woo recursion!
+  mar->seq[0]->items[3] = NULL;
+  mar->seq[1]->items = h_new(HCFChoice*, 2);
+  mar->seq[1]->items[0] = desugar_epsilon(mm__, NULL);\
+  mar->seq[1]->items[1] = NULL;
+  mar->seq[2]->items = NULL;
+
+  /* attach second subrule to first subrule */
+  ma->seq[0]->items[1] = mar;
+  ma->seq[0]->items[2] = NULL;
+
+  /* attach first subrule to ret */
+  ret->seq[0]->items[0] = ma;
+  ret->seq[0]->items[1] = NULL;
+
+  /* if not many1/sepBy1, attach epsilon */
+  if (repeat->min_p) {
+    ret->seq[1]->items = NULL;
+  } else {
+    ret->seq[1]->items = h_new(HCFChoice*, 2);
+    ret->seq[1]->items[0] = desugar_epsilon(mm__, NULL);
+    ret->seq[1]->items[1] = NULL;
+    ret->seq[2]->items = NULL;
+  }
+  return ret;
 }
 
 static const HParserVtable many_vt = {

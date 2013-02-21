@@ -257,6 +257,7 @@ typedef struct HCFChoice_ {
     uint8_t chr;
   };
   HAction action;
+  HPredicate pred;
 } HCFChoice;
 
 struct HCFSequence_ {

@@ -26,4 +26,17 @@ static inline size_t token_length(HParseResult *pr) {
 static inline bool h_true(void *env) { return true; }
 static inline bool h_false(void *env) { return false; }
 
+/* Epsilon rules happen during desugaring. This handles them. */
+static inline HCFChoice* desugar_epsilon(HAllocator *mm__, void *env) {
+  static HCFChoice *res_seq_l[] = {NULL};
+  static HCFSequence res_seq = {res_seq_l};
+  static HCFSequence *res_ch_l[] = {&res_seq, NULL};
+  static HCFChoice res_ch = {
+    .type = HCF_CHOICE,
+    .seq = res_ch_l,
+    .action = NULL
+  };
+  return &res_ch;
+}
+
 #endif // HAMMER_PARSE_INTERNAL__H

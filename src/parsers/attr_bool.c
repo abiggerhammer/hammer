@@ -43,8 +43,7 @@ static HCFChoice* desugar_ab(HAllocator *mm__, void *env) {
   ret->seq = h_new(HCFSequence*, 2);
   ret->seq[0] = seq;
   ret->seq[1] = NULL;
-  /* TODO: need to process this as an HPredicate */
-  ret->action = a->action;
+  ret->pred = a->pred;
   return ret;
 }
 

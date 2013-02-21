@@ -29,6 +29,7 @@ static HParseResult* parse_int_range(void *env, HParseState *state) {
 }
 
 HCFChoice* gen_int_range(HAllocator *mm__, uint64_t low, uint64_t high, uint8_t bytes) {
+  /* Possible FIXME: TallerThanMe */
   if (1 == bytes) {
     HCFChoice *cs = h_new(HCFChoice, 1);
     cs->type = HCF_CHARSET;
