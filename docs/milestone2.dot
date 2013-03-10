@@ -2,8 +2,9 @@ digraph {
 	graph [rankdir=LR];
 subgraph complete {
 	 node [color="gray",fontcolor="gray"];
-	 regex_gen;
 	 glue;
+	 regex_svm;
+	 regex_rvm;
 }
 /* The end result of the milestone, along with the subtasks listed */
 milestone2 [color="green",style="filled"];
@@ -18,6 +19,9 @@ tests -> milestone2;
 
 regex_gen -> regex;
 regex_driver -> regex;
+regex_svm -> regex_driver;
+regex_rvm -> regex_driver;
+regex_svm_actions -> regex_driver;
 llk_driver -> llk;
 llk_gen -> llk;
 
