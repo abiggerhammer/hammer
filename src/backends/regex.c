@@ -147,7 +147,7 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
 
   
   ret_trace = invert_trace(ret_trace);
-  HParseResult *ret = run_trace(ret_trace, input, length);
+  HParseResult *ret = run_trace(mm__, ret_trace, input, length);
   // ret is in its own arena
   h_delete_arena(arena);
   return ret;
@@ -166,4 +166,8 @@ HRVMTrace *invert_trace(HRVMTrace *trace) {
     trace = next;
   } while (trace->next);
   return trace;
+}
+
+HParseResult *run_trace(HAllocator mm__, HRVMTrace *trace, uint8_t *input, int len) {
+  
 }
