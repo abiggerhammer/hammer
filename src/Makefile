@@ -26,7 +26,8 @@ PARSERS := \
 	indirect
 
 BACKENDS := \
-	packrat
+	packrat \
+	regex
 
 HAMMER_PARTS := \
 	bitreader.o \

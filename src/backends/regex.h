@@ -27,12 +27,29 @@ typedef struct HRVMInsn_{
   uint16_t arg;
 } HRVMInsn;
 
+const HTokenType TT_MARK = TT_RESERVED_1;
+
+typedef struct HSVMContext_ {
+  HParsedToken **stack;
+  size_t stack_count;
+  size_t stack_capacity;
+} HSVMContext;
+
+// These actions all assume that the items on the stack are not
+// aliased anywhere.
+typedef struct HSVMAction_ {
+  bool (*fn)(HArena *arena, HSVMContext *ctx, void* env);
+  void* env;
+} HSVMAction;
 
 typedef struct HRVMProg_ {
   size_t length;
   size_t action_count;
-  HAction *actions;
   HRVMInsn *insns;
-};
+  HSVMAction *actions;
+} HRVMProg;
+
+
+
 
 #endif

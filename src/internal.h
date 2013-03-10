@@ -223,6 +223,9 @@ int   h_hashtable_present(HHashTable* ht, void* key);
 void  h_hashtable_del(HHashTable* ht, void* key);
 void  h_hashtable_free(HHashTable* ht);
 
+bool h_false(void*);
+bool h_true(void*);
+
 #if 0
 #include <stdlib.h>
 #define h_arena_malloc(a, s) malloc(s)

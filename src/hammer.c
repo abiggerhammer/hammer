@@ -84,4 +84,12 @@ void h_parse_result_free(HParseResult *result) {
   h_delete_arena(result->arena);
 }
 
+bool h_false(void* env) {
+  (void)env;
+  return false;
+}
 
+bool h_true(void* env) {
+  (void)env;
+  return true;
+}

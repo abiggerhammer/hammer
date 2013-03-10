@@ -1,8 +1,11 @@
+#include <string.h>
+#include <assert.h>
 #include "../internal.h"
 #include "../parsers/parser_internal.h"
+#include "regex.h"
 
 #undef a_new
-#define a_new(typ, count) a_new_(arena, typ, count);
+#define a_new(typ, count) a_new_(arena, typ, count)
 // Stack VM
 typedef enum HSVMOp_ {
   SVM_PUSH, // Push a mark. There is no VM insn to push an object.
@@ -16,6 +19,7 @@ typedef struct HRVMTrace_ {
   struct HRVMTrace_ *next; // When parsing, these are
 			   // reverse-threaded. There is a postproc
 			   // step that inverts all the pointers.
+  size_t input_pos;
   uint16_t arg;
   uint8_t opcode;
 } HRVMTrace;
@@ -25,13 +29,27 @@ typedef struct HRVMThread_ {
   uint16_t ip;
 } HRVMThread;
 
-// TODO(thequux): This function could really use a refactoring, at the
-// very least, to split the two VMs.
-void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t len) {
+HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace, const uint8_t *input, int len);
+
+HRVMTrace *invert_trace(HRVMTrace *trace) {
+  HRVMTrace *last = NULL;
+  if (!trace)
+    return NULL;
+  if (!trace->next)
+    return trace;
+  do {
+    HRVMTrace *next = trace->next;
+    trace->next = last;
+    last = trace;
+    trace = next;
+  } while (trace->next);
+  return trace;
+}
+
+void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_t len) {
   HArena *arena = h_new_arena(mm__, 0);
   HRVMTrace **heads_p = a_new(HRVMTrace*, prog->length),
-    **heads_n = a_new(HRVMTrace*, prog->length),
-    **heads_t;
+    **heads_n = a_new(HRVMTrace*, prog->length);
 
   HRVMTrace *ret_trace;
   
@@ -39,12 +57,16 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
   HRVMThread *ip_queue = a_new(HRVMThread, prog->length);
   size_t ipq_top;
 
+  
+  
+
 #define THREAD ip_queue[ipq_top-1]
 #define PUSH_SVM(op_, arg_) do { \
 	  HRVMTrace *nt = a_new(HRVMTrace, 1); \
 	  nt->arg = (arg_);		       \
 	  nt->opcode = (op_);		       \
 	  nt->next = THREAD.trace;	       \
+	  nt->input_pos = off;		       \
 	  THREAD.trace = nt;		       \
   } while(0)
     
@@ -55,7 +77,8 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
   int live_threads = 1;
   for (off = 0; off <= len; off++) {
     uint8_t ch = ((off == len) ? 0 : input[off]);
-    size_t ip_s, ip;
+    size_t ip_s; // BUG: there was an unused variable ip. Not sure if
+		 // I intended to use it somewhere.
     /* scope */ {
       HRVMTrace **heads_t;
       heads_t = heads_n;
@@ -77,9 +100,9 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
       uint8_t hi, lo;
       uint16_t arg;
       while(ipq_top > 0) {
-	if (insns_seen[THREAD.ip] == 1)
+	if (insn_seen[THREAD.ip] == 1)
 	  continue;
-	insns_seen[THREAD.ip] = 1;
+	insn_seen[THREAD.ip] = 1;
 	arg = prog->insns[THREAD.ip].arg;
 	switch(prog->insns[THREAD.ip].op) {
 	case RVM_ACCEPT:
@@ -100,8 +123,8 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
 	  goto next_insn;
 	case RVM_FORK:
 	  THREAD.ip++;
-	  if (!insns_seen[arg]) {
-	    insns_seen[THREAD.ip] = 2;
+	  if (!insn_seen[arg]) {
+	    insn_seen[THREAD.ip] = 2;
 	    HRVMTrace* tr = THREAD.trace;
 	    ipq_top++;
 	    THREAD.ip = arg;
@@ -109,7 +132,7 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
 	  }
 	  goto next_insn;
 	case RVM_PUSH:
-	  PUSH_SVM(SVM_PUSH, off);
+	  PUSH_SVM(SVM_PUSH, 0);
 	  THREAD.ip++;
 	  goto next_insn;
 	case RVM_ACTION:
@@ -133,6 +156,7 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
 	  goto next_insn;
 	}
       next_insn:
+	;
 	
       }
     }
@@ -147,27 +171,78 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const char* input, size_t l
 
   
   ret_trace = invert_trace(ret_trace);
-  HParseResult *ret = run_trace(mm__, ret_trace, input, length);
+  HParseResult *ret = run_trace(mm__, prog, ret_trace, input, len);
   // ret is in its own arena
   h_delete_arena(arena);
   return ret;
 }
+#undef PUSH_SVM
+#undef THREAD
 
-HRVMTrace *invert_trace(HRVMTrace *trace) {
-  HRVMTrace *next, *last = NULL;
-  if (!trace)
-    return NULL;
-  if (!trace->next)
-    return trace;
-  do {
-    HRVMTrace *next = trace->next;
-    trace->next = last;
-    last = trace;
-    trace = next;
-  } while (trace->next);
-  return trace;
+
+
+
+void svm_stack_ensure_cap(HAllocator *mm__, HSVMContext *ctx, size_t addl) {
+  if (ctx->stack_count + addl >= ctx->stack_capacity) {
+    ctx->stack = mm__->realloc(mm__, ctx->stack, sizeof(*ctx->stack) * (ctx->stack_capacity *= 2));
+    // TODO: check for realloc failure
+  }
 }
 
-HParseResult *run_trace(HAllocator mm__, HRVMTrace *trace, uint8_t *input, int len) {
-  
+HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace, const uint8_t *input, int len) {
+  // orig_prog is only used for the action table
+  HSVMContext ctx;
+  HArena *arena = h_new_arena(mm__, 0);
+  ctx.stack_count = 0;
+  ctx.stack_capacity = 16;
+  ctx.stack = h_new(HParsedToken*, ctx.stack_capacity);
+
+  HParsedToken *tmp_res;
+  HRVMTrace *cur;
+  for (cur = trace; cur; cur = cur->next) {
+    switch (cur->opcode) {
+    case SVM_PUSH:
+      svm_stack_ensure_cap(mm__, &ctx, 1);
+      tmp_res = a_new(HParsedToken, 1);
+      tmp_res->token_type = TT_MARK;
+      tmp_res->index = cur->input_pos;
+      tmp_res->bit_offset = 0;
+      ctx.stack[ctx.stack_count++] = tmp_res;
+      break;
+    case SVM_NOP:
+      break;
+    case SVM_ACTION:
+      // Action should modify stack appropriately
+      if (!orig_prog->actions[cur->arg].fn(arena, &ctx, orig_prog->actions[cur->arg].env)) {
+	// action failed... abort somehow
+	// TODO: Actually abort
+      }
+      break;
+    case SVM_CAPTURE: 
+      // Top of stack must be a mark
+      // This replaces said mark in-place with a TT_BYTES.
+      assert(ctx.stack[ctx.stack_count]->token_type == TT_MARK);
+      
+      tmp_res = ctx.stack[ctx.stack_count];
+      tmp_res->token_type = TT_BYTES;
+      // TODO: Will need to copy if bit_offset is nonzero
+      assert(tmp_res->bit_offset == 0);
+	
+      tmp_res->bytes.token = input + tmp_res->index;
+      tmp_res->bytes.len = cur->input_pos - tmp_res->index + 1; // inclusive
+      break;
+    case SVM_ACCEPT:
+      assert(ctx.stack_count == 1);
+      HParseResult *res = a_new(HParseResult, 1);
+      res->ast = ctx.stack[0];
+      res->bit_length = cur->input_pos * 8;
+      res->arena = arena;
+      return res;
+    }
+  }
+
+  h_delete_arena(arena);
+  return NULL;
 }
+
+    // TODO: Implement the primitive actions

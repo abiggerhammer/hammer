@@ -47,6 +47,7 @@ typedef enum HTokenType_ {
   TT_SINT,
   TT_UINT,
   TT_SEQUENCE,
+  TT_RESERVED_1, // reserved for internal use
   TT_USER = 64,
   TT_ERR,
   TT_MAX
@@ -78,7 +79,9 @@ typedef struct HParsedToken_ {
 } HParsedToken;
 
 /**
- * The result of a successful parse.
+ * The result of a successful parse. Note that this may reference the
+ * input string.
+ *
  * If a parse fails, the parse result will be NULL.
  * If a parse is successful but there's nothing there (i.e., if end_p 
  * succeeds) then there's a parse result but its ast is NULL.

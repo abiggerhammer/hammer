@@ -1,0 +1,32 @@
+digraph {
+	graph [rankdir=LR];
+subgraph complete {
+	 node [color="gray",fontcolor="gray"];
+	 regex_gen;
+	 glue;
+}
+/* The end result of the milestone, along with the subtasks listed */
+milestone2 [color="green",style="filled"];
+llk -> milestone2;
+lr -> milestone2;
+lalr8_gen -> lr;
+glr_gen -> lr;
+lr_driver -> lr;
+regex -> milestone2;
+glue -> milestone2; // Meredith knows what glue referred to here.
+tests -> milestone2;
+
+regex_gen -> regex;
+regex_driver -> regex;
+llk_driver -> llk;
+llk_gen -> llk;
+
+
+/*
+ * 
+ */
+ desugaring -> llk_gen;
+ desugaring -> lalr8_gen;
+ desugaring -> glr_gen;
+ 
+}
