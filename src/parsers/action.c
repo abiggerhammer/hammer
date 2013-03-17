@@ -23,7 +23,7 @@ static HCFChoice* desugar_action(HAllocator *mm__, void *env) {
   HParseAction *a = (HParseAction*)env;
   HCFSequence *seq = h_new(HCFSequence, 1);
   seq->items = h_new(HCFChoice*, 2);
-  seq->items[0] = a->p->vtable->desugar(mm__, a->p->env);
+  seq->items[0] = h_desugar(mm__, a->p);
   seq->items[1] = NULL;
   HCFChoice *ret = h_new(HCFChoice, 1);
   ret->type = HCF_CHOICE;
