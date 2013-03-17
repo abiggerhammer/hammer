@@ -34,6 +34,7 @@ HAMMER_PARTS := \
 	bitwriter.o \
 	pprint.o \
 	allocator.o \
+	desugar.o \
 	datastructures.o \
 	system_allocator.o \
 	benchmark.o \

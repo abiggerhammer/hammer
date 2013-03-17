@@ -76,7 +76,7 @@ static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
   /* create first subrule */
   HCFChoice *ma = h_new(HCFChoice, 3);
   ma->type = HCF_CHOICE;
-  ma->seq[0]->items[0] = repeat->p->vtable->desugar(mm__, repeat->p->env);
+  ma->seq[0]->items[0] = h_desugar(mm__, repeat->p);
 
   /* create second subrule */
   HCFChoice *mar = h_new(HCFChoice, 3);
@@ -84,8 +84,8 @@ static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
   mar->seq = h_new(HCFSequence*, 2);
   mar->seq[0] = h_new(HCFSequence, 1);
   mar->seq[0]->items = h_new(HCFChoice*, 4);
-  mar->seq[0]->items[0] = repeat->sep->vtable->desugar(mm__, repeat->sep->env);
-  mar->seq[0]->items[1] = repeat->p->vtable->desugar(mm__, repeat->p->env);
+  mar->seq[0]->items[0] = h_desugar(mm__, repeat->sep);
+  mar->seq[0]->items[1] = h_desugar(mm__, repeat->p);
   mar->seq[0]->items[2] = mar; // woo recursion!
   mar->seq[0]->items[3] = NULL;
   mar->seq[1]->items = h_new(HCFChoice*, 2);

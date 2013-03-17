@@ -47,7 +47,7 @@ static HCFChoice* desugar_choice(HAllocator *mm__, void *env) {
   for (size_t i=0; i<s->len; ++i) {
     ret->seq[i] = h_new(HCFSequence, 1);
     ret->seq[i]->items = h_new(HCFChoice*, 2);
-    ret->seq[i]->items[0] = s->p_array[i]->vtable->desugar(mm__, s->p_array[i]->env);
+    ret->seq[i]->items[0] = h_desugar(mm__, s->p_array[i]);
     ret->seq[i]->items[1] = NULL;
   }
   ret->seq[s->len] = NULL;

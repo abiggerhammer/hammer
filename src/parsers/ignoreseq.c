@@ -31,7 +31,7 @@ static HCFChoice* desugar_ignoreseq(HAllocator *mm__, void *env) {
   HCFSequence *hseq = h_new(HCFSequence, 1);
   hseq->items = h_new(HCFChoice*, 1+seq->len);
   for (size_t i=0; i<seq->len; ++i) {
-    hseq->items[i] = seq->parsers[i]->vtable->desugar(mm__, seq->parsers[i]->env);
+    hseq->items[i] = h_desugar(mm__, seq->parsers[i]);
   }
   hseq->items[seq->len] = NULL;
   HCFChoice *ret = h_new(HCFChoice, 1);
