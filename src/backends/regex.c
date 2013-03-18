@@ -115,7 +115,7 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
 	  hi = (arg >> 8) & 0xff;
 	  lo = arg & 0xff;
 	  THREAD.ip++;
-	  if (ch < lo && ch > hi)
+	  if (ch < lo || ch > hi)
 	    ipq_top--; // terminate thread
 	  goto next_insn;
 	case RVM_GOTO:
