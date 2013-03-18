@@ -37,12 +37,14 @@ typedef struct HSVMContext_ {
 
 // These actions all assume that the items on the stack are not
 // aliased anywhere.
+typedef bool (*HSVMActionFunc)(HArena *arena, HSVMContext *ctx, void* env);
 typedef struct HSVMAction_ {
-  bool (*fn)(HArena *arena, HSVMContext *ctx, void* env);
+  HSVMActionFunc action
   void* env;
 } HSVMAction;
 
 typedef struct HRVMProg_ {
+  HAllocator *allocator;
   size_t length;
   size_t action_count;
   HRVMInsn *insns;
@@ -53,7 +55,7 @@ typedef struct HRVMProg_ {
 bool h_compile_regex(HRVMProg *prog, const HParser* parser);
 
 // These functions are used by the compile_to_rvm method of HParser
-uint16_t h_rvm_create_action(HRVMProg *prog, HSVMAction *action);
+uint16_t h_rvm_create_action(HRVMProg *prog, HSVMActionFunc action_func, void* env);
 
 // returns the address of the instruction just created
 uint16_t h_rvm_insert_insn(HRVMProg *prog, HRVMOp op, uint16_t arg);

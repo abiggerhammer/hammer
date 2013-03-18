@@ -121,7 +121,7 @@ typedef struct HParserVtable_ {
   HParseResult* (*parse)(void *env, HParseState *state);
   bool (*isValidRegular)(void *env);
   bool (*isValidCF)(void *env);
-  
+  bool (*compile_to_rvm)(struct HRVMProg_ *prog, void* env);
 } HParserVtable;
 
 typedef struct HParser_ {
