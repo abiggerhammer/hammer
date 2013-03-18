@@ -27,7 +27,7 @@ typedef struct HRVMInsn_{
   uint16_t arg;
 } HRVMInsn;
 
-const HTokenType TT_MARK = TT_RESERVED_1;
+#define TT_MARK TT_RESERVED_1
 
 typedef struct HSVMContext_ {
   HParsedToken **stack;
@@ -49,7 +49,21 @@ typedef struct HRVMProg_ {
   HSVMAction *actions;
 } HRVMProg;
 
+// Returns true IFF the provided parser could be compiled.
+bool h_compile_regex(HRVMProg *prog, const HParser* parser);
 
+// These functions are used by the compile_to_rvm method of HParser
+uint16_t h_rvm_create_action(HRVMProg *prog, HSVMAction *action);
 
+// returns the address of the instruction just created
+uint16_t h_rvm_insert_insn(HRVMProg *prog, HRVMOp op, uint16_t arg);
+
+// returns the address of the next insn to be created.
+uint16_t h_rvm_get_ip(HRVMProg *prog);
+
+// Used to insert forward references; the idea is to generate a JUMP
+// or FORK instruction with a target of 0, then update it once the
+// correct target is known.
+void h_rvm_patch_arg(HRVMProg *prog, uint16_t ip, uint16_t new_val);
 
 #endif
