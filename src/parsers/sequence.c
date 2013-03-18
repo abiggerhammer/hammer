@@ -42,10 +42,20 @@ static bool sequence_isValidCF(void *env) {
   return true;
 }
 
+static bool sequence_ctrvm(struct HRVMProg_ *prog, void* env) {
+  HSequence *s = (HSequence*)env;
+  for (size_t i=0; i<s->len; ++i) {
+    if (!s->p_array[i]->vtable->compile_to_rvm(prog, s->p_array[i]->env))
+      return false;
+  }
+  return true;
+}
+
 static const HParserVtable sequence_vt = {
   .parse = parse_sequence,
   .isValidRegular = sequence_isValidRegular,
   .isValidCF = sequence_isValidCF,
+  .compile_to_rvm = sequence_ctrvm,
 };
 
 const HParser* h_sequence(const HParser* p, ...) {
