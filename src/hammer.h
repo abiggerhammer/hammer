@@ -117,11 +117,12 @@ typedef const HParsedToken* (*HAction)(const HParseResult *p);
  */
 typedef bool (*HPredicate)(HParseResult *p);
 
+typedef struct HRVMProg_ HRVMProg;
 typedef struct HParserVtable_ {
   HParseResult* (*parse)(void *env, HParseState *state);
   bool (*isValidRegular)(void *env);
   bool (*isValidCF)(void *env);
-  bool (*compile_to_rvm)(struct HRVMProg_ *prog, void* env);
+  bool (*compile_to_rvm)(HRVMProg *prog, void* env);
 } HParserVtable;
 
 typedef struct HParser_ {

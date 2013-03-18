@@ -213,7 +213,7 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
       break;
     case SVM_ACTION:
       // Action should modify stack appropriately
-      if (!orig_prog->actions[cur->arg].fn(arena, &ctx, orig_prog->actions[cur->arg].env)) {
+      if (!orig_prog->actions[cur->arg].action(arena, &ctx, orig_prog->actions[cur->arg].env)) {
 	// action failed... abort somehow
 	// TODO: Actually abort
       }
@@ -257,13 +257,13 @@ uint16_t h_rvm_create_action(HRVMProg *prog, HSVMActionFunc action_func, void* e
   // Ensure that there's room in the action array...
   if (!(prog->action_count & (prog->action_count + 1))) {
     // needs to be scaled up.
-    array_size = (prog->action_count + 1) * 2; // action_count+1 is a
+    size_t array_size = (prog->action_count + 1) * 2; // action_count+1 is a
 					       // power of two
-    prog->actions = prog->allocator->realloc(prog->actions, array_size * sizeof(*prog->actions));
+    prog->actions = prog->allocator->realloc(prog->allocator, prog->actions, array_size * sizeof(*prog->actions));
     // TODO: Handle the allocation failed case nicely.
   }
 
-  HAction *action = &prog->actions[prog->action_count];
+  HSVMAction *action = &prog->actions[prog->action_count];
   action->action = action_func;
   action->env = env;
   return prog->action_count++;
@@ -273,9 +273,9 @@ uint16_t h_rvm_insert_insn(HRVMProg *prog, HRVMOp op, uint16_t arg) {
   // Ensure that there's room in the insn array...
   if (!(prog->length & (prog->length + 1))) {
     // needs to be scaled up.
-    array_size = (prog->length + 1) * 2; // action_count+1 is a
-					       // power of two
-    prog->insns = prog->allocator->realloc(prog->insns, array_size * sizeof(*prog->insns));
+    size_t array_size = (prog->length + 1) * 2; // action_count+1 is a
+						// power of two
+    prog->insns = prog->allocator->realloc(prog->allocator, prog->insns, array_size * sizeof(*prog->insns));
     // TODO: Handle the allocation failed case nicely.
   }
 

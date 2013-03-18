@@ -39,7 +39,7 @@ typedef struct HSVMContext_ {
 // aliased anywhere.
 typedef bool (*HSVMActionFunc)(HArena *arena, HSVMContext *ctx, void* env);
 typedef struct HSVMAction_ {
-  HSVMActionFunc action
+  HSVMActionFunc action;
   void* env;
 } HSVMAction;
 
