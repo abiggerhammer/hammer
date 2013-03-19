@@ -8,10 +8,15 @@ static HParseResult* parse_epsilon(void* env, HParseState* state) {
   return res;
 }
 
+static bool episilon_ctrvm(HRVMProg *prog, void* env) {
+  return true;
+}
+
 static const HParserVtable epsilon_vt = {
   .parse = parse_epsilon,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .compile_to_rvm = episilon_ctrvm,
 };
 
 static const HParser epsilon_p = {
