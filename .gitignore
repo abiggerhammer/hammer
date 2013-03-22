@@ -8,3 +8,6 @@ examples/base64
 TAGS
 *.swp
 *.swo
+\#*
+.*
+docs/milestone2.dot.pdf
