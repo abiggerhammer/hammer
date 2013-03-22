@@ -17,7 +17,7 @@ regex -> milestone2;
 glue -> milestone2; // Meredith knows what glue referred to here.
 tests -> milestone2;
 
-regex_gen -> regex;
+regex_gen -> regex; // partially done
 regex_driver -> regex;
 regex_svm -> regex_driver;
 regex_rvm -> regex_driver;
