@@ -29,6 +29,35 @@ void init_parser(void)
 }
 
 
+#include <string.h>
+#include <assert.h>
+#define TRUE (1)
+#define FALSE (0)
+
+void assert_parse(int expected, char *data) {
+    const HParseResult *result;
+
+    size_t datasize = strlen(data);
+    result = h_parse(document, (void*)data, datasize);
+    if((result != NULL) != expected) {
+        printf("Test failed: %s\n", data);
+    }
+}
+
+void test() {
+    assert_parse(TRUE, "");
+    assert_parse(TRUE, "YQ==");
+    assert_parse(TRUE, "YXU=");
+    assert_parse(TRUE, "YXVy");
+    assert_parse(TRUE, "QVVSIFNBUkFG");
+    assert_parse(TRUE, "QVVSIEhFUlUgU0FSQUY=");
+    assert_parse(FALSE, "A");
+    assert_parse(FALSE, "A=");
+    assert_parse(FALSE, "A==");
+    assert_parse(FALSE, "AAA==");
+}
+
+
 #include <stdio.h>
 
 int main(int argc, char **argv)
@@ -38,6 +67,8 @@ int main(int argc, char **argv)
     const HParseResult *result;
 
     init_parser();
+
+    test();
 
     inputsize = fread(input, 1, sizeof(input), stdin);
     fprintf(stderr, "inputsize=%lu\ninput=", inputsize);
