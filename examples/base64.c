@@ -1,5 +1,7 @@
 #include "../src/hammer.h"
 
+#define DEBUG
+
 const HParser* document = NULL;
 
 void init_parser(void)
@@ -19,9 +21,14 @@ void init_parser(void)
         h_ch('Y'), h_ch('c'), h_ch('g'), h_ch('k'), h_ch('o'), h_ch('s'),
         h_ch('w'), h_ch('0'), h_ch('4'), h_ch('8'), NULL);
     const HParser *bsfdig_2bit = h_choice(h_ch('A'), h_ch('Q'), h_ch('g'), h_ch('w'), NULL);
-    const HParser *base64_2 = h_sequence(bsfdig, bsfdig, bsfdig_4bit, equals, NULL);
-    const HParser *base64_1 = h_sequence(bsfdig, bsfdig_2bit, equals, equals, NULL);
-    const HParser *base64 = h_choice(base64_2, base64_1, NULL);
+
+    const HParser *base64_quad = h_sequence(bsfdig, bsfdig, bsfdig, bsfdig, NULL);
+    const HParser *base64_quads = h_many(base64_quad);
+
+    const HParser *base64_2 = h_sequence(bsfdig, bsfdig, bsfdig_4bit, equals, h_end_p(), NULL);
+    const HParser *base64_1 = h_sequence(bsfdig, bsfdig_2bit, equals, equals, h_end_p(), NULL);
+    const HParser *base64_ending = h_choice(h_end_p(), base64_2, base64_1, NULL);
+    const HParser *base64 = h_sequence(base64_quads, base64_ending, NULL);
         // why does this parse "A=="?!
         // why does this parse "aaA=" but not "aA=="?!
 
@@ -40,8 +47,15 @@ void assert_parse(int expected, char *data) {
     size_t datasize = strlen(data);
     result = h_parse(document, (void*)data, datasize);
     if((result != NULL) != expected) {
-        printf("Test failed: %s\n", data);
+        fprintf(stderr, "Test failed: %s\n", data);
     }
+#ifdef DEBUG
+    else {
+        fprintf(stderr, "Test succeeded: %s\n", data);
+        fprintf(stderr, "parsed=%lld bytes\n", result->bit_length/8);
+        h_pprint(stdout, result->ast, 0, 0);
+    }
+#endif
 }
 
 void test() {
@@ -55,6 +69,7 @@ void test() {
     assert_parse(FALSE, "A=");
     assert_parse(FALSE, "A==");
     assert_parse(FALSE, "AAA==");
+    assert_parse(FALSE, "aa==");
 }
 
 
