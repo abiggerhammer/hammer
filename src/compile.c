@@ -4,6 +4,7 @@
 
 static HParserBackendVTable *backends[PB_MAX] = {
   &h__packrat_backend_vtable,
+  &h__ll_backend_vtable,
 };
 
 int h_compile(const HParser* parser, HParserBackend backend, const void* params) {

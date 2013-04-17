@@ -34,6 +34,7 @@ typedef struct HParseState_ HParseState;
 typedef enum HParserBackend_ {
   PB_MIN = 0,
   PB_PACKRAT = PB_MIN, // PB_MIN is always the default.
+  PB_LL,
   PB_MAX
 } HParserBackend;
 
