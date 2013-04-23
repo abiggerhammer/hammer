@@ -32,10 +32,31 @@ static HParseResult* parse_charset(void *env, HParseState *state) {
     return NULL;
 }
 
+// FUTURE: this is horribly inefficient
+static bool cs_ctrvm(HRVMProg *prog, void *env) {
+  HCharset cs = (HCharset)env;
+  uint16_t start = h_rvm_get_ip(prog);
+  for (size_t i=0; i<256; ++i) {
+    if (charset_isset(cs, i)) {
+      uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
+      h_rvm_insert_insn(prog, RVM_MATCH, i & i << 8);
+      h_rvm_insert_insn(prog, RVM_GOTO, 0);
+      h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
+    }
+  }
+  uint16_t jump = h_rvm_insert_insn(prog, RVM_STEP, 0);
+  for (size_t i=start; i<jump; ++i) {
+    if (RVM_GOTO == prog->insns[i].op)
+      h_rvm_patch_arg(prog, i, jump);
+  }
+  return true;
+}
+
 static const HParserVtable charset_vt = {
   .parse = parse_charset,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .compile_to_rvm = cs_ctrvm,
 };
 
 const HParser* h_ch_range(const uint8_t lower, const uint8_t upper) {

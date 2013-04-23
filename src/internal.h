@@ -225,6 +225,7 @@ void  h_hashtable_free(HHashTable* ht);
 
 bool h_false(void*);
 bool h_true(void*);
+bool h_not_regular(HRVMProg*, void*);
 
 #if 0
 #include <stdlib.h>

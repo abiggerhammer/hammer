@@ -29,10 +29,16 @@ static bool action_isValidCF(void *env) {
   return a->p->vtable->isValidCF(a->p->env);
 }
 
+static bool action_ctrvm(HRVMProg *prog, void* env) {
+  HParseAction *a = (HParseAction*)env;
+  return a->p->vtable->compile_to_rvm(prog, a->p->env);
+}
+
 static const HParserVtable action_vt = {
   .parse = parse_action,
   .isValidRegular = action_isValidRegular,
   .isValidCF = action_isValidCF,
+  .compile_to_rvm = action_ctrvm,
 };
 
 const HParser* h_action(const HParser* p, const HAction a) {

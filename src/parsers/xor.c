@@ -41,6 +41,7 @@ static const HParserVtable xor_vt = {
   .parse = parse_xor,
   .isValidRegular = h_false,
   .isValidCF = xor_isValidCF,
+  .compile_to_rvm = h_not_regular,
 };
 
 const HParser* h_xor(const HParser* p1, const HParser* p2) {

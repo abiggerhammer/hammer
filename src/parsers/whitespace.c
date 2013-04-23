@@ -24,10 +24,16 @@ static bool ws_isValidCF(void *env) {
   return p->vtable->isValidCF(p->env);
 }
 
+static bool ws_ctrvm(HRVMProg *prog, void *env) {
+  HParser *p = (HParser*)env;
+  return h_compile_regex(prog, p->env);
+}
+
 static const HParserVtable whitespace_vt = {
   .parse = parse_whitespace,
   .isValidRegular = ws_isValidRegular,
   .isValidCF = ws_isValidCF,
+  .compile_to_rvm = ws_ctrvm,
 };
 
 const HParser* h_whitespace(const HParser* p) {

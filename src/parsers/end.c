@@ -10,10 +10,16 @@ static HParseResult* parse_end(void *env, HParseState *state) {
   }
 }
 
+static bool end_ctrvm(HRVMProg *prog, void *env) {
+  h_rvm_insert_insn(prog, RVM_EOF, 0);
+  return true;
+}
+
 static const HParserVtable end_vt = {
   .parse = parse_end,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .compile_to_rvm = end_ctrvm,
 };
 
 const HParser* h_end_p() {

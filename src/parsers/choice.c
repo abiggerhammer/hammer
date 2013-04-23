@@ -39,10 +39,29 @@ static bool choice_isValidCF(void *env) {
   return true;
 }
 
+static bool choice_ctrvm(HRVMProg *prog, void* env) {
+  HSequence *s = (HSequence*)env;
+  uint16_t gotos[s->len];
+  uint16_t start = h_rvm_get_ip(prog);
+  for (size_t i=0; i<s->len; ++i) {
+    uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
+    if (!h_compile_regex(prog, s->p_array[i]->env))
+      return false;
+    gotos[i] = h_rvm_insert_insn(prog, RVM_GOTO, 0);
+    h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
+  }
+  uint16_t jump = h_rvm_insert_insn(prog, RVM_STEP, 0);
+  for (size_t i=start; i<s->len; ++i) {
+      h_rvm_patch_arg(prog, gotos[i], jump);
+  }
+  return true;
+}
+
 static const HParserVtable choice_vt = {
   .parse = parse_choice,
   .isValidRegular = choice_isValidRegular,
   .isValidCF = choice_isValidCF,
+  .compile_to_rvm = choice_ctrvm,
 };
 
 const HParser* h_choice(const HParser* p, ...) {

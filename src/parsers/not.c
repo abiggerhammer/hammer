@@ -14,6 +14,7 @@ static const HParserVtable not_vt = {
   .parse = parse_not,
   .isValidRegular = h_false,  /* see and.c for why */
   .isValidCF = h_false,       /* also see and.c for why */
+  .compile_to_rvm = h_not_regular,
 };
 
 const HParser* h_not(const HParser* p) {

@@ -45,6 +45,7 @@ static const HParserVtable butnot_vt = {
   .parse = parse_butnot,
   .isValidRegular = h_false,
   .isValidCF = bn_isValidCF,
+  .compile_to_rvm = h_not_regular,
 };
 
 const HParser* h_butnot(const HParser* p1, const HParser* p2) {

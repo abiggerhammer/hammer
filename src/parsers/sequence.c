@@ -42,7 +42,7 @@ static bool sequence_isValidCF(void *env) {
   return true;
 }
 
-static bool sequence_ctrvm(struct HRVMProg_ *prog, void* env) {
+static bool sequence_ctrvm(HRVMProg *prog, void *env) {
   HSequence *s = (HSequence*)env;
   for (size_t i=0; i<s->len; ++i) {
     if (!s->p_array[i]->vtable->compile_to_rvm(prog, s->p_array[i]->env))
