@@ -14,6 +14,7 @@ static const HParserVtable indirect_vt = {
   .parse = parse_indirect,
   .isValidRegular = h_false,
   .isValidCF = indirect_isValidCF,
+  .compile_to_rvm = h_not_regular,
 };
 
 void h_bind_indirect(HParser* indirect, const HParser* inner) {

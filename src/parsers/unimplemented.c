@@ -16,6 +16,7 @@ static const HParserVtable unimplemented_vt = {
   .parse = parse_unimplemented,
   .isValidRegular = h_false,
   .isValidCF = h_false,
+  .compile_to_rvm = h_not_regular,
 };
 
 static HParser unimplemented = {

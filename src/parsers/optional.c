@@ -21,10 +21,20 @@ static bool opt_isValidCF(void *env) {
   return p->vtable->isValidCF(p->env);
 }
 
+static bool opt_ctrvm(HRVMProg *prog, void* env) {
+  uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
+  HParser *p = (HParser*) env;
+  if (!h_compile_regex(prog, p->env))
+    return false;
+  h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
+  return true;
+}
+
 static const HParserVtable optional_vt = {
   .parse = parse_optional,
   .isValidRegular = opt_isValidRegular,
   .isValidCF = opt_isValidCF,
+  .compile_to_rvm = opt_ctrvm,
 };
 
 const HParser* h_optional(const HParser* p) {

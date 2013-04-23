@@ -27,10 +27,16 @@ static bool ab_isValidCF(void *env) {
   return ab->p->vtable->isValidCF(ab->p->env);
 }
 
+static bool ab_ctrvm(HRVMProg *prog, void *env) {
+  HAttrBool *ab = (HAttrBool*)env;
+  return h_compile_regex(prog, ab->p);
+}
+
 static const HParserVtable attr_bool_vt = {
   .parse = parse_attr_bool,
   .isValidRegular = ab_isValidRegular,
   .isValidCF = ab_isValidCF,
+  .compile_to_rvm = ab_ctrvm,
 };
 
 

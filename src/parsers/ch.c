@@ -12,10 +12,18 @@ static HParseResult* parse_ch(void* env, HParseState *state) {
   }
 }
 
+static bool ch_ctrvm(HRVMProg *prog, void* env) {
+  uint8_t c = (uint8_t)(unsigned long)(env);
+  h_rvm_insert_insn(prog, RVM_MATCH, c & c << 8);
+  h_rvm_insert_insn(prog, RVM_STEP, 0);
+  return true;
+}
+
 static const HParserVtable ch_vt = {
   .parse = parse_ch,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .compile_to_rvm = ch_ctrvm,
 };
 
 const HParser* h_ch(const uint8_t c) {

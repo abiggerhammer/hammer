@@ -56,10 +56,29 @@ static bool many_isValidCF(void *env) {
 	  repeat->sep->vtable->isValidCF(repeat->sep->env));
 }
 
+static bool many_ctrvm(HRVMProg *prog, void *env) {
+  HRepeat *repeat = (HRepeat*)env;
+  // FIXME: Implement clear_to_mark
+  uint16_t clear_to_mark = h_rvm_create_action(prog, h_svm_action_clear_to_mark, NULL);
+  h_rvm_insert_insn(prog, RVM_PUSH, 0);
+  uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
+  if (!h_compile_regex(prog, repeat->p))
+    return false;
+  if (!h_compile_regex(prog, repeat->sep))
+    return false;
+  h_rvm_insert_insn(prog, RVM_ACTION, clear_to_mark);
+  h_rvm_insert_insn(prog, RVM_GOTO, insn);
+  h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
+
+  h_rvm_insert_insn(prog, RVM_ACTION, h_svm_action_make_sequence, NULL);
+  return true;
+}
+
 static const HParserVtable many_vt = {
   .parse = parse_many,
   .isValidRegular = many_isValidRegular,
   .isValidCF = many_isValidCF,
+  .compile_to_rvm = many_ctrvm,
 };
 
 const HParser* h_many(const HParser* p) {

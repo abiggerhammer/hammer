@@ -93,3 +93,8 @@ bool h_true(void* env) {
   (void)env;
   return true;
 }
+
+bool h_not_regular(HRVMProg *prog, void *env) {
+  (void)env;
+  return false;
+}

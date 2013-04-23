@@ -44,6 +44,7 @@ static HParserVtable difference_vt = {
   .parse = parse_difference,
   .isValidRegular = h_false,
   .isValidCF = diff_isValidCF,
+  .compile_to_rvm = h_not_regular,
 };
 
 const HParser* h_difference(const HParser* p1, const HParser* p2) {

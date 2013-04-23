@@ -16,11 +16,24 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
   return make_result(state, result);
 }
 
+static bool bits_ctrvm(HRVMProg *prog, void* env) {
+  struct bits_env *env_ = (struct bits_env*)env;
+  h_rvm_insert_insn(prog, RVM_PUSH, 0);
+  for (size_t i=0; (i < env_->length)/8; ++i) { // FUTURE: when we can handle non-byte-aligned, the env_->length/8 part will be different
+    h_rvm_insert_insn(prog, RVM_MATCH, 0xFF00);
+    h_rvm_insert_insn(prog, RVM_STEP, 0);
+  }
+  h_rvm_insert_insn(prog, RVM_CAPTURE, 0);
+  return true;
+}
+
 static const HParserVtable bits_vt = {
   .parse = parse_bits,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .compile_to_rvm = bits_ctrvm,
 };
+
 const HParser* h_bits(size_t len, bool sign) {
   return h_bits__m(&system_allocator, len, sign);
 }

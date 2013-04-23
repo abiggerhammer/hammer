@@ -20,10 +20,22 @@ static HParseResult* parse_token(void *env, HParseState *state) {
   return make_result(state, tok);
 }
 
+static bool token_ctrvm(HRVMProg *prog, void *env) {
+  HToken *t = (HToken*)env;
+  h_rvm_insert_insn(prog, RVM_PUSH, 0);
+  for (int i=0; i<t->len; ++i) {
+    h_rvm_insert_insn(prog, RVM_MATCH, t->str[i] & t->str[i] << 8);
+    h_rvm_insert_insn(prog, RVM_STEP, 0);
+  }
+  h_rvm_insert_insn(prog, RVM_CAPTURE, 0);
+  return true;
+}
+
 const HParserVtable token_vt = {
   .parse = parse_token,
   .isValidRegular = h_true,
   .isValidCF = h_true,
+  .compile_to_rvm = token_ctrvm,
 };
 
 const HParser* h_token(const uint8_t *str, const size_t len) {
