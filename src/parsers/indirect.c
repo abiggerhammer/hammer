@@ -13,7 +13,10 @@ void h_bind_indirect(HParser* indirect, const HParser* inner) {
 }
 
 HParser* h_indirect() {
-  HParser *res = g_new(HParser, 1);
+  return h_indirect__m(&system_allocator);
+}
+HParser* h_indirect__m(HAllocator* mm__) {
+  HParser *res = h_new(HParser, 1);
   res->vtable = &indirect_vt;
   res->env = NULL;
   return res;

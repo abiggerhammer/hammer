@@ -4,22 +4,16 @@
 #include "internal.h"
 #include "test_suite.h"
 
-// This file provides the logical inverse of bitreader.c
-struct HBitWriter_ {
-  uint8_t* buf;
-  size_t index;
-  size_t capacity;
-  char bit_offset; // unlike in bit_reader, this is always the number
-		   // of used bits in the current byte. i.e., 0 always
-		   // means that 8 bits are available for use.
-  char flags;
-};
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 // h_bit_writer_
-HBitWriter *h_bit_writer_new() {
-  HBitWriter *writer = g_new0(HBitWriter, 1);
-  writer->buf = g_malloc0(writer->capacity = 8);
-
+HBitWriter *h_bit_writer_new(HAllocator* mm__) {
+  HBitWriter *writer = h_new(HBitWriter, 1);
+  memset(writer, 0, sizeof(*writer));
+  writer->buf = mm__->alloc(mm__, writer->capacity = 8);
+  memset(writer->buf, 0, writer->capacity);
+  writer->mm__ = mm__;
   writer->flags = BYTE_BIG_ENDIAN | BIT_BIG_ENDIAN;
 
   return writer;
@@ -41,7 +35,7 @@ static void h_bit_writer_reserve(HBitWriter* w, size_t nbits) {
   int nbytes = (nbits + 7) / 8 + ((w->bit_offset != 0) ? 1 : 0);
   size_t old_capacity = w->capacity;
   while (w->index + nbytes >= w->capacity) {
-    w->buf = g_realloc(w->buf, w->capacity *= 2);
+    w->buf = w->mm__->realloc(w->mm__, w->buf, w->capacity *= 2);
   }
 
   if (old_capacity != w->capacity)
@@ -100,114 +94,7 @@ const uint8_t *h_bit_writer_get_buffer(HBitWriter* w, size_t *len) {
 }
 
 void h_bit_writer_free(HBitWriter* w) {
-  g_free(w->buf);
-  g_free(w);
+  HAllocator *mm__ = w->mm__;
+  h_free(w->buf);
+  h_free(w);
 }
-
-#ifdef INCLUDE_TESTS
-// TESTS BELOW HERE
-typedef struct {
-  unsigned long long data;
-  size_t nbits;
-} bitwriter_test_elem; // should end with {0,0}
-
-void run_bitwriter_test(bitwriter_test_elem data[], char flags) {
-  size_t len;
-  const uint8_t *buf;
-  HBitWriter *w = h_bit_writer_new();
-  int i;
-  w->flags = flags;
-  for (i = 0; data[i].nbits; i++) {
-    h_bit_writer_put(w, data[i].data, data[i].nbits);
-  }
-
-  buf = h_bit_writer_get_buffer(w, &len);
-  HInputStream input = {
-    .input = buf,
-    .index = 0,
-    .length = len,
-    .bit_offset = (flags & BIT_BIG_ENDIAN) ? 8 : 0,
-    .endianness = flags,
-    .overrun = 0
-  };
-
-  for (i = 0; data[i].nbits; i++) {
-    g_check_cmpulonglong ((unsigned long long)h_read_bits(&input, data[i].nbits, FALSE), ==,  data[i].data);
-  }
-}
-
-static void test_bitwriter_ints(void) {
-  bitwriter_test_elem data[] = {
-    { -0x200000000, 64 },
-    { 0,0 }
-  };
-  run_bitwriter_test(data, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
-}
-
-static void test_bitwriter_be(void) {
-  bitwriter_test_elem data[] = {
-    { 0x03, 3 },
-    { 0x52, 8 },
-    { 0x1A, 5 },
-    { 0, 0 }
-  };
-  run_bitwriter_test(data, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
-}
-
-static void test_bitwriter_le(void) {
-  bitwriter_test_elem data[] = {
-    { 0x02, 3 },
-    { 0x4D, 8 },
-    { 0x0B, 5 },
-    { 0, 0 }
-  };
-  run_bitwriter_test(data, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
-}
-
-static void test_largebits_be(void) {
-  bitwriter_test_elem data[] = {
-    { 0x352, 11 },
-    { 0x1A, 5 },
-    { 0, 0 }
-  };
-  run_bitwriter_test(data, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
-}
-
-static void test_largebits_le(void) {
-  bitwriter_test_elem data[] = {
-    { 0x26A, 11 },
-    { 0x0B, 5 },
-    { 0, 0 }
-  };
-  run_bitwriter_test(data, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
-}
-
-static void test_offset_largebits_be(void) {
-  bitwriter_test_elem data[] = {
-    { 0xD, 5 },
-    { 0x25A, 11 },
-    { 0, 0 }
-  };
-  run_bitwriter_test(data, BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN);
-}
-
-static void test_offset_largebits_le(void) {
-  bitwriter_test_elem data[] = {
-    { 0xA, 5 },
-    { 0x2D3, 11 },
-    { 0, 0 }
-  };
-  run_bitwriter_test(data, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
-}
-
-void register_bitwriter_tests(void) {
-  g_test_add_func("/core/bitwriter/be", test_bitwriter_be);
-  g_test_add_func("/core/bitwriter/le", test_bitwriter_le);
-  g_test_add_func("/core/bitwriter/largebits-be", test_largebits_be);
-  g_test_add_func("/core/bitwriter/largebits-le", test_largebits_le);
-  g_test_add_func("/core/bitwriter/offset-largebits-be", test_offset_largebits_be);
-  g_test_add_func("/core/bitwriter/offset-largebits-le", test_offset_largebits_le);
-  g_test_add_func("/core/bitwriter/ints", test_bitwriter_ints);
-}
-
-#endif // #ifdef INCLUDE_TESTS

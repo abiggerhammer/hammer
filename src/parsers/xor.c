@@ -35,10 +35,13 @@ static const HParserVtable xor_vt = {
   .parse = parse_xor,
 };
 
-const HParser* h_xor(const HParser* p1, const HParser* p2) { 
-  HTwoParsers *env = g_new(HTwoParsers, 1);
+const HParser* h_xor(const HParser* p1, const HParser* p2) {
+  return h_xor__m(&system_allocator, p1, p2);
+}
+const HParser* h_xor__m(HAllocator* mm__, const HParser* p1, const HParser* p2) { 
+  HTwoParsers *env = h_new(HTwoParsers, 1);
   env->p1 = p1; env->p2 = p2;
-  HParser *ret = g_new(HParser, 1);
+  HParser *ret = h_new(HParser, 1);
   ret->vtable = &xor_vt; ret->env = (void*)env;
   return ret;
 }

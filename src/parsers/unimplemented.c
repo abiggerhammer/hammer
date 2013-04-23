@@ -24,3 +24,6 @@ static HParser unimplemented = {
 const HParser* h_unimplemented() {
   return &unimplemented;
 }
+const HParser* h_unimplemented__m(HAllocator* mm__) {
+  return &unimplemented;
+}

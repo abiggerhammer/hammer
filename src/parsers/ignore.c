@@ -15,7 +15,10 @@ static const HParserVtable ignore_vt = {
 };
 
 const HParser* h_ignore(const HParser* p) {
-  HParser* ret = g_new(HParser, 1);
+  return h_ignore__m(&system_allocator, p);
+}
+const HParser* h_ignore__m(HAllocator* mm__, const HParser* p) {
+  HParser* ret = h_new(HParser, 1);
   ret->vtable = &ignore_vt;
   ret->env = (void*)p;
   return ret;

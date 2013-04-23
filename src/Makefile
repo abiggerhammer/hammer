@@ -25,31 +25,55 @@ PARSERS := \
 	attr_bool \
 	indirect
 
-OUTPUTS := bitreader.o \
-	   hammer.o \
-	   bitwriter.o \
-	   libhammer.a \
-	   pprint.o \
-	   allocator.o \
-	   datastructures.o \
+BACKENDS := \
+	packrat
+
+HAMMER_PARTS := \
+	bitreader.o \
+	hammer.o \
+	bitwriter.o \
+	pprint.o \
+	allocator.o \
+	datastructures.o \
+	system_allocator.o \
+	benchmark.o \
+	compile.o \
+	glue.o \
+	$(PARSERS:%=parsers/%.o) \
+	$(BACKENDS:%=backends/%.o)
+
+TESTS := t_benchmark.o \
+	 t_bitreader.o \
+	 t_bitwriter.o \
+	 t_parser.o \
+	 t_misc.o \
+	 test_suite.o
+
+OUTPUTS := libhammer.a \
+	   test_suite.o \
 	   test_suite \
-	   $(PARSERS:%=parsers/%.o)
+	   $(HAMMER_PARTS) \
+	   $(TESTS)
 
 TOPLEVEL := ../
 
 include ../common.mk
 
+$(TESTS): CFLAGS += $(TEST_CFLAGS)
+$(TESTS): LDFLAGS += $(TEST_LDFLAGS)
 
-all: libhammer.a test_suite
+all: libhammer.a
 
-test_suite: test_suite.o libhammer.a
-	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS)
-
-libhammer.a: bitreader.o hammer.o pprint.o allocator.o datastructures.o bitwriter.o \
-	$(PARSERS:%=parsers/%.o)
+libhammer.a: $(HAMMER_PARTS)
 
 bitreader.o: test_suite.h
 hammer.o: hammer.h
+glue.o: hammer.h glue.h
+
+all: libhammer.a
 
 test: test_suite
 	./test_suite -v
+
+test_suite: $(TESTS) libhammer.a
+	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS) $(TEST_LDFLAGS)

@@ -20,3 +20,6 @@ static const HParser epsilon_p = {
 const HParser* h_epsilon_p() {
   return &epsilon_p;
 }
+const HParser* h_epsilon_p__m(HAllocator* mm__) {
+  return &epsilon_p;
+}

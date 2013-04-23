@@ -15,12 +15,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#include <glib.h>
 #include "hammer.h"
 #include "test_suite.h"
 
 extern void register_bitreader_tests();
 extern void register_bitwriter_tests();
 extern void register_parser_tests();
+extern void register_misc_tests();
+extern void register_benchmark_tests();
 
 int main(int argc, char** argv) {
   g_test_init(&argc, &argv, NULL);
@@ -29,6 +32,8 @@ int main(int argc, char** argv) {
   register_bitreader_tests();
   register_bitwriter_tests();
   register_parser_tests();
+  register_misc_tests();
+  register_benchmark_tests();
 
   g_test_run();
 }

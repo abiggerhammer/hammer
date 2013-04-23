@@ -8,7 +8,7 @@ static HParseResult* parse_whitespace(void* env, HParseState *state) {
     bak = state->input_stream;
     c = h_read_bits(&state->input_stream, 8, false);
     if (state->input_stream.overrun)
-      return NULL;
+      break;
   } while (isspace(c));
   state->input_stream = bak;
   return h_do_parse((HParser*)env, state);
@@ -19,7 +19,10 @@ static const HParserVtable whitespace_vt = {
 };
 
 const HParser* h_whitespace(const HParser* p) {
-  HParser *ret = g_new(HParser, 1);
+  return h_whitespace__m(&system_allocator, p);
+}
+const HParser* h_whitespace__m(HAllocator* mm__, const HParser* p) {
+  HParser *ret = h_new(HParser, 1);
   ret->vtable = &whitespace_vt;
   ret->env = (void*)p;
   return ret;

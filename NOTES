@@ -35,4 +35,3 @@ what the comments say.
 
 TODO: implement datastructure linearization func
 TODO: implement free func for parsers
-TODO: Remove glib dependency (i.e., GQueue and GHashtable)

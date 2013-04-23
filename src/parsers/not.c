@@ -15,7 +15,10 @@ static const HParserVtable not_vt = {
 };
 
 const HParser* h_not(const HParser* p) {
-  HParser *res = g_new(HParser, 1);
+  return h_not__m(&system_allocator, p);
+}
+const HParser* h_not__m(HAllocator* mm__, const HParser* p) {
+  HParser *res = h_new(HParser, 1);
   res->vtable = &not_vt;
   res->env = (void*)p;
   return res;
