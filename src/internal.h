@@ -244,6 +244,15 @@ void h_hashtable_put(HHashTable* ht, void* key, void* value);
 int   h_hashtable_present(HHashTable* ht, void* key);
 void  h_hashtable_del(HHashTable* ht, void* key);
 void  h_hashtable_free(HHashTable* ht);
+static inline bool h_hashtable_empty(HHashTable* ht) { return (ht->used == 0); }
+
+typedef HHashTable HHashSet;
+#define h_hashset_new(a,eq,hash) h_hashtable_new(a,eq,hash)
+#define h_hashset_put(ht,el)     h_hashtable_put(ht, el, NULL)
+#define h_hashset_present(ht,el) h_hashtable_present(ht,el)
+#define h_hashset_empty(ht)      h_hashtable_empty(ht)
+#define h_hashset_del(ht,el)     h_hashtable_del(ht,el)
+#define h_hashset_free(ht)       h_hashtable_free(ht)
 
 typedef struct HCFSequence_ HCFSequence;
 
