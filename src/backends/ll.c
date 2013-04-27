@@ -15,7 +15,7 @@ typedef struct HCFGrammar_ {
   HArena      *arena;
 } HCFGrammar;
 
-bool h_eq_pointer(const void *p, const void *q) { return (p==q); }
+bool h_eq_ptr(const void *p, const void *q) { return (p==q); }
 HHashValue h_hash_ptr(const void *p) { return (uintptr_t)p; }
 
 HCFGrammar *h_grammar_new(HAllocator *mm__)
@@ -24,14 +24,16 @@ HCFGrammar *h_grammar_new(HAllocator *mm__)
   assert(g != NULL);
 
   g->arena  = h_new_arena(mm__, 0);     // default blocksize
-  g->nts    = h_hashset_new(g->arena, h_eq_pointer, h_hash_ptr);
+  g->nts    = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
   g->geneps = NULL;
   g->first  = NULL;
 
   return g;
 }
 
-void h_grammar_collect(HCFGrammar *grammar, HCFChoice *symbol); // helper
+// helpers
+static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol);
+static void collect_geneps(HCFGrammar *grammar);
 
 /* Convert 'parser' into CFG representation by desugaring and compiling the set
  * of nonterminals.
@@ -48,18 +50,20 @@ HCFGrammar *h_grammar(HAllocator* mm__, const HParser *parser)
 
   // recursively traverse the desugared form and collect all HCFChoices that
   // represent a nonterminal.
-  h_grammar_collect(g, desugared);
+  collect_nts(g, desugared);
 
   if(h_hashset_empty(g->nts)) {
     // desugared is a single nonterminal. wrap it.
     // XXX is this even necessary?
   }
 
+  // XXX call collect_geneps here?
+
   return g;
 }
 
 /* Add all nonterminals reachable from symbol to grammar. */
-void h_grammar_collect(HCFGrammar *grammar, HCFChoice *symbol)
+static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol)
 {
   HCFSequence **s;  // for the rhs (sentential form) of a production
   HCFChoice **x;    // for a symbol in s
@@ -82,7 +86,7 @@ void h_grammar_collect(HCFGrammar *grammar, HCFChoice *symbol)
     // a production. call self on all symbols (HCFChoice) in s.
     for(s = symbol->seq; *s != NULL; s++) {
       for(x = (*s)->items; *x != NULL; x++) {
-        h_grammar_collect(grammar, *x);
+        collect_nts(grammar, *x);
       }
     }
     break;
@@ -90,6 +94,72 @@ void h_grammar_collect(HCFGrammar *grammar, HCFChoice *symbol)
   default:
     assert_message(0, "unknown HCFChoice type");
   }
+}
+
+/* Does the given symbol derive the empty string (under g)? */
+bool h_symbol_derives_epsilon(HCFGrammar *g, HCFChoice *symbol)
+{
+  if(g->geneps == NULL)
+    collect_geneps(g);
+  assert(g->geneps != NULL);
+
+  switch(symbol->type) {
+  case HCF_END:       // the end token doesn't count as empty
+  case HCF_CHAR:
+  case HCF_CHARSET:
+    return false;
+  default:  // HCF_CHOICE
+    return h_hashset_present(g->geneps, symbol);
+  }
+}
+
+/* Does the sentential form given by s derive the empty string? */
+bool h_sequence_derives_epsilon(HCFGrammar *g, HCFSequence *s)
+{
+  // return true iff all symbols in s derive epsilon
+  HCFChoice **x;
+  for(x = s->items; *x; x++) {
+    if(!h_symbol_derives_epsilon(g, *x))
+      return false;
+  }
+  return true;
+}
+
+/* Populate the geneps member of g; no-op if called multiple times. */
+static void collect_geneps(HCFGrammar *g)
+{
+  if(g->geneps == NULL)
+    return;
+
+  g->geneps = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+  assert(g->geneps != NULL);
+
+  // iterate over the grammar's symbols, the elements of g->nts.
+  // add any we can identify as deriving epsilon to g->geneps.
+  // repeat until g->geneps no longer changes.
+  size_t prevused = g->nts->used;
+  do {
+    size_t i;
+    HHashTableEntry *hte;
+    for(i=0; i < g->nts->capacity; i++) {
+      for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
+        HCFChoice *symbol = hte->key;
+
+        // only nonterminals can derive epsilon.
+        if(symbol->type != HCF_CHOICE)
+          continue;
+
+        // this NT derives epsilon iff any of its productions does.
+        HCFSequence **p;
+        for(p = symbol->seq; *p != NULL; p++) {
+          if(h_sequence_derives_epsilon(g, *p)) {
+            h_hashset_put(g->nts, symbol);
+            break;
+          }
+        }
+      }
+    }
+  } while(g->nts->used != prevused);
 }
 
 // first_set(grammar?, production)
