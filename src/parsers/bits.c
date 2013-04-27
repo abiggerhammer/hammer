@@ -54,10 +54,7 @@ const HParser* h_bits__m(HAllocator* mm__, size_t len, bool sign) {
   struct bits_env *env = h_new(struct bits_env, 1);
   env->length = len;
   env->signedp = sign;
-  HParser *res = h_new(HParser, 1);
-  res->vtable = &bits_vt;
-  res->env = env;
-  return res;
+  return h_new_parser(mm__, &bits_vt, env);
 }
 
 #define SIZED_BITS(name_pre, len, signedp) \

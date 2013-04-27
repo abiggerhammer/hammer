@@ -81,10 +81,7 @@ static const HParser* h_leftright__m(HAllocator* mm__, const HParser* p, const H
   seq->len = 2;
   seq->which = which;
 
-  HParser *ret = h_new(HParser, 1);
-  ret->vtable = &ignoreseq_vt;
-  ret->env = (void*)seq;
-  return ret;
+  return h_new_parser(mm__, &ignoreseq_vt, seq);
 }
 
 const HParser* h_left(const HParser* p, const HParser* q) {
@@ -114,8 +111,5 @@ const HParser* h_middle__m(HAllocator* mm__, const HParser* p, const HParser* x,
   seq->len = 3;
   seq->which = 1;
 
-  HParser *ret = h_new(HParser, 1);
-  ret->vtable = &ignoreseq_vt;
-  ret->env = (void*)seq;
-  return ret;
+  return h_new_parser(mm__, &ignoreseq_vt, seq);
 }

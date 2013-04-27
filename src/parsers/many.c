@@ -123,75 +123,60 @@ const HParser* h_many(const HParser* p) {
   return h_many__m(&system_allocator, p);
 }
 const HParser* h_many__m(HAllocator* mm__, const HParser* p) {
-  HParser *res = h_new(HParser, 1);
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
   env->sep = h_epsilon_p__m(mm__);
   env->count = 0;
   env->min_p = true;
-  res->vtable = &many_vt;
-  res->env = env;
-  return res;
+  return h_new_parser(mm__, &many_vt, env);
 }
 
 const HParser* h_many1(const HParser* p) {
   return h_many1__m(&system_allocator, p);
 }
 const HParser* h_many1__m(HAllocator* mm__, const HParser* p) {
-  HParser *res = h_new(HParser, 1);
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
   env->sep = h_epsilon_p__m(mm__);
   env->count = 1;
   env->min_p = true;
-  res->vtable = &many_vt;
-  res->env = env;
-  return res;
+  return h_new_parser(mm__, &many_vt, env);
 }
 
 const HParser* h_repeat_n(const HParser* p, const size_t n) {
   return h_repeat_n__m(&system_allocator, p, n);
 }
 const HParser* h_repeat_n__m(HAllocator* mm__, const HParser* p, const size_t n) {
-  HParser *res = h_new(HParser, 1);
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
   env->sep = h_epsilon_p__m(mm__);
   env->count = n;
   env->min_p = false;
-  res->vtable = &many_vt;
-  res->env = env;
-  return res;
+  return h_new_parser(mm__, &many_vt, env);
 }
 
 const HParser* h_sepBy(const HParser* p, const HParser* sep) {
   return h_sepBy__m(&system_allocator, p, sep);
 }
 const HParser* h_sepBy__m(HAllocator* mm__, const HParser* p, const HParser* sep) {
-  HParser *res = h_new(HParser, 1);
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
   env->sep = sep;
   env->count = 0;
   env->min_p = true;
-  res->vtable = &many_vt;
-  res->env = env;
-  return res;
+  return h_new_parser(mm__, &many_vt, env);
 }
 
 const HParser* h_sepBy1(const HParser* p, const HParser* sep) {
   return h_sepBy1__m(&system_allocator, p, sep);
 }
 const HParser* h_sepBy1__m(HAllocator* mm__, const HParser* p, const HParser* sep) {
-  HParser *res = h_new(HParser, 1);
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
   env->sep = sep;
   env->count = 1;
   env->min_p = true;
-  res->vtable = &many_vt;
-  res->env = env;
-  return res;
+  return h_new_parser(mm__, &many_vt, env);
 }
 
 typedef struct {
@@ -232,11 +217,8 @@ const HParser* h_length_value(const HParser* length, const HParser* value) {
   return h_length_value__m(&system_allocator, length, value);
 }
 const HParser* h_length_value__m(HAllocator* mm__, const HParser* length, const HParser* value) {
-  HParser *res = h_new(HParser, 1);
-  res->vtable = &length_value_vt;
   HLenVal *env = h_new(HLenVal, 1);
   env->length = length;
   env->value = value;
-  res->env = (void*)env;
-  return res;
+  return h_new_parser(mm__, &length_value_vt, env);
 }

@@ -143,8 +143,5 @@ const HParser* h_int_range__m(HAllocator* mm__, const HParser *p, const int64_t 
   r_env->p = p;
   r_env->lower = lower;
   r_env->upper = upper;
-  HParser *ret = h_new(HParser, 1);
-  ret->vtable = &int_range_vt;
-  ret->env = (void*)r_env;
-  return ret;
+  return h_new_parser(mm__, &int_range_vt, r_env);
 }

@@ -30,8 +30,5 @@ const HParser* h_and(const HParser* p) {
 }
 const HParser* h_and__m(HAllocator* mm__, const HParser* p) {
   // zero-width postive lookahead
-  HParser *res = h_new(HParser, 1);
-  res->env = (void*)p;
-  res->vtable = &and_vt;
-  return res;
+  return h_new_parser(mm__, &and_vt, (void *)p);
 }

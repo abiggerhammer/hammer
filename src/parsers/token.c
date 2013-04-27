@@ -50,8 +50,5 @@ const HParser* h_token(const uint8_t *str, const size_t len) {
 const HParser* h_token__m(HAllocator* mm__, const uint8_t *str, const size_t len) { 
   HToken *t = h_new(HToken, 1);
   t->str = (uint8_t*)str, t->len = len;
-  HParser *ret = h_new(HParser, 1);
-  ret->vtable = &token_vt;
-  ret->env = t;
-  return (const HParser*)ret;
+  return h_new_parser(mm__, &token_vt, t);
 }

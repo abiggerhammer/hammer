@@ -107,7 +107,5 @@ const HParser* h_sequence__mv(HAllocator* mm__, const HParser *p, va_list ap_) {
   va_end(ap);
 
   s->len = len;
-  HParser *ret = h_new(HParser, 1);
-  ret->vtable = &sequence_vt; ret->env = (void*)s;
-  return ret;
+  return h_new_parser(mm__, &sequence_vt, s);
 }

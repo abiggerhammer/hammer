@@ -32,8 +32,5 @@ HParser* h_indirect() {
   return h_indirect__m(&system_allocator);
 }
 HParser* h_indirect__m(HAllocator* mm__) {
-  HParser *res = h_new(HParser, 1);
-  res->vtable = &indirect_vt;
-  res->env = NULL;
-  return res;
+  return h_new_parser(mm__, &indirect_vt, NULL);
 }

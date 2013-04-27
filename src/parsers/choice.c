@@ -103,8 +103,6 @@ const HParser* h_choice__mv(HAllocator* mm__, const HParser* p, va_list ap_) {
   va_end(ap);
 
   s->len = len;
-  HParser *ret = h_new(HParser, 1);
-  ret->vtable = &choice_vt; ret->env = (void*)s;
-  return ret;
+  return h_new_parser(mm__, &choice_vt, s);
 }
 

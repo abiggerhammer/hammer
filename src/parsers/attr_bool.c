@@ -59,11 +59,8 @@ const HParser* h_attr_bool(const HParser* p, HPredicate pred) {
   return h_attr_bool__m(&system_allocator, p, pred);
 }
 const HParser* h_attr_bool__m(HAllocator* mm__, const HParser* p, HPredicate pred) { 
-  HParser *res = h_new(HParser, 1);
-  res->vtable = &attr_bool_vt;
   HAttrBool *env = h_new(HAttrBool, 1);
   env->p = p;
   env->pred = pred;
-  res->env = (void*)env;
-  return res;
+  return h_new_parser(mm__, &attr_bool_vt, env);
 }

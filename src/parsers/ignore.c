@@ -36,8 +36,5 @@ const HParser* h_ignore(const HParser* p) {
   return h_ignore__m(&system_allocator, p);
 }
 const HParser* h_ignore__m(HAllocator* mm__, const HParser* p) {
-  HParser* ret = h_new(HParser, 1);
-  ret->vtable = &ignore_vt;
-  ret->env = (void*)p;
-  return ret;
+  return h_new_parser(mm__, &ignore_vt, (void *)p);
 }

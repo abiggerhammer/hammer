@@ -31,8 +31,5 @@ const HParser* h_ch(const uint8_t c) {
   return h_ch__m(&system_allocator, c);
 }
 const HParser* h_ch__m(HAllocator* mm__, const uint8_t c) {  
-  HParser *ret = h_new(HParser, 1);
-  ret->vtable = &ch_vt;
-  ret->env = (void*)(unsigned long)(c);
-  return (const HParser*)ret;
+  return h_new_parser(mm__, &ch_vt, (void *)(uintptr_t)c);
 }

@@ -29,8 +29,5 @@ const HParser* h_end_p() {
 }
 
 const HParser* h_end_p__m(HAllocator* mm__) { 
-  HParser *ret = h_new(HParser, 1);
-  ret->vtable = &end_vt;
-  ret->env = NULL;
-  return (const HParser*)ret;
+  return h_new_parser(mm__, &end_vt, NULL);
 }

@@ -56,11 +56,8 @@ const HParser* h_action(const HParser* p, const HAction a) {
 }
 
 const HParser* h_action__m(HAllocator* mm__, const HParser* p, const HAction a) {
-  HParser *res = h_new(HParser, 1);
-  res->vtable = &action_vt;
   HParseAction *env = h_new(HParseAction, 1);
   env->p = p;
   env->action = a;
-  res->env = (void*)env;
-  return res;
+  return h_new_parser(mm__, &action_vt, env);
 }

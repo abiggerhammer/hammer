@@ -26,7 +26,5 @@ const HParser* h_nothing_p() {
   return h_nothing_p__m(&system_allocator);
 }
 const HParser* h_nothing_p__m(HAllocator* mm__) { 
-  HParser *ret = h_new(HParser, 1);
-  ret->vtable = &nothing_vt; ret->env = NULL;
-  return (const HParser*)ret;
+  return h_new_parser(mm__, &nothing_vt, NULL);
 }

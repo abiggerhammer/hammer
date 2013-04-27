@@ -225,6 +225,15 @@ long long h_read_bits(HInputStream* state, int count, char signed_p);
 HParseResult* h_do_parse(const HParser* parser, HParseState *state);
 void put_cached(HParseState *ps, const HParser *p, HParseResult *cached);
 
+static inline
+HParser *h_new_parser(HAllocator *mm__, const HParserVtable *vt, void *env) {
+  HParser *p = h_new(HParser, 1);
+  memset(p, 0, sizeof(HParser));
+  p->vtable = vt;
+  p->env = env;
+  return p;
+}
+
 HCFChoice *h_desugar(HAllocator *mm__, const HParser *parser);
 
 HCountedArray *h_carray_new_sized(HArena * arena, size_t size);
