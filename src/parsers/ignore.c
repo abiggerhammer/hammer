@@ -1,5 +1,5 @@
+#include <assert.h>
 #include "parser_internal.h"
-#include "backends/regex_actions.h"
 
 static HParseResult* parse_ignore(void* env, HParseState* state) {
   HParseResult *res0 = h_do_parse((HParser*)env, state);
@@ -21,10 +21,16 @@ static bool ignore_isValidCF(void *env) {
   return (p->vtable->isValidCF(p->env));
 }
 
+static bool h_svm_action_pop(HArena *arena, HSVMContext *ctx, void* arg) {
+  assert(ctx->stack_count > 0);
+  ctx->stack_count--;
+  return true;
+}
+
 static bool ignore_ctrvm(HRVMProg *prog, void *env) {
   HParser *p = (HParser*)env;
   h_compile_regex(prog, p->env);
-  h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_pop));
+  h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_pop, NULL));
   return true;
 }
 
@@ -35,10 +41,10 @@ static const HParserVtable ignore_vt = {
   .compile_to_rvm = ignore_ctrvm,
 };
 
-const HParser* h_ignore(const HParser* p) {
+HParser* h_ignore(const HParser* p) {
   return h_ignore__m(&system_allocator, p);
 }
-const HParser* h_ignore__m(HAllocator* mm__, const HParser* p) {
+HParser* h_ignore__m(HAllocator* mm__, const HParser* p) {
   HParser* ret = h_new(HParser, 1);
   ret->vtable = &ignore_vt;
   ret->env = (void*)p;

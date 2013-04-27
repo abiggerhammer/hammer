@@ -14,13 +14,13 @@ static const HParserVtable not_vt = {
   .parse = parse_not,
   .isValidRegular = h_false,  /* see and.c for why */
   .isValidCF = h_false,       /* also see and.c for why */
-  .compile_to_rvm = h_not_regular,
+  .compile_to_rvm = h_not_regular, // Is actually regular, but the generation step is currently unable to handle it. TODO: fix this.
 };
 
-const HParser* h_not(const HParser* p) {
+HParser* h_not(const HParser* p) {
   return h_not__m(&system_allocator, p);
 }
-const HParser* h_not__m(HAllocator* mm__, const HParser* p) {
+HParser* h_not__m(HAllocator* mm__, const HParser* p) {
   HParser *res = h_new(HParser, 1);
   res->vtable = &not_vt;
   res->env = (void*)p;

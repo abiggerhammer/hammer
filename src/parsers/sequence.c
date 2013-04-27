@@ -44,10 +44,12 @@ static bool sequence_isValidCF(void *env) {
 
 static bool sequence_ctrvm(HRVMProg *prog, void *env) {
   HSequence *s = (HSequence*)env;
+  h_rvm_insert_insn(prog, RVM_PUSH, 0);
   for (size_t i=0; i<s->len; ++i) {
     if (!s->p_array[i]->vtable->compile_to_rvm(prog, s->p_array[i]->env))
       return false;
   }
+  h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_make_sequence, NULL));
   return true;
 }
 
@@ -58,27 +60,27 @@ static const HParserVtable sequence_vt = {
   .compile_to_rvm = sequence_ctrvm,
 };
 
-const HParser* h_sequence(const HParser* p, ...) {
+HParser* h_sequence(const HParser* p, ...) {
   va_list ap;
   va_start(ap, p);
-  const HParser* ret = h_sequence__mv(&system_allocator, p,  ap);
+  HParser* ret = h_sequence__mv(&system_allocator, p,  ap);
   va_end(ap);
   return ret;
 }
 
-const HParser* h_sequence__m(HAllocator* mm__, const HParser* p, ...) {
+HParser* h_sequence__m(HAllocator* mm__, const HParser* p, ...) {
   va_list ap;
   va_start(ap, p);
-  const HParser* ret = h_sequence__mv(mm__, p,  ap);
+  HParser* ret = h_sequence__mv(mm__, p,  ap);
   va_end(ap);
   return ret;
 }
 
-const HParser* h_sequence__v(const HParser* p, va_list ap) {
+HParser* h_sequence__v(const HParser* p, va_list ap) {
   return h_sequence__mv(&system_allocator, p, ap);
 }
 
-const HParser* h_sequence__mv(HAllocator* mm__, const HParser *p, va_list ap_) {
+HParser* h_sequence__mv(HAllocator* mm__, const HParser *p, va_list ap_) {
   va_list ap;
   size_t len = 0;
   const HParser *arg;

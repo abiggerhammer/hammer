@@ -6,7 +6,8 @@ static HParseResult* parse_nothing() {
 }
 
 static bool nothing_ctrvm(HRVMProg *prog, void* env) {
-  h_rvm_insert_insn(prog, RVM_MATCH, 0x00FF);
+  h_rvm_insert_insn(prog, RVM_MATCH, 0x0000);
+  h_rvm_insert_insn(prog, RVM_MATCH, 0xFFFF);
   return true;
 }
 
@@ -17,11 +18,11 @@ static const HParserVtable nothing_vt = {
   .compile_to_rvm = nothing_ctrvm,
 };
 
-const HParser* h_nothing_p() {
+HParser* h_nothing_p() {
   return h_nothing_p__m(&system_allocator);
 }
-const HParser* h_nothing_p__m(HAllocator* mm__) { 
+HParser* h_nothing_p__m(HAllocator* mm__) { 
   HParser *ret = h_new(HParser, 1);
   ret->vtable = &nothing_vt; ret->env = NULL;
-  return (const HParser*)ret;
+  return ret;
 }

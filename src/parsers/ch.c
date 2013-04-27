@@ -14,6 +14,7 @@ static HParseResult* parse_ch(void* env, HParseState *state) {
 
 static bool ch_ctrvm(HRVMProg *prog, void* env) {
   uint8_t c = (uint8_t)(unsigned long)(env);
+  // TODO: Does this capture anything?
   h_rvm_insert_insn(prog, RVM_MATCH, c & c << 8);
   h_rvm_insert_insn(prog, RVM_STEP, 0);
   return true;
@@ -26,12 +27,12 @@ static const HParserVtable ch_vt = {
   .compile_to_rvm = ch_ctrvm,
 };
 
-const HParser* h_ch(const uint8_t c) {
+HParser* h_ch(const uint8_t c) {
   return h_ch__m(&system_allocator, c);
 }
-const HParser* h_ch__m(HAllocator* mm__, const uint8_t c) {  
+HParser* h_ch__m(HAllocator* mm__, const uint8_t c) {  
   HParser *ret = h_new(HParser, 1);
   ret->vtable = &ch_vt;
   ret->env = (void*)(unsigned long)(c);
-  return (const HParser*)ret;
+  return ret;
 }

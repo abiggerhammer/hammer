@@ -47,7 +47,7 @@ static inline void h_generic_free(HAllocator *allocator, void* ptr) {
   allocator->free(allocator, ptr);
 }
 
-HAllocator system_allocator;
+extern HAllocator system_allocator;
 
 
 typedef struct HInputStream_ {
@@ -110,8 +110,9 @@ struct HParseState_ {
 };
 
 typedef struct HParserBackendVTable_ {
-  int (*compile)(HAllocator *mm__, const HParser* parser, const void* params);
-  HParseResult* (*parse)(HAllocator *mm__, const HParser* parser, HParseState* parse_state);
+  int (*compile)(HAllocator *mm__, HParser* parser, const void* params);
+  HParseResult* (*parse)(HAllocator *mm__, const HParser* parser, HInputStream* parse_state);
+  void (*free)(HParser* parser);
 } HParserBackendVTable;
 
 

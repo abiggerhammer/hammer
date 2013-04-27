@@ -22,13 +22,13 @@ static const HParserVtable end_vt = {
   .compile_to_rvm = end_ctrvm,
 };
 
-const HParser* h_end_p() {
+HParser* h_end_p() {
   return h_end_p__m(&system_allocator);
 }
 
-const HParser* h_end_p__m(HAllocator* mm__) { 
+HParser* h_end_p__m(HAllocator* mm__) { 
   HParser *ret = h_new(HParser, 1);
   ret->vtable = &end_vt;
   ret->env = NULL;
-  return (const HParser*)ret;
+  return ret;
 }

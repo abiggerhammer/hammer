@@ -44,10 +44,10 @@ static const HParserVtable xor_vt = {
   .compile_to_rvm = h_not_regular,
 };
 
-const HParser* h_xor(const HParser* p1, const HParser* p2) {
+HParser* h_xor(const HParser* p1, const HParser* p2) {
   return h_xor__m(&system_allocator, p1, p2);
 }
-const HParser* h_xor__m(HAllocator* mm__, const HParser* p1, const HParser* p2) { 
+HParser* h_xor__m(HAllocator* mm__, const HParser* p1, const HParser* p2) { 
   HTwoParsers *env = h_new(HTwoParsers, 1);
   env->p1 = p1; env->p2 = p2;
   HParser *ret = h_new(HParser, 1);

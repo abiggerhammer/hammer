@@ -10,9 +10,12 @@ typedef enum HRVMOp_ {
   RVM_ACCEPT,  // [a]
   RVM_GOTO,    // [c] parameter is an offset into the instruction table
   RVM_FORK,    // [c] parameter is an offset into the instruction table
-  RVM_PUSH,    // [a] No arguments, just pushes a mark onto the stack
+  RVM_PUSH,    // [a] No arguments, just pushes a mark (pointer to some
+               //     character in the input string) onto the stack
   RVM_ACTION,  // [a] argument is an action ID
-  RVM_CAPTURE, // [a] Capture the last string, and push it on the stack. No arg.
+  RVM_CAPTURE, // [a] Capture the last string (up to the current
+	       //     position, non-inclusive), and push it on the
+	       //     stack. No arg.
   RVM_EOF,     // [m] Succeeds only if at EOF.
   RVM_MATCH,   // [m] The high byte of the parameter is an upper bound
 	       //     and the low byte is a lower bound, both
@@ -31,7 +34,7 @@ typedef struct HRVMInsn_{
 
 typedef struct HSVMContext_ {
   HParsedToken **stack;
-  size_t stack_count;
+  size_t stack_count; // number of items on the stack. Thus stack[stack_count] is the first unused item on the stack.
   size_t stack_capacity;
 } HSVMContext;
 
@@ -43,13 +46,13 @@ typedef struct HSVMAction_ {
   void* env;
 } HSVMAction;
 
-typedef struct HRVMProg_ {
+struct HRVMProg_ {
   HAllocator *allocator;
   size_t length;
   size_t action_count;
   HRVMInsn *insns;
   HSVMAction *actions;
-} HRVMProg;
+};
 
 // Returns true IFF the provided parser could be compiled.
 bool h_compile_regex(HRVMProg *prog, const HParser* parser);
@@ -67,5 +70,11 @@ uint16_t h_rvm_get_ip(HRVMProg *prog);
 // or FORK instruction with a target of 0, then update it once the
 // correct target is known.
 void h_rvm_patch_arg(HRVMProg *prog, uint16_t ip, uint16_t new_val);
+
+// Common SVM action funcs...
+bool h_svm_action_make_sequence(HArena *arena, HSVMContext *ctx, void* env);
+bool h_svm_action_clear_to_mark(HArena *arena, HSVMContext *ctx, void* env);
+
+extern HParserBackendVTable h__regex_backend_vtable;
 
 #endif

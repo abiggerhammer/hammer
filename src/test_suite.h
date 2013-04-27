@@ -99,14 +99,14 @@
     } else {								\
       char* cres = h_write_result_unamb(res->ast);			\
       g_check_string(cres, ==, result);					\
-      g_free(cres);							\
+      system_allocator.free(&system_allocator, cres);			\
       HArenaStats stats;						\
       h_allocator_stats(res->arena, &stats);				\
       g_test_message("Parse used %zd bytes, wasted %zd bytes. "		\
                      "Inefficiency: %5f%%",				\
 		     stats.used, stats.wasted,				\
 		     stats.wasted * 100. / (stats.used+stats.wasted));	\
-      h_delete_arena(res->arena);						\
+      h_delete_arena(res->arena);					\
     }									\
   } while(0)
 

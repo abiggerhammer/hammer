@@ -20,10 +20,10 @@ static const HParserVtable and_vt = {
 };
 
 
-const HParser* h_and(const HParser* p) {
+HParser* h_and(const HParser* p) {
   return h_and__m(&system_allocator, p);
 }
-const HParser* h_and__m(HAllocator* mm__, const HParser* p) {
+HParser* h_and__m(HAllocator* mm__, const HParser* p) {
   // zero-width postive lookahead
   HParser *res = h_new(HParser, 1);
   res->env = (void*)p;

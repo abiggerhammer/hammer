@@ -245,10 +245,6 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
   return NULL;
 }
 
-bool h_compile_regex(HRVMProg *prog, const HParser *parser) {
-  return parser->vtable->compile_to_rvm(prog, parser->env);
-}
-
 uint16_t h_rvm_create_action(HRVMProg *prog, HSVMActionFunc action_func, void* env) {
   for (uint16_t i = 0; i < prog->action_count; i++) {
     if (prog->actions[i].action == action_func && prog->actions[i].env == env)
@@ -293,4 +289,78 @@ void h_rvm_patch_arg(HRVMProg *prog, uint16_t ip, uint16_t new_val) {
   prog->insns[ip].arg = new_val;
 }
 
-    // TODO: Implement the primitive actions
+size_t h_svm_count_to_mark(HSVMContext *ctx) {
+  size_t ctm;
+  for (ctm = 0; ctm < ctx->stack_count-1; ctm++) {
+    if (ctx->stack[ctx->stack_count - 1 - ctm]->token_type == TT_MARK)
+      return ctm;
+  }
+  return ctx->stack_count;
+}
+
+// TODO: Implement the primitive actions
+bool h_svm_action_make_sequence(HArena *arena, HSVMContext *ctx, void* env) {
+  size_t n_items = h_svm_count_to_mark(ctx);
+  assert (n_items < ctx->stack_count);
+  HParsedToken *res = ctx->stack[ctx->stack_count - 1 - n_items];
+  assert (res->token_type == TT_MARK);
+  res->token_type = TT_SEQUENCE;
+  
+  HCountedArray *ret_carray = h_carray_new_sized(arena, n_items);
+  res->seq = ret_carray;
+  // res index and bit offset are the same as the mark.
+  for (size_t i = 0; i < n_items; i++) {
+    ret_carray->elements[i] = ctx->stack[ctx->stack_count - n_items + i];
+  }
+  ctx->stack_count -= n_items;
+  return true;
+}
+
+bool h_svm_action_clear_to_mark(HArena *arena, HSVMContext *ctx, void* env) {
+  while (ctx->stack_count > 0) {
+    if (ctx->stack[--ctx->stack_count]->token_type == TT_MARK)
+      return true;
+  }
+  return false; // no mark found.
+}
+
+// Glue regex backend to rest of system
+
+bool h_compile_regex(HRVMProg *prog, const HParser *parser) {
+  return parser->vtable->compile_to_rvm(prog, parser->env);
+}
+
+static void h_regex_free(HParser *parser) {
+  HRVMProg *prog = (HRVMProg*)parser->backend_data;
+  HAllocator *mm__ = prog->allocator;
+  h_free(prog->insns);
+  h_free(prog->actions);
+  h_free(prog);
+  parser->backend_data = NULL;
+  parser->backend = PB_PACKRAT;
+}
+
+static int h_regex_compile(HAllocator *mm__, HParser* parser, const void* params) {
+  if (!parser->vtable->isValidRegular(parser->env))
+    return 1;
+  HRVMProg *prog = h_new(HRVMProg, 1);
+  prog->allocator = mm__;
+  if (!h_compile_regex(prog, parser)) {
+    h_free(prog->insns);
+    h_free(prog->actions);
+    h_free(prog);
+    return 2;
+  }
+  parser->backend_data = prog;
+  return 0;
+}
+
+static HParseResult *h_regex_parse(HAllocator* mm__, const HParser* parser, HInputStream *input_stream) {
+  return h_rvm_run__m(mm__, (HRVMProg*)parser->backend_data, input_stream->input, input_stream->length);
+}
+
+HParserBackendVTable h__regex_backend_vtable = {
+  .compile = h_regex_compile,
+  .parse = h_regex_parse,
+  .free = h_regex_free
+};

@@ -38,7 +38,6 @@ HAMMER_PARTS := \
 	datastructures.o \
 	system_allocator.o \
 	benchmark.o \
-	compile.o \
 	$(PARSERS:%=parsers/%.o) \
 	$(BACKENDS:%=backends/%.o)
 

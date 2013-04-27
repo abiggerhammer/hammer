@@ -64,27 +64,27 @@ static const HParserVtable choice_vt = {
   .compile_to_rvm = choice_ctrvm,
 };
 
-const HParser* h_choice(const HParser* p, ...) {
+HParser* h_choice(const HParser* p, ...) {
   va_list ap;
   va_start(ap, p);
-  const HParser* ret = h_choice__mv(&system_allocator, p,  ap);
+  HParser* ret = h_choice__mv(&system_allocator, p,  ap);
   va_end(ap);
   return ret;
 }
 
-const HParser* h_choice__m(HAllocator* mm__, const HParser* p, ...) {
+HParser* h_choice__m(HAllocator* mm__, const HParser* p, ...) {
   va_list ap;
   va_start(ap, p);
-  const HParser* ret = h_choice__mv(mm__, p,  ap);
+  HParser* ret = h_choice__mv(mm__, p,  ap);
   va_end(ap);
   return ret;
 }
 
-const HParser* h_choice__v(const HParser* p, va_list ap) {
+HParser* h_choice__v(const HParser* p, va_list ap) {
   return h_choice__mv(&system_allocator, p, ap);
 }
 
-const HParser* h_choice__mv(HAllocator* mm__, const HParser* p, va_list ap_) {
+HParser* h_choice__mv(HAllocator* mm__, const HParser* p, va_list ap_) {
   va_list ap;
   size_t len = 0;
   HSequence *s = h_new(HSequence, 1);

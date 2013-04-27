@@ -59,21 +59,21 @@ static const HParserVtable charset_vt = {
   .compile_to_rvm = cs_ctrvm,
 };
 
-const HParser* h_ch_range(const uint8_t lower, const uint8_t upper) {
+HParser* h_ch_range(const uint8_t lower, const uint8_t upper) {
   return h_ch_range__m(&system_allocator, lower, upper);
 }
-const HParser* h_ch_range__m(HAllocator* mm__, const uint8_t lower, const uint8_t upper) {
+HParser* h_ch_range__m(HAllocator* mm__, const uint8_t lower, const uint8_t upper) {
   HParser *ret = h_new(HParser, 1);
   HCharset cs = new_charset(mm__);
   for (int i = 0; i < 256; i++)
     charset_set(cs, i, (lower <= i) && (i <= upper));
   ret->vtable = &charset_vt;
   ret->env = (void*)cs;
-  return (const HParser*)ret;
+  return ret;
 }
 
 
-static const HParser* h_in_or_not__m(HAllocator* mm__, const uint8_t *options, size_t count, int val) {
+static HParser* h_in_or_not__m(HAllocator* mm__, const uint8_t *options, size_t count, int val) {
   HParser *ret = h_new(HParser, 1);
   HCharset cs = new_charset(mm__);
   for (size_t i = 0; i < 256; i++)
@@ -83,22 +83,22 @@ static const HParser* h_in_or_not__m(HAllocator* mm__, const uint8_t *options, s
 
   ret->vtable = &charset_vt;
   ret->env = (void*)cs;
-  return (const HParser*)ret;
+  return ret;
 }
 
-const HParser* h_in(const uint8_t *options, size_t count) {
+HParser* h_in(const uint8_t *options, size_t count) {
   return h_in_or_not__m(&system_allocator, options, count, 1);
 }
 
-const HParser* h_in__m(HAllocator* mm__, const uint8_t *options, size_t count) {
+HParser* h_in__m(HAllocator* mm__, const uint8_t *options, size_t count) {
   return h_in_or_not__m(mm__, options, count, 1);
 }
 
-const HParser* h_not_in(const uint8_t *options, size_t count) {
+HParser* h_not_in(const uint8_t *options, size_t count) {
   return h_in_or_not__m(&system_allocator, options, count, 0);
 }
 
-const HParser* h_not_in__m(HAllocator* mm__, const uint8_t *options, size_t count) {
+HParser* h_not_in__m(HAllocator* mm__, const uint8_t *options, size_t count) {
   return h_in_or_not__m(mm__, options, count, 0);
 }
 

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "parser_internal.h"
 
 struct bits_env {
@@ -16,6 +17,19 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
   return make_result(state, result);
 }
 
+static bool h_svm_action_bits(HArena *arena, HSVMContext *ctx, void* env) {
+  // BUG: relies un undefined behaviour: int64_t is a signed uint64_t; not necessarily true on 32-bit
+  struct bits_env *env_ = env;
+  HParsedToken *top = ctx->stack[ctx->stack_count-1];
+  assert(top->token_type == TT_BYTES);
+  uint64_t res = 0;
+  for (size_t i = 0; i < top->bytes.len; i++)
+    res = (res << 8) | top->bytes.token[i];   // TODO: Handle other endiannesses.
+  top->uint = res; // possibly cast to signed through union
+  top->token_type = (env_->signedp ? TT_SINT : TT_UINT);
+  return true;
+}
+
 static bool bits_ctrvm(HRVMProg *prog, void* env) {
   struct bits_env *env_ = (struct bits_env*)env;
   h_rvm_insert_insn(prog, RVM_PUSH, 0);
@@ -24,6 +38,7 @@ static bool bits_ctrvm(HRVMProg *prog, void* env) {
     h_rvm_insert_insn(prog, RVM_STEP, 0);
   }
   h_rvm_insert_insn(prog, RVM_CAPTURE, 0);
+  h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_bits, env));
   return true;
 }
 
@@ -34,10 +49,10 @@ static const HParserVtable bits_vt = {
   .compile_to_rvm = bits_ctrvm,
 };
 
-const HParser* h_bits(size_t len, bool sign) {
+HParser* h_bits(size_t len, bool sign) {
   return h_bits__m(&system_allocator, len, sign);
 }
-const HParser* h_bits__m(HAllocator* mm__, size_t len, bool sign) {
+HParser* h_bits__m(HAllocator* mm__, size_t len, bool sign) {
   struct bits_env *env = h_new(struct bits_env, 1);
   env->length = len;
   env->signedp = sign;
@@ -48,10 +63,10 @@ const HParser* h_bits__m(HAllocator* mm__, size_t len, bool sign) {
 }
 
 #define SIZED_BITS(name_pre, len, signedp) \
-  const HParser* h_##name_pre##len () {				\
+  HParser* h_##name_pre##len () {				\
     return h_bits__m(&system_allocator, len, signedp);		\
   }								\
-  const HParser* h_##name_pre##len##__m(HAllocator* mm__) {	\
+  HParser* h_##name_pre##len##__m(HAllocator* mm__) {	\
     return h_bits__m(mm__, len, signedp);			\
   }
 SIZED_BITS(int, 8, true)

@@ -24,9 +24,11 @@ static const HParser epsilon_p = {
   .env = NULL
 };
 
-const HParser* h_epsilon_p() {
-  return &epsilon_p;
+HParser* h_epsilon_p() {
+  return h_epsilon_p__m(&system_allocator);
 }
-const HParser* h_epsilon_p__m(HAllocator* mm__) {
-  return &epsilon_p;
+HParser* h_epsilon_p__m(HAllocator* mm__) {
+  HParser *epsilon_p = h_new(HParser, 1);
+  epsilon_p->vtable = &epsilon_vt;
+  return epsilon_p;
 }

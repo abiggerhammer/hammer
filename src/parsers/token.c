@@ -38,14 +38,14 @@ const HParserVtable token_vt = {
   .compile_to_rvm = token_ctrvm,
 };
 
-const HParser* h_token(const uint8_t *str, const size_t len) {
+HParser* h_token(const uint8_t *str, const size_t len) {
   return h_token__m(&system_allocator, str, len);
 }
-const HParser* h_token__m(HAllocator* mm__, const uint8_t *str, const size_t len) { 
+HParser* h_token__m(HAllocator* mm__, const uint8_t *str, const size_t len) { 
   HToken *t = h_new(HToken, 1);
   t->str = (uint8_t*)str, t->len = len;
   HParser *ret = h_new(HParser, 1);
   ret->vtable = &token_vt;
   ret->env = t;
-  return (const HParser*)ret;
+  return ret;
 }

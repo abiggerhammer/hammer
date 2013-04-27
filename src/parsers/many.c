@@ -61,16 +61,20 @@ static bool many_ctrvm(HRVMProg *prog, void *env) {
   // FIXME: Implement clear_to_mark
   uint16_t clear_to_mark = h_rvm_create_action(prog, h_svm_action_clear_to_mark, NULL);
   h_rvm_insert_insn(prog, RVM_PUSH, 0);
+  // TODO: implement min and max properly. Right now, it's always min==0, max==inf
   uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
   if (!h_compile_regex(prog, repeat->p))
     return false;
-  if (!h_compile_regex(prog, repeat->sep))
-    return false;
-  h_rvm_insert_insn(prog, RVM_ACTION, clear_to_mark);
+  if (repeat->sep != NULL) {
+    h_rvm_insert_insn(prog, RVM_PUSH, 0);
+    if (!h_compile_regex(prog, repeat->sep))
+      return false;
+    h_rvm_insert_insn(prog, RVM_ACTION, clear_to_mark);
+  }
   h_rvm_insert_insn(prog, RVM_GOTO, insn);
   h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
 
-  h_rvm_insert_insn(prog, RVM_ACTION, h_svm_action_make_sequence, NULL);
+  h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_make_sequence, NULL));
   return true;
 }
 
@@ -81,10 +85,10 @@ static const HParserVtable many_vt = {
   .compile_to_rvm = many_ctrvm,
 };
 
-const HParser* h_many(const HParser* p) {
+HParser* h_many(const HParser* p) {
   return h_many__m(&system_allocator, p);
 }
-const HParser* h_many__m(HAllocator* mm__, const HParser* p) {
+HParser* h_many__m(HAllocator* mm__, const HParser* p) {
   HParser *res = h_new(HParser, 1);
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
@@ -96,10 +100,10 @@ const HParser* h_many__m(HAllocator* mm__, const HParser* p) {
   return res;
 }
 
-const HParser* h_many1(const HParser* p) {
+HParser* h_many1(const HParser* p) {
   return h_many1__m(&system_allocator, p);
 }
-const HParser* h_many1__m(HAllocator* mm__, const HParser* p) {
+HParser* h_many1__m(HAllocator* mm__, const HParser* p) {
   HParser *res = h_new(HParser, 1);
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
@@ -111,10 +115,10 @@ const HParser* h_many1__m(HAllocator* mm__, const HParser* p) {
   return res;
 }
 
-const HParser* h_repeat_n(const HParser* p, const size_t n) {
+HParser* h_repeat_n(const HParser* p, const size_t n) {
   return h_repeat_n__m(&system_allocator, p, n);
 }
-const HParser* h_repeat_n__m(HAllocator* mm__, const HParser* p, const size_t n) {
+HParser* h_repeat_n__m(HAllocator* mm__, const HParser* p, const size_t n) {
   HParser *res = h_new(HParser, 1);
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
@@ -126,10 +130,10 @@ const HParser* h_repeat_n__m(HAllocator* mm__, const HParser* p, const size_t n)
   return res;
 }
 
-const HParser* h_sepBy(const HParser* p, const HParser* sep) {
+HParser* h_sepBy(const HParser* p, const HParser* sep) {
   return h_sepBy__m(&system_allocator, p, sep);
 }
-const HParser* h_sepBy__m(HAllocator* mm__, const HParser* p, const HParser* sep) {
+HParser* h_sepBy__m(HAllocator* mm__, const HParser* p, const HParser* sep) {
   HParser *res = h_new(HParser, 1);
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
@@ -141,10 +145,10 @@ const HParser* h_sepBy__m(HAllocator* mm__, const HParser* p, const HParser* sep
   return res;
 }
 
-const HParser* h_sepBy1(const HParser* p, const HParser* sep) {
+HParser* h_sepBy1(const HParser* p, const HParser* sep) {
   return h_sepBy1__m(&system_allocator, p, sep);
 }
-const HParser* h_sepBy1__m(HAllocator* mm__, const HParser* p, const HParser* sep) {
+HParser* h_sepBy1__m(HAllocator* mm__, const HParser* p, const HParser* sep) {
   HParser *res = h_new(HParser, 1);
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
@@ -184,10 +188,10 @@ static const HParserVtable length_value_vt = {
   .isValidCF = h_false,
 };
 
-const HParser* h_length_value(const HParser* length, const HParser* value) {
+HParser* h_length_value(const HParser* length, const HParser* value) {
   return h_length_value__m(&system_allocator, length, value);
 }
-const HParser* h_length_value__m(HAllocator* mm__, const HParser* length, const HParser* value) {
+HParser* h_length_value__m(HAllocator* mm__, const HParser* length, const HParser* value) {
   HParser *res = h_new(HParser, 1);
   res->vtable = &length_value_vt;
   HLenVal *env = h_new(HLenVal, 1);

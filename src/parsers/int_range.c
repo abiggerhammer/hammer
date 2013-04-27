@@ -29,7 +29,7 @@ static HParseResult* parse_int_range(void *env, HParseState *state) {
 }
 
 bool h_svm_action_validate_int_range(HArena *arena, HSVMContext *ctx, void* env) {
-  HRange *r_env = (*HRange)env;
+  HRange *r_env = (HRange*)env;
   HParsedToken *head = ctx->stack[ctx->stack_count-1];
   switch (head-> token_type) {
   case TT_SINT: 
@@ -41,7 +41,7 @@ bool h_svm_action_validate_int_range(HArena *arena, HSVMContext *ctx, void* env)
   }
 }
 static bool ir_ctrvm(HRVMProg *prog, void *env) {
-  HRange *r_env = (*HRange)env;
+  HRange *r_env = (HRange*)env;
   
   h_compile_regex(prog, r_env->p);
   h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_validate_int_range, env));
@@ -55,10 +55,10 @@ static const HParserVtable int_range_vt = {
   .compile_to_rvm = ir_ctrvm,
 };
 
-const HParser* h_int_range(const HParser *p, const int64_t lower, const int64_t upper) {
+HParser* h_int_range(const HParser *p, const int64_t lower, const int64_t upper) {
   return h_int_range__m(&system_allocator, p, lower, upper);
 }
-const HParser* h_int_range__m(HAllocator* mm__, const HParser *p, const int64_t lower, const int64_t upper) {
+HParser* h_int_range__m(HAllocator* mm__, const HParser *p, const int64_t lower, const int64_t upper) {
   // p must be an integer parser, which means it's using parse_bits
   // TODO: re-add this check
   //assert_message(p->vtable == &bits_vt, "int_range requires an integer parser"); 
