@@ -49,12 +49,19 @@ HCFGrammar *h_grammar(HAllocator* mm__, const HParser *parser)
   HCFGrammar *g = h_grammar_new(mm__);
 
   // recursively traverse the desugared form and collect all HCFChoices that
-  // represent a nonterminal.
+  // represent a nonterminal (type HCF_CHOICE or HCF_CHARSET).
   collect_nts(g, desugared);
-
   if(h_hashset_empty(g->nts)) {
-    // desugared is a single nonterminal. wrap it.
-    // XXX is this even necessary?
+    // desugared is a single terminal. wrap it in a singleton HCF_CHOICE.
+    HCFChoice *nt = h_new(HCFChoice, 1);
+    nt->type = HCF_CHOICE;
+    nt->seq = h_new(HCFSequence *, 2);
+    nt->seq[0] = h_new(HCFSequence, 1);
+    nt->seq[0]->items = h_new(HCFChoice *, 2);
+    nt->seq[0]->items[0] = desugared;
+    nt->seq[0]->items[1] = NULL;
+    nt->seq[1] = NULL;
+    h_hashset_put(g->nts, nt);
   }
 
   // XXX call collect_geneps here?
@@ -91,7 +98,7 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol)
     }
     break;
 
-  default:
+  default:  // should not be reachable
     assert_message(0, "unknown HCFChoice type");
   }
 }
@@ -145,7 +152,7 @@ static void collect_geneps(HCFGrammar *g)
       for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
         HCFChoice *symbol = hte->key;
 
-        // only nonterminals can derive epsilon.
+        // only "choice" nonterminals can derive epsilon.
         if(symbol->type != HCF_CHOICE)
           continue;
 
