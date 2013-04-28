@@ -156,7 +156,7 @@ static void collect_geneps(HCFGrammar *g)
         if(symbol->type != HCF_CHOICE)
           continue;
 
-        // this NT derives epsilon iff any of its productions does.
+        // this NT derives epsilon if any of its productions does.
         HCFSequence **p;
         for(p = symbol->seq; *p != NULL; p++) {
           if(h_sequence_derives_epsilon(g, *p)) {
