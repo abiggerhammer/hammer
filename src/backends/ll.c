@@ -30,6 +30,7 @@ HCFGrammar *h_grammar_new(HAllocator *mm__)
   g->nts    = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
   g->geneps = NULL;
   g->first  = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+  g->follow = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
 
   return g;
 }
