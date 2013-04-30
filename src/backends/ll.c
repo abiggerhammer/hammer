@@ -10,7 +10,8 @@ typedef struct HCFGrammar_ {
   HHashSet    *nts;     // HCFChoices, each representing the alternative
                         // productions for one nonterminal
   HHashSet    *geneps;  // set of NTs that can generate the empty string
-  HHashTable  *first;   // memoized "first" sets of the grammar's symbols
+  HHashTable  *first;   // memoized first sets of the grammar's symbols
+  HHashTable  *follow;  // memoized follow sets of the grammar's NTs
   HArena      *arena;
 } HCFGrammar;
 
@@ -244,6 +245,60 @@ HHashSet *h_first_sequence(HCFGrammar *g, HCFChoice **s)
   } else {
     return first_x;
   }
+}
+
+
+/* Compute follow set of symbol x. Memoized. */
+HHashSet *h_follow(HCFGrammar *g, const HCFChoice *x)
+{
+  // consider all occurances of X in g
+  // the follow set of X is the union of:
+  //   given a production "A -> alpha X tail":
+  //   if tail derives epsilon:
+  //     first(tail) u follow(A)
+  //   else:
+  //     first(tail)
+
+  HHashSet *ret;
+
+  // memoize via g->follow
+  assert(g->follow != NULL);
+  ret = h_hashtable_get(g->follow, x);
+  if(ret != NULL)
+    return ret;
+  ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+  assert(ret != NULL);
+  h_hashtable_put(g->follow, x, ret);
+
+  // iterate over g->nts
+  size_t i;
+  HHashTableEntry *hte;
+  for(i=0; i < g->nts->capacity; i++) {
+    for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
+      const HCFChoice *a = hte->key;        // production's left-hand symbol
+
+      // X can only occur in a proper HCF_CHOICE
+      if(a->type != HCF_CHOICE) continue;
+
+      // iterate over the productions for A
+      HCFSequence **p;
+      for(p=a->seq; *p; p++) {
+        HCFChoice **s = (*p)->items;        // production's right-hand side
+        
+        for(; *s; s++) {
+          if(*s == x) { // occurance found
+            HCFChoice **tail = s+1;
+
+            h_hashset_put_all(ret, h_first_sequence(g, tail));
+            if(h_sequence_derives_epsilon(g, tail))
+              h_hashset_put_all(ret, h_follow(g, a));
+          }
+        }
+      }
+    }
+  }
+
+  return ret;
 }
 
 
