@@ -96,7 +96,7 @@ typedef bool (*HEqualFunc)(const void* key1, const void* key2);
 
 typedef struct HHashTableEntry_ {
   struct HHashTableEntry_ *next;
-  void* key;
+  const void* key;
   void* value;
   HHashValue hashval;
 } HHashTableEntry;
@@ -248,10 +248,10 @@ HSlist* h_slist_remove_all(HSlist *slist, const void* item);
 void h_slist_free(HSlist *slist);
 
 HHashTable* h_hashtable_new(HArena *arena, HEqualFunc equalFunc, HHashFunc hashFunc);
-void* h_hashtable_get(HHashTable* ht, void* key);
-void h_hashtable_put(HHashTable* ht, void* key, void* value);
-int   h_hashtable_present(HHashTable* ht, void* key);
-void  h_hashtable_del(HHashTable* ht, void* key);
+void* h_hashtable_get(HHashTable* ht, const void* key);
+void  h_hashtable_put(HHashTable* ht, const void* key, void* value);
+int   h_hashtable_present(HHashTable* ht, const void* key);
+void  h_hashtable_del(HHashTable* ht, const void* key);
 void  h_hashtable_free(HHashTable* ht);
 static inline bool h_hashtable_empty(HHashTable* ht) { return (ht->used == 0); }
 
