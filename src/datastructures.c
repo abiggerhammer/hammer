@@ -166,6 +166,16 @@ void h_hashtable_put(HHashTable* ht, const void* key, void* value) {
   hte->hashval = hashval;
 }
 
+void h_hashtable_update(HHashTable *dst, const HHashTable *src) {
+    size_t i;
+    HHashTableEntry *hte;
+    for(i=0; i < src->capacity; i++) {
+      for(hte = &src->contents[i]; hte; hte = hte->next) {
+        h_hashtable_put(dst, hte->key, hte->value);
+      }
+    }
+}
+
 int   h_hashtable_present(HHashTable* ht, const void* key) {
   HHashValue hashval = ht->hashFunc(key);
 #ifdef CONSISTENCY_CHECK
