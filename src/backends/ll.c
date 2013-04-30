@@ -2,7 +2,6 @@
 #include "../internal.h"
 #include "../parsers/parser_internal.h"
 
-#define H_LL_END_TOKEN 256
 
 
 /* Grammar representation and analysis */
@@ -11,9 +10,12 @@ typedef struct HCFGrammar_ {
   HHashSet    *nts;     // HCFChoices, each representing the alternative
                         // productions for one nonterminal
   HHashSet    *geneps;  // set of NTs that can generate the empty string
-  HHashTable  *first;   // "first" sets of the grammar's nonterminals
+  HHashTable  *first;   // memoized "first" sets of the grammar's symbols
   HArena      *arena;
 } HCFGrammar;
+
+typedef int HCFTerminal;
+static HCFTerminal end_token = -1;
 
 bool h_eq_ptr(const void *p, const void *q) { return (p==q); }
 HHashValue h_hash_ptr(const void *p) { return (uintptr_t)p; }
@@ -26,14 +28,14 @@ HCFGrammar *h_grammar_new(HAllocator *mm__)
   g->arena  = h_new_arena(mm__, 0);     // default blocksize
   g->nts    = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
   g->geneps = NULL;
-  g->first  = NULL;
+  g->first  = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
 
   return g;
 }
 
-// helpers
+
+// helper
 static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol);
-static void collect_geneps(HCFGrammar *grammar);
 
 /* Convert 'parser' into CFG representation by desugaring and compiling the set
  * of nonterminals.
@@ -103,6 +105,10 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol)
   }
 }
 
+
+// helper
+static void collect_geneps(HCFGrammar *grammar);
+
 /* Does the given symbol derive the empty string (under g)? */
 bool h_symbol_derives_epsilon(HCFGrammar *g, const HCFChoice *symbol)
 {
@@ -169,8 +175,82 @@ static void collect_geneps(HCFGrammar *g)
   } while(g->nts->used != prevused);
 }
 
-// first_set(grammar?, production)
-// follow_set
+
+// helper
+static HHashSet *first_sequence_(HCFGrammar *g, const HCFChoice **s);
+
+static inline HHashSet *h_first_sequence(HCFGrammar *g, const HCFSequence *s)
+{
+  // why do I have to cast to a type that's _more_ const?
+  return first_sequence_(g, (const HCFChoice **)s->items);
+}
+
+static HHashSet *h_first_symbol(HCFGrammar *g, const HCFChoice *x)
+{
+  HHashSet *ret;
+  HCFSequence **p;
+  uint8_t c;
+
+  // memoize via g->first
+  assert(g->first != NULL);
+  ret = h_hashtable_get(g->first, x);
+  if(ret != NULL)
+    return ret;
+  ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+  assert(ret != NULL);
+  h_hashtable_put(g->first, x, ret);
+
+  switch(x->type) {
+  case HCF_END:
+    h_hashset_put(ret, (void *)(intptr_t)end_token);
+    break;
+  case HCF_CHAR:
+    h_hashset_put(ret, (void *)(intptr_t)x->chr);
+    break;
+  case HCF_CHARSET:
+    c=0;
+    do {
+      if(charset_isset(x->charset, c))
+        h_hashset_put(ret, (void *)(intptr_t)c);
+    } while(c++ < 255);
+    break;
+  case HCF_CHOICE:
+    // this is a nonterminal
+    // return the union of the first sets of all productions
+    for(p=x->seq; *p; ++p)
+      h_hashset_put_all(ret, h_first_sequence(g, *p));
+    break;
+  default:  // should not be reached
+    assert_message(0, "unknown HCFChoice type");
+  }
+  
+  return ret;
+}
+
+static HHashSet *first_sequence_(HCFGrammar *g, const HCFChoice **s)
+{
+  // the first set of the empty sequence is empty
+  if(*s == NULL)
+    return h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+
+  // first(X tail) = first(X)                if X does not derive epsilon
+  //               = first(X) u first(tail)  otherwise
+
+  const HCFChoice *x = s[0];
+  const HCFChoice **tail = s+1;
+
+  HHashSet *first_x = h_first_symbol(g, x);
+  if(h_symbol_derives_epsilon(g, x)) {
+    // return the union of first(x) and first(tail)
+    HHashSet *first_tail = first_sequence_(g, tail);
+    HHashSet *ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+    h_hashset_put_all(ret, first_x);
+    h_hashset_put_all(ret, first_tail);
+    return ret;
+  } else {
+    return first_x;
+  }
+}
 
 
 
