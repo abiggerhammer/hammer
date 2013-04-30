@@ -104,7 +104,7 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol)
 }
 
 /* Does the given symbol derive the empty string (under g)? */
-bool h_symbol_derives_epsilon(HCFGrammar *g, HCFChoice *symbol)
+bool h_symbol_derives_epsilon(HCFGrammar *g, const HCFChoice *symbol)
 {
   if(g->geneps == NULL)
     collect_geneps(g);
@@ -121,7 +121,7 @@ bool h_symbol_derives_epsilon(HCFGrammar *g, HCFChoice *symbol)
 }
 
 /* Does the sentential form given by s derive the empty string? */
-bool h_sequence_derives_epsilon(HCFGrammar *g, HCFSequence *s)
+bool h_sequence_derives_epsilon(HCFGrammar *g, const HCFSequence *s)
 {
   // return true iff all symbols in s derive epsilon
   HCFChoice **x;
@@ -150,7 +150,7 @@ static void collect_geneps(HCFGrammar *g)
     HHashTableEntry *hte;
     for(i=0; i < g->nts->capacity; i++) {
       for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
-        HCFChoice *symbol = hte->key;
+        const HCFChoice *symbol = hte->key;
 
         // only "choice" nonterminals can derive epsilon.
         if(symbol->type != HCF_CHOICE)
