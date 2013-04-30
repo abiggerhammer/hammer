@@ -126,13 +126,12 @@ bool h_symbol_derives_epsilon(HCFGrammar *g, const HCFChoice *symbol)
   }
 }
 
-/* Does the sentential form given by s derive the empty string? */
-bool h_sequence_derives_epsilon(HCFGrammar *g, const HCFSequence *s)
+/* Does the sentential form s derive the empty string? s NULL-terminated. */
+bool h_sequence_derives_epsilon(HCFGrammar *g, HCFChoice **s)
 {
   // return true iff all symbols in s derive epsilon
-  HCFChoice **x;
-  for(x = s->items; *x; x++) {
-    if(!h_symbol_derives_epsilon(g, *x))
+  for(; *s; s++) {
+    if(!h_symbol_derives_epsilon(g, *s))
       return false;
   }
   return true;
@@ -165,7 +164,7 @@ static void collect_geneps(HCFGrammar *g)
         // this NT derives epsilon if any of its productions does.
         HCFSequence **p;
         for(p = symbol->seq; *p != NULL; p++) {
-          if(h_sequence_derives_epsilon(g, *p)) {
+          if(h_sequence_derives_epsilon(g, (*p)->items)) {
             h_hashset_put(g->nts, symbol);
             break;
           }
@@ -176,16 +175,11 @@ static void collect_geneps(HCFGrammar *g)
 }
 
 
-// helper
-static HHashSet *first_sequence_(HCFGrammar *g, const HCFChoice **s);
+/* Compute first set of sentential form s. s NULL-terminated. */
+HHashSet *h_first_sequence(HCFGrammar *g, HCFChoice **s);
 
-static inline HHashSet *h_first_sequence(HCFGrammar *g, const HCFSequence *s)
-{
-  // why do I have to cast to a type that's _more_ const?
-  return first_sequence_(g, (const HCFChoice **)s->items);
-}
-
-static HHashSet *h_first_symbol(HCFGrammar *g, const HCFChoice *x)
+/* Compute first set of symbol x. Memoized. */
+HHashSet *h_first_symbol(HCFGrammar *g, const HCFChoice *x)
 {
   HHashSet *ret;
   HCFSequence **p;
@@ -218,7 +212,7 @@ static HHashSet *h_first_symbol(HCFGrammar *g, const HCFChoice *x)
     // this is a nonterminal
     // return the union of the first sets of all productions
     for(p=x->seq; *p; ++p)
-      h_hashset_put_all(ret, h_first_sequence(g, *p));
+      h_hashset_put_all(ret, h_first_sequence(g, (*p)->items));
     break;
   default:  // should not be reached
     assert_message(0, "unknown HCFChoice type");
@@ -227,7 +221,7 @@ static HHashSet *h_first_symbol(HCFGrammar *g, const HCFChoice *x)
   return ret;
 }
 
-static HHashSet *first_sequence_(HCFGrammar *g, const HCFChoice **s)
+HHashSet *h_first_sequence(HCFGrammar *g, HCFChoice **s)
 {
   // the first set of the empty sequence is empty
   if(*s == NULL)
@@ -236,13 +230,13 @@ static HHashSet *first_sequence_(HCFGrammar *g, const HCFChoice **s)
   // first(X tail) = first(X)                if X does not derive epsilon
   //               = first(X) u first(tail)  otherwise
 
-  const HCFChoice *x = s[0];
-  const HCFChoice **tail = s+1;
+  HCFChoice *x = s[0];
+  HCFChoice **tail = s+1;
 
   HHashSet *first_x = h_first_symbol(g, x);
   if(h_symbol_derives_epsilon(g, x)) {
     // return the union of first(x) and first(tail)
-    HHashSet *first_tail = first_sequence_(g, tail);
+    HHashSet *first_tail = h_first_sequence(g, tail);
     HHashSet *ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
     h_hashset_put_all(ret, first_x);
     h_hashset_put_all(ret, first_tail);
