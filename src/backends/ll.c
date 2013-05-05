@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include "../internal.h"
 #include "../parsers/parser_internal.h"
 
@@ -92,16 +93,20 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol)
     break;  // it's a terminal symbol, nothing to do
 
   case HCF_CHARSET:
-    h_hashset_put(grammar->nts, symbol);
-    break;  // this type has only terminal children
-
   case HCF_CHOICE:
-    h_hashset_put(grammar->nts, symbol);
-    // each element s of symbol->seq (HCFSequence) represents the RHS of
-    // a production. call self on all symbols (HCFChoice) in s.
-    for(s = symbol->seq; *s != NULL; s++) {
-      for(x = (*s)->items; *x != NULL; x++) {
-        collect_nts(grammar, *x);
+    // exploiting the fact that HHashSet is also a HHashTable to number the
+    // nonterminals.
+    // NB top-level (start) symbol gets 0.
+    h_hashtable_put(grammar->nts, symbol,
+                    (void *)(uintptr_t)grammar->nts->used);
+
+    if(symbol->type == HCF_CHOICE) {
+      // each element s of symbol->seq (HCFSequence) represents the RHS of
+      // a production. call self on all symbols (HCFChoice) in s.
+      for(s = symbol->seq; *s != NULL; s++) {
+        for(x = (*s)->items; *x != NULL; x++) {
+          collect_nts(grammar, *x);
+        }
       }
     }
     break;
@@ -161,6 +166,8 @@ static void collect_geneps(HCFGrammar *g)
     HHashTableEntry *hte;
     for(i=0; i < g->nts->capacity; i++) {
       for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
+        if(hte->key == NULL)
+          continue;
         const HCFChoice *symbol = hte->key;
 
         // only "choice" nonterminals can derive epsilon.
@@ -280,6 +287,8 @@ HHashSet *h_follow(HCFGrammar *g, const HCFChoice *x)
   HHashTableEntry *hte;
   for(i=0; i < g->nts->capacity; i++) {
     for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
       const HCFChoice *a = hte->key;        // production's left-hand symbol
 
       // X can only occur in a proper HCF_CHOICE
@@ -306,6 +315,172 @@ HHashSet *h_follow(HCFGrammar *g, const HCFChoice *x)
   return ret;
 }
 
+
+static void pprint_char(FILE *f, char c)
+{
+  switch(c) {
+  case '"': fputs("\\\"", f); break;
+  case '\\': fputs("\\\\", f); break;
+  case '\b': fputs("\\b", f); break;
+  case '\t': fputs("\\t", f); break;
+  case '\n': fputs("\\n", f); break;
+  case '\r': fputs("\\r", f); break;
+  default:
+    if(isprint(c)) {
+      fputc(c, f);
+    } else {
+      fprintf(f, "\\x%.2X", c);
+    }
+  }
+}
+
+static void pprint_charset_char(FILE *f, char c)
+{
+  switch(c) {
+  case '"': fputc(c, f); break;
+  case '-': fputs("\\-", f); break;
+  case ']': fputs("\\-", f); break;
+  default:  pprint_char(f, c);
+  }
+}
+
+static void pprint_charset(FILE *f, const HCharset cs)
+{
+  int i;
+
+  fputc('[', f);
+  for(i=0; i<256; i++) {
+    if(charset_isset(cs, i))
+      pprint_charset_char(f, i);
+
+    // detect ranges
+    if(i+2<256 && charset_isset(cs, i+1) && charset_isset(cs, i+2)) {
+      fputc('-', f);
+      for(; i<256 && charset_isset(cs, i); i++);
+      i--;  // back to the last in range
+      pprint_charset_char(f, i);
+    }
+  }
+  fputc(']', f);
+}
+
+static const char *nonterminal_name(const HCFGrammar *g, const HCFChoice *nt)
+{
+  static char buf[16] = {0}; // 14 characters in base 26 are enough for 64 bits
+
+  // find nt's number in g
+  size_t n = (uintptr_t)h_hashtable_get(g->nts, nt);
+
+  // NB the start symbol (number 0) is always "A".
+  int i;
+  for(i=14; i>=0 && (n>0 || i==14); i--) {
+    buf[i] = 'A' + n%26;
+    n = n/26;   // shift one digit
+  }
+
+  return buf+i+1;
+}
+
+static HCFChoice **pprint_string(FILE *f, HCFChoice **x)
+{
+  fputc('"', f);
+  for(; *x; x++) {
+    if((*x)->type != HCF_CHAR)
+      break;
+    pprint_char(f, (*x)->chr);
+  }
+  fputc('"', f);
+  return x;
+}
+
+static void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
+{
+  HCFChoice **x = seq->items;
+
+  if(*x == NULL) {  // the empty sequence
+    fputs(" \"\"", f);
+  } else {
+    while(*x) {
+      fputc(' ', f);      // separator
+
+      switch((*x)->type) {
+      case HCF_CHAR:
+        x = pprint_string(f, x);
+        break;
+      case HCF_END:
+        fputc('$', f);
+        x++;
+        break;
+      default:
+        fputs(nonterminal_name(g, *x), f);
+        x++;
+      }
+    }
+  }
+
+  fputc('\n', f);
+}
+
+static
+void pprint_ntrules(FILE *f, const HCFGrammar *g, const HCFChoice *nt,
+                    int indent, int len)
+{
+  int i;
+  int column = indent + len;
+
+  const char *name = nonterminal_name(g, nt);
+
+  // print rule head (symbol name)
+  for(i=0; i<indent; i++) fputc(' ', f);
+  fputs(name, f);
+  i += strlen(name);
+  for(; i<column; i++) fputc(' ', f);
+  fputs(" ->", f);
+
+  HCFSequence **p;
+  switch(nt->type) {
+  case HCF_CHARSET:
+    pprint_charset(f, nt->charset);
+    break;
+  case HCF_CHOICE:
+    p = nt->seq;
+    if(*p == NULL) break;           // shouldn't happen
+    pprint_sequence(f, g, *p++);    // print first production on the same line
+    for(; *p; p++) {                // print the rest below with "or" bars
+      for(i=0; i<column; i++) fputc(' ', f);    // indent
+      fputs("  |", f);
+      pprint_sequence(f, g, *p);
+    }
+    break;
+  default: // should not be reached
+    fputs(" ???\n", f);
+    assert_message(0, "unexpected nonterminal type");
+  }
+}
+
+void h_pprint_grammar(FILE *file, const HCFGrammar *g, int indent)
+{
+  if(g->nts->used < 1)
+    return;
+
+  // determine maximum string length of symbol names
+  int len;
+  size_t s;
+  for(len=1, s=26; s < g->nts->used; len++, s*=26); 
+
+  // iterate over g->nts
+  size_t i;
+  HHashTableEntry *hte;
+  for(i=0; i < g->nts->capacity; i++) {
+    for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      const HCFChoice *a = hte->key;        // production's left-hand symbol
+
+      pprint_ntrules(file, g, a, indent, len);
+    }
+  }
+}
 
 
 /* LL parse table and associated data */
