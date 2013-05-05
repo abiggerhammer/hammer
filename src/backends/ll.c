@@ -151,7 +151,7 @@ bool h_sequence_derives_epsilon(HCFGrammar *g, HCFChoice **s)
 /* Populate the geneps member of g; no-op if called multiple times. */
 static void collect_geneps(HCFGrammar *g)
 {
-  if(g->geneps == NULL)
+  if(g->geneps != NULL)
     return;
 
   g->geneps = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
@@ -160,8 +160,9 @@ static void collect_geneps(HCFGrammar *g)
   // iterate over the grammar's symbols, the elements of g->nts.
   // add any we can identify as deriving epsilon to g->geneps.
   // repeat until g->geneps no longer changes.
-  size_t prevused = g->nts->used;
+  size_t prevused;
   do {
+    prevused = g->geneps->used;
     size_t i;
     HHashTableEntry *hte;
     for(i=0; i < g->nts->capacity; i++) {
@@ -178,13 +179,13 @@ static void collect_geneps(HCFGrammar *g)
         HCFSequence **p;
         for(p = symbol->seq; *p != NULL; p++) {
           if(h_sequence_derives_epsilon(g, (*p)->items)) {
-            h_hashset_put(g->nts, symbol);
+            h_hashset_put(g->geneps, symbol);
             break;
           }
         }
       }
     }
-  } while(g->nts->used != prevused);
+  } while(g->geneps->used != prevused);
 }
 
 
@@ -403,16 +404,11 @@ static void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq
     while(*x) {
       fputc(' ', f);      // separator
 
-      switch((*x)->type) {
-      case HCF_CHAR:
+      if((*x)->type == HCF_CHAR) {
+        // condense character strings
         x = pprint_string(f, x);
-        break;
-      case HCF_END:
-        fputc('$', f);
-        x++;
-        break;
-      default:
-        fputs(nonterminal_name(g, *x), f);
+      } else {
+        pprint_symbol(f, g, *x);
         x++;
       }
     }
