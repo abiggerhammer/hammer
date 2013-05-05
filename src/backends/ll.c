@@ -604,3 +604,32 @@ HParserBackendVTable h__ll_backend_vtable = {
   .compile = h_ll_compile,
   .parse = h_ll_parse
 };
+
+
+
+
+// dummy!
+int test_ll(void)
+{
+  const HParser *c = h_many(h_ch('x'));
+  const HParser *q = h_sequence(c, h_ch('y'), NULL);
+  const HParser *p = h_choice(q, h_end_p(), NULL);
+
+  HCFGrammar *g = h_grammar(&system_allocator, p);
+
+  if(g == NULL) {
+    fprintf(stderr, "h_grammar failed\n");
+    return 1;
+  }
+
+  h_pprint_grammar(stdout, g, 0);
+  collect_geneps(g);
+  printf("generate epsilon: ");
+  h_pprint_symbolset(stdout, g, g->geneps, 0);
+  printf("first(A) = ");
+  h_pprint_tokenset(stdout, g, h_first_symbol(g, g->start), 0);
+  printf("follow(C) = ");
+  h_pprint_tokenset(stdout, g, h_follow(g, h_desugar(&system_allocator, c)), 0);
+
+  return 0;
+}
