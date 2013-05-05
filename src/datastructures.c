@@ -171,6 +171,8 @@ void h_hashtable_update(HHashTable *dst, const HHashTable *src) {
   HHashTableEntry *hte;
   for(i=0; i < src->capacity; i++) {
     for(hte = &src->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
       h_hashtable_put(dst, hte->key, hte->value);
     }
   }
