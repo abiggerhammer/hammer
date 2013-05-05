@@ -394,6 +394,22 @@ static HCFChoice **pprint_string(FILE *f, HCFChoice **x)
   return x;
 }
 
+static void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
+{
+  switch(x->type) {
+  case HCF_CHAR:
+    fputc('"', f);
+    pprint_char(f, x->chr);
+    fputc('"', f);
+    break;
+  case HCF_END:
+    fputc('$', f);
+    break;
+  default:
+    fputs(nonterminal_name(g, x), f);
+  }
+}
+
 static void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
 {
   HCFChoice **x = seq->items;
@@ -476,6 +492,59 @@ void h_pprint_grammar(FILE *file, const HCFGrammar *g, int indent)
       pprint_ntrules(file, g, a, indent, len);
     }
   }
+}
+
+void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, int indent)
+{
+  int j;
+  for(j=0; j<indent; j++) fputc(' ', file);
+
+  fputc('{', file);
+
+  // iterate over set
+  size_t i;
+  HHashTableEntry *hte;
+  for(i=0; i < set->capacity; i++) {
+    for(hte = &set->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      const HCFChoice *a = hte->key;        // production's left-hand symbol
+
+      pprint_symbol(file, g, a);
+      fputc(',', file);
+    }
+  }
+
+  fputs("}\n", file);
+}
+
+void h_pprint_tokenset(FILE *file, const HCFGrammar *g, const HHashSet *set, int indent)
+{
+  int j;
+  for(j=0; j<indent; j++) fputc(' ', file);
+
+  fputc('[', file);
+
+  // iterate over set
+  size_t i;
+  HHashTableEntry *hte;
+  for(i=0; i < set->capacity; i++) {
+    for(hte = &set->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      HCFTerminal a = (intptr_t)hte->key;
+      // BUG this ignores tokens with value 0!
+      
+      if(a == '$')
+        fputs("\\$", file);
+      else if(a == end_token)
+        fputc('$', file);
+      else
+        pprint_char(file, a);
+    }
+  }
+
+  fputs("]\n", file);
 }
 
 
