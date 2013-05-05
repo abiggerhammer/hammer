@@ -145,12 +145,14 @@ void h_hashtable_put(HHashTable* ht, const void* key, void* value) {
 
   HHashTableEntry *hte = &ht->contents[hashval & (ht->capacity - 1)];
   if (hte->key != NULL) {
-    do {
+    for(;;) {
+      // check each link, stay on last if not found
       if (hte->hashval == hashval && ht->equalFunc(key, hte->key))
 	goto insert_here;
-      if (hte->next != NULL)
-	hte = hte->next;
-    } while (hte->next != NULL);
+      if (hte->next == NULL)
+        break;
+      hte = hte->next;
+    }
     // Add a new link...
     assert (hte->next == NULL);
     hte->next = h_arena_malloc(ht->arena, sizeof(HHashTableEntry));
