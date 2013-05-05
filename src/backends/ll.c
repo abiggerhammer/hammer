@@ -7,6 +7,7 @@
 /* Grammar representation and analysis */
 
 typedef struct HCFGrammar_ {
+  HCFChoice   *start;   // start symbol (nonterminal)
   HHashSet    *nts;     // HCFChoices, each representing the alternative
                         // productions for one nonterminal
   HHashSet    *geneps;  // set of NTs that can generate the empty string
@@ -56,7 +57,7 @@ HCFGrammar *h_grammar(HAllocator* mm__, const HParser *parser)
   // represent a nonterminal (type HCF_CHOICE or HCF_CHARSET).
   collect_nts(g, desugared);
   if(h_hashset_empty(g->nts)) {
-    // desugared is a single terminal. wrap it in a singleton HCF_CHOICE.
+    // desugared is a terminal. wrap it in a singleton HCF_CHOICE.
     HCFChoice *nt = h_new(HCFChoice, 1);
     nt->type = HCF_CHOICE;
     nt->seq = h_new(HCFSequence *, 2);
@@ -66,6 +67,9 @@ HCFGrammar *h_grammar(HAllocator* mm__, const HParser *parser)
     nt->seq[0]->items[1] = NULL;
     nt->seq[1] = NULL;
     h_hashset_put(g->nts, nt);
+    g->start = nt;
+  } else {
+    g->start = desugared;
   }
 
   // XXX call collect_geneps here?
