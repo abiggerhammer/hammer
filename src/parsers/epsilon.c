@@ -15,7 +15,7 @@ static const HParserVtable epsilon_vt = {
   .desugar = desugar_epsilon,
 };
 
-static const HParser epsilon_p = {
+static HParser epsilon_p = {
   .vtable = &epsilon_vt,
   .env = NULL
 };
