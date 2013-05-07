@@ -17,8 +17,13 @@ typedef struct HCFGrammar_ {
   HArena      *arena;
 } HCFGrammar;
 
-typedef int HCFTerminal;
-static HCFTerminal end_token = -1;
+// mapping input bytes or end to tokens
+// we want to use these, cast to void *, as elements in hashsets
+// therefore we must avoid 0 as a token value because NULL means "not in set".
+typedef uintptr_t HCFToken;
+static inline HCFToken char_token(char c) { return (0x100 | c); }
+static inline char token_char(HCFToken t) { return (0xFF & t); }
+static HCFToken end_token = 0x200;
 
 bool h_eq_ptr(const void *p, const void *q) { return (p==q); }
 HHashValue h_hash_ptr(const void *p) { return (uintptr_t)p; }
@@ -210,16 +215,16 @@ HHashSet *h_first_symbol(HCFGrammar *g, const HCFChoice *x)
 
   switch(x->type) {
   case HCF_END:
-    h_hashset_put(ret, (void *)(intptr_t)end_token);
+    h_hashset_put(ret, (void *)end_token);
     break;
   case HCF_CHAR:
-    h_hashset_put(ret, (void *)(intptr_t)x->chr);
+    h_hashset_put(ret, (void *)char_token(x->chr));
     break;
   case HCF_CHARSET:
     c=0;
     do {
       if(charset_isset(x->charset, c))
-        h_hashset_put(ret, (void *)(intptr_t)c);
+        h_hashset_put(ret, (void *)char_token(c));
     } while(c++ < 255);
     break;
   case HCF_CHOICE:
@@ -532,15 +537,14 @@ void h_pprint_tokenset(FILE *file, const HCFGrammar *g, const HHashSet *set, int
     for(hte = &set->contents[i]; hte; hte = hte->next) {
       if(hte->key == NULL)
         continue;
-      HCFTerminal a = (intptr_t)hte->key;
-      // BUG this ignores tokens with value 0!
+      HCFToken a = (HCFToken)hte->key;
       
-      if(a == '$')
-        fputs("\\$", file);
-      else if(a == end_token)
+      if(a == end_token)
         fputc('$', file);
+      else if(token_char(a) == '$')
+        fputs("\\$", file);
       else
-        pprint_char(file, a);
+        pprint_char(file, token_char(a));
     }
   }
 
