@@ -509,14 +509,17 @@ void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, in
   // iterate over set
   size_t i;
   HHashTableEntry *hte;
+  const HCFChoice *a = NULL;
   for(i=0; i < set->capacity; i++) {
     for(hte = &set->contents[i]; hte; hte = hte->next) {
       if(hte->key == NULL)
         continue;
-      const HCFChoice *a = hte->key;        // production's left-hand symbol
+      if(a != NULL) // we're not on the first element
+          fputc(',', file);
+
+      a = hte->key;        // production's left-hand symbol
 
       pprint_symbol(file, g, a);
-      fputc(',', file);
     }
   }
 
