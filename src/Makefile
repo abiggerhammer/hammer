@@ -40,6 +40,7 @@ HAMMER_PARTS := \
 	system_allocator.o \
 	benchmark.o \
 	compile.o \
+	cfgrammar.o \
 	$(PARSERS:%=parsers/%.o) \
 	$(BACKENDS:%=backends/%.o)
 
