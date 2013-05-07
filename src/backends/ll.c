@@ -28,7 +28,7 @@ static HCFToken end_token = 0x200;
 bool h_eq_ptr(const void *p, const void *q) { return (p==q); }
 HHashValue h_hash_ptr(const void *p) { return (uintptr_t)p; }
 
-HCFGrammar *h_grammar_new(HAllocator *mm__)
+HCFGrammar *h_cfgrammar_new(HAllocator *mm__)
 {
   HCFGrammar *g = h_new(HCFGrammar, 1);
   assert(g != NULL);
@@ -50,14 +50,14 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol);
  * of nonterminals.
  * A NULL return means we are unable to represent the parser as a CFG.
  */
-HCFGrammar *h_grammar(HAllocator* mm__, const HParser *parser)
+HCFGrammar *h_cfgrammar(HAllocator* mm__, const HParser *parser)
 {
   // convert parser to CFG form ("desugar").
   HCFChoice *desugared = h_desugar(mm__, parser);
   if(desugared == NULL)
     return NULL;  // -> backend not suitable for this parser
 
-  HCFGrammar *g = h_grammar_new(mm__);
+  HCFGrammar *g = h_cfgrammar_new(mm__);
 
   // recursively traverse the desugared form and collect all HCFChoices that
   // represent a nonterminal (type HCF_CHOICE or HCF_CHARSET).
@@ -580,7 +580,7 @@ unsigned int h_ll_lookup(const HLLTable *table, unsigned int nonterminal, uint8_
 int h_ll_compile(HAllocator* mm__, const HParser* parser, const void* params)
 {
   // Convert parser to a CFG. This can fail as indicated by a NULL return.
-  HCFGrammar *grammar = h_grammar(mm__, parser);
+  HCFGrammar *grammar = h_cfgrammar(mm__, parser);
   if(grammar == NULL)
     return -1;                  // -> Backend unsuitable for this parser.
 
@@ -622,10 +622,10 @@ int test_ll(void)
   const HParser *q = h_sequence(c, h_ch('y'), NULL);
   const HParser *p = h_choice(q, h_end_p(), NULL);
 
-  HCFGrammar *g = h_grammar(&system_allocator, p);
+  HCFGrammar *g = h_cfgrammar(&system_allocator, p);
 
   if(g == NULL) {
-    fprintf(stderr, "h_grammar failed\n");
+    fprintf(stderr, "h_cfgrammar failed\n");
     return 1;
   }
 
