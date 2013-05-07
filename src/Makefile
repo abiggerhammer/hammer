@@ -48,6 +48,7 @@ TESTS := t_benchmark.o \
 	 t_bitreader.o \
 	 t_bitwriter.o \
 	 t_parser.o \
+	 t_grammar.o \
 	 test_suite.o
 
 OUTPUTS := libhammer.a \

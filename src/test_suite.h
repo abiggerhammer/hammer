@@ -88,6 +88,56 @@
     }									\
   } while(0)
 
+#define g_check_hashtable_present(table, key) do {			\
+    if(!h_hashtable_present(table, key)) {				\
+      g_test_message("Check failed: key should have been in table, but wasn't"); \
+      g_test_fail();							\
+    }									\
+  } while(0)
+
+#define g_check_hashtable_absent(table, key) do {			\
+    if(h_hashtable_present(table, key)) {				\
+      g_test_message("Check failed: key shouldn't have been in table, but was"); \
+      g_test_fail();							\
+    }									\
+  } while(0)
+
+#define g_check_hashtable_size(table, n) do {				\
+    size_t expected = n;						\
+    size_t actual = (table)->used;					\
+    if(actual != expected) {						\
+      g_test_message("Check failed: table size should have been %lu, but was %lu", \
+		     expected, actual);					\
+      g_test_fail();							\
+    }									\
+  } while(0)
+
+#define g_check_terminal(grammar, parser) \
+  g_check_hashtable_absent(grammar->nts, h_desugar(&system_allocator, parser))
+
+#define g_check_nonterminal(grammar, parser) \
+  g_check_hashtable_present(grammar->nts, h_desugar(&system_allocator, parser))
+
+#define g_check_derives_epsilon(grammar, parser) \
+  g_check_hashtable_present(grammar->geneps, h_desugar(&system_allocator, parser))
+
+#define g_check_derives_epsilon_not(grammar, parser) \
+  g_check_hashtable_absent(grammar->geneps, h_desugar(&system_allocator, parser))
+
+#define g_check_firstset_present(grammar, parser, token) \
+  g_check_hashtable_present(h_first_symbol(grammar, h_desugar(&system_allocator, parser)), (void *)token)
+
+#define g_check_firstset_absent(grammar, parser, token) \
+  g_check_hashtable_absent(h_first_symbol(grammar, h_desugar(&system_allocator, parser)), (void *)token)
+
+#define g_check_followset_present(grammar, parser, token) \
+  g_check_hashtable_present(h_follow(grammar, h_desugar(&system_allocator, parser)), (void *)token)
+
+#define g_check_followset_absent(grammar, parser, token) \
+  g_check_hashtable_absent(h_follow(grammar, h_desugar(&system_allocator, parser)), (void *)token)
+
+
+
 
 #define g_check_cmpint(n1, op, n2) g_check_inttype("%d", int, n1, op, n2)
 #define g_check_cmplong(n1, op, n2) g_check_inttype("%ld", long, n1, op, n2)
