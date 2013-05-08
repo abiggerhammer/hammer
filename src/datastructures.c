@@ -116,7 +116,7 @@ HHashTable* h_hashtable_new(HArena *arena, HEqualFunc equalFunc, HHashFunc hashF
   return ht;
 }
 
-void* h_hashtable_get(HHashTable* ht, const void* key) {
+void* h_hashtable_get(const HHashTable* ht, const void* key) {
   HHashValue hashval = ht->hashFunc(key);
 #ifdef CONSISTENCY_CHECK
   assert((ht->capacity & (ht->capacity - 1)) == 0); // capacity is a power of 2
@@ -180,7 +180,7 @@ void h_hashtable_update(HHashTable *dst, const HHashTable *src) {
   }
 }
 
-int   h_hashtable_present(HHashTable* ht, const void* key) {
+int   h_hashtable_present(const HHashTable* ht, const void* key) {
   HHashValue hashval = ht->hashFunc(key);
 #ifdef CONSISTENCY_CHECK
   assert((ht->capacity & (ht->capacity - 1)) == 0); // capacity is a power of 2

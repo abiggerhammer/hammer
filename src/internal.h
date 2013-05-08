@@ -248,13 +248,13 @@ HSlist* h_slist_remove_all(HSlist *slist, const void* item);
 void h_slist_free(HSlist *slist);
 
 HHashTable* h_hashtable_new(HArena *arena, HEqualFunc equalFunc, HHashFunc hashFunc);
-void* h_hashtable_get(HHashTable* ht, const void* key);
+void* h_hashtable_get(const HHashTable* ht, const void* key);
 void  h_hashtable_put(HHashTable* ht, const void* key, void* value);
 void  h_hashtable_update(HHashTable* dst, const HHashTable *src);
-int   h_hashtable_present(HHashTable* ht, const void* key);
+int   h_hashtable_present(const HHashTable* ht, const void* key);
 void  h_hashtable_del(HHashTable* ht, const void* key);
 void  h_hashtable_free(HHashTable* ht);
-static inline bool h_hashtable_empty(HHashTable* ht) { return (ht->used == 0); }
+static inline bool h_hashtable_empty(const HHashTable* ht) { return (ht->used == 0); }
 
 typedef HHashTable HHashSet;
 #define h_hashset_new(a,eq,hash) h_hashtable_new(a,eq,hash)
