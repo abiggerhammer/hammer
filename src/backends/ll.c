@@ -5,21 +5,51 @@
 
 
 
-/* LL parse table and associated data */
+/* Generating the LL parse table */
 
 /* Maps each nonterminal (HCFChoice) of the grammar to another hash table that
  * maps lookahead tokens (HCFToken) to productions (HCFSequence).
  */
-typedef HHashTable HLLTable;
+typedef struct HLLTable_ {
+  HHashTable *rows;
+  HArena     *arena;
+  HAllocator *mm__;
+} HLLTable;
 
 /* Interface to look up an entry in the parse table. */
 const HCFSequence *h_ll_lookup(const HLLTable *table, const HCFChoice *x, HCFToken tok)
 {
-  const HHashTable *row = h_hashtable_get(table, x);
+  const HHashTable *row = h_hashtable_get(table->rows, x);
   assert(row != NULL);  // the table should have one row for each nonterminal
 
   const HCFSequence *production = h_hashtable_get(row, (void *)tok);
   return production;
+}
+
+/* Allocate a new parse table. */
+HLLTable *h_lltable_new(HAllocator *mm__)
+{
+  // NB the parse table gets an arena separate from the grammar so we can free
+  //    the latter after table generation.
+  HArena *arena = h_new_arena(mm__, 0);    // default blocksize
+  assert(arena != NULL);
+  HHashTable *rows = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
+  assert(rows != NULL);
+
+  HLLTable *table = h_new(HLLTable, 1);
+  assert(table != NULL);
+  table->mm__  = mm__;
+  table->arena = arena;
+  table->rows  = rows;
+
+  return table;
+}
+
+void h_lltable_free(HLLTable *table)
+{
+  HAllocator *mm__ = table->mm__;
+  h_delete_arena(table->arena);
+  h_free(table);
 }
 
 /* Compute the predict set of production "A -> rhs". */
@@ -38,7 +68,15 @@ HHashSet *h_predict(HCFGrammar *g, const HCFChoice *A, const HCFSequence *rhs)
   }
 }
 
-int h_ll_compile(HAllocator* mm__, const HParser* parser, const void* params)
+/* Generate the LL parse table from the given grammar.
+ * Returns -1 on error, 0 on success.
+ */
+static int fill_table(HCFGrammar *g, HLLTable *table)
+{
+  return -1; // XXX
+}
+
+int h_ll_compile(HAllocator* mm__, HParser* parser, const void* params)
 {
   // Convert parser to a CFG. This can fail as indicated by a NULL return.
   HCFGrammar *grammar = h_cfgrammar(mm__, parser);
@@ -49,11 +87,21 @@ int h_ll_compile(HAllocator* mm__, const HParser* parser, const void* params)
   // TODO: eliminate left recursion
   // TODO: avoid conflicts by splitting occurances?
 
-  // XXX generate table and store in parser->data.
-  // XXX any other data structures needed?
-  // XXX free grammar and its arena
+  // generate table and store in parser->data.
+  HLLTable *table = h_lltable_new(mm__);
+  if(fill_table(grammar, table) < 0) {
+    // the table was ambiguous
+    h_cfgrammar_free(grammar);
+    h_lltable_free(table);
+    return -1;
+  }
+  parser->data = table;
 
-  return -1; // XXX 0 on success
+  // free grammar and its arena.
+  // desugared parsers (HCFChoice and HCFSequence) are unaffected by this.
+  h_cfgrammar_free(grammar);
+
+  return 0;
 }
 
 
