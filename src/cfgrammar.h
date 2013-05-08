@@ -11,6 +11,7 @@ typedef struct HCFGrammar_ {
   HHashTable  *first;   // memoized first sets of the grammar's symbols
   HHashTable  *follow;  // memoized follow sets of the grammar's NTs
   HArena      *arena;
+  HAllocator  *mm__;
 } HCFGrammar;
 
 /* mapping input bytes or end to tokens
@@ -28,6 +29,11 @@ static const HCFToken end_token = 0x200;
  * A NULL return means we are unable to represent the parser as a CFG.
  */
 HCFGrammar *h_cfgrammar(HAllocator* mm__, const HParser *parser);
+
+/* Frees the given grammar and associated data.
+ * Does *not* free parsers' CFG forms as created by h_desugar.
+ */
+void h_cfgrammar_free(HCFGrammar *g);
 
 /* Does the given symbol derive the empty string (under g)? */
 bool h_symbol_derives_epsilon(HCFGrammar *g, const HCFChoice *symbol);

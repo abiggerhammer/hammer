@@ -1,6 +1,7 @@
 /* Context-free grammar representation and analysis */
 
 #include "cfgrammar.h"
+#include "allocator.h"
 #include <assert.h>
 #include <ctype.h>
 
@@ -10,6 +11,7 @@ HCFGrammar *h_cfgrammar_new(HAllocator *mm__)
   HCFGrammar *g = h_new(HCFGrammar, 1);
   assert(g != NULL);
 
+  g->mm__   = mm__;
   g->arena  = h_new_arena(mm__, 0);     // default blocksize
   g->nts    = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
   g->geneps = NULL;
@@ -17,6 +19,16 @@ HCFGrammar *h_cfgrammar_new(HAllocator *mm__)
   g->follow = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
 
   return g;
+}
+
+/* Frees the given grammar and associated data.
+ * Does *not* free parsers' CFG forms as created by h_desugar.
+ */
+void h_cfgrammar_free(HCFGrammar *g)
+{
+  HAllocator *mm__ = g->mm__;
+  h_delete_arena(g->arena);
+  h_free(g);
 }
 
 
