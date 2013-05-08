@@ -5,10 +5,6 @@
 #include <ctype.h>
 
 
-bool h_eq_ptr(const void *p, const void *q) { return (p==q); }
-HHashValue h_hash_ptr(const void *p) { return (uintptr_t)p; }
-
-
 HCFGrammar *h_cfgrammar_new(HAllocator *mm__)
 {
   HCFGrammar *g = h_new(HCFGrammar, 1);

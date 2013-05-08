@@ -236,3 +236,10 @@ void  h_hashtable_free(HHashTable* ht) {
   h_arena_free(ht->arena, ht->contents);
 }
 
+bool h_eq_ptr(const void *p, const void *q) {
+  return (p==q);
+}
+
+HHashValue h_hash_ptr(const void *p) {
+  return (uintptr_t)p;
+}

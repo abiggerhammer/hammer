@@ -265,6 +265,9 @@ typedef HHashTable HHashSet;
 #define h_hashset_del(ht,el)     h_hashtable_del(ht,el)
 #define h_hashset_free(ht)       h_hashtable_free(ht)
 
+bool h_eq_ptr(const void *p, const void *q);
+HHashValue h_hash_ptr(const void *p);
+
 typedef struct HCFSequence_ HCFSequence;
 
 typedef struct HCFChoice_ {
