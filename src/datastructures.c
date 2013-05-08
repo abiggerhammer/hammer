@@ -241,5 +241,5 @@ bool h_eq_ptr(const void *p, const void *q) {
 }
 
 HHashValue h_hash_ptr(const void *p) {
-  return (uintptr_t)p;
+  return (uintptr_t)p >> 4;
 }
