@@ -7,23 +7,20 @@
 
 /* LL parse table and associated data */
 
-typedef struct HLLTable_ {
-  unsigned int **arr;             // Nonterminals numbered from 1, 0 = error.
-} HLLTable;
+/* Maps each nonterminal (HCFChoice) of the grammar to another hash table that
+ * maps lookahead tokens (HCFToken) to productions (HCFSequence).
+ */
+typedef HHashTable HLLTable;
 
-typedef struct HLLData_ {
-  HCFGrammar *grammar;
-  HLLTable *table;
-} HLLData;
-
-#if 0
 /* Interface to look up an entry in the parse table. */
-unsigned int h_ll_lookup(const HLLTable *table, unsigned int nonterminal, uint8_t token)
+const HCFSequence *h_ll_lookup(const HLLTable *table, const HCFChoice *x, HCFToken tok)
 {
-  assert(nonterminal > 0);
-  return table->arr[n*257+token];
+  const HHashTable *row = h_hashtable_get(table, x);
+  assert(row != NULL);  // the table should have one row for each nonterminal
+
+  const HCFSequence *production = h_hashtable_get(row, (void *)tok);
+  return production;
 }
-#endif
 
 /* Compute the predict set of production "A -> rhs". */
 HHashSet *h_predict(HCFGrammar *g, const HCFChoice *A, const HCFSequence *rhs)
@@ -54,6 +51,7 @@ int h_ll_compile(HAllocator* mm__, const HParser* parser, const void* params)
 
   // XXX generate table and store in parser->data.
   // XXX any other data structures needed?
+  // XXX free grammar and its arena
 
   return -1; // XXX 0 on success
 }
