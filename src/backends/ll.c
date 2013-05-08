@@ -68,12 +68,64 @@ HHashSet *h_predict(HCFGrammar *g, const HCFChoice *A, const HCFSequence *rhs)
   }
 }
 
+/* Generate entries for the production "A -> rhs" in the given table row. */
+static
+int fill_table_row(HCFGrammar *g, HHashTable *row,
+                   const HCFChoice *A, HCFSequence *rhs)
+{
+  // iterate over predict(A -> rhs)
+  HHashSet *pred = h_predict(g, A, rhs);
+
+  size_t i;
+  HHashTableEntry *hte;
+  for(i=0; i < pred->capacity; i++) {
+    for(hte = &pred->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      HCFToken x = (uintptr_t)hte->key;
+
+      if(h_hashtable_present(row, (void *)x))
+        return -1;  // table would be ambiguous
+
+      h_hashtable_put(row, (void *)x, rhs);
+    }
+  }
+
+  return 0;
+}
+
 /* Generate the LL parse table from the given grammar.
  * Returns -1 on error, 0 on success.
  */
 static int fill_table(HCFGrammar *g, HLLTable *table)
 {
-  return -1; // XXX
+  // iterate over g->nts
+  size_t i;
+  HHashTableEntry *hte;
+  for(i=0; i < g->nts->capacity; i++) {
+    for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      const HCFChoice *a = hte->key;        // production's left-hand symbol
+
+      // create table row for this nonterminal
+      HHashTable *row = h_hashtable_new(table->arena, h_eq_ptr, h_hash_ptr);
+      h_hashtable_put(table->rows, a, row);
+
+      // iterate over a's productions
+      HCFSequence **s;
+      for(s = a->seq; *s; s++) {
+        // record this production in row as appropriate
+        // this can signal an ambiguity conflict.
+        // NB we don't worry about deallocating anything, h_ll_compile will
+        //    delete the whole arena for us.
+        if(fill_table_row(g, row, a, *s) < 0)
+          return -1;
+      }
+    }
+  }
+  
+  return 0;
 }
 
 int h_ll_compile(HAllocator* mm__, HParser* parser, const void* params)
