@@ -25,7 +25,21 @@ unsigned int h_ll_lookup(const HLLTable *table, unsigned int nonterminal, uint8_
 }
 #endif
 
-// XXX predict_set
+/* Compute the predict set of production "A -> rhs". */
+HHashSet *h_predict(HCFGrammar *g, const HCFChoice *A, const HCFSequence *rhs)
+{
+  // predict(A -> rhs) = first(rhs) u follow(A)  if "" can be derived from rhs
+  // predict(A -> rhs) = first(rhs)              otherwise
+  HHashSet *first_rhs = h_first_sequence(g, rhs->items);
+  if(h_sequence_derives_epsilon(g, rhs->items)) {
+    HHashSet *ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+    h_hashset_put_all(ret, first_rhs);
+    h_hashset_put_all(ret, h_follow(g, A));
+    return ret;
+  } else {
+    return first_rhs;
+  }
+}
 
 int h_ll_compile(HAllocator* mm__, const HParser* parser, const void* params)
 {
