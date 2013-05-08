@@ -190,7 +190,7 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
   }
 }
 
-int h_packrat_compile(HAllocator* mm__, const HParser* parser, const void* params) {
+int h_packrat_compile(HAllocator* mm__, HParser* parser, const void* params) {
   return 0; // No compilation necessary, and everything should work
 	    // out of the box.
 }

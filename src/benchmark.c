@@ -21,11 +21,11 @@
 
 */
 
-HBenchmarkResults *h_benchmark(const HParser* parser, HParserTestcase* testcases) {
+HBenchmarkResults *h_benchmark(HParser* parser, HParserTestcase* testcases) {
   return h_benchmark__m(&system_allocator, parser, testcases);
 }
 
-HBenchmarkResults *h_benchmark__m(HAllocator* mm__, const HParser* parser, HParserTestcase* testcases) {
+HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTestcase* testcases) {
   // For now, just output the results to stderr
   HParserTestcase* tc = testcases;
   HParserBackend backend = PB_MIN;
