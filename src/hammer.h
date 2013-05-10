@@ -167,14 +167,18 @@ typedef struct HBenchmarkResults_ {
   rtype_t name(__VA_ARGS__, ...);					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...);		\
   rtype_t name##__mv(HAllocator* mm__, __VA_ARGS__, va_list ap);	\
-  rtype_t name##__v(__VA_ARGS__, va_list ap)
+  rtype_t name##__v(__VA_ARGS__, va_list ap);   \
+  rtype_t name##__a(void *args[]);  \
+  rtype_t name##__ma(HAllocator *mm__, void *args[])
 
 // Note: this drops the attributes on the floor for the __v versions
 #define HAMMER_FN_DECL_VARARGS_ATTR(attr, rtype_t, name, ...)		\
   rtype_t name(__VA_ARGS__, ...) attr;					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...) attr;		\
   rtype_t name##__mv(HAllocator* mm__, __VA_ARGS__, va_list ap);	\
-  rtype_t name##__v(__VA_ARGS__, va_list ap)
+  rtype_t name##__v(__VA_ARGS__, va_list ap); \
+  rtype_t name##__a(void *args[]);  \
+  rtype_t name##__ma(HAllocator *mm__, void *args[])
 
 // }}}
 

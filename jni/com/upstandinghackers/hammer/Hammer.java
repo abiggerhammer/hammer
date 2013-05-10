@@ -1,4 +1,5 @@
 package com.upstandinghackers.hammer;
+import java.util.HashMap;
 
 public class Hammer
 {
@@ -7,59 +8,69 @@ public class Hammer
     public final static byte BYTE_LITTLE_ENDIAN = 0x0;
     public final static byte BIT_LITTLE_ENDIAN = 0x0;
    
-    public enum HTokenType
+    static final HashMap<Integer, TokenType> tokenTypeMap = new HashMap<Integer, TokenType>();
+
+    public enum TokenType
     {
-        TT_NONE(1),
-        TT_BYTES(2),
-        TT_SINT(4),
-        TT_UINT(8),
-        TT_SEQUENCE(16),
-        TT_ERR(32),
-        TT_USER(64),
+        NONE(1),
+        BYTES(2),
+        SINT(4),
+        UINT(8),
+        SEQUENCE(16),
+        ERR(32),
+        USER(64);
 
         private int value;
         public int getValue() { return this.value; }
-        private HTokenType(int value) { this.value = value; }
+        private TokenType(int value) { this.value = value; }
     }
 
-    public static native HParseResult parse(HParser parser, byte[] input, int length);
-    public static native HParser token(byte[] str, int length);
-    public static native HParser ch(byte c);
-    public static native HParser chRange(byte from, byte to);
-    public static native HParser intRange(HParser p, int lower, int upper);
-    public static native HParser bits(int len, boolean sign);
-    public static native HParser int64();
-    public static native HParser int32();
-    public static native HParser int16();
-    public static native HParser int8();
-    public static native HParser uInt64();
-    public static native HParser uInt32();
-    public static native HParser uInt16();
-    public static native HParser uInt8();
-    public static native HParser whitespace(HParser p);
-    public static native HParser left(HParser p, HParser q);
-    public static native HParser right(HParser p, HParser q);
-    public static native HParser middle(HParser p, HParser x, HParser q);
-    public static native HParser action(HParser p, HAction a);
-    public static native HParser in(byte[] charset, int length);
-    public static native HParser endP();
-    public static native HParser nothingP();
-    public static native HParser sequence(HParser[] parsers);
-    public static native HParser choice(HParser[] parsers);
-    public static native HParser butNot(HParser p1, HParser p2);
-    public static native HParser difference(HParser p1, HParser p2);
-    public static native HParser xor(HParser p1, HParser p2);
-    public static native HParser many(HParser p);
-    public static native HParser many1(HParser p);
-    public static native HParser repeatN(HParser p, int n);
-    public static native HParser optional(HParser p);
-    public static native HParser ignore(HParser p);
-    public static native HParser sepBy(HParser p, HParser sep);
-    public static native HParser sepBy1(HParser p, HParser sep);
-    public static native HParser epsilonP();
-    public static native HParser lengthValue(HParser length, HParser value);
-    public static native HParser attrBool(HParser p, HPredicate pred);
-    public static native HParser and(HParser p);
-    public static native HParser not(HParser p);
-    public static native HParser indirect();
+    static
+    {
+        for(TokenType tt : TokenType.values())
+        {
+            Hammer.tokenTypeMap.put(new Integer(tt.getValue()), tt);
+        }
+    }
+
+    public static native ParseResult parse(Parser parser, byte[] input, int length);
+    public static native Parser token(byte[] str, int length);
+    public static native Parser ch(byte c);
+    public static native Parser chRange(byte from, byte to);
+    public static native Parser intRange(Parser p, long lower, long upper);
+    public static native Parser bits(int len, boolean sign);
+    public static native Parser int64();
+    public static native Parser int32();
+    public static native Parser int16();
+    public static native Parser int8();
+    public static native Parser uInt64();
+    public static native Parser uInt32();
+    public static native Parser uInt16();
+    public static native Parser uInt8();
+    public static native Parser whitespace(Parser p);
+    public static native Parser left(Parser p, Parser q);
+    public static native Parser right(Parser p, Parser q);
+    public static native Parser middle(Parser p, Parser x, Parser q);
+//    public static native Parser action(Parser p, Action a);
+    public static native Parser in(byte[] charset, int length);
+    public static native Parser endP();
+    public static native Parser nothingP();
+    public static native Parser sequence(Parser[] parsers);
+    public static native Parser choice(Parser[] parsers);
+    public static native Parser butNot(Parser p1, Parser p2);
+    public static native Parser difference(Parser p1, Parser p2);
+    public static native Parser xor(Parser p1, Parser p2);
+    public static native Parser many(Parser p);
+    public static native Parser many1(Parser p);
+    public static native Parser repeatN(Parser p, int n);
+    public static native Parser optional(Parser p);
+    public static native Parser ignore(Parser p);
+    public static native Parser sepBy(Parser p, Parser sep);
+    public static native Parser sepBy1(Parser p, Parser sep);
+    public static native Parser epsilonP();
+    public static native Parser lengthValue(Parser length, Parser value);
+//    public static native Parser attrBool(Parser p, Predicate pred);
+    public static native Parser and(Parser p);
+    public static native Parser not(Parser p);
+    public static native Parser indirect();
 }

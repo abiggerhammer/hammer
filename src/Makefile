@@ -62,6 +62,8 @@ include ../common.mk
 $(TESTS): CFLAGS += $(TEST_CFLAGS)
 $(TESTS): LDFLAGS += $(TEST_LDFLAGS)
 
+CFLAGS += -fPIC
+
 all: libhammer.a
 
 libhammer.a: $(HAMMER_PARTS)

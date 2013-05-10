@@ -1,38 +1,18 @@
+import com.upstandinghackers.hammer.*;
+import java.util.Arrays;
 /**
 * Example JHammer usage
 */
+
 public class Example
 {
 
-private HParser initParser()
-{
-    HParser digit = Hammer.chRange(0x30, 0x39);
-    HParser alpha = Hammer.choice({Hammer.chRange(0x41, 0x5a), Hammer.chRange(0x61, 0x7a)});
-    
-    HParser plus = Hammer.ch('+');
-    HParser slash = Hammer.ch('/');
-    HParser equals = Hammer.ch('=');
-    HParser bsfdig = Hammer.choice({alpha, digit, plus, slash});
-
-    byte[] AEIMQUYcgkosw048 = "AEIMQUYcgkosw048".getBytes();
-    HParser bsfdig_4bit = Hammer.in(AEIMQUYcgkosw048, AEIMQUYcgkosw048.length);
-    byte[] AQgw = "AQgw".getBytes();
-    HParser bsfdig_2bit = Hammer.in(AQgw, AQgw.length);
-    HParser base64_3 = Hammer.repeatN(bsfdig, 4);
-    HParser base64_2 = Hammer.sequence({bsfdig, bsfdig, bsfdig_4bit, equals});
-    HParser base64_1 = Hammer.sequence({bsfdig, bsfdig_2bit, equals, equals});
-    HParser base64 = Hammer.sequence({  Hammer.many(base64_3),
-                                        Hammer.optional(Hammer.choice({base64_2, base64_1}))
-                                    });
-
-    return Hammer.sequence({Hammer.whitespace(base64), Hammer.whitespace(Hammer.endP()}});
+static {
+    System.loadLibrary("jhammer");
 }
 
-public static void main(String args[])
+private static void handle(ParseResult result)
 {
-    byte[] input = "RXMgaXN0IFNwYXJnZWx6ZWl0IQo=".getBytes();
-    int length = input.length;
-    HParsedResult result = Hammer.parse(initParser(), input, length);
     if(result == null)
     {
         System.out.println("FAIL");
@@ -40,8 +20,71 @@ public static void main(String args[])
     else
     {
         System.out.println("PASS");
-        //TODO: Pretty print
+        handleToken(result.getAst());
     }
+}
+
+private static void handleToken(ParsedToken p)
+{
+    if(p==null)
+    {
+        System.out.println("Empty AST");
+        return;
+    }
+    switch(p.getTokenType())
+    {
+        case NONE: out("NONE token type"); break;
+        case BYTES: out("BYTES token type, value: " + Arrays.toString(p.getBytesValue())); break;
+        case SINT: out("SINT token type, value: " + p.getSIntValue()); break;
+        case UINT: out("UINT token type, value: " + p.getUIntValue()); break;
+        case SEQUENCE: out("SEQUENCE token type"); for(ParsedToken tok : p.getSeqValue()) {handleToken(tok);} break;
+        case ERR: out("ERR token type"); break;
+        case USER: out("USER token type"); break;
+    }
+}
+
+private static void out(String msg)
+{
+    System.out.println(">> " + msg);
+}
+
+public static void main(String args[])
+{
+    out("chRange");
+    handle(Hammer.parse(Hammer.chRange((byte)0x30, (byte)0x39), "1".getBytes(), 1));
+    handle(Hammer.parse(Hammer.chRange((byte)0x30, (byte)0x39), "a".getBytes(), 1));
+    
+    out("ch");
+    handle(Hammer.parse(Hammer.ch((byte)0x31), "1".getBytes(), 1));
+    handle(Hammer.parse(Hammer.ch((byte)0x31), "0".getBytes(), 1));
+    
+    out("token");
+    handle(Hammer.parse(Hammer.token("herp".getBytes(), 4), "herp".getBytes(), 4));
+    handle(Hammer.parse(Hammer.token("herp".getBytes(), 4), "derp".getBytes(), 4));
+    
+    out("intRange");
+    byte inbytes[] = {0x31, 0x31, 0x31, 0x31};
+    handle(Hammer.parse(Hammer.intRange(Hammer.uInt8(), 0L, 0x32), inbytes, inbytes.length));
+    handle(Hammer.parse(Hammer.intRange(Hammer.uInt8(), 0L, 0x30), inbytes, inbytes.length));
+
+    out("bits");
+    handle(Hammer.parse(Hammer.bits(7, false), inbytes, inbytes.length));
+    
+    out("int64");
+    byte ints[] = {(byte)0x8F, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
+    handle(Hammer.parse(Hammer.int64(), ints, ints.length));
+    handle(Hammer.parse(Hammer.int64(), inbytes, inbytes.length));
+
+    out("choice");
+    Parser two32s[] = {Hammer.intRange(Hammer.uInt32(), 0x00, 0x01), Hammer.int32()};
+    handle(Hammer.parse(Hammer.choice(two32s), ints, ints.length));
+
+    out("sequence");
+    byte i3[] = {(byte)'i', (byte)3, (byte)0xFF};
+    Parser i3parsers[] = {Hammer.ch((byte)'i'), Hammer.uInt8(), Hammer.int8()};
+    handle(Hammer.parse(Hammer.sequence(i3parsers), i3, i3.length));
+
+    
 }
 
 
