@@ -126,7 +126,6 @@ typedef struct HParser_ {
   HParserBackend backend;
   void* backend_data;
   void *env;
-  void *data; /* e.g., parse tables */
   HCFChoice *desugared; /* if the parser can be desugared, its desugared form */
 } HParser;
 

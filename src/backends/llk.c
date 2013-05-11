@@ -143,7 +143,7 @@ int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
   // TODO: eliminate left recursion
   // TODO: avoid conflicts by splitting occurances?
 
-  // generate table and store in parser->data.
+  // generate table and store in parser->backend_data.
   HLLkTable *table = h_llktable_new(mm__);
   if(fill_table(grammar, table) < 0) {
     // the table was ambiguous
@@ -151,7 +151,7 @@ int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
     h_llktable_free(table);
     return -1;
   }
-  parser->data = table;
+  parser->backend_data = table;
 
   // free grammar and its arena.
   // desugared parsers (HCFChoice and HCFSequence) are unaffected by this.
@@ -160,13 +160,21 @@ int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
   return 0;
 }
 
+void h_llk_free(HParser *parser)
+{
+  HLLkTable *table = parser->backend_data;
+  h_llktable_free(table);
+  parser->backend_data = NULL;
+  parser->backend = PB_PACKRAT;
+}
+
 
 
 /* LL(k) driver */
 
 HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
 {
-  const HLLkTable *table = parser->data;
+  const HLLkTable *table = parser->backend_data;
   assert(table != NULL);
 
   HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
@@ -313,7 +321,8 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
 HParserBackendVTable h__llk_backend_vtable = {
   .compile = h_llk_compile,
-  .parse = h_llk_parse
+  .parse = h_llk_parse,
+  .free = h_llk_free
 };
 
 
