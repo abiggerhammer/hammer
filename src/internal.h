@@ -131,7 +131,7 @@ struct HParseState_ {
 
 typedef struct HParserBackendVTable_ {
   int (*compile)(HAllocator *mm__, HParser* parser, const void* params);
-  HParseResult* (*parse)(HAllocator *mm__, const HParser* parser, HInputStream* parse_state);
+  HParseResult* (*parse)(HAllocator *mm__, const HParser* parser, HInputStream* stream);
   void (*free)(HParser* parser);
 } HParserBackendVTable;
 

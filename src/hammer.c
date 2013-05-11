@@ -47,7 +47,6 @@ HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length
   return h_parse__m(&system_allocator, parser, input, length);
 }
 HParseResult* h_parse__m(HAllocator* mm__, const HParser* parser, const uint8_t* input, size_t length) {
-  // TODO: split the creation of the parse state into h_packrat_parse
   // Set up a parse state...
   HInputStream input_stream = {
     .index = 0,
