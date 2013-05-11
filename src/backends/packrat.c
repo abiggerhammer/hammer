@@ -205,6 +205,10 @@ int h_packrat_compile(HAllocator* mm__, HParser* parser, const void* params) {
 	    // out of the box.
 }
 
+void h_packrat_free(HParser *parser) {
+  parser->backend = PB_PACKRAT; // revert to default, oh that's us
+}
+
 static uint32_t cache_key_hash(const void* key) {
   return djbhash(key, sizeof(HParserCacheKey));
 }
@@ -235,5 +239,6 @@ HParseResult *h_packrat_parse(HAllocator* mm__, const HParser* parser, HInputStr
 
 HParserBackendVTable h__packrat_backend_vtable = {
   .compile = h_packrat_compile,
-  .parse = h_packrat_parse
+  .parse = h_packrat_parse,
+  .free = h_packrat_free
 };
