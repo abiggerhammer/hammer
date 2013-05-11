@@ -30,7 +30,7 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
   HParserTestcase* tc = testcases;
   HParserBackend backend = PB_MIN;
   HBenchmarkResults *ret = h_new(HBenchmarkResults, 1);
-  ret->len = PB_MAX-PB_MIN;
+  ret->len = PB_MAX-PB_MIN+1;
   ret->results = h_new(HBackendResults, ret->len);
 
   for (backend = PB_MIN; backend <= PB_MAX; backend++) {
@@ -108,6 +108,8 @@ void h_benchmark_report(FILE* stream, HBenchmarkResults* result) {
   for (size_t i=0; i<result->len; ++i) {
     fprintf(stream, "Backend %ld ... \n", i);
     for (size_t j=0; j<result->results[i].n_testcases; ++j) {
+      if(result->results[i].cases == NULL)
+        continue;
       fprintf(stream, "Case %ld: %ld ns/parse\n", j,  result->results[i].cases[j].parse_time);
     }
   }
