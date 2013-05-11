@@ -49,6 +49,8 @@ HLLkTable *h_llktable_new(HAllocator *mm__)
 
 void h_llktable_free(HLLkTable *table)
 {
+  if(table == NULL)
+    return;
   HAllocator *mm__ = table->mm__;
   h_delete_arena(table->arena);
   h_free(table);
