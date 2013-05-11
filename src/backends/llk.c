@@ -205,11 +205,11 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
   while(!h_slist_empty(stack)) {
     // fill up lookahead buffer as required
     if(lookahead == 0) {
-        uint8_t c = h_read_bits(stream, 8, false);
-        if(stream->overrun)
-          lookahead = end_token;
-        else
-          lookahead = char_token(c);
+      uint8_t c = h_read_bits(stream, 8, false);
+      if(stream->overrun)
+        lookahead = end_token;
+      else
+        lookahead = char_token(c);
     }
 
     // pop top of stack for inspection
