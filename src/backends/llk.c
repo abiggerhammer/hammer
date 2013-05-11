@@ -336,5 +336,10 @@ int test_llk(void)
   printf("follow(C) = ");
   h_pprint_tokenset(stdout, g, h_follow(g, h_desugar(&system_allocator, c)), 0);
 
+  h_compile(p, PB_LLk, NULL);
+
+  HParseResult *res = h_parse(p, (uint8_t *)"xxy", 3);
+  h_pprint(stdout, res->ast, 0, 2);
+
   return 0;
 }
