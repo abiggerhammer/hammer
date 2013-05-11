@@ -565,7 +565,7 @@ HAMMER_FN_DECL(void, h_pprint, FILE* stream, const HParsedToken* tok, int indent
  *
  * Returns -1 if grammar cannot be compiled with the specified options; 0 otherwise.
  */
-HAMMER_FN_DECL(int, h_compile, HParser* parser, HParserBackend backend, const void* params);
+HAMMER_FN_DECL(int, h_compile, const HParser* parser, HParserBackend backend, const void* params);
 
 /**
  * TODO: Document me
@@ -590,7 +590,7 @@ const uint8_t* h_bit_writer_get_buffer(HBitWriter* w, size_t *len);
 void h_bit_writer_free(HBitWriter* w);
 
 // {{{ Benchmark functions
-HAMMER_FN_DECL(HBenchmarkResults *, h_benchmark, HParser* parser, HParserTestcase* testcases);
+HAMMER_FN_DECL(HBenchmarkResults *, h_benchmark, const HParser* parser, HParserTestcase* testcases);
 void h_benchmark_report(FILE* stream, HBenchmarkResults* results);
 void h_benchmark_dump_optimized_code(FILE* stream, HBenchmarkResults* results);
 // }}}

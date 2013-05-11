@@ -7,10 +7,11 @@ static HParserBackendVTable *backends[PB_MAX] = {
   &h__ll_backend_vtable,
 };
 
-int h_compile(HParser* parser, HParserBackend backend, const void* params) {
+int h_compile(const HParser* parser, HParserBackend backend, const void* params) {
   return h_compile__m(&system_allocator, parser, backend, params);
 }
 
-int h_compile__m(HAllocator* mm__, HParser* parser, HParserBackend backend, const void* params) {
-  return backends[backend]->compile(mm__, parser, params);
+int h_compile__m(HAllocator* mm__, const HParser* parser, HParserBackend backend, const void* params) {
+  // be naughty and cast off the const
+  return backends[backend]->compile(mm__, (HParser *)parser, params);
 }
