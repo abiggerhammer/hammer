@@ -167,6 +167,8 @@ int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
 HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
 {
   const HLLkTable *table = parser->data;
+  assert(table != NULL);
+
   HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
   HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
   HSlist *stack  = h_slist_new(tarena);
@@ -217,6 +219,8 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
       // look up applicable production in parse table
       const HCFSequence *p = h_llk_lookup(table, x, lookahead);
+      if(p == NULL)
+        goto no_parse;
 
       // push production's rhs onto the stack (in reverse order)
       HCFChoice **s;
