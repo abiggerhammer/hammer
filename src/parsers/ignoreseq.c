@@ -64,7 +64,7 @@ static bool is_isValidCF(void *env) {
 
 static bool h_svm_action_ignoreseq(HArena *arena, HSVMContext *ctx, void* env) {
   HIgnoreSeq *seq = (HIgnoreSeq*)env;
-  HParsedToken* save;
+  HParsedToken* save = NULL;
   // We can assume that each subitem generated at most one item on the
   // stack.
   assert(seq->len >= 1);
