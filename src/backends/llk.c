@@ -177,6 +177,9 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
   // derivations are produced this linearization is unique.
   // the 'mark' allocated below simply reserves a memory address to use as the
   // frame delimiter.
+  // nonterminals, instead of being popped and forgotten, are put back onto the
+  // stack below the mark to tell us which validations and semantic actions to
+  // execute on their corresponding result.
   // also on the stack below the mark, we store the previously accumulated
   // value for the surrounding production.
   void *mark = h_arena_malloc(tarena, 1);
@@ -200,8 +203,7 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
     // pop top of stack and check for frame delimiter
     HCFChoice *x = h_slist_pop(stack);
     assert(x != NULL);
-    if(x == mark)
-    {
+    if(x == mark) {
       // hit stack frame boundary
 
       // wrap the accumulated parse result, this sequence is finished
@@ -210,22 +212,25 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       tok->seq = seq;
       // XXX tok->index and tok->bit_offset (don't take directly from stream, cuz peek!)
 
+      // recover original nonterminal and result sequence
+      x   = h_slist_pop(stack);
+      seq = h_slist_pop(stack);
+      // tok becomes next left-most element of higher-level sequence
+
       // call validation and semantic action, if present
       if(x->pred && !x->pred(make_result(tarena, tok)))
         goto no_parse;    // validation failed -> no parse
       if(x->action)
         tok = (HParsedToken *)x->action(make_result(arena, tok));
 
-      // result becomes next left-most element of higher-level sequence
-      seq = h_slist_pop(stack);
       h_carray_append(seq, tok);
     }
-    else if(x->type == HCF_CHOICE)
-    {
+    else if(x->type == HCF_CHOICE) {
       // x is a nonterminal; apply the appropriate production
 
       // push stack frame
       h_slist_push(stack, seq);   // save current partial value
+      h_slist_push(stack, x);     // save the nonterminal
       h_slist_push(stack, mark);  // frame delimiter
 
       // open a fresh result sequence
@@ -240,8 +245,7 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       for(s--; s >= p->items; s--)
         h_slist_push(stack, *s);
     }
-    else
-    {
+    else {
       // x is a terminal, or simple charset; match against input
 
       // consume the input token
