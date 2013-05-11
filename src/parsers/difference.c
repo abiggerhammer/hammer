@@ -42,14 +42,15 @@ static HCFChoice* desugar_difference(HAllocator *mm__, void *env) {
 static HParserVtable difference_vt = {
   .parse = parse_difference,
   .isValidRegular = h_false,
-  .isValidCF = h_false,
+  .isValidCF = h_false, // XXX should this be true if both p1 and p2 are CF?
   .desugar = desugar_difference,
+  .compile_to_rvm = h_not_regular,
 };
 
-const HParser* h_difference(const HParser* p1, const HParser* p2) {
+HParser* h_difference(const HParser* p1, const HParser* p2) {
   return h_difference__m(&system_allocator, p1, p2);
 }
-const HParser* h_difference__m(HAllocator* mm__, const HParser* p1, const HParser* p2) { 
+HParser* h_difference__m(HAllocator* mm__, const HParser* p1, const HParser* p2) { 
   HTwoParsers *env = h_new(HTwoParsers, 1);
   env->p1 = p1;
   env->p2 = p2;

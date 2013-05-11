@@ -3,22 +3,23 @@
 #include "../cfgrammar.h"
 #include "../parsers/parser_internal.h"
 
+// XXX despite the names, this is all LL(1) right now. TODO
 
 
-/* Generating the LL parse table */
+/* Generating the LL(k) parse table */
 
 /* Maps each nonterminal (HCFChoice) of the grammar to another hash table that
  * maps lookahead tokens (HCFToken) to productions (HCFSequence).
  */
-typedef struct HLLTable_ {
+typedef struct HLLkTable_ {
   HHashTable *rows;
   HCFChoice  *start;    // start symbol
   HArena     *arena;
   HAllocator *mm__;
-} HLLTable;
+} HLLkTable;
 
 /* Interface to look up an entry in the parse table. */
-const HCFSequence *h_ll_lookup(const HLLTable *table, const HCFChoice *x, HCFToken tok)
+const HCFSequence *h_llk_lookup(const HLLkTable *table, const HCFChoice *x, HCFToken tok)
 {
   const HHashTable *row = h_hashtable_get(table->rows, x);
   assert(row != NULL);  // the table should have one row for each nonterminal
@@ -28,7 +29,7 @@ const HCFSequence *h_ll_lookup(const HLLTable *table, const HCFChoice *x, HCFTok
 }
 
 /* Allocate a new parse table. */
-HLLTable *h_lltable_new(HAllocator *mm__)
+HLLkTable *h_llktable_new(HAllocator *mm__)
 {
   // NB the parse table gets an arena separate from the grammar so we can free
   //    the latter after table generation.
@@ -37,7 +38,7 @@ HLLTable *h_lltable_new(HAllocator *mm__)
   HHashTable *rows = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
   assert(rows != NULL);
 
-  HLLTable *table = h_new(HLLTable, 1);
+  HLLkTable *table = h_new(HLLkTable, 1);
   assert(table != NULL);
   table->mm__  = mm__;
   table->arena = arena;
@@ -46,7 +47,7 @@ HLLTable *h_lltable_new(HAllocator *mm__)
   return table;
 }
 
-void h_lltable_free(HLLTable *table)
+void h_llktable_free(HLLkTable *table)
 {
   HAllocator *mm__ = table->mm__;
   h_delete_arena(table->arena);
@@ -95,10 +96,10 @@ int fill_table_row(HCFGrammar *g, HHashTable *row,
   return 0;
 }
 
-/* Generate the LL parse table from the given grammar.
+/* Generate the LL(k) parse table from the given grammar.
  * Returns -1 on error, 0 on success.
  */
-static int fill_table(HCFGrammar *g, HLLTable *table)
+static int fill_table(HCFGrammar *g, HLLkTable *table)
 {
   table->start = g->start;
 
@@ -120,7 +121,7 @@ static int fill_table(HCFGrammar *g, HLLTable *table)
       for(s = a->seq; *s; s++) {
         // record this production in row as appropriate
         // this can signal an ambiguity conflict.
-        // NB we don't worry about deallocating anything, h_ll_compile will
+        // NB we don't worry about deallocating anything, h_llk_compile will
         //    delete the whole arena for us.
         if(fill_table_row(g, row, a, *s) < 0)
           return -1;
@@ -131,7 +132,7 @@ static int fill_table(HCFGrammar *g, HLLTable *table)
   return 0;
 }
 
-int h_ll_compile(HAllocator* mm__, HParser* parser, const void* params)
+int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
 {
   // Convert parser to a CFG. This can fail as indicated by a NULL return.
   HCFGrammar *grammar = h_cfgrammar(mm__, parser);
@@ -143,11 +144,11 @@ int h_ll_compile(HAllocator* mm__, HParser* parser, const void* params)
   // TODO: avoid conflicts by splitting occurances?
 
   // generate table and store in parser->data.
-  HLLTable *table = h_lltable_new(mm__);
+  HLLkTable *table = h_llktable_new(mm__);
   if(fill_table(grammar, table) < 0) {
     // the table was ambiguous
     h_cfgrammar_free(grammar);
-    h_lltable_free(table);
+    h_llktable_free(table);
     return -1;
   }
   parser->data = table;
@@ -161,13 +162,14 @@ int h_ll_compile(HAllocator* mm__, HParser* parser, const void* params)
 
 
 
-/* LL driver */
+/* LL(k) driver */
 
-HParseResult *h_ll_parse(HAllocator* mm__, const HParser* parser, HParseState* state)
+HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
 {
-  const HLLTable *table = parser->data;
-  HArena *arena = state->arena;
-  HSlist *stack = h_slist_new(arena);
+  const HLLkTable *table = parser->data;
+  HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
+  HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
+  HSlist *stack  = h_slist_new(tarena);
   HCountedArray *seq = h_carray_new(arena); // accumulates current parse result
 
   // in order to construct the parse tree, we delimit the symbol stack into
@@ -177,7 +179,7 @@ HParseResult *h_ll_parse(HAllocator* mm__, const HParser* parser, HParseState* s
   // frame delimiter.
   // also on the stack below the mark, we store the previously accumulated
   // value for the surrounding production.
-  void *mark = h_arena_malloc(arena, 1);
+  void *mark = h_arena_malloc(tarena, 1);
 
   // initialize with the start symbol on the stack.
   h_slist_push(stack, table->start);
@@ -188,8 +190,8 @@ HParseResult *h_ll_parse(HAllocator* mm__, const HParser* parser, HParseState* s
   while(!h_slist_empty(stack)) {
     // fill up lookahead buffer as required
     if(lookahead == 0) {
-        uint8_t c = h_read_bits(&state->input_stream, 8, false);
-        if(state->input_stream.overrun)
+        uint8_t c = h_read_bits(stream, 8, false);
+        if(stream->overrun)
           lookahead = end_token;
         else
           lookahead = char_token(c);
@@ -203,16 +205,16 @@ HParseResult *h_ll_parse(HAllocator* mm__, const HParser* parser, HParseState* s
       // hit stack frame boundary
 
       // wrap the accumulated parse result, this sequence is finished
-      HParsedToken *tok = a_new(HParsedToken, 1);
+      HParsedToken *tok = h_arena_malloc(arena, sizeof(HParsedToken));
       tok->token_type = TT_SEQUENCE;
       tok->seq = seq;
       // XXX tok->index and tok->bit_offset (don't take directly from stream, cuz peek!)
 
       // call validation and semantic action, if present
-      if(x->pred && !x->pred(make_result(state, tok)))
-        return NULL;    // validation failed -> no parse
+      if(x->pred && !x->pred(make_result(tarena, tok)))
+        goto no_parse;    // validation failed -> no parse
       if(x->action)
-        tok = (HParsedToken *)x->action(make_result(state, tok));
+        tok = (HParsedToken *)x->action(make_result(arena, tok));
 
       // result becomes next left-most element of higher-level sequence
       seq = h_slist_pop(stack);
@@ -230,7 +232,7 @@ HParseResult *h_ll_parse(HAllocator* mm__, const HParser* parser, HParseState* s
       seq = h_carray_new(arena);
 
       // look up applicable production in parse table
-      const HCFSequence *p = h_ll_lookup(table, x, lookahead);
+      const HCFSequence *p = h_llk_lookup(table, x, lookahead);
 
       // push production's rhs onto the stack (in reverse order)
       HCFChoice **s;
@@ -250,40 +252,40 @@ HParseResult *h_ll_parse(HAllocator* mm__, const HParser* parser, HParseState* s
       switch(x->type) {
       case HCF_END:
         if(input != end_token)
-          return NULL;
+          goto no_parse;
         tok = NULL;
         break;
 
       case HCF_CHAR:
         if(input != char_token(x->chr))
-          return NULL;
-        tok = a_new(HParsedToken, 1);
+          goto no_parse;
+        tok = h_arena_malloc(arena, sizeof(HParsedToken));
         tok->token_type = TT_UINT;
         tok->uint = x->chr;
         break;
 
       case HCF_CHARSET:
         if(input == end_token)
-          return NULL;
+          goto no_parse;
         if(!charset_isset(x->charset, token_char(input)))
-          return NULL;
-        tok = a_new(HParsedToken, 1);
+          goto no_parse;
+        tok = h_arena_malloc(arena, sizeof(HParsedToken));
         tok->token_type = TT_UINT;
         tok->uint = token_char(input);
         break;
 
       default: // should not be reached
         assert_message(0, "unknown HCFChoice type");
-        return NULL;
+        goto no_parse;
       }
 
       // XXX tok->index and tok->bit_offset (don't take directly from stream, cuz peek!)
 
       // call validation and semantic action, if present
-      if(x->pred && !x->pred(make_result(state, tok)))
-        return NULL;    // validation failed -> no parse
+      if(x->pred && !x->pred(make_result(tarena, tok)))
+        goto no_parse;  // validation failed -> no parse
       if(x->action)
-        tok = (HParsedToken *)x->action(make_result(state, tok));
+        tok = (HParsedToken *)x->action(make_result(arena, tok));
 
       // append to result sequence
       h_carray_append(seq, tok);
@@ -293,25 +295,31 @@ HParseResult *h_ll_parse(HAllocator* mm__, const HParser* parser, HParseState* s
   // since we started with a single nonterminal on the stack, seq should
   // contain exactly the parse result.
   assert(seq->used == 1);
-  return make_result(state, seq->elements[0]);
+  h_delete_arena(tarena);
+  return make_result(arena, seq->elements[0]);
+
+  no_parse:
+    h_delete_arena(tarena);
+    h_delete_arena(arena);
+    return NULL;
 }
 
 
 
-HParserBackendVTable h__ll_backend_vtable = {
-  .compile = h_ll_compile,
-  .parse = h_ll_parse
+HParserBackendVTable h__llk_backend_vtable = {
+  .compile = h_llk_compile,
+  .parse = h_llk_parse
 };
 
 
 
 
 // dummy!
-int test_ll(void)
+int test_llk(void)
 {
-  const HParser *c = h_many(h_ch('x'));
-  const HParser *q = h_sequence(c, h_ch('y'), NULL);
-  const HParser *p = h_choice(q, h_end_p(), NULL);
+  HParser *c = h_many(h_ch('x'));
+  HParser *q = h_sequence(c, h_ch('y'), NULL);
+  HParser *p = h_choice(q, h_end_p(), NULL);
 
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
 

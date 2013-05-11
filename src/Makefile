@@ -27,7 +27,8 @@ PARSERS := \
 
 BACKENDS := \
 	packrat \
-	ll
+	llk \
+	regex
 
 HAMMER_PARTS := \
 	bitreader.o \
@@ -39,7 +40,6 @@ HAMMER_PARTS := \
 	datastructures.o \
 	system_allocator.o \
 	benchmark.o \
-	compile.o \
 	cfgrammar.o \
 	$(PARSERS:%=parsers/%.o) \
 	$(BACKENDS:%=backends/%.o)

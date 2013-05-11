@@ -15,8 +15,9 @@ static HParseResult* parse_token(void *env, HParseState *state) {
   }
   HParsedToken *tok = a_new(HParsedToken, 1);
   tok->token_type = TT_BYTES; tok->bytes.token = t->str; tok->bytes.len = t->len;
-  return make_result(state, tok);
+  return make_result(state->arena, tok);
 }
+
 
 static HCFChoice* desugar_token(HAllocator *mm__, void *env) {
   HToken *tok = (HToken*)env;
@@ -37,17 +38,29 @@ static HCFChoice* desugar_token(HAllocator *mm__, void *env) {
   return ret;
 }
 
+static bool token_ctrvm(HRVMProg *prog, void *env) {
+  HToken *t = (HToken*)env;
+  h_rvm_insert_insn(prog, RVM_PUSH, 0);
+  for (int i=0; i<t->len; ++i) {
+    h_rvm_insert_insn(prog, RVM_MATCH, t->str[i] & t->str[i] << 8);
+    h_rvm_insert_insn(prog, RVM_STEP, 0);
+  }
+  h_rvm_insert_insn(prog, RVM_CAPTURE, 0);
+  return true;
+}
+
 const HParserVtable token_vt = {
   .parse = parse_token,
   .isValidRegular = h_true,
   .isValidCF = h_true,
   .desugar = desugar_token,
+  .compile_to_rvm = token_ctrvm,
 };
 
-const HParser* h_token(const uint8_t *str, const size_t len) {
+HParser* h_token(const uint8_t *str, const size_t len) {
   return h_token__m(&system_allocator, str, len);
 }
-const HParser* h_token__m(HAllocator* mm__, const uint8_t *str, const size_t len) { 
+HParser* h_token__m(HAllocator* mm__, const uint8_t *str, const size_t len) { 
   HToken *t = h_new(HToken, 1);
   t->str = (uint8_t*)str, t->len = len;
   return h_new_parser(mm__, &token_vt, t);

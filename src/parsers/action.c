@@ -12,7 +12,7 @@ static HParseResult* parse_action(void *env, HParseState *state) {
     //HParsedToken *tok = a->action(h_do_parse(a->p, state));
     if(tmp) {
         const HParsedToken *tok = a->action(tmp);
-        return make_result(state, (HParsedToken*)tok);
+        return make_result(state->arena, (HParsedToken*)tok);
     } else
       return NULL;
   } else // either the parser's missing or the action's missing
@@ -44,18 +44,24 @@ static bool action_isValidCF(void *env) {
   return a->p->vtable->isValidCF(a->p->env);
 }
 
+static bool action_ctrvm(HRVMProg *prog, void* env) {
+  HParseAction *a = (HParseAction*)env;
+  return a->p->vtable->compile_to_rvm(prog, a->p->env);
+}
+
 static const HParserVtable action_vt = {
   .parse = parse_action,
   .isValidRegular = action_isValidRegular,
   .isValidCF = action_isValidCF,
   .desugar = desugar_action,
+  .compile_to_rvm = action_ctrvm,
 };
 
-const HParser* h_action(const HParser* p, const HAction a) {
+HParser* h_action(const HParser* p, const HAction a) {
   return h_action__m(&system_allocator, p, a);
 }
 
-const HParser* h_action__m(HAllocator* mm__, const HParser* p, const HAction a) {
+HParser* h_action__m(HAllocator* mm__, const HParser* p, const HAction a) {
   HParseAction *env = h_new(HParseAction, 1);
   env->p = p;
   env->action = a;

@@ -47,18 +47,24 @@ static HCFChoice* desugar_ab(HAllocator *mm__, void *env) {
   return ret;
 }
 
+static bool ab_ctrvm(HRVMProg *prog, void *env) {
+  HAttrBool *ab = (HAttrBool*)env;
+  return h_compile_regex(prog, ab->p);
+}
+
 static const HParserVtable attr_bool_vt = {
   .parse = parse_attr_bool,
   .isValidRegular = ab_isValidRegular,
   .isValidCF = ab_isValidCF,
   .desugar = desugar_ab,
+  .compile_to_rvm = ab_ctrvm,
 };
 
 
-const HParser* h_attr_bool(const HParser* p, HPredicate pred) {
+HParser* h_attr_bool(const HParser* p, HPredicate pred) {
   return h_attr_bool__m(&system_allocator, p, pred);
 }
-const HParser* h_attr_bool__m(HAllocator* mm__, const HParser* p, HPredicate pred) { 
+HParser* h_attr_bool__m(HAllocator* mm__, const HParser* p, HPredicate pred) { 
   HAttrBool *env = h_new(HAttrBool, 1);
   env->p = p;
   env->pred = pred;

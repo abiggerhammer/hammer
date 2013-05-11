@@ -17,6 +17,9 @@ CONFIG_VARS= INCLUDE_TESTS
 test: src/test_suite
 	$<
 
+examples/all: src/all
+examples/compile: src/compile
+
 define SUBDIR_TEMPLATE
 $(1)/%:
 	$$(MAKE) -C $(1) $$*

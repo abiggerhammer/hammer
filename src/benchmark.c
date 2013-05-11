@@ -21,11 +21,11 @@
 
 */
 
-HBenchmarkResults *h_benchmark(const HParser* parser, HParserTestcase* testcases) {
+HBenchmarkResults *h_benchmark(HParser* parser, HParserTestcase* testcases) {
   return h_benchmark__m(&system_allocator, parser, testcases);
 }
 
-HBenchmarkResults *h_benchmark__m(HAllocator* mm__, const HParser* parser, HParserTestcase* testcases) {
+HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTestcase* testcases) {
   // For now, just output the results to stderr
   HParserTestcase* tc = testcases;
   HParserBackend backend = PB_MIN;
@@ -33,7 +33,7 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, const HParser* parser, HPars
   ret->len = PB_MAX-PB_MIN;
   ret->results = h_new(HBackendResults, ret->len);
 
-  for (backend = PB_MIN; backend < PB_MAX; backend++) {
+  for (backend = PB_MIN; backend <= PB_MAX; backend++) {
     ret->results[backend].backend = backend;
     // Step 1: Compile grammar for given parser...
     if (h_compile(parser, backend, NULL) == -1) {

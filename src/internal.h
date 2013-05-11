@@ -48,7 +48,7 @@ static inline void h_generic_free(HAllocator *allocator, void* ptr) {
   allocator->free(allocator, ptr);
 }
 
-HAllocator system_allocator;
+extern HAllocator system_allocator;
 
 
 typedef struct HInputStream_ {
@@ -131,7 +131,8 @@ struct HParseState_ {
 
 typedef struct HParserBackendVTable_ {
   int (*compile)(HAllocator *mm__, HParser* parser, const void* params);
-  HParseResult* (*parse)(HAllocator *mm__, const HParser* parser, HParseState* parse_state);
+  HParseResult* (*parse)(HAllocator *mm__, const HParser* parser, HInputStream* parse_state);
+  void (*free)(HParser* parser);
 } HParserBackendVTable;
 
 
@@ -213,9 +214,10 @@ struct HBitWriter_ {
 
 // }}}
 
+
 // Backends {{{
 extern HParserBackendVTable h__packrat_backend_vtable;
-extern HParserBackendVTable h__ll_backend_vtable;
+extern HParserBackendVTable h__llk_backend_vtable;
 // }}}
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
@@ -295,8 +297,13 @@ struct HParserVtable_ {
   HParseResult* (*parse)(void *env, HParseState *state);
   bool (*isValidRegular)(void *env);
   bool (*isValidCF)(void *env);
+  bool (*compile_to_rvm)(HRVMProg *prog, void* env); // FIXME: forgot what the bool return value was supposed to mean.
   HCFChoice* (*desugar)(HAllocator *mm__, void *env);
 };
+
+bool h_false(void*);
+bool h_true(void*);
+bool h_not_regular(HRVMProg*, void*);
 
 #if 0
 #include <stdlib.h>
