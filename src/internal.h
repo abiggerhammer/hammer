@@ -246,6 +246,7 @@ void h_slist_push(HSlist *slist, void* item);
 bool h_slist_find(HSlist *slist, const void* item);
 HSlist* h_slist_remove_all(HSlist *slist, const void* item);
 void h_slist_free(HSlist *slist);
+static inline bool h_slist_empty(const HSlist *sl) { return (sl->head == NULL); }
 
 HHashTable* h_hashtable_new(HArena *arena, HEqualFunc equalFunc, HHashFunc hashFunc);
 void* h_hashtable_get(const HHashTable* ht, const void* key);

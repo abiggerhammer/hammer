@@ -12,6 +12,7 @@
  */
 typedef struct HLLTable_ {
   HHashTable *rows;
+  HCFChoice  *start;    // start symbol
   HArena     *arena;
   HAllocator *mm__;
 } HLLTable;
@@ -99,6 +100,8 @@ int fill_table_row(HCFGrammar *g, HHashTable *row,
  */
 static int fill_table(HCFGrammar *g, HLLTable *table)
 {
+  table->start = g->start;
+
   // iterate over g->nts
   size_t i;
   HHashTableEntry *hte;
@@ -160,11 +163,137 @@ int h_ll_compile(HAllocator* mm__, HParser* parser, const void* params)
 
 /* LL driver */
 
-HParseResult *h_ll_parse(HAllocator* mm__, const HParser* parser, HParseState* parse_state)
+HParseResult *h_ll_parse(HAllocator* mm__, const HParser* parser, HParseState* state)
 {
-  // get table from parser->data.
-  // run driver.
-  return NULL; // TODO
+  const HLLTable *table = parser->data;
+  HArena *arena = state->arena;
+  HSlist *stack = h_slist_new(arena);
+  HCountedArray *seq = h_carray_new(arena); // accumulates current parse result
+
+  // in order to construct the parse tree, we delimit the symbol stack into
+  // frames corresponding to production right-hand sides. since only left-most
+  // derivations are produced this linearization is unique.
+  // the 'mark' allocated below simply reserves a memory address to use as the
+  // frame delimiter.
+  // also on the stack below the mark, we store the previously accumulated
+  // value for the surrounding production.
+  void *mark = h_arena_malloc(arena, 1);
+
+  // initialize with the start symbol on the stack.
+  h_slist_push(stack, table->start);
+
+  HCFToken lookahead = 0;   // 0 = empty
+
+  // when we empty the stack, the parse is complete.
+  while(!h_slist_empty(stack)) {
+    // fill up lookahead buffer as required
+    if(lookahead == 0) {
+        uint8_t c = h_read_bits(&state->input_stream, 8, false);
+        if(state->input_stream.overrun)
+          lookahead = end_token;
+        else
+          lookahead = char_token(c);
+    }
+
+    // pop top of stack and check for frame delimiter
+    HCFChoice *x = h_slist_pop(stack);
+    assert(x != NULL);
+    if(x == mark)
+    {
+      // hit stack frame boundary
+
+      // wrap the accumulated parse result, this sequence is finished
+      HParsedToken *tok = a_new(HParsedToken, 1);
+      tok->token_type = TT_SEQUENCE;
+      tok->seq = seq;
+      // XXX tok->index and tok->bit_offset (don't take directly from stream, cuz peek!)
+
+      // call validation and semantic action, if present
+      if(x->pred && !x->pred(make_result(state, tok)))
+        return NULL;    // validation failed -> no parse
+      if(x->action)
+        tok = (HParsedToken *)x->action(make_result(state, tok));
+
+      // result becomes next left-most element of higher-level sequence
+      seq = h_slist_pop(stack);
+      h_carray_append(seq, tok);
+    }
+    else if(x->type == HCF_CHOICE)
+    {
+      // x is a nonterminal; apply the appropriate production
+
+      // push stack frame
+      h_slist_push(stack, seq);   // save current partial value
+      h_slist_push(stack, mark);  // frame delimiter
+
+      // open a fresh result sequence
+      seq = h_carray_new(arena);
+
+      // look up applicable production in parse table
+      const HCFSequence *p = h_ll_lookup(table, x, lookahead);
+
+      // push production's rhs onto the stack (in reverse order)
+      HCFChoice **s;
+      for(s = p->items; *s; s++);
+      for(s--; s >= p->items; s--)
+        h_slist_push(stack, *s);
+    }
+    else
+    {
+      // x is a terminal, or simple charset; match against input
+
+      // consume the input token
+      HCFToken input = lookahead;
+      lookahead = 0;
+
+      HParsedToken *tok;
+      switch(x->type) {
+      case HCF_END:
+        if(input != end_token)
+          return NULL;
+        tok = NULL;
+        break;
+
+      case HCF_CHAR:
+        if(input != char_token(x->chr))
+          return NULL;
+        tok = a_new(HParsedToken, 1);
+        tok->token_type = TT_UINT;
+        tok->uint = x->chr;
+        break;
+
+      case HCF_CHARSET:
+        if(input == end_token)
+          return NULL;
+        if(!charset_isset(x->charset, token_char(input)))
+          return NULL;
+        tok = a_new(HParsedToken, 1);
+        tok->token_type = TT_UINT;
+        tok->uint = token_char(input);
+        break;
+
+      default: // should not be reached
+        assert_message(0, "unknown HCFChoice type");
+        return NULL;
+      }
+
+      // XXX tok->index and tok->bit_offset (don't take directly from stream, cuz peek!)
+
+      // call validation and semantic action, if present
+      if(x->pred && !x->pred(make_result(state, tok)))
+        return NULL;    // validation failed -> no parse
+      if(x->action)
+        tok = (HParsedToken *)x->action(make_result(state, tok));
+
+      // append to result sequence
+      h_carray_append(seq, tok);
+    }
+  }
+
+  // since we started with a single nonterminal on the stack, seq should
+  // contain exactly the parse result.
+  assert(seq->used == 1);
+  return make_result(state, seq->elements[0]);
 }
 
 
