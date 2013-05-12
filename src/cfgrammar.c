@@ -258,6 +258,7 @@ HHashSet *h_follow(HCFGrammar *g, const HCFChoice *x)
 {
   // consider all occurances of X in g
   // the follow set of X is the union of:
+  //   {$} if X is the start symbol
   //   given a production "A -> alpha X tail":
   //   if tail derives epsilon:
   //     first(tail) u follow(A)
@@ -274,6 +275,10 @@ HHashSet *h_follow(HCFGrammar *g, const HCFChoice *x)
   ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
   assert(ret != NULL);
   h_hashtable_put(g->follow, x, ret);
+
+  // if X is the start symbol, the end token is in its follow set
+  if(x == g->start)
+    h_hashset_put(ret, (void *)end_token);
 
   // iterate over g->nts
   size_t i;
