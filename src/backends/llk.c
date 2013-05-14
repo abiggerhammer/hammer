@@ -355,7 +355,10 @@ int test_llk(void)
   h_compile(p, PB_LLk, NULL);
 
   HParseResult *res = h_parse(p, (uint8_t *)"xxy", 3);
-  h_pprint(stdout, res->ast, 0, 2);
+  if(res)
+    h_pprint(stdout, res->ast, 0, 2);
+  else
+    printf("no parse\n");
 
   return 0;
 }
