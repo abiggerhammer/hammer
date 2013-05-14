@@ -17,6 +17,41 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
   return make_result(state->arena, result);
 }
 
+static HParsedToken *reshape_bits(const HParseResult *p, bool signedp) {
+  // XXX works only for whole bytes
+  // XXX assumes big-endian
+  assert(p->ast);
+  assert(p->ast->token_type == TT_SEQUENCE);
+
+  HCountedArray *seq = p->ast->seq;
+  HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
+  ret->token_type = TT_UINT;
+
+  if(signedp && (seq->elements[0]->uint & 128))
+    ret->uint = -1; // all ones
+
+  for(size_t i=0; i<seq->used; i++) {
+    HParsedToken *t = seq->elements[i];
+    assert(t->token_type == TT_UINT);
+
+    ret->uint <<= 8;
+    ret->uint |= t->uint & 0xFF;
+  }
+
+  if(signedp) {
+    ret->token_type = TT_SINT;
+    ret->sint = ret->uint;
+  }
+
+  return ret;
+}
+static const HParsedToken *reshape_bits_unsigned(const HParseResult *p) {
+  return reshape_bits(p, false);
+}
+static const HParsedToken *reshape_bits_signed(const HParseResult *p) {
+  return reshape_bits(p, true);
+}
+
 static HCFChoice* desugar_bits(HAllocator *mm__, void *env) {
   struct bits_env *bits = (struct bits_env*)env;
   if (0 != bits->length % 8)
@@ -45,6 +80,11 @@ static HCFChoice* desugar_bits(HAllocator *mm__, void *env) {
   ret->seq[0] = seq;
   ret->seq[1] = NULL;
   ret->action = NULL;
+
+  if(bits->signedp)
+    ret->reshape = reshape_bits_signed;
+  else
+    ret->reshape = reshape_bits_unsigned;
 
   return ret;
 }

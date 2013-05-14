@@ -19,8 +19,8 @@ typedef struct HCFGrammar_ {
  * therefore we must avoid 0 as a token value because NULL means "not in set".
  */
 typedef uintptr_t HCFToken;
-static inline HCFToken char_token(char c) { return (0x100 | c); }
-static inline char token_char(HCFToken t) { return (0xFF & t); }
+static inline HCFToken char_token(uint8_t c) { return (0x100 | c); }
+static inline uint8_t token_char(HCFToken t) { return (0xFF & t); }
 static const HCFToken end_token = 0x200;
 
 

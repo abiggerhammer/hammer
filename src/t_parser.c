@@ -41,11 +41,25 @@ static void test_int32(void) {
   g_check_parse_failed(int32_, "\xff\xfe\x00", 3);
 }
 
+static void test_int32_pos(void) {
+  const HParser *int32_ = h_int32();
+
+  g_check_parse_ok(int32_, "\x00\x02\x00\x00", 4, "s0x20000");
+  g_check_parse_failed(int32_, "\x00\x02\x00", 3);
+}
+
 static void test_int16(void) {
   const HParser *int16_ = h_int16();
 
   g_check_parse_ok(int16_, "\xfe\x00", 2, "s-0x200");
   g_check_parse_failed(int16_, "\xfe", 1);
+}
+
+static void test_int16_pos(void) {
+  const HParser *int16_ = h_int16();
+
+  g_check_parse_ok(int16_, "\x02\x00", 2, "s0x200");
+  g_check_parse_failed(int16_, "\x02", 1);
 }
 
 static void test_int8(void) {
@@ -395,7 +409,9 @@ void register_parser_tests(void) {
   g_test_add_func("/core/parser/ch_range", test_ch_range);
   g_test_add_func("/core/parser/int64", test_int64);
   g_test_add_func("/core/parser/int32", test_int32);
+  g_test_add_func("/core/parser/int32_pos", test_int32_pos);
   g_test_add_func("/core/parser/int16", test_int16);
+  g_test_add_func("/core/parser/int16_pos", test_int16_pos);
   g_test_add_func("/core/parser/int8", test_int8);
   g_test_add_func("/core/parser/uint64", test_uint64);
   g_test_add_func("/core/parser/uint32", test_uint32);
