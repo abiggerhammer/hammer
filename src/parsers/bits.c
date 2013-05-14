@@ -21,24 +21,31 @@ static HCFChoice* desugar_bits(HAllocator *mm__, void *env) {
   struct bits_env *bits = (struct bits_env*)env;
   if (0 != bits->length % 8)
     return NULL; // can't handle non-byte-aligned for now
-  HCFSequence *seq = h_new(HCFSequence, 1);
-  seq->items = h_new(HCFChoice*, bits->length/8);
+
   HCharset match_all = new_charset(mm__);
+  for (int i = 0; i < 256; i++)
+    charset_set(match_all, i, 1);
+
   HCFChoice *match_all_choice = h_new(HCFChoice, 1);
   match_all_choice->type = HCF_CHARSET;
   match_all_choice->charset = match_all;
   match_all_choice->action = NULL;
-  for (int i = 0; i < 256; i++)
-    charset_set(match_all, i, 1);
-  for (size_t i=0; i<bits->length/8; ++i) {
+
+  size_t n = bits->length/8;
+  HCFSequence *seq = h_new(HCFSequence, 1);
+  seq->items = h_new(HCFChoice*, n+1);
+  for (size_t i=0; i<n; ++i) {
     seq->items[i] = match_all_choice;
   }
+  seq->items[n] = NULL;
+
   HCFChoice *ret = h_new(HCFChoice, 1);
   ret->type = HCF_CHOICE;
   ret->seq = h_new(HCFSequence*, 2);
   ret->seq[0] = seq;
   ret->seq[1] = NULL;
   ret->action = NULL;
+
   return ret;
 }
 
