@@ -56,6 +56,35 @@ static bool many_isValidCF(void *env) {
 	  repeat->sep->vtable->isValidCF(repeat->sep->env));
 }
 
+static void act_flatten_(HCountedArray *seq, const HParsedToken *tok) {
+  if(tok == NULL) {
+    return;
+  } else if(tok->token_type == TT_SEQUENCE) {
+    size_t i;
+    for(i=0; i<tok->seq->used; i++)
+      act_flatten_(seq, tok->seq->elements[i]);
+  } else {
+    h_carray_append(seq, (HParsedToken *)tok);
+  }
+}
+
+const HParsedToken *h_act_flatten(const HParseResult *p) {
+  HCountedArray *seq = h_carray_new(p->arena);
+
+  act_flatten_(seq, p->ast);
+
+  HParsedToken *res = a_new_(p->arena, HParsedToken, 1);
+  res->token_type = TT_SEQUENCE;
+  res->seq = seq;
+  res->index = p->ast->index;
+  res->bit_offset = p->ast->bit_offset;
+  return res;
+}
+
+const HParsedToken *h_act_ignore(const HParseResult *p) {
+  return NULL;
+}
+
 static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
   HRepeat *repeat = (HRepeat*)env;
   if(repeat->count > 1) {
@@ -70,6 +99,7 @@ static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
              -> \epsilon
   */
 
+  HCFChoice *sep = h_desugar(mm__, repeat->sep);
   HCFChoice *a   = h_desugar(mm__, repeat->p);
   HCFChoice *ma  = h_new(HCFChoice, 1);
   HCFChoice *mar = h_new(HCFChoice, 1);
@@ -99,7 +129,7 @@ static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
   mar->seq = h_new(HCFSequence*, 3);
   mar->seq[0] = h_new(HCFSequence, 1);
   mar->seq[0]->items = h_new(HCFChoice*, 4);
-  mar->seq[0]->items[0] = h_desugar(mm__, repeat->sep);
+  mar->seq[0]->items[0] = sep;
   mar->seq[0]->items[1] = a;
   mar->seq[0]->items[2] = mar; // woo recursion!
   mar->seq[0]->items[3] = NULL;
@@ -108,6 +138,10 @@ static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
   mar->seq[1]->items[0] = eps;
   mar->seq[1]->items[1] = NULL;
   mar->seq[2] = NULL;
+
+  /* attach reshapers */
+  sep->reshape = h_act_ignore; 
+  ma->reshape = h_act_flatten;
 
   return ma;
 }
