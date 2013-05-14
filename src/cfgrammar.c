@@ -100,6 +100,8 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol)
     break;  // it's a terminal symbol, nothing to do
 
   case HCF_CHARSET:
+    break;  // NB charsets are considered terminal, too
+
   case HCF_CHOICE:
     // exploiting the fact that HHashSet is also a HHashTable to number the
     // nonterminals.
@@ -107,13 +109,11 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol)
     h_hashtable_put(grammar->nts, symbol,
                     (void *)(uintptr_t)grammar->nts->used);
 
-    if(symbol->type == HCF_CHOICE) {
-      // each element s of symbol->seq (HCFSequence) represents the RHS of
-      // a production. call self on all symbols (HCFChoice) in s.
-      for(s = symbol->seq; *s != NULL; s++) {
-        for(x = (*s)->items; *x != NULL; x++) {
-          collect_nts(grammar, *x);
-        }
+    // each element s of symbol->seq (HCFSequence) represents the RHS of
+    // a production. call self on all symbols (HCFChoice) in s.
+    for(s = symbol->seq; *s != NULL; s++) {
+      for(x = (*s)->items; *x != NULL; x++) {
+        collect_nts(grammar, *x);
       }
     }
     break;
@@ -172,10 +172,7 @@ static void collect_geneps(HCFGrammar *g)
         if(hte->key == NULL)
           continue;
         const HCFChoice *symbol = hte->key;
-
-        // only "choice" nonterminals can derive epsilon.
-        if(symbol->type != HCF_CHOICE)
-          continue;
+        assert(symbol->type == HCF_CHOICE);
 
         // this NT derives epsilon if any of its productions does.
         HCFSequence **p;
@@ -298,9 +295,7 @@ HHashSet *h_follow(HCFGrammar *g, const HCFChoice *x)
       if(hte->key == NULL)
         continue;
       const HCFChoice *a = hte->key;        // production's left-hand symbol
-
-      // X can only occur in a proper HCF_CHOICE
-      if(a->type != HCF_CHOICE) continue;
+      assert(a->type == HCF_CHOICE);
 
       // iterate over the productions for A
       HCFSequence **p;
@@ -412,6 +407,8 @@ static void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
   case HCF_END:
     fputc('$', f);
     break;
+  case HCF_CHARSET:
+    pprint_charset(f, x->charset);
   default:
     fputs(nonterminal_name(g, x), f);
   }
@@ -456,24 +453,14 @@ void pprint_ntrules(FILE *f, const HCFGrammar *g, const HCFChoice *nt,
   for(; i<column; i++) fputc(' ', f);
   fputs(" ->", f);
 
-  HCFSequence **p;
-  switch(nt->type) {
-  case HCF_CHARSET:
-    pprint_charset(f, nt->charset);
-    break;
-  case HCF_CHOICE:
-    p = nt->seq;
-    if(*p == NULL) break;           // shouldn't happen
-    pprint_sequence(f, g, *p++);    // print first production on the same line
-    for(; *p; p++) {                // print the rest below with "or" bars
-      for(i=0; i<column; i++) fputc(' ', f);    // indent
-      fputs("  |", f);
-      pprint_sequence(f, g, *p);
-    }
-    break;
-  default: // should not be reached
-    fputs(" ???\n", f);
-    assert_message(0, "unexpected nonterminal type");
+  assert(nt->type == HCF_CHOICE);
+  HCFSequence **p = nt->seq;
+  if(*p == NULL) return;          // shouldn't happen
+  pprint_sequence(f, g, *p++);    // print first production on the same line
+  for(; *p; p++) {                // print the rest below with "or" bars
+    for(i=0; i<column; i++) fputc(' ', f);    // indent
+    fputs("  |", f);
+    pprint_sequence(f, g, *p);
   }
 }
 
@@ -495,6 +482,7 @@ void h_pprint_grammar(FILE *file, const HCFGrammar *g, int indent)
       if(hte->key == NULL)
         continue;
       const HCFChoice *a = hte->key;        // production's left-hand symbol
+      assert(a->type == HCF_CHOICE);
 
       pprint_ntrules(file, g, a, indent, len);
     }

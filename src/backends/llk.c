@@ -113,6 +113,7 @@ static int fill_table(HCFGrammar *g, HLLkTable *table)
       if(hte->key == NULL)
         continue;
       const HCFChoice *a = hte->key;        // production's left-hand symbol
+      assert(a->type == HCF_CHOICE);
 
       // create table row for this nonterminal
       HHashTable *row = h_hashtable_new(table->arena, h_eq_ptr, h_hash_ptr);
