@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "parser_internal.h"
 
 typedef struct {
@@ -19,6 +20,30 @@ static HParseResult* parse_token(void *env, HParseState *state) {
 }
 
 
+static const HParsedToken *reshape_token(const HParseResult *p) {
+  // fetch sequence of uints from p
+  assert(p->ast);
+  assert(p->ast->token_type == TT_SEQUENCE);
+  HCountedArray *seq = p->ast->seq;
+
+  // extract byte string
+  uint8_t *arr = h_arena_malloc(p->arena, seq->used);
+  size_t i;
+  for(i=0; i<seq->used; i++) {
+    HParsedToken *t = seq->elements[i];
+    assert(t->token_type == TT_UINT);
+    arr[i] = t->uint;
+  }
+
+  // create result token
+  HParsedToken *tok = h_arena_malloc(p->arena, sizeof(HParsedToken));
+  tok->token_type = TT_BYTES;
+  tok->bytes.len = seq->used;
+  tok->bytes.token = arr;
+
+  return tok;
+}
+
 static HCFChoice* desugar_token(HAllocator *mm__, void *env) {
   HToken *tok = (HToken*)env;
   HCFSequence *seq = h_new(HCFSequence, 1);
@@ -35,6 +60,8 @@ static HCFChoice* desugar_token(HAllocator *mm__, void *env) {
   ret->seq[0] = seq;
   ret->seq[1] = NULL;
   ret->action = NULL;
+  ret->pred = NULL;
+  ret->reshape = reshape_token;
   return ret;
 }
 
