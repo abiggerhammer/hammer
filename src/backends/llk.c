@@ -297,6 +297,10 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
     // XXX set tok->index and tok->bit_offset (don't take directly from stream, cuz peek!)
 
+    // perform token reshape if indicated
+    if(x->reshape)
+      tok = (HParsedToken *)x->reshape(make_result(arena, tok));
+
     // call validation and semantic action, if present
     if(x->pred && !x->pred(make_result(tarena, tok)))
       goto no_parse;    // validation failed -> no parse

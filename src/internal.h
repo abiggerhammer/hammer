@@ -285,6 +285,8 @@ typedef struct HCFChoice_ {
     HCFSequence** seq;
     uint8_t chr;
   };
+  HAction reshape;  // take CFG parse tree to HParsedToken of expected form.
+                    // to execute before action and pred are applied.
   HAction action;
   HPredicate pred;
 } HCFChoice;
