@@ -55,8 +55,8 @@ public class Hammer
     public static native Parser in(byte[] charset, int length);
     public static native Parser endP();
     public static native Parser nothingP();
-    public static native Parser sequence(Parser[] parsers);
-    public static native Parser choice(Parser[] parsers);
+    public static native Parser sequence(Parser... parsers);
+    public static native Parser choice(Parser... parsers);
     public static native Parser butNot(Parser p1, Parser p2);
     public static native Parser difference(Parser p1, Parser p2);
     public static native Parser xor(Parser p1, Parser p2);

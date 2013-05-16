@@ -77,12 +77,12 @@ public static void main(String args[])
 
     out("choice");
     Parser two32s[] = {Hammer.intRange(Hammer.uInt32(), 0x00, 0x01), Hammer.int32()};
-    handle(Hammer.parse(Hammer.choice(two32s), ints, ints.length));
+    handle(Hammer.parse(Hammer.choice(Hammer.intRange(Hammer.uInt32(), 0x00, 0x01), Hammer.int32()), ints, ints.length));
 
     out("sequence");
     byte i3[] = {(byte)'i', (byte)3, (byte)0xFF};
     Parser i3parsers[] = {Hammer.ch((byte)'i'), Hammer.uInt8(), Hammer.int8()};
-    handle(Hammer.parse(Hammer.sequence(i3parsers), i3, i3.length));
+    handle(Hammer.parse(Hammer.sequence(Hammer.ch((byte)'i'), Hammer.uInt8(), Hammer.int8()), i3, i3.length));
 
     
 }
