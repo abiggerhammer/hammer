@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <assert.h>
 #include "parser_internal.h"
 
 typedef struct {
@@ -42,6 +43,27 @@ static bool sequence_isValidCF(void *env) {
   return true;
 }
 
+static const HParsedToken *reshape_sequence(const HParseResult *p) {
+  assert(p->ast);
+  assert(p->ast->token_type == TT_SEQUENCE);
+
+  HCountedArray *seq = h_carray_new(p->arena);
+
+  // drop all elements that are NULL
+  for(size_t i=0; i<p->ast->seq->used; i++) {
+    if(p->ast->seq->elements[i] != NULL)
+      h_carray_append(seq, p->ast->seq->elements[i]);
+  }
+
+  HParsedToken *res = a_new_(p->arena, HParsedToken, 1);
+  res->token_type = TT_SEQUENCE;
+  res->seq = seq;
+  res->index = p->ast->index;
+  res->bit_offset = p->ast->bit_offset;
+
+  return res;
+}
+
 static HCFChoice* desugar_sequence(HAllocator *mm__, void *env) {
   HSequence *s = (HSequence*)env;
   HCFSequence *seq = h_new(HCFSequence, 1);
@@ -56,6 +78,7 @@ static HCFChoice* desugar_sequence(HAllocator *mm__, void *env) {
   ret->seq[0] = seq;
   ret->seq[1] = NULL;
   ret->action = NULL;
+  ret->reshape = reshape_sequence;
   return ret;
 }
 
