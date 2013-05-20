@@ -85,7 +85,7 @@ int h_compile(HParser* parser, HParserBackend backend, const void* params) {
 }
 
 int h_compile__m(HAllocator* mm__, HParser* parser, HParserBackend backend, const void* params) {
-  backends[backend]->free(parser);
+  backends[parser->backend]->free(parser);
   int ret = backends[backend]->compile(mm__, parser, params);
   if (!ret)
     parser->backend = backend;
