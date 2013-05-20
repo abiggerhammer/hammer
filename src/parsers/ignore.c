@@ -23,7 +23,20 @@ static bool ignore_isValidCF(void *env) {
 
 static HCFChoice* desugar_ignore(HAllocator *mm__, void *env) {
   HParser *p = (HParser*)env;
-  return (h_desugar(mm__, p));
+
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  HCFChoice *a   = h_desugar(mm__, p);
+
+  ret->type = HCF_CHOICE;
+  ret->seq = h_new(HCFSequence*, 2);
+  ret->seq[0] = h_new(HCFSequence, 1);
+  ret->seq[0]->items = h_new(HCFChoice*, 2);
+  ret->seq[0]->items[0] = a;
+  ret->seq[0]->items[1] = NULL;
+  ret->seq[1] = NULL;
+  ret->reshape = h_act_ignore;
+
+  return ret;
 }
 
 static bool h_svm_action_pop(HArena *arena, HSVMContext *ctx, void* arg) {
