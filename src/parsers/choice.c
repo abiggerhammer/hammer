@@ -51,6 +51,7 @@ static HCFChoice* desugar_choice(HAllocator *mm__, void *env) {
     ret->seq[i]->items[1] = NULL;
   }
   ret->seq[s->len] = NULL;
+  ret->reshape = h_act_first;
   return ret;
 }
 

@@ -31,6 +31,7 @@ static HCFChoice* desugar_action(HAllocator *mm__, void *env) {
   ret->seq[0] = seq;
   ret->seq[1] = NULL;
   ret->action = a->action;
+  ret->reshape = h_act_first;
   return ret;
 }
 
