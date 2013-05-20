@@ -32,7 +32,8 @@ static inline HCFChoice* desugar_epsilon(HAllocator *mm__, void *env) {
   static HCFChoice res_ch = {
     .type = HCF_CHOICE,
     .seq = res_ch_l,
-    .action = NULL
+    .action = NULL,
+    .reshape = h_act_ignore
   };
   return &res_ch;
 }
