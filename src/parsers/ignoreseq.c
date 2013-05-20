@@ -2,6 +2,10 @@
 #include "parser_internal.h"
 
 
+// XXX I'm thinking these parsers should be removed entirely in favor of an
+//     equivalent family of HActions.  --pesco
+
+
 //
 // general case: parse sequence, pick one result
 //
@@ -27,6 +31,18 @@ static HParseResult* parse_ignoreseq(void* env, HParseState *state) {
   return res;
 }
 
+extern const HParsedToken *h_act_first(const HParseResult *p);
+extern const HParsedToken *h_act_last(const HParseResult *p);
+
+// XXX to be consolidated with glue.c when merged upstream
+const HParsedToken *h_act_second(const HParseResult *p) {
+  assert(p->ast);
+  assert(p->ast->token_type == TT_SEQUENCE);
+  assert(p->ast->seq->used > 0);
+
+  return p->ast->seq->elements[1];
+}
+
 static HCFChoice* desugar_ignoreseq(HAllocator *mm__, void *env) {
   HIgnoreSeq *seq = (HIgnoreSeq*)env;
   HCFSequence *hseq = h_new(HCFSequence, 1);
@@ -41,6 +57,16 @@ static HCFChoice* desugar_ignoreseq(HAllocator *mm__, void *env) {
   ret->seq[0] = hseq;
   ret->seq[1] = NULL;
   ret->action = NULL;
+
+  if(seq->which == 0)
+    ret->reshape = h_act_first;
+  else if(seq->which == 1)
+    ret->reshape = h_act_second;    // for h_middle
+  else if(seq->which == seq->len-1)
+    ret->reshape = h_act_last;
+  else
+    ret->reshape = NULL;    // XXX
+
   return ret;
 }
 

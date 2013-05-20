@@ -37,7 +37,8 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol);
 static void collect_geneps(HCFGrammar *grammar);
 
 
-static const HParsedToken *h_act_first(const HParseResult *p)
+// XXX to be consolidated with glue.c when merged upstream
+const HParsedToken *h_act_first(const HParseResult *p)
 {
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);
