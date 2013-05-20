@@ -44,6 +44,7 @@ static HCFChoice* desugar_ab(HAllocator *mm__, void *env) {
   ret->seq[0] = seq;
   ret->seq[1] = NULL;
   ret->pred = a->pred;
+  ret->reshape = h_act_first;
   return ret;
 }
 
