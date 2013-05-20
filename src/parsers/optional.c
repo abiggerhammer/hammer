@@ -22,9 +22,50 @@ static bool opt_isValidCF(void *env) {
   return p->vtable->isValidCF(p->env);
 }
 
+static const HParsedToken* reshape_optional(const HParseResult *p) {
+  assert(p->ast);
+  assert(p->ast->token_type == TT_SEQUENCE);
+  assert(p->ast->seq->used > 0);
+
+  HParsedToken *res = p->ast->seq->elements[0];
+  if(res)
+    return res;
+
+  HParsedToken *ret = h_arena_malloc(p->arena, sizeof(HParsedToken));
+  ret->token_type = TT_NONE;
+  return ret;
+}
+
 static HCFChoice* desugar_optional(HAllocator *mm__, void *env) {
   HParser *p = (HParser*) env;
-  return h_desugar(mm__, p);
+
+  /* optional(A) =>
+         S  -> A
+            -> \epsilon
+  */
+
+  HCFChoice *ret = h_new(HCFChoice, 1);
+  HCFChoice *a   = h_desugar(mm__, p);
+  HCFChoice *eps = desugar_epsilon(mm__, NULL);
+
+  ret->type = HCF_CHOICE;
+  ret->seq = h_new(HCFSequence*, 3);  /* enough for 2 productions */
+
+  ret->seq[0] = h_new(HCFSequence, 1);
+  ret->seq[0]->items = h_new(HCFChoice*, 2);
+  ret->seq[0]->items[0] = a;
+  ret->seq[0]->items[1] = NULL;
+
+  ret->seq[1] = h_new(HCFSequence, 1);
+  ret->seq[1]->items = h_new(HCFChoice*, 2);
+  ret->seq[1]->items[0] = eps;
+  ret->seq[1]->items[1] = NULL;
+
+  ret->seq[2] = NULL;
+
+  ret->reshape = reshape_optional;
+
+  return ret;
 }
 
 static bool h_svm_action_optional(HArena *arena, HSVMContext *ctx, void *env) {
