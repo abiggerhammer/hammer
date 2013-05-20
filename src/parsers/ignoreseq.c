@@ -31,18 +31,6 @@ static HParseResult* parse_ignoreseq(void* env, HParseState *state) {
   return res;
 }
 
-extern const HParsedToken *h_act_first(const HParseResult *p);
-extern const HParsedToken *h_act_last(const HParseResult *p);
-
-// XXX to be consolidated with glue.c when merged upstream
-const HParsedToken *h_act_second(const HParseResult *p) {
-  assert(p->ast);
-  assert(p->ast->token_type == TT_SEQUENCE);
-  assert(p->ast->seq->used > 0);
-
-  return p->ast->seq->elements[1];
-}
-
 static HCFChoice* desugar_ignoreseq(HAllocator *mm__, void *env) {
   HIgnoreSeq *seq = (HIgnoreSeq*)env;
   HCFSequence *hseq = h_new(HCFSequence, 1);

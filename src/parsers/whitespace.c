@@ -17,15 +17,6 @@ static HParseResult* parse_whitespace(void* env, HParseState *state) {
 
 static const char SPACE_CHRS[6] = {' ', '\f', '\n', '\r', '\t', '\v'};
 
-// XXX to be consolidated with glue.c when merged upstream
-const HParsedToken *h_act_last(const HParseResult *p) {
-  assert(p->ast);
-  assert(p->ast->token_type == TT_SEQUENCE);
-  assert(p->ast->seq->used > 0);
-
-  return p->ast->seq->elements[p->ast->seq->used-1];
-}
-
 static HCFChoice* desugar_whitespace(HAllocator *mm__, void *env) {
   HCFChoice *ws = h_new(HCFChoice, 1);
   ws->type = HCF_CHOICE;

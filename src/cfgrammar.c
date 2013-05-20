@@ -37,16 +37,6 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol);
 static void collect_geneps(HCFGrammar *grammar);
 
 
-// XXX to be consolidated with glue.c when merged upstream
-const HParsedToken *h_act_first(const HParseResult *p)
-{
-  assert(p->ast);
-  assert(p->ast->token_type == TT_SEQUENCE);
-  assert(p->ast->seq->used > 0);
-
-  return p->ast->seq->elements[0];
-}
-
 /* Convert 'parser' into CFG representation by desugaring and compiling the set
  * of nonterminals.
  * A NULL return means we are unable to represent the parser as a CFG.
