@@ -19,8 +19,18 @@ typedef struct HLLkTable_ {
 } HLLkTable;
 
 /* Interface to look up an entry in the parse table. */
-const HCFSequence *h_llk_lookup(const HLLkTable *table, const HCFChoice *x, HCFToken tok)
+const HCFSequence *h_llk_lookup(const HLLkTable *table, const HCFChoice *x,
+                                HInputStream lookahead)
 {
+  // note the lookahead stream is passed by value, i.e. a copy
+  // reading bits from it does not consume them from the input
+  HCFToken tok;
+  uint8_t c = h_read_bits(&lookahead, 8, false);
+  if(lookahead.overrun)
+    tok = end_token;
+  else
+    tok = char_token(c);
+
   const HHashTable *row = h_hashtable_get(table->rows, x);
   assert(row != NULL);  // the table should have one row for each nonterminal
 
@@ -200,19 +210,8 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
   // initialize with the start symbol on the stack.
   h_slist_push(stack, table->start);
 
-  HCFToken lookahead = 0;   // 0 = empty
-
   // when we empty the stack, the parse is complete.
   while(!h_slist_empty(stack)) {
-    // fill up lookahead buffer as required
-    if(lookahead == 0) {
-      uint8_t c = h_read_bits(stream, 8, false);
-      if(stream->overrun)
-        lookahead = end_token;
-      else
-        lookahead = char_token(c);
-    }
-
     // pop top of stack for inspection
     HCFChoice *x = h_slist_pop(stack);
     assert(x != NULL);
@@ -229,7 +228,7 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       seq = h_carray_new(arena);
 
       // look up applicable production in parse table
-      const HCFSequence *p = h_llk_lookup(table, x, lookahead);
+      const HCFSequence *p = h_llk_lookup(table, x, *stream);
       if(p == NULL)
         goto no_parse;
 
@@ -260,18 +259,17 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       // x is a terminal or simple charset; match against input
 
       // consume the input token
-      HCFToken input = lookahead;
-      lookahead = 0;
+      uint8_t input = h_read_bits(stream, 8, false);
 
       switch(x->type) {
       case HCF_END:
-        if(input != end_token)
+        if(!stream->overrun)
           goto no_parse;
         tok = NULL;
         break;
 
       case HCF_CHAR:
-        if(input != char_token(x->chr))
+        if(input != x->chr)
           goto no_parse;
         tok = h_arena_malloc(arena, sizeof(HParsedToken));
         tok->token_type = TT_UINT;
@@ -279,13 +277,13 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
         break;
 
       case HCF_CHARSET:
-        if(input == end_token)
+        if(stream->overrun)
           goto no_parse;
-        if(!charset_isset(x->charset, token_char(input)))
+        if(!charset_isset(x->charset, input))
           goto no_parse;
         tok = h_arena_malloc(arena, sizeof(HParsedToken));
         tok->token_type = TT_UINT;
-        tok->uint = token_char(input);
+        tok->uint = input;
         break;
 
       default: // should not be reached
@@ -338,6 +336,15 @@ HParserBackendVTable h__llk_backend_vtable = {
 // dummy!
 int test_llk(void)
 {
+  /* for k=2:
+
+     S -> A | B
+     A -> X Y a
+     B -> Y b
+     X -> x | ''
+     Y -> y         -- for k=3 use "yy"
+  */
+
   HParser *c = h_many(h_ch('x'));
   HParser *q = h_sequence(c, h_ch('y'), NULL);
   HParser *p = h_choice(q, h_end_p(), NULL);
