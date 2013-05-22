@@ -46,6 +46,7 @@ void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v);
 void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n);
 void *h_stringmap_get(const HCFStringMap *m, const uint8_t *str, size_t n, bool end);
 bool h_stringmap_present(const HCFStringMap *m, const uint8_t *str, size_t n, bool end);
+bool h_stringmap_present_epsilon(const HCFStringMap *m);
 
 
 /* Convert 'parser' into CFG representation by desugaring and compiling the set

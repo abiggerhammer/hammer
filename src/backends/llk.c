@@ -369,12 +369,12 @@ int test_llk(void)
   }
 
   h_pprint_grammar(stdout, g, 0);
-  printf("generate epsilon: ");
+  printf("derive epsilon: ");
   h_pprint_symbolset(stdout, g, g->geneps, 0);
   printf("first(A) = ");
-  h_pprint_stringset(stdout, g, h_first(1, g, g->start), 0);
+  h_pprint_stringset(stdout, g, h_first(2, g, g->start), 0);
   printf("follow(C) = ");
-  h_pprint_stringset(stdout, g, h_follow(1, g, h_desugar(&system_allocator, c)), 0);
+  h_pprint_stringset(stdout, g, h_follow(2, g, h_desugar(&system_allocator, c)), 0);
 
   h_compile(p, PB_LLk, NULL);
 

@@ -131,8 +131,8 @@ static void ensure_k(HCFGrammar *g, size_t k)
   if(g->kmax > 0) {
     // we are resizing, copy the old tables over
     for(size_t i=0; i<=g->kmax; i++) {
-      first[i]  = g->first[0];
-      follow[i] = g->follow[0];
+      first[i]  = g->first[i];
+      follow[i] = g->follow[i];
     }
   } else {
     // we are initializing, allocate the first (in fact, dummy) tables
@@ -151,9 +151,12 @@ static void ensure_k(HCFGrammar *g, size_t k)
   g->kmax = k;
 }
 
-
 bool h_derives_epsilon(HCFGrammar *g, const HCFChoice *symbol)
 {
+  // XXX this can now also be implemented in terms of h_first:
+  // h_stringmap_present_epsilon(h_first(1, g, symbol))
+  // then the geneps structure and associated functions would be unneed
+
   assert(g->geneps != NULL);
 
   switch(symbol->type) {
@@ -274,6 +277,11 @@ bool h_stringmap_present(const HCFStringMap *m, const uint8_t *str, size_t n, bo
   return (h_stringmap_get(m, str, n, end) != NULL);
 }
 
+bool h_stringmap_present_epsilon(const HCFStringMap *m)
+{
+  return (m->epsilon_branch != NULL);
+}
+
 
 const HCFStringMap *h_first(size_t k, HCFGrammar *g, const HCFChoice *x)
 {
@@ -323,10 +331,16 @@ const HCFStringMap *h_first(size_t k, HCFGrammar *g, const HCFChoice *x)
 }
 
 // helpers for h_first_seq, definitions below
-static void first_extend(HCFGrammar *g, HCFStringMap *ret,
-                         size_t k, const HCFStringMap *as, HCFChoice **tail);
 static bool is_singleton_epsilon(const HCFStringMap *m);
 static bool any_string_shorter(size_t k, const HCFStringMap *m);
+
+// pointer to functions like h_first_seq
+typedef const HCFStringMap *(*StringSetFun)(size_t, HCFGrammar *, HCFChoice **);
+
+// helper for h_first_seq and h_follow
+static void stringset_extend(HCFGrammar *g, HCFStringMap *ret,
+                             size_t k, const HCFStringMap *as,
+                             StringSetFun f, HCFChoice **tail);
 
 const HCFStringMap *h_first_seq(size_t k, HCFGrammar *g, HCFChoice **s)
 {
@@ -353,46 +367,9 @@ const HCFStringMap *h_first_seq(size_t k, HCFGrammar *g, HCFChoice **s)
   HCFStringMap *ret = h_stringmap_new(g->arena);
 
   // extend the elements of first_k(X) up to length k from tail
-  first_extend(g, ret, k, first_x, tail);
+  stringset_extend(g, ret, k, first_x, h_first_seq, tail);
 
   return ret;
-}
-
-// add the set { a b | a <- as, b <- first_l(tail), l=k-|a| } to ret
-static void first_extend(HCFGrammar *g, HCFStringMap *ret,
-                         size_t k, const HCFStringMap *as, HCFChoice **tail)
-{
-  if(as->epsilon_branch) {
-    // for a="", add first_k(tail) to ret
-    h_stringmap_update(ret, h_first_seq(k, g, tail));
-  }
-
-  if(as->end_branch) {
-    // for a="$", nothing can follow; just add "$" to ret
-    // NB: formally, "$" is considered to be of length k
-    h_stringmap_put_end(ret, INSET);
-  }
-
-  // iterate over as->char_branches
-  const HHashTable *ht = as->char_branches;
-  for(size_t i=0; i < ht->capacity; i++) {
-    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
-      if(hte->key == NULL)
-        continue;
-      uint8_t c = key_char((HCharKey)hte->key);
-      
-      // follow the branch to find the set { a' | t a' <- as }
-      HCFStringMap *as_ = (HCFStringMap *)hte->value;
-
-      // now the elements of ret that begin with t are given by
-      // t { a b | a <- as_, b <- first_l(tail), l=k-|a|-1 }
-      // so we can use recursion over k
-      HCFStringMap *ret_ = h_stringmap_new(g->arena);
-      h_stringmap_put_char(ret, c, ret_);
-
-      first_extend(g, ret_, k-1, as_, tail);
-    }
-  }
 }
 
 static bool is_singleton_epsilon(const HCFStringMap *m)
@@ -429,15 +406,8 @@ static bool any_string_shorter(size_t k, const HCFStringMap *m)
 
 const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x);
 
-// pointer to functions like h_first_seq
-typedef const HCFStringMap *(*StringSetFun)(size_t, HCFGrammar *, HCFChoice const* const*);
-
-static void stringset_extend(HCFGrammar *g, HCFStringMap *ret,
-                             size_t k, const HCFStringMap *as,
-                             StringSetFun f, HCFChoice const * const *tail);
-
 // h_follow adapted to the signature of StringSetFun
-static inline const HCFStringMap *h_follow_(size_t k, HCFGrammar *g, HCFChoice const* const*s)
+static inline const HCFStringMap *h_follow_(size_t k, HCFGrammar *g, HCFChoice **s)
 {
   return h_follow(k, g, *s);
 }
@@ -479,7 +449,7 @@ const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x)
     for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
       if(hte->key == NULL)
         continue;
-      HCFChoice const * const a = hte->key; // production's left-hand symbol
+      HCFChoice *a = (void *)hte->key;      // production's left-hand symbol
       assert(a->type == HCF_CHOICE);
 
       // iterate over the productions for A
@@ -509,7 +479,7 @@ const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x)
 // add the set { a b | a <- as, b <- f_l(S), l=k-|a| } to ret
 static void stringset_extend(HCFGrammar *g, HCFStringMap *ret,
                              size_t k, const HCFStringMap *as,
-                             StringSetFun f, HCFChoice const * const *tail)
+                             StringSetFun f, HCFChoice **tail)
 {
   if(as->epsilon_branch) {
     // for a="", add f_k(tail) to ret
