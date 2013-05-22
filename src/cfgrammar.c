@@ -741,21 +741,20 @@ void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, in
 
 #define BUFSIZE 512
 
-void pprint_stringset_elems(FILE *file, char *prefix, size_t n, const HCFStringMap *set)
+void pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n, const HCFStringMap *set)
 {
   assert(n < BUFSIZE-4);
 
   if(set->epsilon_branch) {
-    if(n==0) {
+    if(!first) fputc(',', file); first=false;
+    if(n==0)
       fputs("''", file);
-    } else {
-      fputc(',', file);
+    else
       fwrite(prefix, 1, n, file);
-    }
   }
 
   if(set->end_branch) {
-    fputc(',', file);
+    if(!first) fputc(',', file); first=false;
     fwrite(prefix, 1, n, file);
     fputc('$', file);
   }
@@ -787,7 +786,7 @@ void pprint_stringset_elems(FILE *file, char *prefix, size_t n, const HCFStringM
           n_ += sprintf(prefix+n_, "\\x%.2X", c);
       }
 
-      pprint_stringset_elems(file, prefix, n_, ends);
+      pprint_stringset_elems(file, first, prefix, n_, ends);
     }
   }
 }
@@ -799,6 +798,6 @@ void h_pprint_stringset(FILE *file, const HCFGrammar *g, const HCFStringMap *set
 
   char buf[BUFSIZE];
   fputc('{', file);
-  pprint_stringset_elems(file, buf, 0, set);
+  pprint_stringset_elems(file, true, buf, 0, set);
   fputs("}\n", file);
 }
