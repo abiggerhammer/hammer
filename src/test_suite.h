@@ -84,6 +84,11 @@
   } while(0)
 
 #define g_check_parse_failed(parser, input, inp_len) do {		\
+    int skip = h_compile((HParser *)(parser), PB_LLk, NULL); \
+    if(skip != 0) {	\
+      g_test_message("Backend not applicable, skipping test");	\
+      break;	\
+    }	\
     const HParseResult *result = h_parse(parser, (const uint8_t*)input, inp_len); \
     if (NULL != result) {						\
       g_test_message("Check failed: shouldn't have succeeded, but did"); \
@@ -92,6 +97,11 @@
   } while(0)
 
 #define g_check_parse_ok(parser, input, inp_len, result) do {		\
+    int skip = h_compile((HParser *)(parser), PB_LLk, NULL); \
+    if(skip) {	\
+      g_test_message("Backend not applicable, skipping test");	\
+      break;	\
+    }	\
     HParseResult *res = h_parse(parser, (const uint8_t*)input, inp_len); \
     if (!res) {								\
       g_test_message("Parse failed on line %d", __LINE__);		\
@@ -134,6 +144,23 @@
     }									\
   } while(0)
 
+#define g_check_stringmap_present(table, key) do {			\
+    bool end = (key[strlen(key)-1] == '$');				\
+    if(!h_stringmap_present(table, (uint8_t *)key, strlen(key), end)) {	\
+      g_test_message("Check failed: \"%s\" should have been in map, but wasn't", key); \
+      g_test_fail();							\
+    }									\
+  } while(0)
+
+#define g_check_stringmap_absent(table, key) do {			\
+    bool end = (key[strlen(key)-2] == '$');				\
+    if(h_stringmap_present(table, (uint8_t *)key, strlen(key), end)) {	\
+      g_test_message("Check failed: \"%s\" shouldn't have been in map, but was", key); \
+      g_test_fail();							\
+    }									\
+  } while(0)
+
+
 #define g_check_terminal(grammar, parser) \
   g_check_hashtable_absent(grammar->nts, h_desugar(&system_allocator, parser))
 
@@ -146,17 +173,17 @@
 #define g_check_derives_epsilon_not(grammar, parser) \
   g_check_hashtable_absent(grammar->geneps, h_desugar(&system_allocator, parser))
 
-#define g_check_firstset_present(grammar, parser, token) \
-  g_check_hashtable_present(h_first_symbol(grammar, h_desugar(&system_allocator, parser)), (void *)token)
+#define g_check_firstset_present(k, grammar, parser, str) \
+  g_check_stringmap_present(h_first(k, grammar, h_desugar(&system_allocator, parser)), str)
 
-#define g_check_firstset_absent(grammar, parser, token) \
-  g_check_hashtable_absent(h_first_symbol(grammar, h_desugar(&system_allocator, parser)), (void *)token)
+#define g_check_firstset_absent(k, grammar, parser, str) \
+  g_check_stringmap_absent(h_first(k, grammar, h_desugar(&system_allocator, parser)), str)
 
-#define g_check_followset_present(grammar, parser, token) \
-  g_check_hashtable_present(h_follow(grammar, h_desugar(&system_allocator, parser)), (void *)token)
+#define g_check_followset_present(k, grammar, parser, str) \
+  g_check_stringmap_present(h_follow(k, grammar, h_desugar(&system_allocator, parser)), str)
 
-#define g_check_followset_absent(grammar, parser, token) \
-  g_check_hashtable_absent(h_follow(grammar, h_desugar(&system_allocator, parser)), (void *)token)
+#define g_check_followset_absent(k, grammar, parser, str) \
+  g_check_stringmap_absent(h_follow(k, grammar, h_desugar(&system_allocator, parser)), str)
 
 
 

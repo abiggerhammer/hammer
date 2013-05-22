@@ -18,12 +18,18 @@ typedef struct HLLkTable_ {
   HAllocator *mm__;
 } HLLkTable;
 
+
+// XXX adaptation to LL(1), to be removed
+typedef HCharKey HCFToken;
+static const HCFToken end_token = 0x200;
+#define char_token char_key
+
 /* Interface to look up an entry in the parse table. */
 const HCFSequence *h_llk_lookup(const HLLkTable *table, const HCFChoice *x,
                                 HInputStream lookahead)
 {
-  // note the lookahead stream is passed by value, i.e. a copy
-  // reading bits from it does not consume them from the input
+  // note the lookahead stream is passed by value, i.e. a copy.
+  // reading bits from it does not consume them from the real input.
   HCFToken tok;
   uint8_t c = h_read_bits(&lookahead, 8, false);
   if(lookahead.overrun)
@@ -71,15 +77,21 @@ HHashSet *h_predict(HCFGrammar *g, const HCFChoice *A, const HCFSequence *rhs)
 {
   // predict(A -> rhs) = first(rhs) u follow(A)  if "" can be derived from rhs
   // predict(A -> rhs) = first(rhs)              otherwise
-  HHashSet *first_rhs = h_first_sequence(g, rhs->items);
-  if(h_sequence_derives_epsilon(g, rhs->items)) {
-    HHashSet *ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
-    h_hashset_put_all(ret, first_rhs);
-    h_hashset_put_all(ret, h_follow(g, A));
-    return ret;
-  } else {
-    return first_rhs;
+  const HCFStringMap *first_rhs = h_first_seq(1, g, rhs->items);
+  const HCFStringMap *follow_A = h_follow(1, g, A);
+  HHashSet *ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+
+  h_hashset_put_all(ret, first_rhs->char_branches);
+  if(first_rhs->end_branch)
+    h_hashset_put(ret, (void *)end_token);
+
+  if(h_derives_epsilon_seq(g, rhs->items)) {
+    h_hashset_put_all(ret, follow_A->char_branches);
+    if(follow_A->end_branch)
+      h_hashset_put(ret, (void *)end_token);
   }
+
+  return ret;
 }
 
 /* Generate entries for the production "A -> rhs" in the given table row. */
@@ -360,9 +372,9 @@ int test_llk(void)
   printf("generate epsilon: ");
   h_pprint_symbolset(stdout, g, g->geneps, 0);
   printf("first(A) = ");
-  h_pprint_tokenset(stdout, g, h_first_symbol(g, g->start), 0);
+  h_pprint_stringset(stdout, g, h_first(1, g, g->start), 0);
   printf("follow(C) = ");
-  h_pprint_tokenset(stdout, g, h_follow(g, h_desugar(&system_allocator, c)), 0);
+  h_pprint_stringset(stdout, g, h_follow(1, g, h_desugar(&system_allocator, c)), 0);
 
   h_compile(p, PB_LLk, NULL);
 

@@ -28,13 +28,13 @@ static void test_example_1(void) {
   g_check_derives_epsilon_not(g, q);
   g_check_derives_epsilon_not(g, p);
 
-  g_check_firstset_present(g, p, end_token);
-  g_check_firstset_present(g, p, char_token('x'));
-  g_check_firstset_present(g, p, char_token('y'));
+  g_check_firstset_present(1, g, p, "$");
+  g_check_firstset_present(1, g, p, "x");
+  g_check_firstset_present(1, g, p, "y");
 
-  g_check_followset_absent(g, c, end_token);
-  g_check_followset_absent(g, c, char_token('x'));
-  g_check_followset_present(g, c, char_token('y'));
+  g_check_followset_absent(1, g, c, "$");
+  g_check_followset_absent(1, g, c, "x");
+  g_check_followset_present(1, g, c, "y");
 }
 
 void register_grammar_tests(void) {

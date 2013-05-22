@@ -6,6 +6,10 @@
 #include <ctype.h>
 
 
+// a special map value for use when the map is used to represent a set
+static void * const INSET = (void *)(uintptr_t)1;
+
+
 HCFGrammar *h_cfgrammar_new(HAllocator *mm__)
 {
   HCFGrammar *g = h_new(HCFGrammar, 1);
@@ -15,15 +19,17 @@ HCFGrammar *h_cfgrammar_new(HAllocator *mm__)
   g->arena  = h_new_arena(mm__, 0);     // default blocksize
   g->nts    = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
   g->geneps = NULL;
-  g->first  = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
-  g->follow = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+  g->first  = NULL;
+  g->follow = NULL;
+  g->kmax   = 0;    // will be increased as needed by ensure_k
+
+  HCFStringMap *eps = h_stringmap_new(g->arena);
+  h_stringmap_put_epsilon(eps, INSET);
+  g->singleton_epsilon = eps;
 
   return g;
 }
 
-/* Frees the given grammar and associated data.
- * Does *not* free parsers' CFG forms as created by h_desugar.
- */
 void h_cfgrammar_free(HCFGrammar *g)
 {
   HAllocator *mm__ = g->mm__;
@@ -37,10 +43,6 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol);
 static void collect_geneps(HCFGrammar *grammar);
 
 
-/* Convert 'parser' into CFG representation by desugaring and compiling the set
- * of nonterminals.
- * A NULL return means we are unable to represent the parser as a CFG.
- */
 HCFGrammar *h_cfgrammar(HAllocator* mm__, const HParser *parser)
 {
   // convert parser to CFG form ("desugar").
@@ -114,9 +116,26 @@ static void collect_nts(HCFGrammar *grammar, HCFChoice *symbol)
   }
 }
 
+/* Increase g->kmax if needed, allocating enough first/follow slots. */
+static void ensure_k(HCFGrammar *g, size_t k)
+{
+  if(k <= g->kmax) return;
 
-/* Does the given symbol derive the empty string (under g)? */
-bool h_symbol_derives_epsilon(HCFGrammar *g, const HCFChoice *symbol)
+  // NB: we don't actually use first/follow[0] but allocate it anyway
+  // so indices of the array correspond neatly to values of k
+
+  assert(k==1);   // XXX
+  g->first  = h_arena_malloc(g->arena, (k+1)*sizeof(HHashTable *));
+  g->follow = h_arena_malloc(g->arena, (k+1)*sizeof(HHashTable *));
+  g->first[0]  = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+  g->follow[0] = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+  g->first[1]  = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+  g->follow[1] = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+  g->kmax = k;
+}
+
+
+bool h_derives_epsilon(HCFGrammar *g, const HCFChoice *symbol)
 {
   assert(g->geneps != NULL);
 
@@ -130,12 +149,11 @@ bool h_symbol_derives_epsilon(HCFGrammar *g, const HCFChoice *symbol)
   }
 }
 
-/* Does the sentential form s derive the empty string? s NULL-terminated. */
-bool h_sequence_derives_epsilon(HCFGrammar *g, HCFChoice **s)
+bool h_derives_epsilon_seq(HCFGrammar *g, HCFChoice **s)
 {
   // return true iff all symbols in s derive epsilon
   for(; *s; s++) {
-    if(!h_symbol_derives_epsilon(g, *s))
+    if(!h_derives_epsilon(g, *s))
       return false;
   }
   return true;
@@ -165,10 +183,10 @@ static void collect_geneps(HCFGrammar *g)
         const HCFChoice *symbol = hte->key;
         assert(symbol->type == HCF_CHOICE);
 
-        // this NT derives epsilon if any of its productions does.
+        // this NT derives epsilon if any one of its productions does.
         HCFSequence **p;
         for(p = symbol->seq; *p != NULL; p++) {
-          if(h_sequence_derives_epsilon(g, (*p)->items)) {
+          if(h_derives_epsilon_seq(g, (*p)->items)) {
             h_hashset_put(g->geneps, symbol);
             break;
           }
@@ -179,44 +197,118 @@ static void collect_geneps(HCFGrammar *g)
 }
 
 
-/* Compute first set of sentential form s. s NULL-terminated. */
-HHashSet *h_first_sequence(HCFGrammar *g, HCFChoice **s);
-
-/* Compute first set of symbol x. Memoized. */
-HHashSet *h_first_symbol(HCFGrammar *g, const HCFChoice *x)
+HCFStringMap *h_stringmap_new(HArena *a)
 {
-  HHashSet *ret;
+  HCFStringMap *m = h_arena_malloc(a, sizeof(HCFStringMap));
+  m->char_branches = h_hashtable_new(a, h_eq_ptr, h_hash_ptr);
+  m->arena = a;
+  return m;
+}
+
+void h_stringmap_put_end(HCFStringMap *m, void *v)
+{
+  m->end_branch = v;
+}
+
+void h_stringmap_put_epsilon(HCFStringMap *m, void *v)
+{
+  m->epsilon_branch = v;
+}
+
+void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v)
+{
+  HCFStringMap *node = h_stringmap_new(m->arena);
+  h_stringmap_put_epsilon(node, v);
+  h_hashtable_put(m->char_branches, (void *)char_key(c), node);
+}
+
+void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n)
+{
+  if(n->epsilon_branch)
+    m->epsilon_branch = n->epsilon_branch;
+
+  if(n->end_branch)
+    m->end_branch = n->end_branch;
+
+  h_hashtable_update(m->char_branches, n->char_branches);
+}
+
+void *h_stringmap_get(const HCFStringMap *m, const uint8_t *str, size_t n, bool end)
+{
+  for(size_t i=0; i<n; i++) {
+    if(i==n-1 && end && m->end_branch)
+      return m->end_branch;
+    m = h_hashtable_get(m->char_branches, (void *)char_key(str[i]));
+    if(!m)
+      return NULL;
+  }
+  return m->epsilon_branch;
+}
+
+bool h_stringmap_present(const HCFStringMap *m, const uint8_t *str, size_t n, bool end)
+{
+  return (h_stringmap_get(m, str, n, end) != NULL);
+}
+
+
+const HCFStringMap *h_first(size_t k, HCFGrammar *g, const HCFChoice *x)
+{
+  HCFStringMap *ret;
   HCFSequence **p;
   uint8_t c;
 
+  // shortcut: first_0(X) is always {""}
+  if(k==0)
+    return g->singleton_epsilon;
+#if 0
+  // XXX this is bullshit?
+  // shortcut: first_0(X) is {""} if X derives anything
+  if(k==0) {
+    switch(x->type) {
+    case HCF_END:
+    case HCF_CHAR:
+      return g->singleton_epsilon;
+    case HCF_CHARSET:
+      c=0;
+      do {
+        if(charset_isset(x->charset, c))
+          return g->singleton_epsilon;
+      } while(c++ < 255);
+      break;
+    // HCF_CHOICE is handled by the general case below
+    }
+  }
+#endif
+
   // memoize via g->first
-  assert(g->first != NULL);
-  ret = h_hashtable_get(g->first, x);
+  ensure_k(g, k);
+  ret = h_hashtable_get(g->first[k], x);
   if(ret != NULL)
     return ret;
-  ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+  ret = h_stringmap_new(g->arena);
   assert(ret != NULL);
-  h_hashtable_put(g->first, x, ret);
+  h_hashtable_put(g->first[k], x, ret);
 
   switch(x->type) {
   case HCF_END:
-    h_hashset_put(ret, (void *)end_token);
+    h_stringmap_put_end(ret, INSET);
     break;
   case HCF_CHAR:
-    h_hashset_put(ret, (void *)char_token(x->chr));
+    h_stringmap_put_char(ret, x->chr, INSET);
     break;
   case HCF_CHARSET:
     c=0;
     do {
-      if(charset_isset(x->charset, c))
-        h_hashset_put(ret, (void *)char_token(c));
+      if(charset_isset(x->charset, c)) {
+        h_stringmap_put_char(ret, c, INSET);
+      }
     } while(c++ < 255);
     break;
   case HCF_CHOICE:
     // this is a nonterminal
     // return the union of the first sets of all productions
     for(p=x->seq; *p; ++p)
-      h_hashset_put_all(ret, h_first_sequence(g, (*p)->items));
+      h_stringmap_update(ret, h_first_seq(k, g, (*p)->items));
     break;
   default:  // should not be reached
     assert_message(0, "unknown HCFChoice type");
@@ -225,58 +317,155 @@ HHashSet *h_first_symbol(HCFGrammar *g, const HCFChoice *x)
   return ret;
 }
 
-HHashSet *h_first_sequence(HCFGrammar *g, HCFChoice **s)
-{
-  // the first set of the empty sequence is empty
-  if(*s == NULL)
-    return h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+// helpers for h_first_seq, definitions below
+static void first_extend(HCFGrammar *g, HCFStringMap *ret,
+                         size_t k, const HCFStringMap *as, HCFChoice **tail);
+static bool is_singleton_epsilon(const HCFStringMap *m);
+static bool any_string_shorter(size_t k, const HCFStringMap *m);
 
-  // first(X tail) = first(X)                if X does not derive epsilon
-  //               = first(X) u first(tail)  otherwise
+const HCFStringMap *h_first_seq(size_t k, HCFGrammar *g, HCFChoice **s)
+{
+  // shortcut: the first set of the empty sequence, for any k, is {""}
+  if(*s == NULL)
+    return g->singleton_epsilon;
+
+  // first_k(X tail) = { a b | a <- first_k(X), b <- first_l(tail), l=k-|a| }
 
   HCFChoice *x = s[0];
   HCFChoice **tail = s+1;
 
-  HHashSet *first_x = h_first_symbol(g, x);
-  if(h_symbol_derives_epsilon(g, x)) {
-    // return the union of first(x) and first(tail)
-    HHashSet *first_tail = h_first_sequence(g, tail);
-    HHashSet *ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
-    h_hashset_put_all(ret, first_x);
-    h_hashset_put_all(ret, first_tail);
-    return ret;
-  } else {
+  const HCFStringMap *first_x = h_first(k, g, x);
+
+  // shortcut: if first_k(X) = {""}, just return first_k(tail)
+  if(is_singleton_epsilon(first_x))
+    return h_first_seq(k, g, tail);
+
+  // shortcut: if no elements of first_k(X) have length <k, just return first_k(X)
+  if(!any_string_shorter(k, first_x))
     return first_x;
+
+  // create a new result set and build up the set described above
+  HCFStringMap *ret = h_stringmap_new(g->arena);
+
+  // extend the elements of first_k(X) up to length k from tail
+  first_extend(g, ret, k, first_x, tail);
+
+  return ret;
+}
+
+// add the set { a b | a <- as, b <- first_l(tail), l=k-|a| } to ret
+static void first_extend(HCFGrammar *g, HCFStringMap *ret,
+                         size_t k, const HCFStringMap *as, HCFChoice **tail)
+{
+  if(as->epsilon_branch) {
+    // for a="", add first_k(tail) to ret
+    h_stringmap_update(ret, h_first_seq(k, g, tail));
+  }
+
+  if(as->end_branch) {
+    // for a="$", nothing can follow; just add "$" to ret
+    // NB: formally, "$" is considered to be of length k
+    h_stringmap_put_end(ret, INSET);
+  }
+
+  // iterate over as->char_branches
+  const HHashTable *ht = as->char_branches;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      uint8_t c = key_char((HCharKey)hte->key);
+      
+      // follow the branch to find the set { a' | t a' <- as }
+      HCFStringMap *as_ = (HCFStringMap *)hte->value;
+
+      // now the elements of ret that begin with t are given by
+      // t { a b | a <- as_, b <- first_l(tail), l=k-|a|-1 }
+      // so we can use recursion over k
+      HCFStringMap *ret_ = h_stringmap_new(g->arena);
+      h_stringmap_put_char(ret, c, ret_);
+
+      first_extend(g, ret_, k-1, as_, tail);
+    }
   }
 }
 
+static bool is_singleton_epsilon(const HCFStringMap *m)
+{
+  return ( m->epsilon_branch
+           && !m->end_branch
+           && h_hashtable_empty(m->char_branches) );
+}
 
-/* Compute follow set of symbol x. Memoized. */
-HHashSet *h_follow(HCFGrammar *g, const HCFChoice *x)
+static bool any_string_shorter(size_t k, const HCFStringMap *m)
+{
+  if(k==0)
+    return false;
+
+  if(m->epsilon_branch)
+    return true;
+
+  // iterate over m->char_branches
+  const HHashTable *ht = m->char_branches;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      HCFStringMap *m_ = hte->value;
+
+      // check subtree for strings shorter than k-1
+      if(any_string_shorter(k-1, m_))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x);
+
+// pointer to functions like h_first_seq
+typedef const HCFStringMap *(*StringSetFun)(size_t, HCFGrammar *, HCFChoice const* const*);
+
+static void stringset_extend(HCFGrammar *g, HCFStringMap *ret,
+                             size_t k, const HCFStringMap *as,
+                             StringSetFun f, HCFChoice const * const *tail);
+
+// h_follow adapted to the signature of StringSetFun
+static inline const HCFStringMap *h_follow_(size_t k, HCFGrammar *g, HCFChoice const* const*s)
+{
+  return h_follow(k, g, *s);
+}
+
+const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x)
 {
   // consider all occurances of X in g
   // the follow set of X is the union of:
   //   {$} if X is the start symbol
   //   given a production "A -> alpha X tail":
-  //   if tail derives epsilon:
-  //     first(tail) u follow(A)
-  //   else:
-  //     first(tail)
+  //     first_k(tail follow_k(A))
 
-  HHashSet *ret;
+  // first_k(tail follow_k(A)) =
+  //   { a b | a <- first_k(tail), b <- follow_l(A), l=k-|a| }
+
+  HCFStringMap *ret;
+
+  // shortcut: follow_0(X) is always {""}
+  if(k==0)
+    return g->singleton_epsilon;
 
   // memoize via g->follow
-  assert(g->follow != NULL);
-  ret = h_hashtable_get(g->follow, x);
+  ensure_k(g, k);
+  ret = h_hashtable_get(g->follow[k], x);
   if(ret != NULL)
     return ret;
-  ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+  ret = h_stringmap_new(g->arena);
   assert(ret != NULL);
-  h_hashtable_put(g->follow, x, ret);
+  h_hashtable_put(g->follow[k], x, ret);
 
   // if X is the start symbol, the end token is in its follow set
   if(x == g->start)
-    h_hashset_put(ret, (void *)end_token);
+    h_stringmap_put_end(ret, INSET);
 
   // iterate over g->nts
   size_t i;
@@ -285,7 +474,7 @@ HHashSet *h_follow(HCFGrammar *g, const HCFChoice *x)
     for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
       if(hte->key == NULL)
         continue;
-      const HCFChoice *a = hte->key;        // production's left-hand symbol
+      HCFChoice const * const a = hte->key; // production's left-hand symbol
       assert(a->type == HCF_CHOICE);
 
       // iterate over the productions for A
@@ -297,9 +486,12 @@ HHashSet *h_follow(HCFGrammar *g, const HCFChoice *x)
           if(*s == x) { // occurance found
             HCFChoice **tail = s+1;
 
-            h_hashset_put_all(ret, h_first_sequence(g, tail));
-            if(h_sequence_derives_epsilon(g, tail))
-              h_hashset_put_all(ret, h_follow(g, a));
+            const HCFStringMap *first_tail = h_first_seq(k, g, tail);
+
+            //h_stringmap_update(ret, first_tail);
+
+            // extend the elems of first_k(tail) up to length k from follow(A)
+            stringset_extend(g, ret, k, first_tail, h_follow_, &a);
           }
         }
       }
@@ -307,6 +499,44 @@ HHashSet *h_follow(HCFGrammar *g, const HCFChoice *x)
   }
 
   return ret;
+}
+
+// add the set { a b | a <- as, b <- f_l(S), l=k-|a| } to ret
+static void stringset_extend(HCFGrammar *g, HCFStringMap *ret,
+                             size_t k, const HCFStringMap *as,
+                             StringSetFun f, HCFChoice const * const *tail)
+{
+  if(as->epsilon_branch) {
+    // for a="", add f_k(tail) to ret
+    h_stringmap_update(ret, f(k, g, tail));
+  }
+
+  if(as->end_branch) {
+    // for a="$", nothing can follow; just add "$" to ret
+    // NB: formally, "$" is considered to be of length k
+    h_stringmap_put_end(ret, INSET);
+  }
+
+  // iterate over as->char_branches
+  const HHashTable *ht = as->char_branches;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      uint8_t c = key_char((HCharKey)hte->key);
+      
+      // follow the branch to find the set { a' | t a' <- as }
+      HCFStringMap *as_ = (HCFStringMap *)hte->value;
+
+      // now the elements of ret that begin with t are given by
+      // t { a b | a <- as_, b <- f_l(tail), l=k-|a|-1 }
+      // so we can use recursion over k
+      HCFStringMap *ret_ = h_stringmap_new(g->arena);
+      h_stringmap_put_char(ret, c, ret_);
+
+      stringset_extend(g, ret_, k-1, as_, f, tail);
+    }
+  }
 }
 
 
@@ -344,15 +574,16 @@ static void pprint_charset(FILE *f, const HCharset cs)
 
   fputc('[', f);
   for(i=0; i<256; i++) {
-    if(charset_isset(cs, i))
+    if(charset_isset(cs, i)) {
       pprint_charset_char(f, i);
 
-    // detect ranges
-    if(i+2<256 && charset_isset(cs, i+1) && charset_isset(cs, i+2)) {
-      fputc('-', f);
-      for(; i<256 && charset_isset(cs, i); i++);
-      i--;  // back to the last in range
-      pprint_charset_char(f, i);
+      // detect ranges
+      if(i+2<256 && charset_isset(cs, i+1) && charset_isset(cs, i+2)) {
+        fputc('-', f);
+        for(; i<256 && charset_isset(cs, i); i++);
+        i--;  // back to the last in range
+        pprint_charset_char(f, i);
+      }
     }
   }
   fputc(']', f);
@@ -400,6 +631,7 @@ static void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
     break;
   case HCF_CHARSET:
     pprint_charset(f, x->charset);
+    break;
   default:
     fputs(nonterminal_name(g, x), f);
   }
@@ -507,30 +739,66 @@ void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, in
   fputs("}\n", file);
 }
 
-void h_pprint_tokenset(FILE *file, const HCFGrammar *g, const HHashSet *set, int indent)
+#define BUFSIZE 512
+
+void pprint_stringset_elems(FILE *file, char *prefix, size_t n, const HCFStringMap *set)
+{
+  assert(n < BUFSIZE-4);
+
+  if(set->epsilon_branch) {
+    if(n==0) {
+      fputs("''", file);
+    } else {
+      fputc(',', file);
+      fwrite(prefix, 1, n, file);
+    }
+  }
+
+  if(set->end_branch) {
+    fputc(',', file);
+    fwrite(prefix, 1, n, file);
+    fputc('$', file);
+  }
+
+  // iterate over set->char_branches
+  HHashTable *ht = set->char_branches;
+  size_t i;
+  HHashTableEntry *hte;
+  for(i=0; i < ht->capacity; i++) {
+    for(hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      uint8_t c = key_char((HCharKey)hte->key);
+      HCFStringMap *ends = hte->value;
+
+      size_t n_ = n;
+      switch(c) {
+      case '$':  prefix[n_++] = '\\'; prefix[n_++] = '$'; break;
+      case '"':  prefix[n_++] = '\\'; prefix[n_++] = '"'; break;
+      case '\\': prefix[n_++] = '\\'; prefix[n_++] = '\\'; break;
+      case '\b': prefix[n_++] = '\\'; prefix[n_++] = 'b'; break;
+      case '\t': prefix[n_++] = '\\'; prefix[n_++] = 't'; break;
+      case '\n': prefix[n_++] = '\\'; prefix[n_++] = 'n'; break;
+      case '\r': prefix[n_++] = '\\'; prefix[n_++] = 'r'; break;
+      default:
+        if(isprint(c))
+          prefix[n_++] = c;
+        else
+          n_ += sprintf(prefix+n_, "\\x%.2X", c);
+      }
+
+      pprint_stringset_elems(file, prefix, n_, ends);
+    }
+  }
+}
+
+void h_pprint_stringset(FILE *file, const HCFGrammar *g, const HCFStringMap *set, int indent)
 {
   int j;
   for(j=0; j<indent; j++) fputc(' ', file);
 
-  fputc('[', file);
-
-  // iterate over set
-  size_t i;
-  HHashTableEntry *hte;
-  for(i=0; i < set->capacity; i++) {
-    for(hte = &set->contents[i]; hte; hte = hte->next) {
-      if(hte->key == NULL)
-        continue;
-      HCFToken a = (HCFToken)hte->key;
-      
-      if(a == end_token)
-        fputc('$', file);
-      else if(token_char(a) == '$')
-        fputs("\\$", file);
-      else
-        pprint_char(file, token_char(a));
-    }
-  }
-
-  fputs("]\n", file);
+  char buf[BUFSIZE];
+  fputc('{', file);
+  pprint_stringset_elems(file, buf, 0, set);
+  fputs("}\n", file);
 }
