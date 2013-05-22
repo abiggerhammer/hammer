@@ -239,6 +239,13 @@ void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v)
   h_hashtable_put(m->char_branches, (void *)char_key(c), node);
 }
 
+// helper for h_stringmap_update
+void *combine_stringmap(void *v1, void *v2)
+{
+  h_stringmap_update((HCFStringMap *)v1, (HCFStringMap *)v2);
+  return v1;
+}
+
 void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n)
 {
   if(n->epsilon_branch)
@@ -247,7 +254,7 @@ void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n)
   if(n->end_branch)
     m->end_branch = n->end_branch;
 
-  h_hashtable_update(m->char_branches, n->char_branches);
+  h_hashtable_merge(combine_stringmap, m->char_branches, n->char_branches);
 }
 
 void *h_stringmap_get(const HCFStringMap *m, const uint8_t *str, size_t n, bool end)
