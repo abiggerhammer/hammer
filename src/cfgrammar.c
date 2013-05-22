@@ -124,13 +124,30 @@ static void ensure_k(HCFGrammar *g, size_t k)
   // NB: we don't actually use first/follow[0] but allocate it anyway
   // so indices of the array correspond neatly to values of k
 
-  assert(k==1);   // XXX
-  g->first  = h_arena_malloc(g->arena, (k+1)*sizeof(HHashTable *));
-  g->follow = h_arena_malloc(g->arena, (k+1)*sizeof(HHashTable *));
-  g->first[0]  = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
-  g->follow[0] = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
-  g->first[1]  = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
-  g->follow[1] = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+  // allocate the new arrays
+  HHashTable **first  = h_arena_malloc(g->arena, (k+1)*sizeof(HHashTable *));
+  HHashTable **follow = h_arena_malloc(g->arena, (k+1)*sizeof(HHashTable *));
+
+  if(g->kmax > 0) {
+    // we are resizing, copy the old tables over
+    for(size_t i=0; i<=g->kmax; i++) {
+      first[i]  = g->first[0];
+      follow[i] = g->follow[0];
+    }
+  } else {
+    // we are initializing, allocate the first (in fact, dummy) tables
+    first[0]  = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+    follow[0] = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+  }
+
+  // allocate the new tables
+  for(size_t i=g->kmax+1; i<=k; i++) {
+    first[i]  = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+    follow[i] = h_hashtable_new(g->arena, h_eq_ptr, h_hash_ptr);
+  }
+
+  g->first = first;
+  g->follow = follow;
   g->kmax = k;
 }
 
