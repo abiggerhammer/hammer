@@ -260,25 +260,6 @@ const HCFStringMap *h_first(size_t k, HCFGrammar *g, const HCFChoice *x)
   // shortcut: first_0(X) is always {""}
   if(k==0)
     return g->singleton_epsilon;
-#if 0
-  // XXX this is bullshit?
-  // shortcut: first_0(X) is {""} if X derives anything
-  if(k==0) {
-    switch(x->type) {
-    case HCF_END:
-    case HCF_CHAR:
-      return g->singleton_epsilon;
-    case HCF_CHARSET:
-      c=0;
-      do {
-        if(charset_isset(x->charset, c))
-          return g->singleton_epsilon;
-      } while(c++ < 255);
-      break;
-    // HCF_CHOICE is handled by the general case below
-    }
-  }
-#endif
 
   // memoize via g->first
   ensure_k(g, k);
