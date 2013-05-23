@@ -12,7 +12,6 @@
 typedef struct HLLkTable_ {
   HHashTable *rows;
   HCFChoice  *start;    // start symbol
-  size_t     k;         // lookahead depth XXX needed?
   HArena     *arena;
   HAllocator *mm__;
 } HLLkTable;
@@ -109,34 +108,40 @@ HCFStringMap *h_predict(size_t k, HCFGrammar *g,
 
 void *const CONFLICT = (void *)(uintptr_t)(-1);
 
-static HHashSet *cte_workset; // emulating a closure
-static void *combine_table_entry(void *dst, const void *src)
+// helper for stringmap_merge
+static void *combine_entries(HHashSet *workset, void *dst, const void *src)
 {
+  assert(dst != NULL);
+  assert(src != NULL);
+
   if(dst == CONFLICT) {                 // previous conflict
-    h_hashset_put(cte_workset, src);
+    h_hashset_put(workset, src);
   } else if(dst != src) {               // new conflict
-    h_hashset_put(cte_workset, dst);
-    h_hashset_put(cte_workset, src);
+    h_hashset_put(workset, dst);
+    h_hashset_put(workset, src);
     dst = CONFLICT;
   }
+
   return dst;
 }
 
-// add the mappings of src to dst, calling combine if there is a collision
-// note: might reuse parts of src in building up dst!
-static void stringmap_merge(void *(*combine)(void *, const void *),
-                            HCFStringMap *dst, HCFStringMap *src)
+// add the mappings of src to dst, marking conflicts and adding the conflicting
+// values to workset.
+// note: reuses parts of src to build dst!
+static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *src)
 {
   if(src->epsilon_branch) {
     if(dst->epsilon_branch)
-      dst->epsilon_branch = combine(dst->epsilon_branch, src->epsilon_branch);
+      dst->epsilon_branch =
+          combine_entries(workset, dst->epsilon_branch, src->epsilon_branch);
     else
       dst->epsilon_branch = src->epsilon_branch;
   }
 
   if(src->end_branch) {
     if(dst->end_branch)
-      dst->end_branch = combine(dst->end_branch, src->end_branch);
+      dst->end_branch =
+          combine_entries(workset, dst->end_branch, src->end_branch);
     else
       dst->end_branch = src->end_branch;
   }
@@ -154,7 +159,7 @@ static void stringmap_merge(void *(*combine)(void *, const void *),
       if(src_) {
         HCFStringMap *dst_ = h_hashtable_get(dst->char_branches, (void *)c);
         if(dst_)
-          stringmap_merge(combine, dst_, src_);
+          stringmap_merge(workset, dst_, src_);
         else
           dst_ = src_;
       }
@@ -162,49 +167,62 @@ static void stringmap_merge(void *(*combine)(void *, const void *),
   }
 }
 
-/* Generate entries for the production "A -> rhs" in the given table row. */
-static int fill_production_entries(size_t k, HCFGrammar *g, HCFStringMap *row,
-                                   const HCFChoice *A, HCFSequence *rhs)
-{
-
-  for(size_t i=1; i<=k; i++) {
-    HCFStringMap *pred = h_predict(i, g, A, rhs);
-    h_stringmap_replace(pred, NULL, rhs); // make all values in pred map to rhs
-
-    // clear previous conflict markers
-    h_stringmap_replace(row, CONFLICT, NULL);
-
-    // merge predict set into the row, accumulating conflicts in workset
-    cte_workset = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
-                                           // will be deleted after compile
-    stringmap_merge(combine_table_entry, row, pred);
-
-    // if the workset is empty, row is free of conflicts and we are done.
-    if(h_hashset_empty(cte_workset))
-      return 0;
-  }
-
-  // if we reach here, conflicts remain at maximum lookahead
-  return -1;
-}
-
 /* Generate entries for the production "A" in the given table row. */
-static int fill_table_row(size_t k, HCFGrammar *g, HCFStringMap *row,
+static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
                           const HCFChoice *A)
 {
-  // iterate over A's productions
-  for(HCFSequence **s = A->seq; *s; s++) {
-    // record this production in row as appropriate
-    if(fill_production_entries(k, g, row, A, *s) < 0)
-      return -1;
+  HHashSet *workset;    // to be deleted after compile
+                        // ~> alloc in g->arena
+
+  // initialize working set to the productions of A
+  workset = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+  for(HCFSequence **s = A->seq; *s; s++)
+    h_hashset_put(workset, *s);
+
+  // run until workset exhausted or kmax hit
+  size_t k;
+  for(k=1; k<=kmax; k++) {
+    // iterate over productions in workset...
+    const HHashTable *ht = workset;
+    for(size_t i=0; i < ht->capacity; i++) {
+      for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+        if(hte->key == NULL)
+          continue;
+
+        HCFSequence *rhs = (void *)hte->key;
+        assert(rhs != NULL);
+        assert(rhs != CONFLICT);  // just to be sure there's no mixup
+
+        // remove this production from workset
+        h_hashset_del(workset, rhs);
+    
+        // calculate predict set; let values map to rhs
+        HCFStringMap *pred = h_predict(k, g, A, rhs);
+        h_stringmap_replace(pred, NULL, rhs);
+
+        // merge predict set into the row; accumulates conflicts in workset
+        stringmap_merge(workset, row, pred);
+      }
+    }
+
+    // if the workset is empty, row is without conflict; we're done
+    if(h_hashset_empty(workset))
+      break;
+
+    // clear conflict markers for next iteration
+    h_stringmap_replace(row, CONFLICT, NULL);
   }
-  return 0;
+
+  if(k>kmax)    // conflicts remain
+    return -1;
+  else
+    return 0;
 }
 
 /* Generate the LL(k) parse table from the given grammar.
  * Returns -1 on error, 0 on success.
  */
-static int fill_table(size_t k, HCFGrammar *g, HLLkTable *table)
+static int fill_table(size_t kmax, HCFGrammar *g, HLLkTable *table)
 {
   table->start = g->start;
 
@@ -222,7 +240,7 @@ static int fill_table(size_t k, HCFGrammar *g, HLLkTable *table)
       HCFStringMap *row = h_stringmap_new(table->arena);
       h_hashtable_put(table->rows, a, row);
 
-      if(fill_table_row(k, g, row, a) < 0) {
+      if(fill_table_row(kmax, g, row, a) < 0) {
         // unresolvable conflicts in row
         // NB we don't worry about deallocating anything, h_llk_compile will
         //    delete the whole arena for us.
@@ -234,12 +252,12 @@ static int fill_table(size_t k, HCFGrammar *g, HLLkTable *table)
   return 0;
 }
 
-static const size_t K_DEFAULT = 1;
+static const size_t DEFAULT_KMAX = 1;
 
 int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
 {
-  size_t k = params? (uintptr_t)params : K_DEFAULT;
-  assert(k>0);
+  size_t kmax = params? (uintptr_t)params : DEFAULT_KMAX;
+  assert(kmax>0);
 
   // Convert parser to a CFG. This can fail as indicated by a NULL return.
   HCFGrammar *grammar = h_cfgrammar(mm__, parser);
@@ -252,7 +270,7 @@ int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
 
   // generate table and store in parser->backend_data.
   HLLkTable *table = h_llktable_new(mm__);
-  if(fill_table(k, grammar, table) < 0) {
+  if(fill_table(kmax, grammar, table) < 0) {
     // the table was ambiguous
     h_cfgrammar_free(grammar);
     h_llktable_free(table);

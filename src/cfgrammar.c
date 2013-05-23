@@ -248,7 +248,7 @@ void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v)
 }
 
 // helper for h_stringmap_update
-void *combine_stringmap(void *v1, void *v2)
+static void *combine_stringmap(void *v1, void *v2)
 {
   h_stringmap_update((HCFStringMap *)v1, (HCFStringMap *)v2);
   return v1;
