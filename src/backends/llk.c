@@ -357,9 +357,11 @@ int test_llk(void)
      Y -> y         -- for k=3 use "yy"
   */
 
-  HParser *c = h_many(h_ch('x'));
-  HParser *q = h_sequence(c, h_ch('y'), NULL);
-  HParser *p = h_choice(q, h_end_p(), NULL);
+  HParser *X = h_optional(h_ch('x'));
+  HParser *Y = h_sequence(h_ch('y'), NULL);
+  HParser *A = h_sequence(X, Y, h_ch('a'), NULL);
+  HParser *B = h_sequence(Y, h_ch('b'), NULL);
+  HParser *p = h_choice(A, B, NULL);
 
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
 
@@ -372,13 +374,16 @@ int test_llk(void)
   printf("derive epsilon: ");
   h_pprint_symbolset(stdout, g, g->geneps, 0);
   printf("first(A) = ");
-  h_pprint_stringset(stdout, g, h_first(2, g, g->start), 0);
-  printf("follow(C) = ");
-  h_pprint_stringset(stdout, g, h_follow(2, g, h_desugar(&system_allocator, c)), 0);
+  h_pprint_stringset(stdout, g, h_first(3, g, g->start), 0);
+  //printf("follow(C) = ");
+  //h_pprint_stringset(stdout, g, h_follow(3, g, h_desugar(&system_allocator, c)), 0);
 
-  h_compile(p, PB_LLk, NULL);
+  if(h_compile(p, PB_LLk, NULL)) {
+    fprintf(stderr, "does not compile\n");
+    return 2;
+  }
 
-  HParseResult *res = h_parse(p, (uint8_t *)"xxy", 3);
+  HParseResult *res = h_parse(p, (uint8_t *)"xya", 3);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
