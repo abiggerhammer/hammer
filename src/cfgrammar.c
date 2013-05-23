@@ -719,7 +719,9 @@ void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, in
 
 #define BUFSIZE 512
 
-void pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n, const HCFStringMap *set)
+static bool
+pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n,
+                       const HCFStringMap *set)
 {
   assert(n < BUFSIZE-4);
 
@@ -764,9 +766,11 @@ void pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n, cons
           n_ += sprintf(prefix+n_, "\\x%.2X", c);
       }
 
-      pprint_stringset_elems(file, first, prefix, n_, ends);
+      first = pprint_stringset_elems(file, first, prefix, n_, ends);
     }
   }
+
+  return first;
 }
 
 void h_pprint_stringset(FILE *file, const HCFGrammar *g, const HCFStringMap *set, int indent)
