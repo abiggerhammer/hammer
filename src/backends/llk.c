@@ -111,6 +111,12 @@ static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *
           combine_entries(workset, dst->epsilon_branch, src->epsilon_branch);
     else
       dst->epsilon_branch = src->epsilon_branch;
+  } else {
+    // if there is a non-conflicting value on the left (dst) side, it means
+    // that prediction is already unambiguous. we can drop the right (src)
+    // side we were going to extend with.
+    if(dst->epsilon_branch && dst->epsilon_branch != CONFLICT)
+      return;
   }
 
   if(src->end_branch) {
