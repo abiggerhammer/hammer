@@ -473,4 +473,40 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/llk/epsilon_p", GINT_TO_POINTER(PB_LLk), test_epsilon_p);
   g_test_add_data_func("/core/parser/llk/attr_bool", GINT_TO_POINTER(PB_LLk), test_attr_bool);
   g_test_add_data_func("/core/parser/llk/ignore", GINT_TO_POINTER(PB_LLk), test_ignore);
+
+  g_test_add_data_func("/core/parser/regex/token", GINT_TO_POINTER(PB_REGULAR), test_token);
+  g_test_add_data_func("/core/parser/regex/ch", GINT_TO_POINTER(PB_REGULAR), test_ch);
+  g_test_add_data_func("/core/parser/regex/ch_range", GINT_TO_POINTER(PB_REGULAR), test_ch_range);
+  g_test_add_data_func("/core/parser/regex/int64", GINT_TO_POINTER(PB_REGULAR), test_int64);
+  g_test_add_data_func("/core/parser/regex/int32", GINT_TO_POINTER(PB_REGULAR), test_int32);
+  g_test_add_data_func("/core/parser/regex/int16", GINT_TO_POINTER(PB_REGULAR), test_int16);
+  g_test_add_data_func("/core/parser/regex/int8", GINT_TO_POINTER(PB_REGULAR), test_int8);
+  g_test_add_data_func("/core/parser/regex/uint64", GINT_TO_POINTER(PB_REGULAR), test_uint64);
+  g_test_add_data_func("/core/parser/regex/uint32", GINT_TO_POINTER(PB_REGULAR), test_uint32);
+  g_test_add_data_func("/core/parser/regex/uint16", GINT_TO_POINTER(PB_REGULAR), test_uint16);
+  g_test_add_data_func("/core/parser/regex/uint8", GINT_TO_POINTER(PB_REGULAR), test_uint8);
+  g_test_add_data_func("/core/parser/regex/int_range", GINT_TO_POINTER(PB_REGULAR), test_int_range);
+#if 0
+  g_test_add_data_func("/core/parser/regex/float64", GINT_TO_POINTER(PB_REGULAR), test_float64);
+  g_test_add_data_func("/core/parser/regex/float32", GINT_TO_POINTER(PB_REGULAR), test_float32);
+#endif
+  g_test_add_data_func("/core/parser/regex/whitespace", GINT_TO_POINTER(PB_REGULAR), test_whitespace);
+  g_test_add_data_func("/core/parser/regex/left", GINT_TO_POINTER(PB_REGULAR), test_left);
+  g_test_add_data_func("/core/parser/regex/right", GINT_TO_POINTER(PB_REGULAR), test_right);
+  g_test_add_data_func("/core/parser/regex/middle", GINT_TO_POINTER(PB_REGULAR), test_middle);
+  g_test_add_data_func("/core/parser/regex/action", GINT_TO_POINTER(PB_REGULAR), test_action);
+  g_test_add_data_func("/core/parser/regex/in", GINT_TO_POINTER(PB_REGULAR), test_in);
+  g_test_add_data_func("/core/parser/regex/not_in", GINT_TO_POINTER(PB_REGULAR), test_not_in);
+  g_test_add_data_func("/core/parser/regex/end_p", GINT_TO_POINTER(PB_REGULAR), test_end_p);
+  g_test_add_data_func("/core/parser/regex/nothing_p", GINT_TO_POINTER(PB_REGULAR), test_nothing_p);
+  g_test_add_data_func("/core/parser/regex/sequence", GINT_TO_POINTER(PB_REGULAR), test_sequence);
+  g_test_add_data_func("/core/parser/regex/choice", GINT_TO_POINTER(PB_REGULAR), test_choice);
+  g_test_add_data_func("/core/parser/regex/many", GINT_TO_POINTER(PB_REGULAR), test_many);
+  g_test_add_data_func("/core/parser/regex/many1", GINT_TO_POINTER(PB_REGULAR), test_many1);
+  g_test_add_data_func("/core/parser/regex/optional", GINT_TO_POINTER(PB_REGULAR), test_optional);
+  g_test_add_data_func("/core/parser/regex/sepBy", GINT_TO_POINTER(PB_REGULAR), test_sepBy);
+  g_test_add_data_func("/core/parser/regex/sepBy1", GINT_TO_POINTER(PB_REGULAR), test_sepBy1);
+  g_test_add_data_func("/core/parser/regex/epsilon_p", GINT_TO_POINTER(PB_REGULAR), test_epsilon_p);
+  g_test_add_data_func("/core/parser/regex/attr_bool", GINT_TO_POINTER(PB_REGULAR), test_attr_bool);
+  g_test_add_data_func("/core/parser/regex/ignore", GINT_TO_POINTER(PB_REGULAR), test_ignore);
 }
