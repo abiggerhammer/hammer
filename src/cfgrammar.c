@@ -235,11 +235,16 @@ void h_stringmap_put_epsilon(HCFStringMap *m, void *v)
   m->epsilon_branch = v;
 }
 
+void h_stringmap_put_after(HCFStringMap *m, uint8_t c, HCFStringMap *ends)
+{
+  h_hashtable_put(m->char_branches, (void *)char_key(c), ends);
+}
+
 void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v)
 {
   HCFStringMap *node = h_stringmap_new(m->arena);
   h_stringmap_put_epsilon(node, v);
-  h_hashtable_put(m->char_branches, (void *)char_key(c), node);
+  h_stringmap_put_after(m, c, node);
 }
 
 // helper for h_stringmap_update
@@ -505,7 +510,7 @@ static void stringset_extend(HCFGrammar *g, HCFStringMap *ret,
       // t { a b | a <- as_, b <- f_l(tail), l=k-|a|-1 }
       // so we can use recursion over k
       HCFStringMap *ret_ = h_stringmap_new(g->arena);
-      h_stringmap_put_char(ret, c, ret_);
+      h_stringmap_put_after(ret, c, ret_);
 
       stringset_extend(g, ret_, k-1, as_, f, tail);
     }

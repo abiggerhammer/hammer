@@ -42,6 +42,7 @@ typedef struct HCFStringMap_ {
 HCFStringMap *h_stringmap_new(HArena *a);
 void h_stringmap_put_end(HCFStringMap *m, void *v);
 void h_stringmap_put_epsilon(HCFStringMap *m, void *v);
+void h_stringmap_put_after(HCFStringMap *m, uint8_t c, HCFStringMap *ends);
 void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v);
 void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n);
 void *h_stringmap_get(const HCFStringMap *m, const uint8_t *str, size_t n, bool end);
