@@ -265,12 +265,38 @@ void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n)
   h_hashtable_merge(combine_stringmap, m->char_branches, n->char_branches);
 }
 
+/* Replace all occurances of old in m with new.
+ * If old is NULL, replace all values in m with new.
+ * If new is NULL, remove the respective values.
+ */
+void h_stringmap_replace(HCFStringMap *m, void *old, void *new)
+{
+  if(!old || m->epsilon_branch == old)
+    m->epsilon_branch = new;
+
+  if(!old || m->end_branch == old)
+    m->end_branch = new;
+
+  // iterate over m->char_branches
+  const HHashTable *ht = m->char_branches;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+
+      HCFStringMap *m_ = hte->value;
+      if(m_)
+        h_stringmap_replace(m_, old, new);
+    }
+  }
+}
+
 void *h_stringmap_get(const HCFStringMap *m, const uint8_t *str, size_t n, bool end)
 {
   for(size_t i=0; i<n; i++) {
     if(i==n-1 && end && m->end_branch)
       return m->end_branch;
-    m = h_hashtable_get(m->char_branches, (void *)char_key(str[i]));
+    m = h_stringmap_get_char(m, str[i]);
     if(!m)
       return NULL;
   }

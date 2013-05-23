@@ -45,9 +45,13 @@ void h_stringmap_put_epsilon(HCFStringMap *m, void *v);
 void h_stringmap_put_after(HCFStringMap *m, uint8_t c, HCFStringMap *ends);
 void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v);
 void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n);
+void h_stringmap_replace(HCFStringMap *m, void *old, void *new);
 void *h_stringmap_get(const HCFStringMap *m, const uint8_t *str, size_t n, bool end);
 bool h_stringmap_present(const HCFStringMap *m, const uint8_t *str, size_t n, bool end);
 bool h_stringmap_present_epsilon(const HCFStringMap *m);
+
+static inline void *h_stringmap_get_char(const HCFStringMap *m, const uint8_t c)
+ { return h_hashtable_get(m->char_branches, (void *)char_key(c)); }
 
 
 /* Convert 'parser' into CFG representation by desugaring and compiling the set
