@@ -271,11 +271,13 @@ void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n)
  */
 void h_stringmap_replace(HCFStringMap *m, void *old, void *new)
 {
-  if(!old || m->epsilon_branch == old)
-    m->epsilon_branch = new;
-
-  if(!old || m->end_branch == old)
-    m->end_branch = new;
+  if(!old) {
+    if(m->epsilon_branch) m->epsilon_branch = new;
+    if(m->end_branch)     m->end_branch = new;
+  } else {
+    if(m->epsilon_branch == old) m->epsilon_branch = new;
+    if(m->end_branch == old)     m->end_branch = new;
+  }
 
   // iterate over m->char_branches
   const HHashTable *ht = m->char_branches;
