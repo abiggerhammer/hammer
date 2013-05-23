@@ -467,13 +467,10 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/llk/choice", GINT_TO_POINTER(PB_LLk), test_choice);
   g_test_add_data_func("/core/parser/llk/many", GINT_TO_POINTER(PB_LLk), test_many);
   g_test_add_data_func("/core/parser/llk/many1", GINT_TO_POINTER(PB_LLk), test_many1);
-  g_test_add_data_func("/core/parser/llk/repeat_n", GINT_TO_POINTER(PB_LLk), test_repeat_n);
   g_test_add_data_func("/core/parser/llk/optional", GINT_TO_POINTER(PB_LLk), test_optional);
   g_test_add_data_func("/core/parser/llk/sepBy", GINT_TO_POINTER(PB_LLk), test_sepBy);
   g_test_add_data_func("/core/parser/llk/sepBy1", GINT_TO_POINTER(PB_LLk), test_sepBy1);
   g_test_add_data_func("/core/parser/llk/epsilon_p", GINT_TO_POINTER(PB_LLk), test_epsilon_p);
   g_test_add_data_func("/core/parser/llk/attr_bool", GINT_TO_POINTER(PB_LLk), test_attr_bool);
-  g_test_add_data_func("/core/parser/llk/and", GINT_TO_POINTER(PB_LLk), test_and);
-  g_test_add_data_func("/core/parser/llk/not", GINT_TO_POINTER(PB_LLk), test_not);
   g_test_add_data_func("/core/parser/llk/ignore", GINT_TO_POINTER(PB_LLk), test_ignore);
 }
