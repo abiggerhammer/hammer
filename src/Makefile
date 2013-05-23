@@ -41,7 +41,7 @@ HAMMER_PARTS := \
 	system_allocator.o \
 	benchmark.o \
 	cfgrammar.o \
-	actions.o \
+	glue.o \
 	$(PARSERS:%=parsers/%.o) \
 	$(BACKENDS:%=backends/%.o)
 
@@ -50,6 +50,7 @@ TESTS := t_benchmark.o \
 	 t_bitwriter.o \
 	 t_parser.o \
 	 t_grammar.o \
+	 t_misc.o \
 	 test_suite.o
 
 OUTPUTS := libhammer.a \
@@ -65,12 +66,15 @@ include ../common.mk
 $(TESTS): CFLAGS += $(TEST_CFLAGS)
 $(TESTS): LDFLAGS += $(TEST_LDFLAGS)
 
+CFLAGS += -fPIC
+
 all: libhammer.a
 
 libhammer.a: $(HAMMER_PARTS)
 
 bitreader.o: test_suite.h
 hammer.o: hammer.h
+glue.o: hammer.h glue.h
 
 all: libhammer.a
 

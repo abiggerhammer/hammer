@@ -1,10 +1,15 @@
 *.o
 *~
 *.a
+*.class
+*.so
+jni/com*.h
 src/test_suite
 lib/hush
 examples/dns
 examples/base64
+examples/base64_sem1
+examples/base64_sem2
 TAGS
 *.swp
 *.swo

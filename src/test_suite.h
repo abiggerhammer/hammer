@@ -83,8 +83,8 @@
     }									\
   } while(0)
 
-#define g_check_parse_failed(parser, input, inp_len) do {		\
-    int skip = h_compile((HParser *)(parser), PB_LLk, NULL); \
+#define g_check_parse_failed(parser, backend, input, inp_len) do {	\
+    int skip = h_compile((HParser *)(parser), (HParserBackend)backend, NULL); \
     if(skip != 0) {	\
       g_test_message("Backend not applicable, skipping test");	\
       break;	\
@@ -96,9 +96,9 @@
     }									\
   } while(0)
 
-#define g_check_parse_ok(parser, input, inp_len, result) do {		\
-    int skip = h_compile((HParser *)(parser), PB_LLk, NULL); \
-    if(skip) {	\
+#define g_check_parse_ok(parser, backend, input, inp_len, result) do {	\
+    int skip = h_compile((HParser *)(parser), (HParserBackend) backend, NULL); \
+  if(skip) {	\
       g_test_message("Backend not applicable, skipping test");	\
       break;	\
     }	\
