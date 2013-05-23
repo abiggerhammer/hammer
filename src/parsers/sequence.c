@@ -144,3 +144,28 @@ HParser* h_sequence__mv(HAllocator* mm__, const HParser *p, va_list ap_) {
   s->len = len;
   return h_new_parser(mm__, &sequence_vt, s);
 }
+
+HParser* h_sequence__a(void *args[]) {
+  return h_sequence__ma(&system_allocator, args);
+}
+
+HParser* h_sequence__ma(HAllocator* mm__, void *args[]) {
+  size_t len = -1; // because do...while
+  const HParser *arg;
+  
+  do {
+    arg=((HParser **)args)[++len];
+  } while(arg);
+  
+  HSequence *s = h_new(HSequence, 1);
+  s->p_array = h_new(const HParser *, len);
+
+  for (size_t i = 0; i < len; i++) {
+    s->p_array[i] = ((HParser **)args)[i];
+  }
+  
+  s->len = len;
+  HParser *ret = h_new(HParser, 1);
+  ret->vtable = &sequence_vt; ret->env = (void*)s;
+  return ret;
+}

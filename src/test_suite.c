@@ -23,6 +23,7 @@ extern void register_bitreader_tests();
 extern void register_bitwriter_tests();
 extern void register_parser_tests();
 extern void register_grammar_tests();
+extern void register_misc_tests();
 extern void register_benchmark_tests();
 
 int main(int argc, char** argv) {
@@ -33,6 +34,7 @@ int main(int argc, char** argv) {
   register_bitwriter_tests();
   register_parser_tests();
   register_grammar_tests();
+  register_misc_tests();
   register_benchmark_tests();
 
   g_test_run();
