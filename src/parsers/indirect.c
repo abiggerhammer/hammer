@@ -6,14 +6,12 @@ static HParseResult* parse_indirect(void* env, HParseState* state) {
 
 static bool indirect_isValidCF(void *env) {
   HParser *p = (HParser*)env;
-  HParser *inner = (HParser*)p->env;
-  return inner->vtable->isValidCF(inner->env);
+  return p->vtable->isValidCF(p->env);
 }
 
 static HCFChoice* desugar_indirect(HAllocator *mm__, void *env) {
   HParser *p = (HParser*)env;
-  HParser *inner = (HParser*)p->env;
-  return inner->desugared;
+  return h_desugar(mm__, p);
 }
 
 static const HParserVtable indirect_vt = {
