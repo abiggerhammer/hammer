@@ -171,8 +171,7 @@ static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *
 static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
                           const HCFChoice *A)
 {
-  HHashSet *workset;    // to be deleted after compile
-                        // ~> alloc in g->arena
+  HHashSet *workset;
 
   // initialize working set to the productions of A
   workset = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
@@ -182,7 +181,10 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
   // run until workset exhausted or kmax hit
   size_t k;
   for(k=1; k<=kmax; k++) {
-    // iterate over productions in workset...
+    // allocate a fresh workset for the next round
+    HHashSet *nextset = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+
+    // iterate over the productions in workset...
     const HHashTable *ht = workset;
     for(size_t i=0; i < ht->capacity; i++) {
       for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
@@ -193,17 +195,19 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
         assert(rhs != NULL);
         assert(rhs != CONFLICT);  // just to be sure there's no mixup
 
-        // remove this production from workset
-        h_hashset_del(workset, rhs);
-    
         // calculate predict set; let values map to rhs
         HCFStringMap *pred = h_predict(k, g, A, rhs);
         h_stringmap_replace(pred, NULL, rhs);
 
-        // merge predict set into the row; accumulates conflicts in workset
-        stringmap_merge(workset, row, pred);
+        // merge predict set into the row
+        // accumulates conflicts in new workset
+        stringmap_merge(nextset, row, pred);
       }
     }
+
+    // switch to the updated workset
+    h_hashtable_free(workset);
+    workset = nextset;
 
     // if the workset is empty, row is without conflict; we're done
     if(h_hashset_empty(workset))
@@ -213,10 +217,8 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
     h_stringmap_replace(row, CONFLICT, NULL);
   }
 
-  if(k>kmax)    // conflicts remain
-    return -1;
-  else
-    return 0;
+  h_hashset_free(workset);
+  return (k>kmax)? -1 : 0;
 }
 
 /* Generate the LL(k) parse table from the given grammar.
@@ -483,7 +485,7 @@ int test_llk(void)
     return 2;
   }
 
-  HParseResult *res = h_parse(p, (uint8_t *)"xya", 3);
+  HParseResult *res = h_parse(p, (uint8_t *)"xa", 2);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
