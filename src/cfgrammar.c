@@ -437,7 +437,23 @@ static bool any_string_shorter(size_t k, const HCFStringMap *m)
   return false;
 }
 
-const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x);
+// helper for h_predict
+static void remove_all_shorter(size_t k, HCFStringMap *m)
+{
+  if(k==0) return;
+  m->epsilon_branch = NULL;
+  if(k==1) return;
+
+  // iterate over m->char_branches
+  const HHashTable *ht = m->char_branches;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      remove_all_shorter(k-1, hte->value);      // recursion into subtree
+    }
+  }
+}
 
 // h_follow adapted to the signature of StringSetFun
 static inline const HCFStringMap *h_follow_(size_t k, HCFGrammar *g, HCFChoice **s)
@@ -503,6 +519,23 @@ const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x)
       }
     }
   }
+
+  return ret;
+}
+
+HCFStringMap *h_predict(size_t k, HCFGrammar *g,
+                        const HCFChoice *A, const HCFSequence *rhs)
+{
+  HCFStringMap *ret = h_stringmap_new(g->arena);
+
+  // predict_k(A -> rhs) =
+  //   { ab | a <- first_k(rhs), b <- follow_k(A), |ab|=k }
+  
+  const HCFStringMap *first_rhs = h_first_seq(k, g, rhs->items);
+  stringset_extend(g, ret, k, first_rhs, h_follow_, (HCFChoice **)&A);
+
+  // make sure there are only strings of length _exactly_ k
+  remove_all_shorter(k, ret);
 
   return ret;
 }
@@ -806,7 +839,7 @@ pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n,
   return first;
 }
 
-void h_pprint_stringset(FILE *file, const HCFGrammar *g, const HCFStringMap *set, int indent)
+void h_pprint_stringset(FILE *file, const HCFStringMap *set, int indent)
 {
   int j;
   for(j=0; j<indent; j++) fputc(' ', file);

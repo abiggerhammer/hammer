@@ -81,28 +81,6 @@ void h_llktable_free(HLLkTable *table)
   h_free(table);
 }
 
-/* Compute the predict_k set of production "A -> rhs".
- * Always returns a newly-allocated HCFStringMap.
- */
-HCFStringMap *h_predict(size_t k, HCFGrammar *g,
-                        const HCFChoice *A, const HCFSequence *rhs)
-{
-  assert(k==1); // XXX
-  HCFStringMap *ret = h_stringmap_new(g->arena);
-
-  // predict(A -> rhs) = first(rhs) u follow(A)  if "" can be derived from rhs
-  // predict(A -> rhs) = first(rhs)              otherwise
-
-  h_stringmap_update(ret, h_first_seq(k, g, rhs->items));
-  if(h_derives_epsilon_seq(g, rhs->items))
-    h_stringmap_update(ret, h_follow(k, g, A));
-
-  // make sure there are only strings of length _exactly_ k
-  ret->epsilon_branch = NULL;
-
-  return ret;
-}
-
 void *const CONFLICT = (void *)(uintptr_t)(-1);
 
 // helper for stringmap_merge
@@ -113,7 +91,7 @@ static void *combine_entries(HHashSet *workset, void *dst, const void *src)
 
   if(dst == CONFLICT) {                 // previous conflict
     h_hashset_put(workset, src);
-  } else if(dst == src) {               // new conflict
+  } else if(dst != src) {               // new conflict
     h_hashset_put(workset, dst);
     h_hashset_put(workset, src);
     dst = CONFLICT;
@@ -178,6 +156,8 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
   // run until workset exhausted or kmax hit
   size_t k;
   for(k=1; k<=kmax; k++) {
+    printf("k=%lu\n", k); // XXX debug
+
     // allocate a fresh workset for the next round
     HHashSet *nextset = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
 
@@ -196,26 +176,22 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
         HCFStringMap *pred = h_predict(k, g, A, rhs);
         h_stringmap_replace(pred, NULL, rhs);
 
+        // XXX debug
+        printf("predict(");
+        h_pprint_sequence(stdout, g, rhs);
+        printf(") = ");
+        h_pprint_stringset(stdout, pred, 0);
+
         // merge predict set into the row
         // accumulates conflicts in new workset
         stringmap_merge(nextset, row, pred);
-
-        // XXX debug
-        if(A == g->start) {
-          printf("predict(");
-          h_pprint_sequence(stdout, g, rhs);
-          printf(") = ");
-          h_pprint_stringset(stdout, g, pred, 0);
-        }
       }
     }
     // XXX debug
-    if(A == g->start) {
-      printf("row(");
-      h_pprint_symbol(stdout, g, A);
-      printf(") = ");
-      h_pprint_stringset(stdout, g, row, 0);
-    }
+    printf("row(");
+    h_pprint_symbol(stdout, g, A);
+    printf(") = ");
+    h_pprint_stringset(stdout, row, 0);
 
     // switch to the updated workset
     h_hashtable_free(workset);
@@ -486,11 +462,11 @@ int test_llk(void)
   printf("derive epsilon: ");
   h_pprint_symbolset(stdout, g, g->geneps, 0);
   printf("first(A) = ");
-  h_pprint_stringset(stdout, g, h_first(3, g, g->start), 0);
+  h_pprint_stringset(stdout, h_first(3, g, g->start), 0);
   //printf("follow(C) = ");
-  //h_pprint_stringset(stdout, g, h_follow(3, g, h_desugar(&system_allocator, c)), 0);
+  //h_pprint_stringset(stdout, h_follow(3, g, h_desugar(&system_allocator, c)), 0);
 
-  if(h_compile(p, PB_LLk, NULL)) {
+  if(h_compile(p, PB_LLk, (void *)2)) {
     fprintf(stderr, "does not compile\n");
     return 2;
   }

@@ -80,10 +80,16 @@ const HCFStringMap *h_first_seq(size_t k, HCFGrammar *g, HCFChoice **s);
 /* Compute follow_k set of symbol x. Memoized. */
 const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x);
 
+/* Compute the predict_k set of production "A -> rhs".
+ * Always returns a newly-allocated HCFStringMap.
+ */
+HCFStringMap *h_predict(size_t k, HCFGrammar *g,
+                        const HCFChoice *A, const HCFSequence *rhs);
+
 
 /* Pretty-printers for grammars and associated data. */
 void h_pprint_grammar(FILE *file, const HCFGrammar *g, int indent);
 void h_pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq);
 void h_pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x);
 void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, int indent);
-void h_pprint_stringset(FILE *file, const HCFGrammar *g, const HCFStringMap *set, int indent);
+void h_pprint_stringset(FILE *file, const HCFStringMap *set, int indent);
