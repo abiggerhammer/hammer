@@ -83,3 +83,5 @@ test: test_suite
 
 test_suite: $(TESTS) libhammer.a
 	$(call hush, "Linking $@") $(CC) -o $@ $^ $(LDFLAGS) $(TEST_LDFLAGS)
+
+backends/regex.o: backends/regex_debug.c

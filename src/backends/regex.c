@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <string.h>
 #include <assert.h>
 #include "../internal.h"
@@ -13,6 +14,7 @@ typedef enum HSVMOp_ {
   SVM_ACTION, // Same meaning as RVM_ACTION
   SVM_CAPTURE, // Same meaning as RVM_CAPTURE
   SVM_ACCEPT,
+  SVM_OPCOUNT
 } HSVMOp;
 
 typedef struct HRVMTrace_ {
@@ -42,8 +44,8 @@ HRVMTrace *invert_trace(HRVMTrace *trace) {
     trace->next = last;
     last = trace;
     trace = next;
-  } while (trace->next);
-  return trace;
+  } while (trace);
+  return last;
 }
 
 void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_t len) {
@@ -151,7 +153,7 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
 	case RVM_STEP:
 	  // save thread
 	  live_threads++;
-	  heads_n[THREAD.ip++] = THREAD.trace;
+	  heads_n[++THREAD.ip] = THREAD.trace;
 	  ipq_top--;
 	  goto next_insn;
 	}
@@ -221,15 +223,15 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
     case SVM_CAPTURE: 
       // Top of stack must be a mark
       // This replaces said mark in-place with a TT_BYTES.
-      assert(ctx.stack[ctx.stack_count]->token_type == TT_MARK);
+      assert(ctx.stack[ctx.stack_count-1]->token_type == TT_MARK);
       
-      tmp_res = ctx.stack[ctx.stack_count];
+      tmp_res = ctx.stack[ctx.stack_count-1];
       tmp_res->token_type = TT_BYTES;
       // TODO: Will need to copy if bit_offset is nonzero
       assert(tmp_res->bit_offset == 0);
 	
       tmp_res->bytes.token = input + tmp_res->index;
-      tmp_res->bytes.len = cur->input_pos - tmp_res->index + 1; // inclusive
+      tmp_res->bytes.len = cur->input_pos - tmp_res->index;
       break;
     case SVM_ACCEPT:
       assert(ctx.stack_count == 1);
@@ -351,6 +353,7 @@ static int h_regex_compile(HAllocator *mm__, HParser* parser, const void* params
     h_free(prog);
     return 2;
   }
+  h_rvm_insert_insn(prog, RVM_ACCEPT, 0);
   parser->backend_data = prog;
   return 0;
 }
@@ -364,3 +367,7 @@ HParserBackendVTable h__regex_backend_vtable = {
   .parse = h_regex_parse,
   .free = h_regex_free
 };
+
+#ifndef NDEBUG
+#include "regex_debug.c"
+#endif

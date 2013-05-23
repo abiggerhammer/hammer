@@ -11,7 +11,10 @@ CONFIG_VARS= INCLUDE_TESTS
 
 .DEFAULT_GOAL := all
 
-%:
+nojni: all
+nojni: SUBDIRS:=$(filter-out jni,$(SUBDIRS))
+
+all clean:
 	+for dir in $(SUBDIRS); do $(MAKE) -C $${dir} $@; done
 
 test: src/test_suite

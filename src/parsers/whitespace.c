@@ -73,7 +73,7 @@ static bool ws_ctrvm(HRVMProg *prog, void *env) {
     h_rvm_insert_insn(prog, RVM_GOTO, start);
     h_rvm_patch_arg(prog, next, h_rvm_get_ip(prog));
   }
-  return h_compile_regex(prog, p->env);
+  return h_compile_regex(prog, p);
 }
 
 static const HParserVtable whitespace_vt = {
