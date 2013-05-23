@@ -463,8 +463,6 @@ const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x)
 
             const HCFStringMap *first_tail = h_first_seq(k, g, tail);
 
-            //h_stringmap_update(ret, first_tail);
-
             // extend the elems of first_k(tail) up to length k from follow(A)
             stringset_extend(g, ret, k, first_tail, h_follow_, &a);
           }
