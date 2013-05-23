@@ -164,9 +164,6 @@ static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *
   }
 }
 
-void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq);
-void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x);
-
 /* Generate entries for the production "A" in the given table row. */
 static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
                           const HCFChoice *A)
@@ -206,8 +203,8 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
         // XXX debug
         if(A == g->start) {
           printf("predict(");
-          pprint_sequence(stdout, g, rhs);
-          printf("  ) = ");
+          h_pprint_sequence(stdout, g, rhs);
+          printf(") = ");
           h_pprint_stringset(stdout, g, pred, 0);
         }
       }
@@ -215,7 +212,7 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
     // XXX debug
     if(A == g->start) {
       printf("row(");
-      pprint_symbol(stdout, g, A);
+      h_pprint_symbol(stdout, g, A);
       printf(") = ");
       h_pprint_stringset(stdout, g, row, 0);
     }

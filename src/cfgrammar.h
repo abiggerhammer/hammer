@@ -83,5 +83,7 @@ const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x);
 
 /* Pretty-printers for grammars and associated data. */
 void h_pprint_grammar(FILE *file, const HCFGrammar *g, int indent);
+void h_pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq);
+void h_pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x);
 void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, int indent);
 void h_pprint_stringset(FILE *file, const HCFGrammar *g, const HCFStringMap *set, int indent);

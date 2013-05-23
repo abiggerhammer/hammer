@@ -624,7 +624,7 @@ static HCFChoice **pprint_string(FILE *f, HCFChoice **x)
   return x;
 }
 
-void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
+void h_pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
 {
   switch(x->type) {
   case HCF_CHAR:
@@ -643,32 +643,37 @@ void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
   }
 }
 
-void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
+void h_pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
 {
   HCFChoice **x = seq->items;
 
   if(*x == NULL) {  // the empty sequence
-    fputs(" \"\"", f);
+    fputs("\"\"", f);
   } else {
     while(*x) {
-      fputc(' ', f);      // separator
+      if(x != seq->items) fputc(' ', f); // internal separator
 
       if((*x)->type == HCF_CHAR) {
         // condense character strings
         x = pprint_string(f, x);
       } else {
-        pprint_symbol(f, g, *x);
+        h_pprint_symbol(f, g, *x);
         x++;
       }
     }
   }
+}
 
+// adds some separators expected below
+static void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
+{
+  fputc(' ', f);
+  h_pprint_sequence(f, g, seq);
   fputc('\n', f);
 }
 
-static
-void pprint_ntrules(FILE *f, const HCFGrammar *g, const HCFChoice *nt,
-                    int indent, int len)
+static void pprint_ntrules(FILE *f, const HCFGrammar *g, const HCFChoice *nt,
+                           int indent, int len)
 {
   int i;
   int column = indent + len;
@@ -738,7 +743,7 @@ void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, in
 
       a = hte->key;        // production's left-hand symbol
 
-      pprint_symbol(file, g, a);
+      h_pprint_symbol(file, g, a);
     }
   }
 
