@@ -624,7 +624,7 @@ static HCFChoice **pprint_string(FILE *f, HCFChoice **x)
   return x;
 }
 
-static void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
+void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
 {
   switch(x->type) {
   case HCF_CHAR:
@@ -643,7 +643,7 @@ static void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
   }
 }
 
-static void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
+void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
 {
   HCFChoice **x = seq->items;
 

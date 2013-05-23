@@ -3,6 +3,8 @@
 #include "../cfgrammar.h"
 #include "../parsers/parser_internal.h"
 
+static const size_t DEFAULT_KMAX = 1;
+
 
 /* Generating the LL(k) parse table */
 
@@ -16,11 +18,6 @@ typedef struct HLLkTable_ {
   HAllocator *mm__;
 } HLLkTable;
 
-
-// XXX adaptation to LL(1), to be removed
-typedef HCharKey HCFToken;
-static const HCFToken end_token = 0x200;
-#define char_token char_key
 
 /* Interface to look up an entry in the parse table. */
 const HCFSequence *h_llk_lookup(const HLLkTable *table, const HCFChoice *x,
@@ -116,7 +113,7 @@ static void *combine_entries(HHashSet *workset, void *dst, const void *src)
 
   if(dst == CONFLICT) {                 // previous conflict
     h_hashset_put(workset, src);
-  } else if(dst != src) {               // new conflict
+  } else if(dst == src) {               // new conflict
     h_hashset_put(workset, dst);
     h_hashset_put(workset, src);
     dst = CONFLICT;
@@ -161,11 +158,14 @@ static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *
         if(dst_)
           stringmap_merge(workset, dst_, src_);
         else
-          dst_ = src_;
+          h_hashtable_put(dst->char_branches, (void *)c, src_);
       }
     }
   }
 }
+
+void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq);
+void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x);
 
 /* Generate entries for the production "A" in the given table row. */
 static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
@@ -202,7 +202,22 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
         // merge predict set into the row
         // accumulates conflicts in new workset
         stringmap_merge(nextset, row, pred);
+
+        // XXX debug
+        if(A == g->start) {
+          printf("predict(");
+          pprint_sequence(stdout, g, rhs);
+          printf("  ) = ");
+          h_pprint_stringset(stdout, g, pred, 0);
+        }
       }
+    }
+    // XXX debug
+    if(A == g->start) {
+      printf("row(");
+      pprint_symbol(stdout, g, A);
+      printf(") = ");
+      h_pprint_stringset(stdout, g, row, 0);
     }
 
     // switch to the updated workset
@@ -253,8 +268,6 @@ static int fill_table(size_t kmax, HCFGrammar *g, HLLkTable *table)
   
   return 0;
 }
-
-static const size_t DEFAULT_KMAX = 1;
 
 int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
 {
@@ -460,7 +473,7 @@ int test_llk(void)
   */
 
   HParser *X = h_optional(h_ch('x'));
-  HParser *Y = h_epsilon_p(); //h_sequence(h_ch('y'), NULL);
+  HParser *Y = h_sequence(h_ch('y'), NULL);
   HParser *A = h_sequence(X, Y, h_ch('a'), NULL);
   HParser *B = h_sequence(Y, h_ch('b'), NULL);
   HParser *p = h_choice(A, B, NULL);
