@@ -198,9 +198,14 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
     h_pprint_symbol(stdout, g, A);
     printf(") = ");
     h_pprint_stringset(stdout, row, 0);
+    if(h_stringmap_get(row, (uint8_t *)"a", 1, false)) {
+      printf("  a -> ");
+      h_pprint_sequence(stdout, g, h_stringmap_get(row, (uint8_t *)"a", 1, false));
+      printf("\n");
+    }
 
     // switch to the updated workset
-    h_hashtable_free(workset);
+    h_hashset_free(workset);
     workset = nextset;
 
     // if the workset is empty, row is without conflict; we're done
@@ -452,9 +457,9 @@ int test_llk(void)
   */
 
   HParser *X = h_optional(h_ch('x'));
-  HParser *Y = h_sequence(h_ch('y'), NULL);
-  HParser *A = h_sequence(X, Y, h_ch('a'), NULL);
-  HParser *B = h_sequence(Y, h_ch('b'), NULL);
+  //HParser *Y = h_epsilon_p(); //h_sequence(h_ch('y'), NULL);
+  HParser *A = h_sequence(X, h_ch('a'), NULL);
+  HParser *B = h_sequence(h_ch('b'), NULL);
   HParser *p = h_choice(A, B, NULL);
 
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
@@ -477,7 +482,7 @@ int test_llk(void)
     return 2;
   }
 
-  HParseResult *res = h_parse(p, (uint8_t *)"xa", 2);
+  HParseResult *res = h_parse(p, (uint8_t *)"ab", 2);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
