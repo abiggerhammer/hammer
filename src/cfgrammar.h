@@ -50,7 +50,7 @@ void *h_stringmap_get(const HCFStringMap *m, const uint8_t *str, size_t n, bool 
 bool h_stringmap_present(const HCFStringMap *m, const uint8_t *str, size_t n, bool end);
 bool h_stringmap_present_epsilon(const HCFStringMap *m);
 
-static inline void *h_stringmap_get_char(const HCFStringMap *m, const uint8_t c)
+static inline HCFStringMap *h_stringmap_get_char(const HCFStringMap *m, const uint8_t c)
  { return h_hashtable_get(m->char_branches, (void *)char_key(c)); }
 
 
