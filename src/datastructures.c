@@ -200,7 +200,7 @@ void h_hashtable_update(HHashTable *dst, const HHashTable *src) {
   }
 }
 
-void h_hashtable_merge(void *(*combine)(void *v1, void *v2),
+void h_hashtable_merge(void *(*combine)(void *v1, const void *v2),
 	HHashTable *dst, const HHashTable *src) {
   size_t i;
   HHashTableEntry *hte;
@@ -208,13 +208,9 @@ void h_hashtable_merge(void *(*combine)(void *v1, void *v2),
     for(hte = &src->contents[i]; hte; hte = hte->next) {
       if(hte->key == NULL)
         continue;
-      void *oldvalue = h_hashtable_get(dst, hte->key);
-      void *newvalue;
-      if(oldvalue)
-        newvalue = combine(oldvalue, hte->value);
-      else
-        newvalue = hte->value;
-      h_hashtable_put(dst, hte->key, newvalue);
+      void *dstvalue = h_hashtable_get(dst, hte->key);
+      void *srcvalue = hte->value;
+      h_hashtable_put(dst, hte->key, combine(dstvalue, srcvalue));
     }
   }
 }
