@@ -98,7 +98,7 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
       if (!heads_p[ip_s])
 	continue;
       THREAD.ip = ip_s;
-
+      THREAD.trace = heads_p[ip_s];
       uint8_t hi, lo;
       uint16_t arg;
       while(ipq_top > 0) {
@@ -112,8 +112,6 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
 	  ret_trace = THREAD.trace;
 	  goto run_trace;
 	case RVM_MATCH:
-	  // Doesn't actually validate the "must be followed by MATCH
-	  // or STEP. It should. Preproc perhaps?
 	  hi = (arg >> 8) & 0xff;
 	  lo = arg & 0xff;
 	  THREAD.ip++;
@@ -171,7 +169,6 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
  run_trace:
   // Invert the direction of the trace linked list.
 
-  
   ret_trace = invert_trace(ret_trace);
   HParseResult *ret = run_trace(mm__, prog, ret_trace, input, len);
   // ret is in its own arena
@@ -234,9 +231,13 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
       tmp_res->bytes.len = cur->input_pos - tmp_res->index;
       break;
     case SVM_ACCEPT:
-      assert(ctx.stack_count == 1);
-      HParseResult *res = a_new(HParseResult, 1);
-      res->ast = ctx.stack[0];
+      assert(ctx.stack_count <= 1);
+	HParseResult *res = a_new(HParseResult, 1);
+      if (ctx.stack_count == 1) {
+	res->ast = ctx.stack[0];
+      } else {
+	res->ast = NULL;
+      }
       res->bit_length = cur->input_pos * 8;
       res->arena = arena;
       return res;

@@ -41,13 +41,25 @@ static bool cs_ctrvm(HRVMProg *prog, void *env) {
   h_rvm_insert_insn(prog, RVM_PUSH, 0);
 
   uint16_t start = h_rvm_get_ip(prog);
-  for (size_t i=0; i<256; ++i) {
-    // TODO: merge ranges.
-    if (charset_isset(cs, i)) {
-      uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
-      h_rvm_insert_insn(prog, RVM_MATCH, i | i << 8);
-      h_rvm_insert_insn(prog, RVM_GOTO, 0);
-      h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
+
+  uint8_t range_start = 0;
+  bool collecting = false;
+  for (size_t i=0; i<257; ++i) {
+    // Position 256 is only there so that every included character has
+    // a non-included character after it.
+    if (i < 256 && charset_isset(cs, i)) {
+      if (!collecting) {
+	collecting = true;
+	range_start = i;
+      }
+    } else {
+      if (collecting) {
+	collecting = false;
+	uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
+	h_rvm_insert_insn(prog, RVM_MATCH, range_start | i << 8);
+	h_rvm_insert_insn(prog, RVM_GOTO, 0);
+	h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
+      }
     }
   }
   h_rvm_insert_insn(prog, RVM_MATCH, 0x00FF);

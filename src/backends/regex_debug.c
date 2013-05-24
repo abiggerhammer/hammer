@@ -61,7 +61,7 @@ void dump_rvm_prog(HRVMProg *prog) {
       uint8_t low, high;
       low = insn->arg & 0xff;
       high = (insn->arg >> 8) & 0xff;
-      if (high > low)
+      if (high < low)
 	printf("NONE\n");
       else {
 	if (low >= 0x32 && low <= 0x7e)
@@ -76,6 +76,23 @@ void dump_rvm_prog(HRVMProg *prog) {
       }
       break;
     }
+    default:
+      printf("\n");
+    }
+  }
+}
+
+void dump_svm_prog(HRVMProg *prog, HRVMTrace *trace) {
+  char* symref;
+  for (; trace != NULL; trace = trace->next) {
+    printf("@%04zd %-10s", trace->input_pos, svm_op_names[trace->opcode]);
+    switch (trace->opcode) {
+    case SVM_ACTION:
+      symref = getsym(prog->actions[trace->arg].action);
+      // TODO: somehow format the argument to action
+      printf("%s\n", symref);
+      free(symref);
+      break;
     default:
       printf("\n");
     }
