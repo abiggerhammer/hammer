@@ -460,9 +460,9 @@ int test_llk(void)
   */
 
   HParser *X = h_optional(h_ch('x'));
-  //HParser *Y = h_epsilon_p(); //h_sequence(h_ch('y'), NULL);
-  HParser *A = h_sequence(X, h_ch('a'), NULL);
-  HParser *B = h_sequence(h_ch('b'), NULL);
+  HParser *Y = h_sequence(h_ch('y'), h_ch('y'), NULL);
+  HParser *A = h_sequence(X, Y, h_ch('a'), NULL);
+  HParser *B = h_sequence(Y, h_ch('b'), NULL);
   HParser *p = h_choice(A, B, NULL);
 
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
@@ -480,27 +480,12 @@ int test_llk(void)
   //printf("follow(C) = ");
   //h_pprint_stringset(stdout, h_follow(3, g, h_desugar(&system_allocator, c)), 0);
 
-  if(h_compile(p, PB_LLk, (void *)2)) {
+  if(h_compile(p, PB_LLk, (void *)3)) {
     fprintf(stderr, "does not compile\n");
     return 2;
   }
-  HLLkTable *table = p->backend_data;
-  printf("table(C,a) = ");
-  HCFStringMap *row = h_hashtable_get(table->rows, X->desugared);
-  assert(row);
-  HCFSequence  *rhs = h_stringmap_get(row, (uint8_t*)"a", 1, false);
-  assert(rhs);
-  h_pprint_sequence(stdout, g, rhs);
-  printf(" (row %p, rhs %p)\n", row, rhs);
-  printf("table(D,a) = ");
-  row = h_hashtable_get(table->rows, rhs->items[0]);
-  assert(row);
-  rhs = h_stringmap_get(row, (uint8_t*)"a", 1, false);
-  assert(rhs);
-  h_pprint_sequence(stdout, g, rhs);
-  printf(" (row %p, rhs %p)\n", row, rhs);
 
-  HParseResult *res = h_parse(p, (uint8_t *)"ab", 2);
+  HParseResult *res = h_parse(p, (uint8_t *)"xyya", 4);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
