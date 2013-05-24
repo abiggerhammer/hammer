@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "parser_internal.h"
 
 // TODO: split this up.
@@ -14,7 +15,7 @@ static HParseResult *parse_many(void* env, HParseState *state) {
   HInputStream bak;
   while (env_->min_p || env_->count > count) {
     bak = state->input_stream;
-    if (count > 0) {
+    if (count > 0 && env_->sep != NULL) {
       HParseResult *sep = h_do_parse(env_->sep, state);
       if (!sep)
 	goto err0;
@@ -47,13 +48,15 @@ static HParseResult *parse_many(void* env, HParseState *state) {
 static bool many_isValidRegular(void *env) {
   HRepeat *repeat = (HRepeat*)env;
   return (repeat->p->vtable->isValidRegular(repeat->p->env) &&
-	  repeat->sep->vtable->isValidRegular(repeat->sep->env));
+	  (repeat->sep == NULL ||
+	   repeat->sep->vtable->isValidRegular(repeat->sep->env)));
 }
 
 static bool many_isValidCF(void *env) {
   HRepeat *repeat = (HRepeat*)env;
   return (repeat->p->vtable->isValidCF(repeat->p->env) &&
-	  repeat->sep->vtable->isValidCF(repeat->sep->env));
+	  (repeat->sep == NULL ||
+	   repeat->sep->vtable->isValidCF(repeat->sep->env)));
 }
 
 static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
@@ -70,7 +73,9 @@ static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
              -> \epsilon
   */
 
-  HCFChoice *sep = h_desugar(mm__, repeat->sep);
+  HParser *epsilon = h_epsilon_p__m(mm__);
+  
+  HCFChoice *sep = h_desugar(mm__, (repeat->sep != NULL) ? repeat->sep : epsilon);
   HCFChoice *a   = h_desugar(mm__, repeat->p);
   HCFChoice *ma  = h_new(HCFChoice, 1);
   HCFChoice *mar = h_new(HCFChoice, 1);
@@ -119,24 +124,56 @@ static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
 
 static bool many_ctrvm(HRVMProg *prog, void *env) {
   HRepeat *repeat = (HRepeat*)env;
-  // FIXME: Implement clear_to_mark
   uint16_t clear_to_mark = h_rvm_create_action(prog, h_svm_action_clear_to_mark, NULL);
-  h_rvm_insert_insn(prog, RVM_PUSH, 0);
-  // TODO: implement min and max properly. Right now, it's always min==0, max==inf
-  uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
-  if (!h_compile_regex(prog, repeat->p))
-    return false;
-  if (repeat->sep != NULL) {
-    h_rvm_insert_insn(prog, RVM_PUSH, 0);
-    if (!h_compile_regex(prog, repeat->sep))
-      return false;
-    h_rvm_insert_insn(prog, RVM_ACTION, clear_to_mark);
-  }
-  h_rvm_insert_insn(prog, RVM_GOTO, insn);
-  h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
+  // TODO: implement min & max properly. Right now, it's always
+  // max==inf, min={0,1}
 
-  h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_make_sequence, NULL));
-  return true;
+  // Structure:
+  // Min == 0:
+  //        FORK end // if Min == 0
+  //        GOTO mid
+  //   nxt: <SEP>
+  //   mid: <ELEM>
+  //        FORK nxt
+  //   end:
+
+  if (repeat->min_p) {
+  h_rvm_insert_insn(prog, RVM_PUSH, 0);
+    assert(repeat->count < 2); // TODO: The other cases should be supported later.
+    uint16_t end_fork;
+    if (repeat->count == 0)
+      end_fork = h_rvm_insert_insn(prog, RVM_FORK, 0xFFFF);
+    uint16_t goto_mid = h_rvm_insert_insn(prog, RVM_GOTO, 0xFFFF);
+    uint16_t nxt = h_rvm_get_ip(prog);
+    if (repeat->sep != NULL) {
+      h_rvm_insert_insn(prog, RVM_PUSH, 0);
+      if (!h_compile_regex(prog, repeat->sep))
+	return false;
+      h_rvm_insert_insn(prog, RVM_ACTION, clear_to_mark);
+    }
+    h_rvm_patch_arg(prog, goto_mid, h_rvm_get_ip(prog));
+    if (!h_compile_regex(prog, repeat->p))
+      return false;
+    h_rvm_insert_insn(prog, RVM_FORK, nxt);
+    h_rvm_patch_arg(prog, end_fork, h_rvm_get_ip(prog));
+    
+    h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_make_sequence, NULL));
+    return true;
+  } else {
+    h_rvm_insert_insn(prog, RVM_PUSH, 0);
+    for (size_t i = 0; i < repeat->count; i++) {
+      if (repeat->sep != NULL && i != 0) {
+	h_rvm_insert_insn(prog, RVM_PUSH, 0);
+	if (!h_compile_regex(prog, repeat->sep))
+	  return false;
+	h_rvm_insert_insn(prog, RVM_ACTION, clear_to_mark);
+      }
+      if (!h_compile_regex(prog, repeat->p))
+	return false;
+    }
+    h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_make_sequence, NULL));
+    return true;
+  }
 }
 
 static const HParserVtable many_vt = {
@@ -153,7 +190,7 @@ HParser* h_many(const HParser* p) {
 HParser* h_many__m(HAllocator* mm__, const HParser* p) {
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
-  env->sep = h_epsilon_p__m(mm__);
+  env->sep = NULL;
   env->count = 0;
   env->min_p = true;
   return h_new_parser(mm__, &many_vt, env);
@@ -165,7 +202,7 @@ HParser* h_many1(const HParser* p) {
 HParser* h_many1__m(HAllocator* mm__, const HParser* p) {
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
-  env->sep = h_epsilon_p__m(mm__);
+  env->sep = NULL;
   env->count = 1;
   env->min_p = true;
   return h_new_parser(mm__, &many_vt, env);
@@ -177,7 +214,7 @@ HParser* h_repeat_n(const HParser* p, const size_t n) {
 HParser* h_repeat_n__m(HAllocator* mm__, const HParser* p, const size_t n) {
   HRepeat *env = h_new(HRepeat, 1);
   env->p = p;
-  env->sep = h_epsilon_p__m(mm__);
+  env->sep = NULL;
   env->count = n;
   env->min_p = false;
   return h_new_parser(mm__, &many_vt, env);
@@ -222,7 +259,7 @@ static HParseResult* parse_length_value(void *env, HParseState *state) {
   // TODO: allocate this using public functions
   HRepeat repeat = {
     .p = lv->value,
-    .sep = h_epsilon_p(),
+    .sep = NULL,
     .count = len->ast->uint,
     .min_p = false
   };

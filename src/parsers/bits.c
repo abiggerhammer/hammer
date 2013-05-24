@@ -45,10 +45,10 @@ static HParsedToken *reshape_bits(const HParseResult *p, bool signedp) {
 
   return ret;
 }
-static const HParsedToken *reshape_bits_unsigned(const HParseResult *p) {
+static HParsedToken *reshape_bits_unsigned(const HParseResult *p) {
   return reshape_bits(p, false);
 }
-static const HParsedToken *reshape_bits_signed(const HParseResult *p) {
+static HParsedToken *reshape_bits_signed(const HParseResult *p) {
   return reshape_bits(p, true);
 }
 

@@ -43,7 +43,7 @@ static bool sequence_isValidCF(void *env) {
   return true;
 }
 
-static const HParsedToken *reshape_sequence(const HParseResult *p) {
+static HParsedToken *reshape_sequence(const HParseResult *p) {
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);
 
@@ -86,7 +86,7 @@ static bool sequence_ctrvm(HRVMProg *prog, void *env) {
   HSequence *s = (HSequence*)env;
   h_rvm_insert_insn(prog, RVM_PUSH, 0);
   for (size_t i=0; i<s->len; ++i) {
-    if (!s->p_array[i]->vtable->compile_to_rvm(prog, s->p_array[i]))
+    if (!s->p_array[i]->vtable->compile_to_rvm(prog, s->p_array[i]->env))
       return false;
   }
   h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_make_sequence, NULL));

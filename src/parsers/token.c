@@ -20,7 +20,7 @@ static HParseResult* parse_token(void *env, HParseState *state) {
 }
 
 
-static const HParsedToken *reshape_token(const HParseResult *p) {
+static HParsedToken *reshape_token(const HParseResult *p) {
   // fetch sequence of uints from p
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);

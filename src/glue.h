@@ -55,13 +55,13 @@
 //
 
 
-#define H_RULE(rule, def) const HParser *rule = def
-#define H_ARULE(rule, def) const HParser *rule = h_action(def, act_ ## rule)
-#define H_VRULE(rule, def) const HParser *rule = \
+#define H_RULE(rule, def)  HParser *rule = def
+#define H_ARULE(rule, def) HParser *rule = h_action(def, act_ ## rule)
+#define H_VRULE(rule, def) HParser *rule = \
   h_attr_bool(def, validate_ ## rule)
-#define H_VARULE(rule, def) const HParser *rule = \
+#define H_VARULE(rule, def) HParser *rule = \
   h_attr_bool(h_action(def, act_ ## rule), validate_ ## rule)
-#define H_AVRULE(rule, def) const HParser *rule = \
+#define H_AVRULE(rule, def) HParser *rule = \
   h_action(h_attr_bool(def, validate_ ## rule), act_ ## rule)
 
 
@@ -88,17 +88,17 @@
 // action such as h_act_index.
 //
 
-const HParsedToken *h_act_index(int i, const HParseResult *p);
-const HParsedToken *h_act_first(const HParseResult *p);
-const HParsedToken *h_act_second(const HParseResult *p);
-const HParsedToken *h_act_last(const HParseResult *p);
-const HParsedToken *h_act_flatten(const HParseResult *p);
-const HParsedToken *h_act_ignore(const HParseResult *p);
+HParsedToken *h_act_index(int i, const HParseResult *p);
+HParsedToken *h_act_first(const HParseResult *p);
+HParsedToken *h_act_second(const HParseResult *p);
+HParsedToken *h_act_last(const HParseResult *p);
+HParsedToken *h_act_flatten(const HParseResult *p);
+HParsedToken *h_act_ignore(const HParseResult *p);
 
 // Define 'myaction' as a specialization of 'paction' by supplying the leading
 // parameters.
 #define H_ACT_APPLY(myaction, paction, ...) \
-  const HParsedToken *myaction(const HParseResult *p) { \
+  HParsedToken *myaction(const HParseResult *p) { \
     return paction(__VA_ARGS__, p); \
   }
 
