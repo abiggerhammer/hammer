@@ -97,6 +97,8 @@ static bool h_svm_action_bits(HArena *arena, HSVMContext *ctx, void* env) {
   uint64_t res = 0;
   for (size_t i = 0; i < top->bytes.len; i++)
     res = (res << 8) | top->bytes.token[i];   // TODO: Handle other endiannesses.
+  uint64_t msb = (env_->signedp ? 1LL:0) << (top->bytes.len * 8 - 1);
+  res = (res ^ msb) - msb;
   top->uint = res; // possibly cast to signed through union
   top->token_type = (env_->signedp ? TT_SINT : TT_UINT);
   return true;
@@ -105,7 +107,7 @@ static bool h_svm_action_bits(HArena *arena, HSVMContext *ctx, void* env) {
 static bool bits_ctrvm(HRVMProg *prog, void* env) {
   struct bits_env *env_ = (struct bits_env*)env;
   h_rvm_insert_insn(prog, RVM_PUSH, 0);
-  for (size_t i=0; (i < env_->length)/8; ++i) { // FUTURE: when we can handle non-byte-aligned, the env_->length/8 part will be different
+  for (size_t i=0; i < (env_->length/8); ++i) { // FUTURE: when we can handle non-byte-aligned, the env_->length/8 part will be different
     h_rvm_insert_insn(prog, RVM_MATCH, 0xFF00);
     h_rvm_insert_insn(prog, RVM_STEP, 0);
   }

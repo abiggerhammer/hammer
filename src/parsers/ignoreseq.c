@@ -97,7 +97,7 @@ static bool is_ctrvm(HRVMProg *prog, void* env) {
   HIgnoreSeq *seq = (HIgnoreSeq*)env;
   for (size_t i=0; i<seq->len; ++i) {
     h_rvm_insert_insn(prog, RVM_PUSH, 0);
-    if (!h_compile_regex(prog, seq->parsers[i]->env))
+    if (!h_compile_regex(prog, seq->parsers[i]))
       return false;
   }
   h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_ignoreseq, env));

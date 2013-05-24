@@ -67,13 +67,19 @@ static bool ws_ctrvm(HRVMProg *prog, void *env) {
   uint16_t start = h_rvm_get_ip(prog);
   uint16_t next;
 
-  for (int i = 0; i < 6; i++) {
+  uint16_t ranges[2] = {
+    0x0d09,
+    0x2020,
+  };
+  
+  for (int i = 0; i < 2; i++) {
     next = h_rvm_insert_insn(prog, RVM_FORK, 0);
-    h_rvm_insert_insn(prog, RVM_MATCH, (SPACE_CHRS[i] << 8) | (SPACE_CHRS[i]));
+    h_rvm_insert_insn(prog, RVM_MATCH, ranges[i]);
+    h_rvm_insert_insn(prog, RVM_STEP, 0);
     h_rvm_insert_insn(prog, RVM_GOTO, start);
     h_rvm_patch_arg(prog, next, h_rvm_get_ip(prog));
   }
-  return h_compile_regex(prog, p->env);
+  return h_compile_regex(prog, p);
 }
 
 static const HParserVtable whitespace_vt = {
