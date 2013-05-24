@@ -3,6 +3,6 @@
 
 #include "../src/hammer.h"
 
-const HParser* init_rdata(uint16_t type);
+HParser* init_rdata(uint16_t type);
 
 #endif

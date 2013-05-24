@@ -21,7 +21,8 @@ static void* system_realloc(HAllocator *allocator, void* ptr, size_t size) {
 }
 
 static void system_free(HAllocator *allocator, void* ptr) {
-  free(ptr - sizeof(size_t));
+  if (ptr != NULL)
+    free(ptr - sizeof(size_t));
 }
 
 HAllocator system_allocator = {

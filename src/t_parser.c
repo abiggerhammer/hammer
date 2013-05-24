@@ -162,7 +162,7 @@ static void test_middle(gconstpointer backend) {
 
 #include <ctype.h>
 
-const HParsedToken* upcase(const HParseResult *p) {
+HParsedToken* upcase(const HParseResult *p) {
   switch(p->ast->token_type) {
   case TT_SEQUENCE:
     {
@@ -180,17 +180,17 @@ const HParsedToken* upcase(const HParseResult *p) {
 	}
       }
       ret->seq = seq;
-      return (const HParsedToken*)ret;
+      return ret;
     }
   case TT_UINT:
     {
       HParsedToken *ret = a_new_(p->arena, HParsedToken, 1);
       ret->token_type = TT_UINT;
       ret->uint = toupper(p->ast->uint);
-      return (const HParsedToken*)ret;
+      return ret;
     }
   default:
-    return p->ast;
+    return (HParsedToken*)p->ast;
   }
 }
 
@@ -526,6 +526,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/regex/choice", GINT_TO_POINTER(PB_REGULAR), test_choice);
   g_test_add_data_func("/core/parser/regex/many", GINT_TO_POINTER(PB_REGULAR), test_many);
   g_test_add_data_func("/core/parser/regex/many1", GINT_TO_POINTER(PB_REGULAR), test_many1);
+  g_test_add_data_func("/core/parser/regex/repeat_n", GINT_TO_POINTER(PB_REGULAR), test_repeat_n);
   g_test_add_data_func("/core/parser/regex/optional", GINT_TO_POINTER(PB_REGULAR), test_optional);
   g_test_add_data_func("/core/parser/regex/sepBy", GINT_TO_POINTER(PB_REGULAR), test_sepBy);
   g_test_add_data_func("/core/parser/regex/sepBy1", GINT_TO_POINTER(PB_REGULAR), test_sepBy1);

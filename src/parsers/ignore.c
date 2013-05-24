@@ -47,7 +47,7 @@ static bool h_svm_action_pop(HArena *arena, HSVMContext *ctx, void* arg) {
 
 static bool ignore_ctrvm(HRVMProg *prog, void *env) {
   HParser *p = (HParser*)env;
-  h_compile_regex(prog, p->env);
+  h_compile_regex(prog, p);
   h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_pop, NULL));
   return true;
 }

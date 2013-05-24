@@ -22,7 +22,7 @@ static bool opt_isValidCF(void *env) {
   return p->vtable->isValidCF(p->env);
 }
 
-static const HParsedToken* reshape_optional(const HParseResult *p) {
+static HParsedToken* reshape_optional(const HParseResult *p) {
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);
 
@@ -82,7 +82,7 @@ static bool opt_ctrvm(HRVMProg *prog, void* env) {
   h_rvm_insert_insn(prog, RVM_PUSH, 0);
   uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
   HParser *p = (HParser*) env;
-  if (!h_compile_regex(prog, p->env))
+  if (!h_compile_regex(prog, p))
     return false;
   h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
   h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_optional, NULL));
