@@ -343,6 +343,9 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       if(p == NULL)
         goto no_parse;
 
+      // an infinite loop case that shouldn't happen
+      assert(!p->items[0] || p->items[0] != x);
+
       // push production's rhs onto the stack (in reverse order)
       HCFChoice **s;
       for(s = p->items; *s; s++);
