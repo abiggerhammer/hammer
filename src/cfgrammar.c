@@ -462,7 +462,8 @@ static void remove_all_shorter(size_t k, HCFStringMap *m)
 }
 
 // h_follow adapted to the signature of StringSetFun
-static inline const HCFStringMap *h_follow_(size_t k, HCFGrammar *g, HCFChoice **s)
+static inline
+const HCFStringMap *h_follow_(size_t k, HCFGrammar *g, HCFChoice **s)
 {
   return h_follow(k, g, *s);
 }
@@ -538,6 +539,10 @@ HCFStringMap *h_predict(size_t k, HCFGrammar *g,
   //   { ab | a <- first_k(rhs), b <- follow_k(A), |ab|=k }
   
   const HCFStringMap *first_rhs = h_first_seq(k, g, rhs->items);
+
+  // casting the const off of A below. note: stringset_extend does
+  // not touch this argument, only passes it through to h_follow
+  // in this case, which accepts it, once again, as const.
   stringset_extend(g, ret, k, first_rhs, h_follow_, (HCFChoice **)&A);
 
   // make sure there are only strings of length _exactly_ k
