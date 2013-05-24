@@ -42,11 +42,16 @@ typedef struct HCFStringMap_ {
 HCFStringMap *h_stringmap_new(HArena *a);
 void h_stringmap_put_end(HCFStringMap *m, void *v);
 void h_stringmap_put_epsilon(HCFStringMap *m, void *v);
+void h_stringmap_put_after(HCFStringMap *m, uint8_t c, HCFStringMap *ends);
 void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v);
 void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n);
+void h_stringmap_replace(HCFStringMap *m, void *old, void *new);
 void *h_stringmap_get(const HCFStringMap *m, const uint8_t *str, size_t n, bool end);
 bool h_stringmap_present(const HCFStringMap *m, const uint8_t *str, size_t n, bool end);
 bool h_stringmap_present_epsilon(const HCFStringMap *m);
+
+static inline HCFStringMap *h_stringmap_get_char(const HCFStringMap *m, const uint8_t c)
+ { return h_hashtable_get(m->char_branches, (void *)char_key(c)); }
 
 
 /* Convert 'parser' into CFG representation by desugaring and compiling the set
@@ -75,8 +80,16 @@ const HCFStringMap *h_first_seq(size_t k, HCFGrammar *g, HCFChoice **s);
 /* Compute follow_k set of symbol x. Memoized. */
 const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x);
 
+/* Compute the predict_k set of production "A -> rhs".
+ * Always returns a newly-allocated HCFStringMap.
+ */
+HCFStringMap *h_predict(size_t k, HCFGrammar *g,
+                        const HCFChoice *A, const HCFSequence *rhs);
+
 
 /* Pretty-printers for grammars and associated data. */
 void h_pprint_grammar(FILE *file, const HCFGrammar *g, int indent);
+void h_pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq);
+void h_pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x);
 void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, int indent);
-void h_pprint_stringset(FILE *file, const HCFGrammar *g, const HCFStringMap *set, int indent);
+void h_pprint_stringset(FILE *file, const HCFStringMap *set, int indent);

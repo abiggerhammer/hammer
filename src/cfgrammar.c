@@ -235,15 +235,20 @@ void h_stringmap_put_epsilon(HCFStringMap *m, void *v)
   m->epsilon_branch = v;
 }
 
+void h_stringmap_put_after(HCFStringMap *m, uint8_t c, HCFStringMap *ends)
+{
+  h_hashtable_put(m->char_branches, (void *)char_key(c), ends);
+}
+
 void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v)
 {
   HCFStringMap *node = h_stringmap_new(m->arena);
   h_stringmap_put_epsilon(node, v);
-  h_hashtable_put(m->char_branches, (void *)char_key(c), node);
+  h_stringmap_put_after(m, c, node);
 }
 
 // helper for h_stringmap_update
-void *combine_stringmap(void *v1, void *v2)
+static void *combine_stringmap(void *v1, void *v2)
 {
   h_stringmap_update((HCFStringMap *)v1, (HCFStringMap *)v2);
   return v1;
@@ -260,12 +265,40 @@ void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n)
   h_hashtable_merge(combine_stringmap, m->char_branches, n->char_branches);
 }
 
+/* Replace all occurances of old in m with new.
+ * If old is NULL, replace all values in m with new.
+ * If new is NULL, remove the respective values.
+ */
+void h_stringmap_replace(HCFStringMap *m, void *old, void *new)
+{
+  if(!old) {
+    if(m->epsilon_branch) m->epsilon_branch = new;
+    if(m->end_branch)     m->end_branch = new;
+  } else {
+    if(m->epsilon_branch == old) m->epsilon_branch = new;
+    if(m->end_branch == old)     m->end_branch = new;
+  }
+
+  // iterate over m->char_branches
+  const HHashTable *ht = m->char_branches;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+
+      HCFStringMap *m_ = hte->value;
+      if(m_)
+        h_stringmap_replace(m_, old, new);
+    }
+  }
+}
+
 void *h_stringmap_get(const HCFStringMap *m, const uint8_t *str, size_t n, bool end)
 {
   for(size_t i=0; i<n; i++) {
     if(i==n-1 && end && m->end_branch)
       return m->end_branch;
-    m = h_hashtable_get(m->char_branches, (void *)char_key(str[i]));
+    m = h_stringmap_get_char(m, str[i]);
     if(!m)
       return NULL;
   }
@@ -404,7 +437,23 @@ static bool any_string_shorter(size_t k, const HCFStringMap *m)
   return false;
 }
 
-const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x);
+// helper for h_predict
+static void remove_all_shorter(size_t k, HCFStringMap *m)
+{
+  if(k==0) return;
+  m->epsilon_branch = NULL;
+  if(k==1) return;
+
+  // iterate over m->char_branches
+  const HHashTable *ht = m->char_branches;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      remove_all_shorter(k-1, hte->value);      // recursion into subtree
+    }
+  }
+}
 
 // h_follow adapted to the signature of StringSetFun
 static inline const HCFStringMap *h_follow_(size_t k, HCFGrammar *g, HCFChoice **s)
@@ -463,8 +512,6 @@ const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x)
 
             const HCFStringMap *first_tail = h_first_seq(k, g, tail);
 
-            //h_stringmap_update(ret, first_tail);
-
             // extend the elems of first_k(tail) up to length k from follow(A)
             stringset_extend(g, ret, k, first_tail, h_follow_, &a);
           }
@@ -472,6 +519,23 @@ const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x)
       }
     }
   }
+
+  return ret;
+}
+
+HCFStringMap *h_predict(size_t k, HCFGrammar *g,
+                        const HCFChoice *A, const HCFSequence *rhs)
+{
+  HCFStringMap *ret = h_stringmap_new(g->arena);
+
+  // predict_k(A -> rhs) =
+  //   { ab | a <- first_k(rhs), b <- follow_k(A), |ab|=k }
+  
+  const HCFStringMap *first_rhs = h_first_seq(k, g, rhs->items);
+  stringset_extend(g, ret, k, first_rhs, h_follow_, (HCFChoice **)&A);
+
+  // make sure there are only strings of length _exactly_ k
+  remove_all_shorter(k, ret);
 
   return ret;
 }
@@ -507,7 +571,7 @@ static void stringset_extend(HCFGrammar *g, HCFStringMap *ret,
       // t { a b | a <- as_, b <- f_l(tail), l=k-|a|-1 }
       // so we can use recursion over k
       HCFStringMap *ret_ = h_stringmap_new(g->arena);
-      h_stringmap_put_char(ret, c, ret_);
+      h_stringmap_put_after(ret, c, ret_);
 
       stringset_extend(g, ret_, k-1, as_, f, tail);
     }
@@ -593,7 +657,7 @@ static HCFChoice **pprint_string(FILE *f, HCFChoice **x)
   return x;
 }
 
-static void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
+void h_pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
 {
   switch(x->type) {
   case HCF_CHAR:
@@ -612,32 +676,37 @@ static void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
   }
 }
 
-static void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
+void h_pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
 {
   HCFChoice **x = seq->items;
 
   if(*x == NULL) {  // the empty sequence
-    fputs(" \"\"", f);
+    fputs("\"\"", f);
   } else {
     while(*x) {
-      fputc(' ', f);      // separator
+      if(x != seq->items) fputc(' ', f); // internal separator
 
       if((*x)->type == HCF_CHAR) {
         // condense character strings
         x = pprint_string(f, x);
       } else {
-        pprint_symbol(f, g, *x);
+        h_pprint_symbol(f, g, *x);
         x++;
       }
     }
   }
+}
 
+// adds some separators expected below
+static void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
+{
+  fputc(' ', f);
+  h_pprint_sequence(f, g, seq);
   fputc('\n', f);
 }
 
-static
-void pprint_ntrules(FILE *f, const HCFGrammar *g, const HCFChoice *nt,
-                    int indent, int len)
+static void pprint_ntrules(FILE *f, const HCFGrammar *g, const HCFChoice *nt,
+                           int indent, int len)
 {
   int i;
   int column = indent + len;
@@ -707,7 +776,7 @@ void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, in
 
       a = hte->key;        // production's left-hand symbol
 
-      pprint_symbol(file, g, a);
+      h_pprint_symbol(file, g, a);
     }
   }
 
@@ -716,7 +785,9 @@ void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, in
 
 #define BUFSIZE 512
 
-void pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n, const HCFStringMap *set)
+static bool
+pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n,
+                       const HCFStringMap *set)
 {
   assert(n < BUFSIZE-4);
 
@@ -761,12 +832,14 @@ void pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n, cons
           n_ += sprintf(prefix+n_, "\\x%.2X", c);
       }
 
-      pprint_stringset_elems(file, first, prefix, n_, ends);
+      first = pprint_stringset_elems(file, first, prefix, n_, ends);
     }
   }
+
+  return first;
 }
 
-void h_pprint_stringset(FILE *file, const HCFGrammar *g, const HCFStringMap *set, int indent)
+void h_pprint_stringset(FILE *file, const HCFStringMap *set, int indent)
 {
   int j;
   for(j=0; j<indent; j++) fputc(' ', file);
