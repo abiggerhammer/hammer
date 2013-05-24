@@ -53,12 +53,13 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
   HRVMTrace **heads_p = a_new(HRVMTrace*, prog->length),
     **heads_n = a_new(HRVMTrace*, prog->length);
 
-  HRVMTrace *ret_trace;
+  HRVMTrace *ret_trace = NULL;
   
   uint8_t *insn_seen = a_new(uint8_t, prog->length); // 0 -> not seen, 1->processed, 2->queued
   HRVMThread *ip_queue = a_new(HRVMThread, prog->length);
   size_t ipq_top;
 
+  
   
   
 
@@ -102,15 +103,18 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
       uint8_t hi, lo;
       uint16_t arg;
       while(ipq_top > 0) {
-	if (insn_seen[THREAD.ip] == 1)
+	if (insn_seen[THREAD.ip] == 1) {
+	  ipq_top--; // Kill thread.
 	  continue;
+	}
 	insn_seen[THREAD.ip] = 1;
 	arg = prog->insns[THREAD.ip].arg;
 	switch(prog->insns[THREAD.ip].op) {
 	case RVM_ACCEPT:
 	  PUSH_SVM(SVM_ACCEPT, 0);
 	  ret_trace = THREAD.trace;
-	  goto run_trace;
+	  ipq_top--;
+	  goto next_insn;
 	case RVM_MATCH:
 	  hi = (arg >> 8) & 0xff;
 	  lo = arg & 0xff;
@@ -163,10 +167,12 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
   }
   // No accept was reached.
  match_fail:
-  h_delete_arena(arena);
-  return NULL;
+  if (ret_trace == NULL) {
+    // No match found; definite failure.
+    h_delete_arena(arena);
+    return NULL;
+  }
   
- run_trace:
   // Invert the direction of the trace linked list.
 
   ret_trace = invert_trace(ret_trace);
@@ -213,8 +219,9 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
     case SVM_ACTION:
       // Action should modify stack appropriately
       if (!orig_prog->actions[cur->arg].action(arena, &ctx, orig_prog->actions[cur->arg].env)) {
+	
 	// action failed... abort somehow
-	// TODO: Actually abort
+	goto fail;
       }
       break;
     case SVM_CAPTURE: 
@@ -243,7 +250,7 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
       return res;
     }
   }
-
+ fail:
   h_delete_arena(arena);
   return NULL;
 }
@@ -294,7 +301,7 @@ void h_rvm_patch_arg(HRVMProg *prog, uint16_t ip, uint16_t new_val) {
 
 size_t h_svm_count_to_mark(HSVMContext *ctx) {
   size_t ctm;
-  for (ctm = 0; ctm < ctx->stack_count-1; ctm++) {
+  for (ctm = 0; ctm < ctx->stack_count; ctm++) {
     if (ctx->stack[ctx->stack_count - 1 - ctm]->token_type == TT_MARK)
       return ctm;
   }
@@ -308,20 +315,20 @@ bool h_svm_action_make_sequence(HArena *arena, HSVMContext *ctx, void* env) {
   HParsedToken *res = ctx->stack[ctx->stack_count - 1 - n_items];
   assert (res->token_type == TT_MARK);
   res->token_type = TT_SEQUENCE;
-  
+
   HCountedArray *ret_carray = h_carray_new_sized(arena, n_items);
   res->seq = ret_carray;
   // res index and bit offset are the same as the mark.
   for (size_t i = 0; i < n_items; i++) {
     ret_carray->elements[i] = ctx->stack[ctx->stack_count - n_items + i];
   }
+  ret_carray->used = n_items;
   ctx->stack_count -= n_items;
   return true;
 }
 
 bool h_svm_action_clear_to_mark(HArena *arena, HSVMContext *ctx, void* env) {
-  while (ctx->stack_count > 0) {
-    if (ctx->stack[--ctx->stack_count]->token_type == TT_MARK)
+  while (ctx->stack_count > 0) {    if (ctx->stack[--ctx->stack_count]->token_type == TT_MARK)
       return true;
   }
   return false; // no mark found.

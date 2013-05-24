@@ -22,7 +22,7 @@
 // They must be named act_<rulename>.
 ///
 
-const HParsedToken *act_bsfdig(const HParseResult *p)
+HParsedToken *act_bsfdig(const HParseResult *p)
 {
     HParsedToken *res = H_MAKE_UINT(0);
 
@@ -53,7 +53,7 @@ H_ACT_APPLY(act_index0, h_act_index, 0);
 #define act_document     act_index0
 
 // General-form action to turn a block of base64 digits into bytes.
-const HParsedToken *act_base64_n(int n, const HParseResult *p)
+HParsedToken *act_base64_n(int n, const HParseResult *p)
 {
     HParsedToken *res = H_MAKE_SEQN(n);
 
@@ -82,7 +82,7 @@ H_ACT_APPLY(act_base64_3, act_base64_n, 3);
 H_ACT_APPLY(act_base64_2, act_base64_n, 2);
 H_ACT_APPLY(act_base64_1, act_base64_n, 1);
 
-const HParsedToken *act_base64(const HParseResult *p)
+HParsedToken *act_base64(const HParseResult *p)
 {
     assert(p->ast->token_type == TT_SEQUENCE);
     assert(p->ast->seq->used == 2);
@@ -96,7 +96,7 @@ const HParsedToken *act_base64(const HParseResult *p)
         h_seq_append(res, seq->elements[i]);
 
     // append one trailing base64_2 or _1 block
-    const HParsedToken *tok = h_seq_index(p->ast, 1);
+    HParsedToken *tok = h_seq_index(p->ast, 1);
     if(tok->token_type == TT_SEQUENCE)
         h_seq_append(res, tok);
 
@@ -108,7 +108,7 @@ const HParsedToken *act_base64(const HParseResult *p)
 // Set up the parser with the grammar to be recognized.
 ///
 
-const HParser *init_parser(void)
+HParser *init_parser(void)
 {
     // CORE
     H_RULE (digit,   h_ch_range(0x30, 0x39));
