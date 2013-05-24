@@ -248,12 +248,18 @@ void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v)
 }
 
 // helper for h_stringmap_update
-static void *combine_stringmap(void *v1, void *v2)
+static void *combine_stringmap(void *v1, const void *v2)
 {
-  h_stringmap_update((HCFStringMap *)v1, (HCFStringMap *)v2);
-  return v1;
+  HCFStringMap *m1 = v1;
+  const HCFStringMap *m2 = v2;
+  if(!m1)
+    m1 = h_stringmap_new(m2->arena);
+  h_stringmap_update(m1, m2);
+
+  return m1;
 }
 
+/* Note: Does *not* reuse submaps from n in building m. */
 void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n)
 {
   if(n->epsilon_branch)
