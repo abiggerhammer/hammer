@@ -370,7 +370,7 @@ HAMMER_FN_DECL_NOARG(HParser*, h_nothing_p);
  *
  * Result token type: TT_SEQUENCE
  */
-HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_sequence, const HParser* p);
+HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_sequence, HParser* p);
 
 /**
  * Given an array of parsers, p_array, apply each parser in order. The 
@@ -379,7 +379,7 @@ HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_sequence, con
  *
  * Result token type: The type of the first successful parser's result.
  */
-HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_choice, const HParser* p);
+HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_choice, HParser* p);
 
 /**
  * Given two parsers, p1 and p2, this parser succeeds in the following 

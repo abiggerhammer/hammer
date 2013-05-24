@@ -294,7 +294,7 @@ void h_rvm_patch_arg(HRVMProg *prog, uint16_t ip, uint16_t new_val) {
 
 size_t h_svm_count_to_mark(HSVMContext *ctx) {
   size_t ctm;
-  for (ctm = 0; ctm < ctx->stack_count-1; ctm++) {
+  for (ctm = 0; ctm < ctx->stack_count; ctm++) {
     if (ctx->stack[ctx->stack_count - 1 - ctm]->token_type == TT_MARK)
       return ctm;
   }

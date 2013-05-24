@@ -56,7 +56,7 @@ static bool cs_ctrvm(HRVMProg *prog, void *env) {
       if (collecting) {
 	collecting = false;
 	uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
-	h_rvm_insert_insn(prog, RVM_MATCH, range_start | i << 8);
+	h_rvm_insert_insn(prog, RVM_MATCH, range_start | (i-1) << 8);
 	h_rvm_insert_insn(prog, RVM_GOTO, 0);
 	h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
       }

@@ -3,7 +3,7 @@
 
 typedef struct {
   size_t len;
-  const HParser **p_array;
+  HParser **p_array;
 } HSequence;
 
 
@@ -58,16 +58,15 @@ static HCFChoice* desugar_choice(HAllocator *mm__, void *env) {
 static bool choice_ctrvm(HRVMProg *prog, void* env) {
   HSequence *s = (HSequence*)env;
   uint16_t gotos[s->len];
-  uint16_t start = h_rvm_get_ip(prog);
   for (size_t i=0; i<s->len; ++i) {
     uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
-    if (!h_compile_regex(prog, s->p_array[i]->env))
+    if (!h_compile_regex(prog, s->p_array[i]))
       return false;
-    gotos[i] = h_rvm_insert_insn(prog, RVM_GOTO, 0);
+    gotos[i] = h_rvm_insert_insn(prog, RVM_GOTO, 65535);
     h_rvm_patch_arg(prog, insn, h_rvm_get_ip(prog));
   }
-  uint16_t jump = h_rvm_insert_insn(prog, RVM_STEP, 0);
-  for (size_t i=start; i<s->len; ++i) {
+  uint16_t jump = h_rvm_get_ip(prog);
+  for (size_t i=0; i<s->len; ++i) {
       h_rvm_patch_arg(prog, gotos[i], jump);
   }
   return true;
@@ -81,7 +80,7 @@ static const HParserVtable choice_vt = {
   .compile_to_rvm = choice_ctrvm,
 };
 
-HParser* h_choice(const HParser* p, ...) {
+HParser* h_choice(HParser* p, ...) {
   va_list ap;
   va_start(ap, p);
   HParser* ret = h_choice__mv(&system_allocator, p,  ap);
@@ -89,7 +88,7 @@ HParser* h_choice(const HParser* p, ...) {
   return ret;
 }
 
-HParser* h_choice__m(HAllocator* mm__, const HParser* p, ...) {
+HParser* h_choice__m(HAllocator* mm__, HParser* p, ...) {
   va_list ap;
   va_start(ap, p);
   HParser* ret = h_choice__mv(mm__, p,  ap);
@@ -97,28 +96,28 @@ HParser* h_choice__m(HAllocator* mm__, const HParser* p, ...) {
   return ret;
 }
 
-HParser* h_choice__v(const HParser* p, va_list ap) {
+HParser* h_choice__v(HParser* p, va_list ap) {
   return h_choice__mv(&system_allocator, p, ap);
 }
 
-HParser* h_choice__mv(HAllocator* mm__, const HParser* p, va_list ap_) {
+HParser* h_choice__mv(HAllocator* mm__, HParser* p, va_list ap_) {
   va_list ap;
   size_t len = 0;
   HSequence *s = h_new(HSequence, 1);
 
-  const HParser *arg;
+  HParser *arg;
   va_copy(ap, ap_);
   do {
     len++;
-    arg = va_arg(ap, const HParser *);
+    arg = va_arg(ap, HParser *);
   } while (arg);
   va_end(ap);
-  s->p_array = h_new(const HParser *, len);
+  s->p_array = h_new(HParser *, len);
 
   va_copy(ap, ap_);
   s->p_array[0] = p;
   for (size_t i = 1; i < len; i++) {
-    s->p_array[i] = va_arg(ap, const HParser *);
+    s->p_array[i] = va_arg(ap, HParser *);
   } while (arg);
   va_end(ap);
 
@@ -139,7 +138,7 @@ HParser* h_choice__ma(HAllocator* mm__, void *args[]) {
   } while(arg);
 
   HSequence *s = h_new(HSequence, 1);
-  s->p_array = h_new(const HParser *, len);
+  s->p_array = h_new(HParser *, len);
 
   for (size_t i = 0; i < len; i++) {
     s->p_array[i] = ((HParser **)args)[i];

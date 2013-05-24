@@ -83,7 +83,7 @@ static bool h_svm_action_ignoreseq(HArena *arena, HSVMContext *ctx, void* env) {
   // stack.
   assert(seq->len >= 1);
   for (int i = seq->len - 1; i>=0; i--) {
-    if (i == (int)seq->which && ctx->stack[ctx->stack_count]->token_type != TT_MARK) 
+    if (i == (int)seq->which && ctx->stack[ctx->stack_count-1]->token_type != TT_MARK) 
       save = ctx->stack[ctx->stack_count-1];
     // skip over everything up to and including the mark.
     while (ctx->stack[--ctx->stack_count]->token_type != TT_MARK)

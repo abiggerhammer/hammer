@@ -67,12 +67,12 @@ void dump_rvm_prog(HRVMProg *prog) {
       if (high < low)
 	printf("NONE\n");
       else {
-	if (low >= 0x32 && low <= 0x7e)
+	if (low >= 0x20 && low <= 0x7e)
 	  printf("%02hhx ('%c')", low, low);
 	else
 	  printf("%02hhx", low);
 	
-	if (high >= 0x32 && high <= 0x7e)
+	if (high >= 0x20 && high <= 0x7e)
 	  printf(" - %02hhx ('%c')\n", high, high);
 	else
 	  printf(" - %02hhx\n", high);
