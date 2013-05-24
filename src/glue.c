@@ -5,7 +5,7 @@
 #include "parsers/parser_internal.h"
 
 // Helper to build HAction's that pick one index out of a sequence.
-const HParsedToken *h_act_index(int i, const HParseResult *p)
+HParsedToken *h_act_index(int i, const HParseResult *p)
 {
     if(!p) return NULL;
 
@@ -23,7 +23,7 @@ const HParsedToken *h_act_index(int i, const HParseResult *p)
         return tok->seq->elements[i];
 }
 
-const HParsedToken *h_act_first(const HParseResult *p) {
+HParsedToken *h_act_first(const HParseResult *p) {
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);
   assert(p->ast->seq->used > 0);
@@ -31,7 +31,7 @@ const HParsedToken *h_act_first(const HParseResult *p) {
   return p->ast->seq->elements[0];
 }
 
-const HParsedToken *h_act_second(const HParseResult *p) {
+HParsedToken *h_act_second(const HParseResult *p) {
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);
   assert(p->ast->seq->used > 0);
@@ -39,7 +39,7 @@ const HParsedToken *h_act_second(const HParseResult *p) {
   return p->ast->seq->elements[1];
 }
 
-const HParsedToken *h_act_last(const HParseResult *p) {
+HParsedToken *h_act_last(const HParseResult *p) {
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);
   assert(p->ast->seq->used > 0);
@@ -59,7 +59,7 @@ static void act_flatten_(HCountedArray *seq, const HParsedToken *tok) {
   }
 }
 
-const HParsedToken *h_act_flatten(const HParseResult *p) {
+HParsedToken *h_act_flatten(const HParseResult *p) {
   HCountedArray *seq = h_carray_new(p->arena);
 
   act_flatten_(seq, p->ast);
@@ -72,7 +72,7 @@ const HParsedToken *h_act_flatten(const HParseResult *p) {
   return res;
 }
 
-const HParsedToken *h_act_ignore(const HParseResult *p) {
+HParsedToken *h_act_ignore(const HParseResult *p) {
   return NULL;
 }
 

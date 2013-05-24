@@ -15,21 +15,21 @@ const HParser* document = NULL;
 void init_parser(void)
 {
     // CORE
-    const HParser *digit = h_ch_range(0x30, 0x39);
-    const HParser *alpha = h_choice(h_ch_range(0x41, 0x5a), h_ch_range(0x61, 0x7a), NULL);
+    HParser *digit = h_ch_range(0x30, 0x39);
+    HParser *alpha = h_choice(h_ch_range(0x41, 0x5a), h_ch_range(0x61, 0x7a), NULL);
 
     // AUX.
-    const HParser *plus = h_ch('+');
-    const HParser *slash = h_ch('/');
-    const HParser *equals = h_ch('=');
+    HParser *plus = h_ch('+');
+    HParser *slash = h_ch('/');
+    HParser *equals = h_ch('=');
 
-    const HParser *bsfdig = h_choice(alpha, digit, plus, slash, NULL);
-    const HParser *bsfdig_4bit = h_in((uint8_t *)"AEIMQUYcgkosw048", 16);
-    const HParser *bsfdig_2bit = h_in((uint8_t *)"AQgw", 4);
-    const HParser *base64_3 = h_repeat_n(bsfdig, 4);
-    const HParser *base64_2 = h_sequence(bsfdig, bsfdig, bsfdig_4bit, equals, NULL);
-    const HParser *base64_1 = h_sequence(bsfdig, bsfdig_2bit, equals, equals, NULL);
-    const HParser *base64 = h_sequence(h_many(base64_3),
+    HParser *bsfdig = h_choice(alpha, digit, plus, slash, NULL);
+    HParser *bsfdig_4bit = h_in((uint8_t *)"AEIMQUYcgkosw048", 16);
+    HParser *bsfdig_2bit = h_in((uint8_t *)"AQgw", 4);
+    HParser *base64_3 = h_repeat_n(bsfdig, 4);
+    HParser *base64_2 = h_sequence(bsfdig, bsfdig, bsfdig_4bit, equals, NULL);
+    HParser *base64_1 = h_sequence(bsfdig, bsfdig_2bit, equals, equals, NULL);
+    HParser *base64 = h_sequence(h_many(base64_3),
                                        h_optional(h_choice(base64_2,
                                                            base64_1, NULL)),
                                        NULL);

@@ -18,8 +18,8 @@ bool validate_label(HParseResult *p) {
 
 #define act_label h_act_flatten
 
-const HParsedToken* act_domain(const HParseResult *p) {
-  const HParsedToken *ret = NULL;
+HParsedToken* act_domain(const HParseResult *p) {
+  HParsedToken *ret = NULL;
   char *arr = NULL;
 
   switch(p->ast->token_type) {
@@ -56,8 +56,8 @@ const HParsedToken* act_domain(const HParseResult *p) {
   return ret;
 }
 
-const HParser* init_domain() {
-  static const HParser *ret = NULL;
+HParser* init_domain() {
+  static HParser *ret = NULL;
   if (ret)
     return ret;
 
@@ -76,8 +76,8 @@ const HParser* init_domain() {
   return ret;
 }
 
-const HParser* init_character_string() {
-  static const HParser *cstr = NULL;
+HParser* init_character_string() {
+  static HParser *cstr = NULL;
   if (cstr)
     return cstr;
 

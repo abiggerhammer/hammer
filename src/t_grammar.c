@@ -15,9 +15,9 @@ static void test_end(void) {
 }
 
 static void test_example_1(void) {
-  const HParser *c = h_many(h_ch('x'));
-  const HParser *q = h_sequence(c, h_ch('y'), NULL);
-  const HParser *p = h_choice(q, h_end_p(), NULL);
+  HParser *c = h_many(h_ch('x'));
+  HParser *q = h_sequence(c, h_ch('y'), NULL);
+  HParser *p = h_choice(q, h_end_p(), NULL);
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
 
   g_check_nonterminal(g, c);

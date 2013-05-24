@@ -17,7 +17,7 @@ bool validate_null(HParseResult *p) {
   return (65536 > p->ast->seq->used);
 }
 
-const HParsedToken *act_null(const HParseResult *p) {
+HParsedToken *act_null(const HParseResult *p) {
   dns_rr_null_t *null = H_ALLOC(dns_rr_null_t);
 
   size_t len = h_seq_len(p->ast);
@@ -28,7 +28,7 @@ const HParsedToken *act_null(const HParseResult *p) {
   return H_MAKE(dns_rr_null_t, null);
 }
 
-const HParsedToken *act_txt(const HParseResult *p) {
+HParsedToken *act_txt(const HParseResult *p) {
   dns_rr_txt_t *txt = H_ALLOC(dns_rr_txt_t);
 
   const HCountedArray *arr = H_CAST_SEQ(p->ast);
@@ -47,7 +47,7 @@ const HParsedToken *act_txt(const HParseResult *p) {
   return H_MAKE(dns_rr_txt_t, txt);
 }
 
-const HParsedToken* act_cstr(const HParseResult *p) {
+HParsedToken* act_cstr(const HParseResult *p) {
   dns_cstr_t *cs = H_ALLOC(dns_cstr_t);
 
   const HCountedArray *arr = H_CAST_SEQ(p->ast);
@@ -60,7 +60,7 @@ const HParsedToken* act_cstr(const HParseResult *p) {
   return H_MAKE(dns_cstr_t, cs);
 }
 
-const HParsedToken* act_soa(const HParseResult *p) {
+HParsedToken* act_soa(const HParseResult *p) {
   dns_rr_soa_t *soa = H_ALLOC(dns_rr_soa_t);
 
   soa->mname   = *H_FIELD(dns_domain_t, 0);
@@ -74,7 +74,7 @@ const HParsedToken* act_soa(const HParseResult *p) {
   return H_MAKE(dns_rr_soa_t, soa);
 }
 
-const HParsedToken* act_wks(const HParseResult *p) {
+HParsedToken* act_wks(const HParseResult *p) {
   dns_rr_wks_t *wks = H_ALLOC(dns_rr_wks_t);
 
   wks->address  = H_FIELD_UINT(0);
@@ -87,7 +87,7 @@ const HParsedToken* act_wks(const HParseResult *p) {
   return H_MAKE(dns_rr_wks_t, wks);
 }
 
-const HParsedToken* act_hinfo(const HParseResult *p) {
+HParsedToken* act_hinfo(const HParseResult *p) {
   dns_rr_hinfo_t *hinfo = H_ALLOC(dns_rr_hinfo_t);
 
   hinfo->cpu = *H_FIELD(dns_cstr_t, 0);
@@ -96,7 +96,7 @@ const HParsedToken* act_hinfo(const HParseResult *p) {
   return H_MAKE(dns_rr_hinfo_t, hinfo);
 }
 
-const HParsedToken* act_minfo(const HParseResult *p) {
+HParsedToken* act_minfo(const HParseResult *p) {
   dns_rr_minfo_t *minfo = H_ALLOC(dns_rr_minfo_t);
 
   minfo->rmailbx = *H_FIELD(dns_domain_t, 0);
@@ -105,7 +105,7 @@ const HParsedToken* act_minfo(const HParseResult *p) {
   return H_MAKE(dns_rr_minfo_t, minfo);
 }
 
-const HParsedToken* act_mx(const HParseResult *p) {
+HParsedToken* act_mx(const HParseResult *p) {
   dns_rr_mx_t *mx = H_ALLOC(dns_rr_mx_t);
 
   mx->preference = H_FIELD_UINT(0);
@@ -120,8 +120,8 @@ const HParsedToken* act_mx(const HParseResult *p) {
 ///
 
 #define RDATA_TYPE_MAX 16
-const HParser* init_rdata(uint16_t type) {
-  static const HParser *parsers[RDATA_TYPE_MAX+1];
+HParser* init_rdata(uint16_t type) {
+  static HParser *parsers[RDATA_TYPE_MAX+1];
   static int inited = 0;
 
   if (type >= sizeof(parsers))

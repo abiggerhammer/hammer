@@ -9,7 +9,8 @@
 
 HCountedArray *h_carray_new_sized(HArena * arena, size_t size) {
   HCountedArray *ret = h_arena_malloc(arena, sizeof(HCountedArray));
-  assert(size > 0);
+  if (size == 0)
+    size = 1;
   ret->used = 0;
   ret->capacity = size;
   ret->arena = arena;

@@ -6,7 +6,7 @@ endif
 include $(TOPLEVEL)/config.mk
 
 TEST_CFLAGS = $(shell pkg-config --cflags glib-2.0) -DINCLUDE_TESTS
-TEST_LDFLAGS = $(shell pkg-config --libs glib-2.0) -lrt
+TEST_LDFLAGS = $(shell pkg-config --libs glib-2.0) -lrt -ldl
 
 CFLAGS := -std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -g
 LDFLAGS :=

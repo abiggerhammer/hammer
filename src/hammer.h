@@ -111,7 +111,7 @@ typedef struct HBitWriter_ HBitWriter;
  * say, structs) and stuff values for them into the void* in the 
  * tagged union in HParsedToken. 
  */
-typedef const HParsedToken* (*HAction)(const HParseResult *p);
+typedef HParsedToken* (*HAction)(const HParseResult *p);
 
 /**
  * Type of a boolean attribute-checking function, used in the 
@@ -370,7 +370,7 @@ HAMMER_FN_DECL_NOARG(HParser*, h_nothing_p);
  *
  * Result token type: TT_SEQUENCE
  */
-HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_sequence, const HParser* p);
+HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_sequence, HParser* p);
 
 /**
  * Given an array of parsers, p_array, apply each parser in order. The 
@@ -379,7 +379,7 @@ HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_sequence, con
  *
  * Result token type: The type of the first successful parser's result.
  */
-HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_choice, const HParser* p);
+HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_choice, HParser* p);
 
 /**
  * Given two parsers, p1 and p2, this parser succeeds in the following 
@@ -605,11 +605,11 @@ void h_bit_writer_free(HBitWriter* w);
 
 // General-purpose actions for use with h_action
 // XXX to be consolidated with glue.h when merged upstream
-const HParsedToken *h_act_first(const HParseResult *p);
-const HParsedToken *h_act_second(const HParseResult *p);
-const HParsedToken *h_act_last(const HParseResult *p);
-const HParsedToken *h_act_flatten(const HParseResult *p);
-const HParsedToken *h_act_ignore(const HParseResult *p);
+HParsedToken *h_act_first(const HParseResult *p);
+HParsedToken *h_act_second(const HParseResult *p);
+HParsedToken *h_act_last(const HParseResult *p);
+HParsedToken *h_act_flatten(const HParseResult *p);
+HParsedToken *h_act_ignore(const HParseResult *p);
 
 // {{{ Benchmark functions
 HAMMER_FN_DECL(HBenchmarkResults *, h_benchmark, HParser* parser, HParserTestcase* testcases);
