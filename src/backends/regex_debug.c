@@ -8,14 +8,17 @@
 // This is some spectacularly non-portable code... but whee!
 #include <dlfcn.h>
 char* getsym(void* addr) {
-  Dl_info dli;
   char* retstr;
+#if 0
+  // This will be fixed later.
+  Dl_info dli;
   if (dladdr(addr, &dli) != 0 && dli.dli_sname != NULL) {
     if (dli.dli_saddr == addr)
       return strdup(dli.dli_sname);
     else
       asprintf(&retstr, "%s+0x%lx", dli.dli_sname, addr - dli.dli_saddr);
   } else
+#endif
     asprintf(&retstr, "%p", addr);
 
   return retstr;
