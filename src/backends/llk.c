@@ -162,8 +162,6 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
   // run until workset exhausted or kmax hit
   size_t k;
   for(k=1; k<=kmax; k++) {
-    printf("k=%lu\n", k); // XXX debug
-
     // allocate a fresh workset for the next round
     HHashSet *nextset = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
 
@@ -182,26 +180,10 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
         HCFStringMap *pred = h_predict(k, g, A, rhs);
         h_stringmap_replace(pred, NULL, rhs);
 
-        // XXX debug
-        printf("predict(");
-        h_pprint_sequence(stdout, g, rhs);
-        printf(") = ");
-        h_pprint_stringset(stdout, pred, 0);
-
         // merge predict set into the row
         // accumulates conflicts in new workset
         stringmap_merge(nextset, row, pred);
       }
-    }
-    // XXX debug
-    printf("row(");
-    h_pprint_symbol(stdout, g, A);
-    printf(") = ");
-    h_pprint_stringset(stdout, row, 0);
-    if(h_stringmap_get(row, (uint8_t *)"a", 1, false)) {
-      printf("  a -> ");
-      h_pprint_sequence(stdout, g, h_stringmap_get(row, (uint8_t *)"a", 1, false));
-      printf("\n");
     }
 
     // switch to the updated workset
