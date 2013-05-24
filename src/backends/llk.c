@@ -484,6 +484,21 @@ int test_llk(void)
     fprintf(stderr, "does not compile\n");
     return 2;
   }
+  HLLkTable *table = p->backend_data;
+  printf("table(C,a) = ");
+  HCFStringMap *row = h_hashtable_get(table->rows, X->desugared);
+  assert(row);
+  HCFSequence  *rhs = h_stringmap_get(row, (uint8_t*)"a", 1, false);
+  assert(rhs);
+  h_pprint_sequence(stdout, g, rhs);
+  printf(" (row %p, rhs %p)\n", row, rhs);
+  printf("table(D,a) = ");
+  row = h_hashtable_get(table->rows, rhs->items[0]);
+  assert(row);
+  rhs = h_stringmap_get(row, (uint8_t*)"a", 1, false);
+  assert(rhs);
+  h_pprint_sequence(stdout, g, rhs);
+  printf(" (row %p, rhs %p)\n", row, rhs);
 
   HParseResult *res = h_parse(p, (uint8_t *)"ab", 2);
   if(res)
