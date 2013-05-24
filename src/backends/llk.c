@@ -148,7 +148,7 @@ static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *
   }
 }
 
-/* Generate entries for the production "A" in the given table row. */
+/* Generate entries for the productions of A in the given table row. */
 static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
                           const HCFChoice *A)
 {
@@ -162,8 +162,6 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
   // run until workset exhausted or kmax hit
   size_t k;
   for(k=1; k<=kmax; k++) {
-    printf("k=%lu\n", k); // XXX debug
-
     // allocate a fresh workset for the next round
     HHashSet *nextset = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
 
@@ -182,26 +180,10 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
         HCFStringMap *pred = h_predict(k, g, A, rhs);
         h_stringmap_replace(pred, NULL, rhs);
 
-        // XXX debug
-        printf("predict(");
-        h_pprint_sequence(stdout, g, rhs);
-        printf(") = ");
-        h_pprint_stringset(stdout, pred, 0);
-
         // merge predict set into the row
         // accumulates conflicts in new workset
         stringmap_merge(nextset, row, pred);
       }
-    }
-    // XXX debug
-    printf("row(");
-    h_pprint_symbol(stdout, g, A);
-    printf(") = ");
-    h_pprint_stringset(stdout, row, 0);
-    if(h_stringmap_get(row, (uint8_t *)"a", 1, false)) {
-      printf("  a -> ");
-      h_pprint_sequence(stdout, g, h_stringmap_get(row, (uint8_t *)"a", 1, false));
-      printf("\n");
     }
 
     // switch to the updated workset
@@ -343,6 +325,9 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       if(p == NULL)
         goto no_parse;
 
+      // an infinite loop case that shouldn't happen
+      assert(!p->items[0] || p->items[0] != x);
+
       // push production's rhs onto the stack (in reverse order)
       HCFChoice **s;
       for(s = p->items; *s; s++);
@@ -457,9 +442,9 @@ int test_llk(void)
   */
 
   HParser *X = h_optional(h_ch('x'));
-  //HParser *Y = h_epsilon_p(); //h_sequence(h_ch('y'), NULL);
-  HParser *A = h_sequence(X, h_ch('a'), NULL);
-  HParser *B = h_sequence(h_ch('b'), NULL);
+  HParser *Y = h_sequence(h_ch('y'), h_ch('y'), NULL);
+  HParser *A = h_sequence(X, Y, h_ch('a'), NULL);
+  HParser *B = h_sequence(Y, h_ch('b'), NULL);
   HParser *p = h_choice(A, B, NULL);
 
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
@@ -477,12 +462,12 @@ int test_llk(void)
   //printf("follow(C) = ");
   //h_pprint_stringset(stdout, h_follow(3, g, h_desugar(&system_allocator, c)), 0);
 
-  if(h_compile(p, PB_LLk, (void *)2)) {
+  if(h_compile(p, PB_LLk, (void *)3)) {
     fprintf(stderr, "does not compile\n");
     return 2;
   }
 
-  HParseResult *res = h_parse(p, (uint8_t *)"ab", 2);
+  HParseResult *res = h_parse(p, (uint8_t *)"xyya", 4);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else

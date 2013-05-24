@@ -255,7 +255,7 @@ HHashTable* h_hashtable_new(HArena *arena, HEqualFunc equalFunc, HHashFunc hashF
 void* h_hashtable_get(const HHashTable* ht, const void* key);
 void  h_hashtable_put(HHashTable* ht, const void* key, void* value);
 void  h_hashtable_update(HHashTable* dst, const HHashTable *src);
-void  h_hashtable_merge(void *(*combine)(void *v1, void *v2),
+void  h_hashtable_merge(void *(*combine)(void *v1, const void *v2),
                         HHashTable *dst, const HHashTable *src);
 int   h_hashtable_present(const HHashTable* ht, const void* key);
 void  h_hashtable_del(HHashTable* ht, const void* key);
