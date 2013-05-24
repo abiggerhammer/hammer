@@ -437,7 +437,23 @@ static bool any_string_shorter(size_t k, const HCFStringMap *m)
   return false;
 }
 
-const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x);
+// helper for h_predict
+static void remove_all_shorter(size_t k, HCFStringMap *m)
+{
+  if(k==0) return;
+  m->epsilon_branch = NULL;
+  if(k==1) return;
+
+  // iterate over m->char_branches
+  const HHashTable *ht = m->char_branches;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+      remove_all_shorter(k-1, hte->value);      // recursion into subtree
+    }
+  }
+}
 
 // h_follow adapted to the signature of StringSetFun
 static inline const HCFStringMap *h_follow_(size_t k, HCFGrammar *g, HCFChoice **s)
@@ -503,6 +519,23 @@ const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x)
       }
     }
   }
+
+  return ret;
+}
+
+HCFStringMap *h_predict(size_t k, HCFGrammar *g,
+                        const HCFChoice *A, const HCFSequence *rhs)
+{
+  HCFStringMap *ret = h_stringmap_new(g->arena);
+
+  // predict_k(A -> rhs) =
+  //   { ab | a <- first_k(rhs), b <- follow_k(A), |ab|=k }
+  
+  const HCFStringMap *first_rhs = h_first_seq(k, g, rhs->items);
+  stringset_extend(g, ret, k, first_rhs, h_follow_, (HCFChoice **)&A);
+
+  // make sure there are only strings of length _exactly_ k
+  remove_all_shorter(k, ret);
 
   return ret;
 }
@@ -624,7 +657,7 @@ static HCFChoice **pprint_string(FILE *f, HCFChoice **x)
   return x;
 }
 
-void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
+void h_pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
 {
   switch(x->type) {
   case HCF_CHAR:
@@ -643,32 +676,37 @@ void pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
   }
 }
 
-void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
+void h_pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
 {
   HCFChoice **x = seq->items;
 
   if(*x == NULL) {  // the empty sequence
-    fputs(" \"\"", f);
+    fputs("\"\"", f);
   } else {
     while(*x) {
-      fputc(' ', f);      // separator
+      if(x != seq->items) fputc(' ', f); // internal separator
 
       if((*x)->type == HCF_CHAR) {
         // condense character strings
         x = pprint_string(f, x);
       } else {
-        pprint_symbol(f, g, *x);
+        h_pprint_symbol(f, g, *x);
         x++;
       }
     }
   }
+}
 
+// adds some separators expected below
+static void pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq)
+{
+  fputc(' ', f);
+  h_pprint_sequence(f, g, seq);
   fputc('\n', f);
 }
 
-static
-void pprint_ntrules(FILE *f, const HCFGrammar *g, const HCFChoice *nt,
-                    int indent, int len)
+static void pprint_ntrules(FILE *f, const HCFGrammar *g, const HCFChoice *nt,
+                           int indent, int len)
 {
   int i;
   int column = indent + len;
@@ -738,7 +776,7 @@ void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, in
 
       a = hte->key;        // production's left-hand symbol
 
-      pprint_symbol(file, g, a);
+      h_pprint_symbol(file, g, a);
     }
   }
 
@@ -801,7 +839,7 @@ pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n,
   return first;
 }
 
-void h_pprint_stringset(FILE *file, const HCFGrammar *g, const HCFStringMap *set, int indent)
+void h_pprint_stringset(FILE *file, const HCFStringMap *set, int indent)
 {
   int j;
   for(j=0; j<indent; j++) fputc(' ', file);

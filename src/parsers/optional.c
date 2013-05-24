@@ -25,7 +25,6 @@ static bool opt_isValidCF(void *env) {
 static HParsedToken* reshape_optional(const HParseResult *p) {
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);
-  assert(p->ast->seq->used > 0);
 
   HParsedToken *res = p->ast->seq->elements[0];
   if(res)
