@@ -148,7 +148,7 @@ static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *
   }
 }
 
-/* Generate entries for the production "A" in the given table row. */
+/* Generate entries for the productions of A in the given table row. */
 static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
                           const HCFChoice *A)
 {
