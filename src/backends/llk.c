@@ -108,7 +108,7 @@ static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *
   if(src->epsilon_branch) {
     if(dst->epsilon_branch)
       dst->epsilon_branch =
-          combine_entries(workset, dst->epsilon_branch, src->epsilon_branch);
+	combine_entries(workset, dst->epsilon_branch, src->epsilon_branch);
     else
       dst->epsilon_branch = src->epsilon_branch;
   } else {
@@ -122,7 +122,7 @@ static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *
   if(src->end_branch) {
     if(dst->end_branch)
       dst->end_branch =
-          combine_entries(workset, dst->end_branch, src->end_branch);
+	combine_entries(workset, dst->end_branch, src->end_branch);
     else
       dst->end_branch = src->end_branch;
   }
@@ -412,10 +412,10 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
   h_delete_arena(tarena);
   return make_result(arena, seq->elements[0]);
 
-  no_parse:
-    h_delete_arena(tarena);
-    h_delete_arena(arena);
-    return NULL;
+ no_parse:
+  h_delete_arena(tarena);
+  h_delete_arena(arena);
+  return NULL;
 }
 
 
@@ -458,9 +458,9 @@ int test_llk(void)
   printf("derive epsilon: ");
   h_pprint_symbolset(stdout, g, g->geneps, 0);
   printf("first(A) = ");
-  h_pprint_stringset(stdout, g, h_first(2, g, g->start), 0);
-  printf("follow(C) = ");
-  h_pprint_stringset(stdout, g, h_follow(2, g, h_desugar(&system_allocator, NULL, c)), 0);
+  h_pprint_stringset(stdout, h_first(3, g, g->start), 0);
+  //  printf("follow(C) = ");
+  //  h_pprint_stringset(stdout, h_follow(3, g, h_desugar(&system_allocator, NULL, c)), 0);
 
   if(h_compile(p, PB_LLk, (void *)3)) {
     fprintf(stderr, "does not compile\n");
