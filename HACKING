@@ -2,14 +2,16 @@ Privileged arguments
 ====================
 
 As a matter of convenience, there are several identifiers that
-internal macros use. Chances are that if you use these names for other
-things, you're gonna have a bad time.
+internal anaphoric macros use. Chances are that if you use these names
+for other things, you're gonna have a bad time.
 
 In particular, these names, and the macros that use them, are:
 - state:
     Used by a_new and company. Should be an HParseState*
 - mm__:
     Used by h_new and h_free. Should be an HAllocator*
+- stk__:
+    Used in desugaring. Should be an HCFStack*
 
 Function suffixes
 =================

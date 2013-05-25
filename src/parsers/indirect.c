@@ -9,9 +9,8 @@ static bool indirect_isValidCF(void *env) {
   return p->vtable->isValidCF(p->env);
 }
 
-static HCFChoice* desugar_indirect(HAllocator *mm__, void *env) {
-  HParser *p = (HParser*)env;
-  return h_desugar(mm__, p);
+static void desugar_indirect(HAllocator *mm__, HCFStack *stk__, void *env) {
+  HCFS_DESUGAR( (HParser*)env );
 }
 
 static const HParserVtable indirect_vt = {

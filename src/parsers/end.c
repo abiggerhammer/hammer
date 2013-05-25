@@ -10,11 +10,8 @@ static HParseResult* parse_end(void *env, HParseState *state) {
   }
 }
 
-static HCFChoice* desugar_end(HAllocator *mm__, void *env) {
-  static HCFChoice ret = {
-    .type = HCF_END
-  };
-  return &ret;
+static void desugar_end(HAllocator *mm__, HCFStack *stk__, void *env) {
+  HCFS_ADD_END();
 }
 
 static bool end_ctrvm(HRVMProg *prog, void *env) {

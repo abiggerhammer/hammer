@@ -59,11 +59,25 @@ static bool many_isValidCF(void *env) {
 	   repeat->sep->vtable->isValidCF(repeat->sep->env)));
 }
 
-static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
+static void desugar_many(HAllocator *mm__, HCFStack *stk__, void *env) {
+  // TODO: refactor this.
   HRepeat *repeat = (HRepeat*)env;
+  if (!repeat->min_p) {
+    assert(!"Unreachable");
+    HCFS_BEGIN_CHOICE() {
+      HCFS_BEGIN_SEQ() {
+	for (size_t i = 0; i < repeat->count; i++) {
+	  if (i != 0 && repeat->sep != NULL)
+	    HCFS_DESUGAR(repeat->sep); // Should be ignored.
+	  HCFS_DESUGAR(repeat->p);
+	}
+      } HCFS_END_SEQ();
+    } HCFS_END_CHOICE();
+    return;
+  }
   if(repeat->count > 1) {
     assert_message(0, "'h_repeat_n' is not context-free, can't be desugared");
-    return NULL;
+    return;
   }
 
   /* many(A) =>
@@ -73,53 +87,29 @@ static HCFChoice* desugar_many(HAllocator *mm__, void *env) {
              -> \epsilon
   */
 
-  HParser *epsilon = h_epsilon_p__m(mm__);
-  
-  HCFChoice *sep = h_desugar(mm__, (repeat->sep != NULL) ? repeat->sep : epsilon);
-  HCFChoice *a   = h_desugar(mm__, repeat->p);
-  HCFChoice *ma  = h_new(HCFChoice, 1);
-  HCFChoice *mar = h_new(HCFChoice, 1);
-  HCFChoice *eps = desugar_epsilon(mm__, NULL);
-
-  /* create first subrule */
-  ma->type = HCF_CHOICE;
-  ma->seq = h_new(HCFSequence*, 3);  /* enough for 2 productions */
-  ma->seq[0] = h_new(HCFSequence, 1);
-  ma->seq[0]->items = h_new(HCFChoice*, 3);
-  ma->seq[0]->items[0] = a;
-  ma->seq[0]->items[1] = mar;
-  ma->seq[0]->items[2] = NULL;
-  ma->seq[1] = NULL;
-
-  /* if not many1/sepBy1, attach epsilon */
-  if (repeat->count == 0) {
-    ma->seq[1] = h_new(HCFSequence, 1);
-    ma->seq[1]->items = h_new(HCFChoice*, 2);
-    ma->seq[1]->items[0] = eps;
-    ma->seq[1]->items[1] = NULL;
-    ma->seq[2] = NULL;
-  }
-
-  /* create second subrule */
-  mar->type = HCF_CHOICE;
-  mar->seq = h_new(HCFSequence*, 3);
-  mar->seq[0] = h_new(HCFSequence, 1);
-  mar->seq[0]->items = h_new(HCFChoice*, 4);
-  mar->seq[0]->items[0] = sep;
-  mar->seq[0]->items[1] = a;
-  mar->seq[0]->items[2] = mar; // woo recursion!
-  mar->seq[0]->items[3] = NULL;
-  mar->seq[1] = h_new(HCFSequence, 1);
-  mar->seq[1]->items = h_new(HCFChoice*, 2);
-  mar->seq[1]->items[0] = eps;
-  mar->seq[1]->items[1] = NULL;
-  mar->seq[2] = NULL;
-
-  /* attach reshapers */
-  sep->reshape = h_act_ignore; 
-  ma->reshape = h_act_flatten;
-
-  return ma;
+  HCFS_BEGIN_CHOICE() {
+    HCFS_BEGIN_SEQ() {
+      HCFS_DESUGAR(repeat->p);
+      HCFS_BEGIN_CHOICE() { // Mar
+	HCFS_BEGIN_SEQ() {
+	  if (repeat->sep != NULL) {
+	    HCFS_DESUGAR(h_ignore__m(mm__, repeat->sep));
+	  }
+	  //stk__->last_completed->reshape = h_act_ignore; // BUG: This modifies a memoized entry.
+	  HCFS_DESUGAR(repeat->p);
+	  HCFS_APPEND(HCFS_THIS_CHOICE);
+	} HCFS_END_SEQ();
+	HCFS_BEGIN_SEQ() {
+	} HCFS_END_SEQ();
+      } HCFS_END_CHOICE(); // Mar
+    }
+    if (repeat->count == 0) {
+      HCFS_BEGIN_SEQ() {
+	//HCFS_DESUGAR(h_ignore__m(mm__, h_epsilon_p()));
+      } HCFS_END_SEQ();
+    }
+    HCFS_THIS_CHOICE->reshape = h_act_flatten;
+  } HCFS_END_CHOICE();
 }
 
 static bool many_ctrvm(HRVMProg *prog, void *env) {
@@ -266,16 +256,10 @@ static HParseResult* parse_length_value(void *env, HParseState *state) {
   return parse_many(&repeat, state);
 }
 
-static HCFChoice* desugar_length_value(HAllocator *mm__, void *env) {
-  assert_message(0, "'h_length_value' is not context-free, can't be desugared");
-  return NULL;
-}
-
 static const HParserVtable length_value_vt = {
   .parse = parse_length_value,
   .isValidRegular = h_false,
   .isValidCF = h_false,
-  .desugar = desugar_length_value,
 };
 
 HParser* h_length_value(const HParser* length, const HParser* value) {

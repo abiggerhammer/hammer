@@ -162,28 +162,28 @@
 
 
 #define g_check_terminal(grammar, parser) \
-  g_check_hashtable_absent(grammar->nts, h_desugar(&system_allocator, parser))
+  g_check_hashtable_absent(grammar->nts, h_desugar(&system_allocator, NULL, parser))
 
 #define g_check_nonterminal(grammar, parser) \
-  g_check_hashtable_present(grammar->nts, h_desugar(&system_allocator, parser))
+  g_check_hashtable_present(grammar->nts, h_desugar(&system_allocator, NULL, parser))
 
 #define g_check_derives_epsilon(grammar, parser) \
-  g_check_hashtable_present(grammar->geneps, h_desugar(&system_allocator, parser))
+  g_check_hashtable_present(grammar->geneps, h_desugar(&system_allocator, NULL, parser))
 
 #define g_check_derives_epsilon_not(grammar, parser) \
-  g_check_hashtable_absent(grammar->geneps, h_desugar(&system_allocator, parser))
+  g_check_hashtable_absent(grammar->geneps, h_desugar(&system_allocator, NULL, parser))
 
 #define g_check_firstset_present(k, grammar, parser, str) \
-  g_check_stringmap_present(h_first(k, grammar, h_desugar(&system_allocator, parser)), str)
+  g_check_stringmap_present(h_first(k, grammar, h_desugar(&system_allocator, NULL, parser)), str)
 
 #define g_check_firstset_absent(k, grammar, parser, str) \
-  g_check_stringmap_absent(h_first(k, grammar, h_desugar(&system_allocator, parser)), str)
+  g_check_stringmap_absent(h_first(k, grammar, h_desugar(&system_allocator, NULL, parser)), str)
 
 #define g_check_followset_present(k, grammar, parser, str) \
-  g_check_stringmap_present(h_follow(k, grammar, h_desugar(&system_allocator, parser)), str)
+  g_check_stringmap_present(h_follow(k, grammar, h_desugar(&system_allocator, NULL,  parser)), str)
 
 #define g_check_followset_absent(k, grammar, parser, str) \
-  g_check_stringmap_absent(h_follow(k, grammar, h_desugar(&system_allocator, parser)), str)
+  g_check_stringmap_absent(h_follow(k, grammar, h_desugar(&system_allocator, NULL, parser)), str)
 
 
 

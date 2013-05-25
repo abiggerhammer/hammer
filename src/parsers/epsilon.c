@@ -25,6 +25,9 @@ HParser* h_epsilon_p() {
 }
 HParser* h_epsilon_p__m(HAllocator* mm__) {
   HParser *epsilon_p = h_new(HParser, 1);
+  epsilon_p->desugared = NULL;
+  epsilon_p->backend_data = NULL;
+  epsilon_p->backend = 0;
   epsilon_p->vtable = &epsilon_vt;
   return epsilon_p;
 }

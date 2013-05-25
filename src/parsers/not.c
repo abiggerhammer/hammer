@@ -10,16 +10,10 @@ static HParseResult* parse_not(void* env, HParseState* state) {
   }
 }
 
-static HCFChoice* desugar_not(HAllocator *mm__, void *env) {
-  assert_message(0, "'h_not' is not context-free, can't be desugared");
-  return NULL;
-}
-
 static const HParserVtable not_vt = {
   .parse = parse_not,
   .isValidRegular = h_false,  /* see and.c for why */
-  .isValidCF = h_false,       /* also see and.c for why */
-  .desugar = desugar_not,
+  .isValidCF = h_false,
   .compile_to_rvm = h_not_regular, // Is actually regular, but the generation step is currently unable to handle it. TODO: fix this.
 };
 

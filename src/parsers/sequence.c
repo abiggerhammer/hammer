@@ -64,22 +64,15 @@ static HParsedToken *reshape_sequence(const HParseResult *p) {
   return res;
 }
 
-static HCFChoice* desugar_sequence(HAllocator *mm__, void *env) {
+static void desugar_sequence(HAllocator *mm__, HCFStack *stk__, void *env) {
   HSequence *s = (HSequence*)env;
-  HCFSequence *seq = h_new(HCFSequence, 1);
-  seq->items = h_new(HCFChoice*, s->len+1);
-  for (size_t i=0; i<s->len; ++i) {
-    seq->items[i] = h_desugar(mm__, s->p_array[i]);
-  }
-  seq->items[s->len] = NULL;
-  HCFChoice *ret = h_new(HCFChoice, 1);
-  ret->type = HCF_CHOICE;
-  ret->seq = h_new(HCFSequence*, 2);
-  ret->seq[0] = seq;
-  ret->seq[1] = NULL;
-  ret->action = NULL;
-  ret->reshape = reshape_sequence;
-  return ret;
+  HCFS_BEGIN_CHOICE() {
+    HCFS_BEGIN_SEQ() {
+      for (size_t i = 0; i < s->len; i++)
+	HCFS_DESUGAR(s->p_array[i]);
+    } HCFS_END_SEQ();
+    HCFS_THIS_CHOICE->reshape = reshape_sequence;
+  } HCFS_END_CHOICE();
 }
 
 static bool sequence_ctrvm(HRVMProg *prog, void *env) {

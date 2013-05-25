@@ -52,41 +52,25 @@ static HParsedToken *reshape_bits_signed(const HParseResult *p) {
   return reshape_bits(p, true);
 }
 
-static HCFChoice* desugar_bits(HAllocator *mm__, void *env) {
+static void desugar_bits(HAllocator *mm__, HCFStack *stk__, void *env) {
   struct bits_env *bits = (struct bits_env*)env;
-  if (0 != bits->length % 8)
-    return NULL; // can't handle non-byte-aligned for now
+  assert (0 == bits->length % 8);
 
   HCharset match_all = new_charset(mm__);
   for (int i = 0; i < 256; i++)
     charset_set(match_all, i, 1);
 
-  HCFChoice *match_all_choice = h_new(HCFChoice, 1);
-  match_all_choice->type = HCF_CHARSET;
-  match_all_choice->charset = match_all;
-  match_all_choice->action = NULL;
-
-  size_t n = bits->length/8;
-  HCFSequence *seq = h_new(HCFSequence, 1);
-  seq->items = h_new(HCFChoice*, n+1);
-  for (size_t i=0; i<n; ++i) {
-    seq->items[i] = match_all_choice;
-  }
-  seq->items[n] = NULL;
-
-  HCFChoice *ret = h_new(HCFChoice, 1);
-  ret->type = HCF_CHOICE;
-  ret->seq = h_new(HCFSequence*, 2);
-  ret->seq[0] = seq;
-  ret->seq[1] = NULL;
-  ret->action = NULL;
-
-  if(bits->signedp)
-    ret->reshape = reshape_bits_signed;
-  else
-    ret->reshape = reshape_bits_unsigned;
-
-  return ret;
+  HCFS_BEGIN_CHOICE() {
+    HCFS_BEGIN_SEQ() {
+      size_t n = bits->length/8;
+      for (size_t i=0; i<n; ++i) {
+	HCFS_ADD_CHARSET(match_all);
+      }
+    } HCFS_END_SEQ();
+    HCFS_THIS_CHOICE->reshape = bits->signedp
+      ? reshape_bits_signed
+      : reshape_bits_unsigned;
+  } HCFS_END_CHOICE();
 }
 
 static bool h_svm_action_bits(HArena *arena, HSVMContext *ctx, void* env) {
