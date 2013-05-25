@@ -39,20 +39,16 @@ static bool choice_isValidCF(void *env) {
   return true;
 }
 
-static HCFChoice* desugar_choice(HAllocator *mm__, void *env) {
+static void desugar_choice(HAllocator *mm__, HCFStack *stk__, void *env) {
   HSequence *s = (HSequence*)env;
-  HCFChoice *ret = h_new(HCFChoice, 1);
-  ret->type = HCF_CHOICE;
-  ret->seq = h_new(HCFSequence*, 1+s->len);
-  for (size_t i=0; i<s->len; ++i) {
-    ret->seq[i] = h_new(HCFSequence, 1);
-    ret->seq[i]->items = h_new(HCFChoice*, 2);
-    ret->seq[i]->items[0] = h_desugar(mm__, s->p_array[i]);
-    ret->seq[i]->items[1] = NULL;
-  }
-  ret->seq[s->len] = NULL;
-  ret->reshape = h_act_first;
-  return ret;
+  HCFS_BEGIN_CHOICE() {
+    for (size_t i = 0; i < s->len; i++) {
+      HCFS_BEGIN_SEQ() {
+	HCFS_DESUGAR(s->p_array[i]);
+      } HCFS_END_SEQ();
+    }
+    HCFS_THIS_CHOICE->reshape = h_act_first;
+  } HCFS_END_CHOICE();
 }
 
 static bool choice_ctrvm(HRVMProg *prog, void* env) {

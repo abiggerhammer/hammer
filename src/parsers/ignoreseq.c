@@ -31,31 +31,24 @@ static HParseResult* parse_ignoreseq(void* env, HParseState *state) {
   return res;
 }
 
-static HCFChoice* desugar_ignoreseq(HAllocator *mm__, void *env) {
+static void desugar_ignoreseq(HAllocator *mm__, HCFStack *stk__, void *env) {
   HIgnoreSeq *seq = (HIgnoreSeq*)env;
-  HCFSequence *hseq = h_new(HCFSequence, 1);
-  hseq->items = h_new(HCFChoice*, 1+seq->len);
-  for (size_t i=0; i<seq->len; ++i) {
-    hseq->items[i] = h_desugar(mm__, seq->parsers[i]);
-  }
-  hseq->items[seq->len] = NULL;
-  HCFChoice *ret = h_new(HCFChoice, 1);
-  ret->type = HCF_CHOICE;
-  ret->seq = h_new(HCFSequence*, 2);
-  ret->seq[0] = hseq;
-  ret->seq[1] = NULL;
-  ret->action = NULL;
 
-  if(seq->which == 0)
-    ret->reshape = h_act_first;
-  else if(seq->which == 1)
-    ret->reshape = h_act_second;    // for h_middle
-  else if(seq->which == seq->len-1)
-    ret->reshape = h_act_last;
-  else
-    ret->reshape = NULL;    // XXX
+  HCFS_BEGIN_CHOICE() {
+    HCFS_BEGIN_SEQ() {
+      for (size_t i=0; i<seq->len; ++i)
+	HCFS_DESUGAR(seq->parsers[i]);
+    } HCFS_END_SEQ();
 
-  return ret;
+    if(seq->which == 0)
+      HCFS_THIS_CHOICE->reshape = h_act_first;
+    else if(seq->which == 1)
+      HCFS_THIS_CHOICE->reshape = h_act_second;    // for h_middle
+    else if(seq->which == seq->len-1)
+      HCFS_THIS_CHOICE->reshape = h_act_last;
+    else
+      assert(!"Ignoreseq must select item 0, 1, or n-1");
+  } HCFS_END_CHOICE();
 }
 
 static bool is_isValidRegular(void *env) {

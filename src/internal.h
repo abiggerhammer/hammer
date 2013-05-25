@@ -49,6 +49,7 @@ static inline void h_generic_free(HAllocator *allocator, void* ptr) {
 }
 
 extern HAllocator system_allocator;
+typedef struct HCFStack_ HCFStack;
 
 
 typedef struct HInputStream_ {
@@ -236,7 +237,7 @@ HParser *h_new_parser(HAllocator *mm__, const HParserVtable *vt, void *env) {
   return p;
 }
 
-HCFChoice *h_desugar(HAllocator *mm__, const HParser *parser);
+HCFChoice *h_desugar(HAllocator *mm__, HCFStack *stk__, const HParser *parser);
 
 HCountedArray *h_carray_new_sized(HArena * arena, size_t size);
 HCountedArray *h_carray_new(HArena * arena);
@@ -276,8 +277,9 @@ HHashValue h_hash_ptr(const void *p);
 
 typedef struct HCFSequence_ HCFSequence;
 
-typedef struct HCFChoice_ {
-  enum {
+
+struct HCFChoice_ {
+  enum HCFChoiceType {
     HCF_END,
     HCF_CHOICE,
     HCF_CHARSET,
@@ -292,7 +294,7 @@ typedef struct HCFChoice_ {
                     // to execute before action and pred are applied.
   HAction action;
   HPredicate pred;
-} HCFChoice;
+};
 
 struct HCFSequence_ {
   HCFChoice **items; // last one is NULL
@@ -303,7 +305,7 @@ struct HParserVtable_ {
   bool (*isValidRegular)(void *env);
   bool (*isValidCF)(void *env);
   bool (*compile_to_rvm)(HRVMProg *prog, void* env); // FIXME: forgot what the bool return value was supposed to mean.
-  HCFChoice* (*desugar)(HAllocator *mm__, void *env);
+  void (*desugar)(HAllocator *mm__, HCFStack *stk__, void *env);
 };
 
 bool h_false(void*);

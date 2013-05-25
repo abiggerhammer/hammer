@@ -5,13 +5,9 @@ static HParseResult* parse_nothing() {
   return NULL;
 }
 
-static HCFChoice *desugar_nothing(HAllocator *mm__, void *env) {
-  HCFChoice *ret = h_new(HCFChoice, 1);
-  ret->type = HCF_CHOICE;
-  ret->seq = h_new(HCFSequence*, 1);
-  ret->seq[0] = NULL;
-  ret->action = NULL;
-  return ret;
+static void desugar_nothing(HAllocator *mm__, HCFStack *stk__, void *env) {
+  HCFS_BEGIN_CHOICE() {
+  } HCFS_END_CHOICE();
 }
 
 static bool nothing_ctrvm(HRVMProg *prog, void* env) {

@@ -12,7 +12,7 @@ static HParseResult* parse_unimplemented(void* env, HParseState *state) {
   return &result;
 }
 
-static HCFChoice* desugar_unimplemented(HAllocator *mm__, void *env) {
+static HCFChoice* desugar_unimplemented(HAllocator *mm__, HCFStack *stk__, void *env) {
   assert_message(0, "'h_unimplemented' is not context-free, can't be desugared");
   return NULL;
 }

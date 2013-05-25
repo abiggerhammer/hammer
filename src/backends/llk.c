@@ -374,7 +374,7 @@ int test_llk(void)
   printf("first(A) = ");
   h_pprint_stringset(stdout, g, h_first(2, g, g->start), 0);
   printf("follow(C) = ");
-  h_pprint_stringset(stdout, g, h_follow(2, g, h_desugar(&system_allocator, c)), 0);
+  h_pprint_stringset(stdout, g, h_follow(2, g, h_desugar(&system_allocator, NULL, c)), 0);
 
   h_compile(p, PB_LLk, NULL);
 

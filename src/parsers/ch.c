@@ -13,12 +13,8 @@ static HParseResult* parse_ch(void* env, HParseState *state) {
   }
 }
 
-static HCFChoice* desugar_ch(HAllocator *mm__, void *env) {
-  HCFChoice *ret = h_new(HCFChoice, 1);
-  ret->type = HCF_CHAR;
-  ret->chr = (uint8_t)(unsigned long)(env);
-  ret->action = NULL;
-  return ret;
+static void desugar_ch(HAllocator *mm__, HCFStack *stk__, void *env) {
+  HCFS_ADD_CHAR( (uint8_t)(unsigned long)(env) );
 }
 
 static bool h_svm_action_ch(HArena *arena, HSVMContext *ctx, void* env) {

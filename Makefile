@@ -24,17 +24,19 @@ examples/all: src/all
 examples/compile: src/compile
 
 define SUBDIR_TEMPLATE
-$(1)/%:
-	$$(MAKE) -C $(1) $$*
+$(1)/%: force
+	$(MAKE) -C $(1) $$*
 endef
+
+force:
 
 $(foreach dir,$(SUBDIRS),$(eval $(call SUBDIR_TEMPLATE,$(dir))))
 
 #.DEFAULT:
 #	$(if $(findstring ./,$(dir $@)),$(error No rule to make target `$@'),$(MAKE) -C $(dir $@) $(notdir $@))
 
-TAGS: $(shell find * -name "*.c")
-	etags $^
+TAGS: force
+	etags $(shell find * -name "*.c" -o -name "*.h")
 
 config:
 	@printf "%30s %s\n" $(foreach var,$(CONFIG_VARS),$(var) $($(var)) )
