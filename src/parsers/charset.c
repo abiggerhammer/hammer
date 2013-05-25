@@ -15,12 +15,8 @@ static HParseResult* parse_charset(void *env, HParseState *state) {
     return NULL;
 }
 
-static HCFChoice* desugar_charset(HAllocator *mm__, void *env) {
-  HCFChoice *ret = h_new(HCFChoice, 1);
-  ret->type = HCF_CHARSET;
-  ret->charset = (HCharset)env;
-  ret->action = NULL;
-  return ret;
+static void desugar_charset(HAllocator *mm__, HCFStack *stk__, void *env) {
+  HCFS_ADD_CHARSET( (HCharset)env );
 }
 
 static bool h_svm_action_ch(HArena *arena, HSVMContext *ctx, void* env) {

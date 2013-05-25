@@ -207,7 +207,7 @@ const HParsedToken *h_seq_flatten(HArena *arena, const HParsedToken *p)
   switch(p->token_type) {
   case TT_SEQUENCE:
     // Flatten and append all.
-    for(size_t i; i<p->seq->used; i++) {
+    for(size_t i = 0; i<p->seq->used; i++) {
       h_seq_append(ret, h_seq_flatten(arena, h_seq_index(p, i)));
     }
     break;

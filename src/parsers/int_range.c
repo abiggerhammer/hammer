@@ -28,84 +28,53 @@ static HParseResult* parse_int_range(void *env, HParseState *state) {
   }
 }
 
-HCFChoice* gen_int_range(HAllocator *mm__, uint64_t low, uint64_t high, uint8_t bytes) {
+void gen_int_range(HAllocator *mm__, HCFStack *stk__, uint64_t low, uint64_t high, uint8_t bytes) {
   /* Possible FIXME: TallerThanMe */
   if (1 == bytes) {
-    HCFChoice *cs = h_new(HCFChoice, 1);
-    cs->type = HCF_CHARSET;
-    cs->charset = new_charset(mm__);
+    HCharset cs = new_charset(mm__);
     for (uint64_t i=low; i<=high; ++i) {
-      charset_set(cs->charset, i, 1);
+      charset_set(cs, i, 1);
     }
-    cs->action = NULL;
-    return cs;
+    HCFS_ADD_CHARSET(cs);
   }
   else if (1 < bytes) {
     uint8_t low_head, hi_head;
     low_head = ((low >> (8*(bytes - 1))) & 0xFF);
     hi_head = ((high >> (8*(bytes - 1))) & 0xFF);
     if (low_head != hi_head) {
-      HCFChoice *root = h_new(HCFChoice, 1);
-      root->type = HCF_CHOICE;
-      root->seq = h_new(HCFSequence*, 4);
-      root->seq[0] = h_new(HCFSequence, 1);
-      root->seq[0]->items = h_new(HCFChoice*, 3);
-      root->seq[0]->items[0] = h_new(HCFChoice, 1);
-      root->seq[0]->items[0]->type = HCF_CHAR;
-      root->seq[0]->items[0]->chr = low_head;
-      root->seq[0]->items[0]->action = NULL;
-      root->seq[0]->items[1] = gen_int_range(mm__, low & ((1 << (8 * (bytes - 1))) - 1), ((1 << (8*(bytes-1)))-1), bytes-1);
-      root->seq[0]->items[2] = NULL;
-      root->seq[1] = h_new(HCFSequence, 1);
-      root->seq[1]->items = h_new(HCFChoice*, bytes+1);
-      root->seq[1]->items[0] = h_new(HCFChoice, 2);
-      root->seq[1]->items[0]->type = HCF_CHARSET;
-      root->seq[1]->items[0]->charset = new_charset(mm__);
-      root->seq[1]->items[0]->action = NULL;
-      root->seq[1]->items[1] = root->seq[1]->items[0] + 1;
-      root->seq[1]->items[1]->type = HCF_CHARSET;
-      root->seq[1]->items[1]->charset = new_charset(mm__);
-      for (int i = 0; i < 256; i++) {
-	charset_set(root->seq[1]->items[0]->charset, i, (i > low_head && i < hi_head));
-	charset_set(root->seq[1]->items[1]->charset, i, 1);
-      }
-      root->seq[1]->items[1]->action = NULL;
-      for (int i = 2; i < bytes; i++)
-	root->seq[1]->items[i] = root->seq[1]->items[1];
-      root->seq[1]->items[bytes] = NULL;
-      root->seq[2] = h_new(HCFSequence, 1);
-      root->seq[2]->items = h_new(HCFChoice*, 3);
-      root->seq[2]->items[0] = h_new(HCFChoice, 1);
-      root->seq[2]->items[0]->type = HCF_CHAR;
-      root->seq[2]->items[0]->type = hi_head;
-      root->seq[2]->items[0]->action = NULL;
-      root->seq[2]->items[1] = gen_int_range(mm__, 0, high & ((1 << (8 * (bytes - 1))) - 1), bytes-1);
-      root->seq[2]->items[2] = NULL;
-      root->seq[3] = NULL;
-      root->action = NULL;
-      return root;
+      HCFS_BEGIN_CHOICE() {
+	HCFS_BEGIN_SEQ() {
+	  HCFS_ADD_CHAR(low_head);
+	  gen_int_range(mm__, stk__, low & ((1 << (8 * (bytes - 1))) - 1), ((1 << (8*(bytes-1)))-1), bytes-1);
+	} HCFS_END_SEQ();
+	HCFS_BEGIN_SEQ() {
+	  HCharset hd = new_charset(mm__);
+	  HCharset rest = new_charset(mm__);
+	  for (int i = 0; i < 256; i++) {
+	    charset_set(hd, i, (i > low_head && i < hi_head));
+	    charset_set(rest, i, 1);
+	  }
+	  HCFS_ADD_CHARSET(hd);
+	  for (int i = 2; i < bytes; i++)
+	    HCFS_ADD_CHARSET(rest);
+	} HCFS_END_SEQ();
+	HCFS_BEGIN_SEQ() {
+	  HCFS_ADD_CHAR(hi_head);
+	  gen_int_range(mm__, stk__, 0, high & ((1 << (8 * (bytes - 1))) - 1), bytes-1);
+	} HCFS_END_SEQ();
+      } HCFS_END_CHOICE();
     } else {
-      HCFChoice *root = h_new(HCFChoice, 1);
-      root->type = HCF_CHOICE;
-      root->seq = h_new(HCFSequence*, 2);
-      root->seq[0] = h_new(HCFSequence, 1);
-      root->seq[0]->items = h_new(HCFChoice*, 3);
-      root->seq[0]->items[0] = h_new(HCFChoice, 1);
-      root->seq[0]->items[0]->type = HCF_CHAR;
-      root->seq[0]->items[0]->chr = low_head;
-      root->seq[0]->items[0]->action = NULL;
-      root->seq[0]->items[1] = gen_int_range(mm__,
-					     low & ((1 << (8 * (bytes - 1))) - 1),
-					     high & ((1 << (8 * (bytes - 1))) - 1),
-					     bytes - 1);
-      root->seq[0]->items[2] = NULL;
-      root->seq[1] = NULL;
-      root->action = NULL;
-      return root;
+      // TODO: find a way to merge this with the higher-up SEQ
+      HCFS_BEGIN_CHOICE() {
+	HCFS_BEGIN_SEQ() {
+	  HCFS_ADD_CHAR(low_head);
+	  gen_int_range(mm__, stk__,
+			low & ((1 << (8 * (bytes - 1))) - 1),
+			high & ((1 << (8 * (bytes - 1))) - 1),
+			bytes - 1);
+	} HCFS_END_SEQ();
+      } HCFS_END_CHOICE();
     }
-  }
-  else { // idk why this would ever be <1, but whatever
-    return NULL; 
   }
 }
 
@@ -114,11 +83,11 @@ struct bits_env {
   uint8_t signedp;
 };
 
-static HCFChoice* desugar_int_range(HAllocator *mm__, void *env) {
+static void desugar_int_range(HAllocator *mm__, HCFStack *stk__, void *env) {
   HRange *r = (HRange*)env;
   struct bits_env* be = (struct bits_env*)r->p->env;
   uint8_t bytes = be->length / 8;
-  return gen_int_range(mm__, r->lower, r->upper, bytes);
+  gen_int_range(mm__, stk__, r->lower, r->upper, bytes);
 }
 
 bool h_svm_action_validate_int_range(HArena *arena, HSVMContext *ctx, void* env) {

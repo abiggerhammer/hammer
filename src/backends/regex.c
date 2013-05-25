@@ -354,6 +354,9 @@ static int h_regex_compile(HAllocator *mm__, HParser* parser, const void* params
   if (!parser->vtable->isValidRegular(parser->env))
     return 1;
   HRVMProg *prog = h_new(HRVMProg, 1);
+  prog->length = prog->action_count = 0;
+  prog->insns = NULL;
+  prog->actions = NULL;
   prog->allocator = mm__;
   if (!h_compile_regex(prog, parser)) {
     h_free(prog->insns);

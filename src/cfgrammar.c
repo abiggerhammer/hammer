@@ -46,7 +46,7 @@ static void collect_geneps(HCFGrammar *grammar);
 HCFGrammar *h_cfgrammar(HAllocator* mm__, const HParser *parser)
 {
   // convert parser to CFG form ("desugar").
-  HCFChoice *desugared = h_desugar(mm__, parser);
+  HCFChoice *desugared = h_desugar(mm__, NULL, parser);
   if(desugared == NULL)
     return NULL;  // -> backend not suitable for this parser
 
@@ -65,6 +65,8 @@ HCFGrammar *h_cfgrammar(HAllocator* mm__, const HParser *parser)
     nt->seq[0]->items[0] = desugared;
     nt->seq[0]->items[1] = NULL;
     nt->seq[1] = NULL;
+    nt->pred = NULL;
+    nt->action = NULL;
     nt->reshape = h_act_first;
     h_hashset_put(g->nts, nt);
     g->start = nt;

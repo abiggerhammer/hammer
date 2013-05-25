@@ -458,9 +458,9 @@ int test_llk(void)
   printf("derive epsilon: ");
   h_pprint_symbolset(stdout, g, g->geneps, 0);
   printf("first(A) = ");
-  h_pprint_stringset(stdout, h_first(3, g, g->start), 0);
-  //printf("follow(C) = ");
-  //h_pprint_stringset(stdout, h_follow(3, g, h_desugar(&system_allocator, c)), 0);
+  h_pprint_stringset(stdout, g, h_first(2, g, g->start), 0);
+  printf("follow(C) = ");
+  h_pprint_stringset(stdout, g, h_follow(2, g, h_desugar(&system_allocator, NULL, c)), 0);
 
   if(h_compile(p, PB_LLk, (void *)3)) {
     fprintf(stderr, "does not compile\n");

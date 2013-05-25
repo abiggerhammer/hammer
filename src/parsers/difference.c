@@ -34,16 +34,10 @@ static HParseResult* parse_difference(void *env, HParseState *state) {
   }
 }
 
-static HCFChoice* desugar_difference(HAllocator *mm__, void *env) {
-  assert_message(0, "'h_difference' is not context-free, can't be desugared");
-  return NULL;
-}
-
 static HParserVtable difference_vt = {
   .parse = parse_difference,
   .isValidRegular = h_false,
   .isValidCF = h_false, // XXX should this be true if both p1 and p2 are CF?
-  .desugar = desugar_difference,
   .compile_to_rvm = h_not_regular,
 };
 

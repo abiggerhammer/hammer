@@ -2,9 +2,14 @@
 #include <stdlib.h>
 #include "internal.h"
 
+//#define DEBUG__MEMFILL 0xFF
+
 static void* system_alloc(HAllocator *allocator, size_t size) {
   
-  void* ptr = calloc(size + sizeof(size_t), 1);
+  void* ptr = malloc(size + sizeof(size_t));
+#ifdef DEBUG__MEMFILL
+  memset(ptr, DEBUG__MEMFILL, size + sizeof(size_t));
+#endif
   *(size_t*)ptr = size;
   return ptr + sizeof(size_t);
 }
@@ -13,10 +18,12 @@ static void* system_realloc(HAllocator *allocator, void* ptr, size_t size) {
   if (ptr == NULL)
     return system_alloc(allocator, size);
   ptr = realloc(ptr - sizeof(size_t), size + sizeof(size_t));
-  size_t old_size = *(size_t*)ptr;
   *(size_t*)ptr = size;
+#ifdef DEBUG__MEMFILL
+  size_t old_size = *(size_t*)ptr;
   if (size > old_size)
-    memset(ptr+sizeof(size_t)+old_size, 0, size - old_size);
+    memset(ptr+sizeof(size_t)+old_size, DEBUG__MEMFILL, size - old_size);
+#endif
   return ptr + sizeof(size_t);
 }
 
