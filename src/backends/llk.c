@@ -339,10 +339,12 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
     // the top of stack is such that there will be a result...
     HParsedToken *tok;  // will hold result token
+    tok = h_arena_malloc(arena, sizeof(HParsedToken));
+    tok->index = stream->index;
+    tok->bit_offset = stream->bit_offset;
     if(x == mark) {
       // hit stack frame boundary...
       // wrap the accumulated parse result, this sequence is finished
-      tok = h_arena_malloc(arena, sizeof(HParsedToken));
       tok->token_type = TT_SEQUENCE;
       tok->seq = seq;
 
@@ -361,13 +363,13 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       case HCF_END:
         if(!stream->overrun)
           goto no_parse;
+        h_arena_free(arena, tok);
         tok = NULL;
         break;
 
       case HCF_CHAR:
         if(input != x->chr)
           goto no_parse;
-        tok = h_arena_malloc(arena, sizeof(HParsedToken));
         tok->token_type = TT_UINT;
         tok->uint = x->chr;
         break;
@@ -377,7 +379,6 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
           goto no_parse;
         if(!charset_isset(x->charset, input))
           goto no_parse;
-        tok = h_arena_malloc(arena, sizeof(HParsedToken));
         tok->token_type = TT_UINT;
         tok->uint = input;
         break;
@@ -389,8 +390,6 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
     }
 
     // 'tok' has been parsed; process it
-
-    // XXX set tok->index and tok->bit_offset (don't take directly from stream, cuz peek!)
 
     // perform token reshape if indicated
     if(x->reshape)
