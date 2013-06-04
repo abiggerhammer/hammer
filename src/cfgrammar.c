@@ -18,6 +18,7 @@ HCFGrammar *h_cfgrammar_new(HAllocator *mm__)
   g->mm__   = mm__;
   g->arena  = h_new_arena(mm__, 0);     // default blocksize
   g->nts    = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+  g->start  = NULL;
   g->geneps = NULL;
   g->first  = NULL;
   g->follow = NULL;
@@ -222,6 +223,8 @@ static void collect_geneps(HCFGrammar *g)
 HStringMap *h_stringmap_new(HArena *a)
 {
   HStringMap *m = h_arena_malloc(a, sizeof(HStringMap));
+  m->epsilon_branch = NULL;
+  m->end_branch = NULL;
   m->char_branches = h_hashtable_new(a, h_eq_ptr, h_hash_ptr);
   m->arena = a;
   return m;
