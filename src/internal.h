@@ -219,6 +219,7 @@ struct HBitWriter_ {
 // Backends {{{
 extern HParserBackendVTable h__packrat_backend_vtable;
 extern HParserBackendVTable h__llk_backend_vtable;
+extern HParserBackendVTable h__lalr_backend_vtable;
 // }}}
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
