@@ -232,6 +232,7 @@ int   h_hashtable_present(const HHashTable* ht, const void* key) {
   }
   return false;
 }
+
 void  h_hashtable_del(HHashTable* ht, const void* key) {
   HHashValue hashval = ht->hashFunc(key);
 #ifdef CONSISTENCY_CHECK
@@ -257,6 +258,7 @@ void  h_hashtable_del(HHashTable* ht, const void* key) {
     }
   }
 }
+
 void  h_hashtable_free(HHashTable* ht) {
   for (size_t i = 0; i < ht->capacity; i++) {
     HHashTableEntry *hten, *hte = &ht->contents[i];
@@ -270,6 +272,56 @@ void  h_hashtable_free(HHashTable* ht) {
     }
   }
   h_arena_free(ht->arena, ht->contents);
+}
+
+// helper for hte_equal
+static bool hte_same_length(HHashTableEntry *xs, HHashTableEntry *ys) {
+  for(; xs && ys; xs=xs->next, ys=ys->next) {
+    // skip NULL keys (= element not present)
+    if(xs->key == NULL) xs=xs->next;
+    if(ys->key == NULL) ys=ys->next;
+  }
+  return (xs == ys);    // both NULL
+}
+
+// helper for hte_equal: are all elements of xs present in ys?
+static bool hte_subset(HEqualFunc eq, HHashTableEntry *xs, HHashTableEntry *ys)
+{
+  for(; xs; xs=xs->next) {
+    if(xs->key == NULL) continue;   // element not present
+
+    HHashTableEntry *hte;
+    for(hte=ys; hte; hte=hte->next) {
+      if(hte->key == xs->key) break; // assume an element is equal to itself
+      if(hte->hashval != xs->hashval) continue; // shortcut
+      if(eq(hte->key, xs->key)) break;
+    }
+    if(hte == NULL) return false;   // element not found
+  }
+  return true;                      // all found
+}
+
+// compare two lists of HHashTableEntries
+static inline bool hte_equal(HEqualFunc eq, HHashTableEntry *xs, HHashTableEntry *ys) {
+  return (hte_same_length(xs, ys) && hte_subset(eq, xs, ys));
+}
+
+/* Set equality of HHashSets.
+ * Obviously, 'a' and 'b' must use the same equality function.
+ * Not strictly necessary, but we also assume the same hash function.
+ */
+bool h_hashset_equal(const HHashSet *a, const HHashSet *b) {
+  if(a->capacity == b->capacity) {
+    // iterate over the buckets in parallel
+    for(size_t i=0; i < a->capacity; i++) {
+      if(!hte_equal(a->equalFunc, &a->contents[i], &b->contents[i]))
+        return false;
+    }
+  } else {
+    assert_message(0, "h_hashset_equal called on sets of different capacity");
+    // TODO implement general case
+  }
+  return true;
 }
 
 bool h_eq_ptr(const void *p, const void *q) {
