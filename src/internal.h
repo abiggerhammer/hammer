@@ -276,6 +276,7 @@ bool h_hashset_equal(const HHashSet *a, const HHashSet *b);
 
 bool h_eq_ptr(const void *p, const void *q);
 HHashValue h_hash_ptr(const void *p);
+uint32_t h_djbhash(const uint8_t *buf, size_t len);
 
 typedef struct HCFSequence_ HCFSequence;
 

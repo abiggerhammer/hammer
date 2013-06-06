@@ -329,6 +329,15 @@ bool h_eq_ptr(const void *p, const void *q) {
 }
 
 HHashValue h_hash_ptr(const void *p) {
-  // XXX just djbhash it
+  // XXX just djbhash it? it does make the benchmark ~7% slower.
+  //return h_djbhash((const uint8_t *)&p, sizeof(void *));
   return (uintptr_t)p >> 4;
+}
+
+uint32_t h_djbhash(const uint8_t *buf, size_t len) {
+  uint32_t hash = 5381;
+  while (len--) {
+    hash = hash * 33 + *buf++;
+  }
+  return hash;
 }
