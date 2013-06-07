@@ -60,6 +60,8 @@ static inline HStringMap *h_stringmap_get_char(const HStringMap *m, const uint8_
  */
 HCFGrammar *h_cfgrammar(HAllocator* mm__, const HParser *parser);
 
+HCFGrammar *h_cfgrammar_new(HAllocator *mm__);
+
 /* Frees the given grammar and associated data.
  * Does *not* free parsers' CFG forms as created by h_desugar.
  */
