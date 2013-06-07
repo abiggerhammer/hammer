@@ -250,6 +250,8 @@ HLRDFA *h_lalr_dfa(HCFGrammar *g)
           h_hashtable_put(states, neighbor, (void *)(uintptr_t)neighbor_idx);
           h_slist_push(work, neighbor);
           h_slist_push(work, (void *)(uintptr_t)neighbor_idx);
+        } else {
+          neighbor_idx = (uintptr_t)h_hashtable_get(states, neighbor);
         }
 
         // add transition "state --symbol--> neighbor"
