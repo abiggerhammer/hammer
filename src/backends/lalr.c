@@ -17,29 +17,47 @@
 
 /* Constructing the characteristic automaton (handle recognizer) */
 
-//  - DFA is a hashset containing states (mapped to numbers)
 //  - states are hashsets containing LRItems
 //  - LRItems contain an optional lookahead set (HStringMap)
 //  - states (hashsets) get hash and comparison functions that ignore the lookahead
 
+typedef HHashSet HLRState;
+
 typedef struct HLRDFA_ {
-  HHashSet *states;
+  size_t nstates;
+  const HLRState **states;  // array of size nstates
   HSlist *transitions;
 } HLRDFA;
 
 typedef struct HLRTransition_ {
-  HLRState *from;
-  HCFChoice *symbol;
-  HLRState *to;
+  size_t from, to;      // indices into 'states' array
+  const HCFChoice *symbol;
 } HLRTransition;
 
 typedef struct HLRItem_ {
   HCFChoice *lhs;
-  HCFChoice **rhs;
+  HCFChoice **rhs;          // NULL-terminated
   size_t len;               // number of elements in rhs
   size_t mark;
   HStringMap *lookahead;    // optional
 } HLRItem;
+
+HLRItem *h_lritem_new(HArena *a, HCFChoice *lhs, HCFChoice **rhs, size_t mark)
+{
+  HLRItem *ret = h_arena_malloc(a, sizeof(HLRItem));
+
+  size_t len = 0;
+  for(HCFChoice **p=rhs; *p; p++) len++;
+  assert(mark <= len);
+
+  ret->lhs = lhs;
+  ret->rhs = rhs;
+  ret->len = len;
+  ret->mark = mark;
+  ret->lookahead = NULL;
+
+  return ret;
+}
 
 // compare LALR items - ignores lookahead
 static bool eq_lalr_item(const void *p, const void *q)
@@ -63,8 +81,9 @@ static inline bool eq_lalr_itemset(const void *p, const void *q)
 }
 
 // hash LALR items
-static inline HHashValue hash_lalr_item(const HLRItem *x)
+static inline HHashValue hash_lalr_item(const void *p)
 {
+  const HLRItem *x = p;
   return (h_hash_ptr(x->lhs)
           + h_djbhash((uint8_t *)x->rhs, x->len*sizeof(HCFChoice *))
           + x->mark);   // XXX is it okay to just add mark?
@@ -88,13 +107,90 @@ static HHashValue hash_lalr_itemset(const void *p)
   return hash;
 }
 
-static HHashSet *closure(const HHashSet *items);
+static inline HLRState *h_lrstate_new(HArena *arena)
+{
+  return h_hashset_new(arena, eq_lalr_item, hash_lalr_item);
+}
+
+static HLRItem *advance_mark(HArena *arena, const HLRItem *item)
+{
+  assert(item->rhs[item->mark] != NULL);
+  HLRItem *ret = h_arena_malloc(arena, sizeof(HLRItem));
+  *ret = *item;
+  ret->mark++;
+  return ret;
+}
+
+static HHashSet *closure(HCFGrammar *g, const HHashSet *items)
+{
+  HArena *arena = g->arena;
+  HHashSet *ret = h_lrstate_new(arena);
+  HSlist *work = h_slist_new(arena);
+
+  // iterate over items - initialize work list with them
+  const HHashTable *ht = items;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+  
+      const HLRItem *item = hte->key;
+      h_hashset_put(ret, item);
+      h_slist_push(work, (void *)item);
+    }
+  }
+
+  while(!h_slist_empty(work)) {
+    const HLRItem *item = h_slist_pop(work);
+    HCFChoice *sym = item->rhs[item->mark]; // symbol after mark
+
+    // if there is a non-terminal after the mark, follow it
+    // XXX: do we have to count HCF_CHARSET as nonterminal?
+    if(sym != NULL && sym->type == HCF_CHOICE) {
+      // add items corresponding to the productions of sym
+      for(HCFSequence **p=sym->seq; *p; p++) {
+        HLRItem *it = h_lritem_new(arena, sym, (*p)->items, 0);
+        if(!h_hashset_present(ret, it)) {
+          h_hashset_put(ret, it);
+          h_slist_push(work, it);
+        }
+      }
+
+      // if sym derives epsilon, also advance over it
+      if(h_derives_epsilon(g, sym)) {
+        HLRItem *it = advance_mark(arena, item);
+        h_hashset_put(ret, it);
+        h_slist_push(work, it);
+      }
+    }
+  }
+
+  return ret;
+}
 
 HLRDFA *h_lalr_dfa(HCFGrammar *g)
 {
-  HHashSet *states = h_hashset_new(g->arena, eq_lalr_itemset, hash_lalr_itemset);
+  HArena *arena = g->arena;
+
+  HHashSet *states = h_hashset_new(arena, eq_lalr_itemset, hash_lalr_itemset);
+      // maps itemsets to assigned array indices
+  HSlist *transitions = h_slist_new(arena);
+
+  // list of states that need to be processed
+  // to save lookups, we push two elements per state, the itemset and its
+  // assigned index.
+  HSlist *work = h_slist_new(arena);
+
+  // XXX augment grammar?!
 
   // make initial state (kernel)
+  HLRState *start = h_lrstate_new(arena);
+  assert(g->start->type == HCF_CHOICE);
+  for(HCFSequence **p=g->start->seq; *p; p++)
+    h_hashset_put(start, h_lritem_new(arena, g->start, (*p)->items, 0));
+  h_hashtable_put(states, start, 0);
+  h_slist_push(work, start);
+  h_slist_push(work, 0);
   
   // while work to do (on some state)
   //   compute closure
@@ -105,6 +201,85 @@ HLRDFA *h_lalr_dfa(HCFGrammar *g)
   //       add it to state set
   //       add transition to it
   //       add it to the work list
+
+  while(!h_slist_empty(work)) {
+    size_t state_idx = (uintptr_t)h_slist_pop(work);
+    HLRState *state = h_slist_pop(work);
+
+    // maps edge symbols to neighbor states (item sets) of s
+    HHashTable *neighbors = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
+
+    // iterate over closure and generate neighboring sets
+    const HHashTable *ht = closure(g, state);
+    for(size_t i=0; i < ht->capacity; i++) {
+      for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+        if(hte->key == NULL)
+          continue;
+
+        const HLRItem *item = hte->key;
+        HCFChoice *sym = item->rhs[item->mark]; // symbol after mark
+
+        if(sym != NULL) { // mark was not at the end
+          // find or create prospective neighbor set
+          HLRState *neighbor = h_hashtable_get(neighbors, sym);
+          if(neighbor == NULL) {
+            neighbor = h_lrstate_new(arena);
+            h_hashtable_put(neighbors, sym, neighbor);
+          }
+
+          // ...and add the advanced item to it
+          h_hashset_put(neighbor, advance_mark(arena, item));
+        }
+      }
+    }
+
+    // merge neighbor sets into the set of existing states
+    ht = neighbors;
+    for(size_t i=0; i < ht->capacity; i++) {
+      for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+        if(hte->key == NULL)
+          continue;
+
+        const HCFChoice *symbol = hte->key;
+        HLRState *neighbor = hte->value;
+
+        // look up existing state, allocate new if not found
+        size_t neighbor_idx;
+        if(!h_hashset_present(states, neighbor)) {
+          neighbor_idx = states->used;
+          h_hashtable_put(states, neighbor, (void *)(uintptr_t)neighbor_idx);
+          h_slist_push(work, neighbor);
+          h_slist_push(work, (void *)(uintptr_t)neighbor_idx);
+        }
+
+        // add transition "state --symbol--> neighbor"
+        HLRTransition *t = h_arena_malloc(arena, sizeof(HLRTransition));
+        t->from = state_idx;
+        t->to = neighbor_idx;
+        t->symbol = symbol;
+        h_slist_push(transitions, t);
+      }
+    }
+  } // end while(work)
+
+  // fill DFA struct
+  HLRDFA *dfa = h_arena_malloc(arena, sizeof(HLRDFA));
+  dfa->nstates = states->used;
+  dfa->states = h_arena_malloc(arena, dfa->nstates*sizeof(HLRState *));
+  for(size_t i=0; i < states->capacity; i++) {
+    for(HHashTableEntry *hte = &states->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+
+      const HLRState *state = hte->key;
+      size_t idx = (uintptr_t)hte->value;
+
+      dfa->states[idx] = state;
+    }
+  }
+  dfa->transitions = transitions;
+
+  return dfa;
 }
 
 
@@ -172,20 +347,22 @@ int test_lalr(void)
   HParser *p = h_choice(A, B, NULL);
 
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
-
   if(g == NULL) {
     fprintf(stderr, "h_cfgrammar failed\n");
     return 1;
   }
-
   h_pprint_grammar(stdout, g, 0);
-  // print states of the LR(0) automaton
-  // print LALR(1) table
+
+  HLRDFA *dfa = h_lalr_dfa(g);
+  if(dfa) {
+    // print states of the LR(0) automaton
+  }
 
   if(h_compile(p, PB_LALR, NULL)) {
     fprintf(stderr, "does not compile\n");
     return 2;
   }
+  // print LALR(1) table
 
 
   HParseResult *res = h_parse(p, (uint8_t *)"xyya", 4);
