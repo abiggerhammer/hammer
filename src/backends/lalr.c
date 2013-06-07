@@ -4,17 +4,6 @@
 #include "../parsers/parser_internal.h"
 
 
-// PLAN:
-// data structures:
-//  - LR table is an array of hashtables that map grammar symbols (HCFChoice)
-//    to LRActions.
-
-// build LR(0) DFA
-// extend with lookahead information by either:
-//  - reworking algorithm to propagate lookahead ("simple LALR generation")
-//  - follow sets of enhanced grammar ("conversion to SLR")
-
-
 /* Constructing the characteristic automaton (handle recognizer) */
 
 //  - states are hashsets containing LRItems
@@ -288,17 +277,122 @@ HLRDFA *h_lalr_dfa(HCFGrammar *g)
 
 /* LALR table generation */
 
+typedef struct HLRAction_ {
+  enum {HLR_SHIFT, HLR_REDUCE} type;
+  union {
+    size_t nextstate;   // used with shift
+    struct {
+      HCFChoice *lhs;
+      HCFChoice **rhs;
+    } production;       // used with reduce
+  };
+} HLRAction;
+
+typedef struct HLRTable_ {
+  size_t     nrows;
+  HHashTable **rows;    // map symbols to HLRActions
+  HCFChoice  *start;    // start symbol
+  HArena     *arena;
+  HAllocator *mm__;
+} HLRTable;
+
+HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows)
+{
+  HArena *arena = h_new_arena(mm__, 0);    // default blocksize
+  assert(arena != NULL);
+
+  HLRTable *ret = h_new(HLRTable, 1);
+  ret->nrows = nrows;
+  ret->rows = h_arena_malloc(arena, nrows * sizeof(HHashTable *));
+  ret->arena = arena;
+  ret->mm__ = mm__;
+
+  for(size_t i=0; i<nrows; i++)
+    ret->rows[i] = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
+
+  return ret;
+}
+
+static HCFGrammar *transform_grammar(const HCFGrammar *g, const HLRTable *table,
+                                     const HLRDFA *dfa, HHashTable **syms)
+{
+  HCFGrammar *gt = h_cfgrammar_new(g->mm__);
+  HArena *arena = gt->arena;
+
+  // old grammar symbol -> 
+  //HHashTable *map = h_hashtable_new(
+
+  for(size_t i=0; i<dfa->nstates; i++) {
+    const HLRState *state = dfa->states[i];
+
+    syms[i] = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
+    
+    
+  }
+
+  // iterate over g->nts
+  const HHashTable *ht = g->nts;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+
+      const HCFChoice *A = hte->key;
+
+      // iterate over the productions of A
+      for(HCFSequence **p=A->seq; *p; p++) {
+        // find all transitions marked by A
+        // yields xAy -> rhs'
+        // trace rhs starting in state x and following the transitions
+      }
+    }
+  }
+
+  return gt;
+}
+
 int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
 {
-  // generate grammar
-  // construct dfa / determine lookahead
-  // extract table
-  //   create an array of hashtables, one per state
-  //   for each transition a--S-->b:
-  //     add "shift, goto b" to table entry (a,S)
-  //   for each state:
-  //     add reduce entries for its accepting items
-  return -1;
+  // generate CFG from parser
+  // construct LR(0) DFA
+  // build parse table, shift-entries only
+  //   for each transition a--S-->b, add "shift, goto b" to table entry (a,S)
+  // determine lookahead "by conversion to SLR"
+  //   transform grammar to encode transitions in symbols
+  //   -> lookahead for an item is the transformed left-hand side's follow set
+  // finish table; for each state:
+  //   add reduce entries for its accepting items
+  //   in case of conflict, add lookahead info
+
+  HCFGrammar *g = h_cfgrammar(mm__, parser);
+  if(g == NULL)     // backend not suitable (language not context-free)
+    return -1;
+
+  HLRDFA *dfa = h_lalr_dfa(g);
+  if(dfa == NULL)   // this should actually not happen
+    return -1;
+
+  // create table with shift actions
+  HLRTable *table = h_lrtable_new(mm__, dfa->nstates);
+  for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {
+    HLRTransition *t = x->elem;
+    HLRAction *action = h_arena_malloc(table->arena, sizeof(HLRAction));
+    action->type = HLR_SHIFT;
+    action->nextstate = t->to;
+    h_hashtable_put(table->rows[t->from], t->symbol, action);
+  }
+
+  // mapping (state,item)-pairs to the symbols of the new grammar
+  HHashTable **syms = h_arena_malloc(g->arena, dfa->nstates * sizeof(HHashTable *));
+      // XXX use a different arena for this (and other things)
+
+  HCFGrammar *gt = transform_grammar(g, table, dfa, syms);
+  if(gt == NULL)   // this should actually not happen
+    return -1;
+
+  // XXX fill in reduce actions
+
+  return 0;
 }
 
 void h_lalr_free(HParser *parser)
