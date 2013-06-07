@@ -276,10 +276,12 @@ void  h_hashtable_free(HHashTable* ht) {
 
 // helper for hte_equal
 static bool hte_same_length(HHashTableEntry *xs, HHashTableEntry *ys) {
-  for(; xs && ys; xs=xs->next, ys=ys->next) {
+  while(xs && ys) {
+    xs=xs->next;
+    ys=ys->next;
     // skip NULL keys (= element not present)
-    if(xs->key == NULL) xs=xs->next;
-    if(ys->key == NULL) ys=ys->next;
+    while(xs && xs->key == NULL) xs=xs->next;
+    while(ys && ys->key == NULL) ys=ys->next;
   }
   return (xs == ys);    // both NULL
 }
