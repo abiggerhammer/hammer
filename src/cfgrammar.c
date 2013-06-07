@@ -595,7 +595,7 @@ static void stringset_extend(HCFGrammar *g, HStringMap *ret,
 }
 
 
-static void pprint_char(FILE *f, char c)
+void h_pprint_char(FILE *f, char c)
 {
   switch(c) {
   case '"': fputs("\\\"", f); break;
@@ -619,7 +619,7 @@ static void pprint_charset_char(FILE *f, char c)
   case '"': fputc(c, f); break;
   case '-': fputs("\\-", f); break;
   case ']': fputs("\\-", f); break;
-  default:  pprint_char(f, c);
+  default:  h_pprint_char(f, c);
   }
 }
 
@@ -667,7 +667,7 @@ static HCFChoice **pprint_string(FILE *f, HCFChoice **x)
   for(; *x; x++) {
     if((*x)->type != HCF_CHAR)
       break;
-    pprint_char(f, (*x)->chr);
+    h_pprint_char(f, (*x)->chr);
   }
   fputc('"', f);
   return x;
@@ -678,7 +678,7 @@ void h_pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x)
   switch(x->type) {
   case HCF_CHAR:
     fputc('"', f);
-    pprint_char(f, x->chr);
+    h_pprint_char(f, x->chr);
     fputc('"', f);
     break;
   case HCF_END:
