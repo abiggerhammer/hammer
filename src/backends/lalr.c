@@ -317,6 +317,93 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
 
 
 
+/* Pretty-printers */
+
+void h_pprint_lritem(FILE *f, const HCFGrammar *g, const HLRItem *item)
+{
+  h_pprint_symbol(f, g, item->lhs);
+  fputs(" ->", f);
+
+  HCFChoice **x = item->rhs;
+  HCFChoice **mark = item->rhs + item->mark;
+  if(*x == NULL) {
+    fputs("\"\"", f);
+  } else {
+    while(*x) {
+      if(x == mark)
+        fputc('.', f);
+      else
+        fputc(' ', f);
+
+      if((*x)->type == HCF_CHAR) {
+        // condense character strings
+        fputc('"', f);
+        h_pprint_char(f, (*x)->chr);
+        for(x++; *x; x++) {
+          if(x == mark)
+            break;
+          if((*x)->type != HCF_CHAR)
+            break;
+          h_pprint_char(f, (*x)->chr);
+        }
+        fputc('"', f);
+      } else {
+        h_pprint_symbol(f, g, *x);
+        x++;
+      }
+    }
+    if(x == mark)
+      fputs(".", f);
+  }
+}
+
+void h_pprint_lrstate(FILE *f, const HCFGrammar *g,
+                      const HLRState *state, unsigned int indent)
+{
+  bool first = true;
+  const HHashTable *ht = state;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+  
+      const HLRItem *item = hte->key;
+
+      if(!first)
+        for(unsigned int i=0; i<indent; i++) fputc(' ', f);
+      first = false;
+      h_pprint_lritem(f, g, item);
+      fputc('\n', f);
+    }
+  }
+}
+
+void pprint_transition(FILE *f, const HCFGrammar *g, const HLRTransition *t)
+{
+  fputs("-", f);
+  h_pprint_symbol(f, g, t->symbol);
+  fprintf(f, "->%lu", t->to);
+}
+
+void h_pprint_lrdfa(FILE *f, const HCFGrammar *g,
+                    const HLRDFA *dfa, unsigned int indent)
+{
+  for(size_t i=0; i<dfa->nstates; i++) {
+    unsigned int indent2 = indent + fprintf(f, "%4lu: ", i);
+    h_pprint_lrstate(f, g, dfa->states[i], indent2);
+    for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {
+      const HLRTransition *t = x->elem;
+      if(t->from == i) {
+        for(unsigned int i=0; i<indent2-2; i++) fputc(' ', f);
+        pprint_transition(f, g, t);
+        fputc('\n', f);
+      }
+    }
+  }
+}
+
+
+
 
 HParserBackendVTable h__lalr_backend_vtable = {
   .compile = h_lalr_compile,
@@ -346,6 +433,7 @@ int test_lalr(void)
   HParser *B = h_sequence(Y, h_ch('b'), NULL);
   HParser *p = h_choice(A, B, NULL);
 
+  printf("\n==== G R A M M A R ====\n");
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
   if(g == NULL) {
     fprintf(stderr, "h_cfgrammar failed\n");
@@ -353,18 +441,21 @@ int test_lalr(void)
   }
   h_pprint_grammar(stdout, g, 0);
 
+  printf("\n==== D F A ====\n");
   HLRDFA *dfa = h_lalr_dfa(g);
-  if(dfa) {
-    // print states of the LR(0) automaton
-  }
+  if(dfa)
+    h_pprint_lrdfa(stdout, g, dfa, 0);
+  else
+    fprintf(stderr, "h_lalr_dfa failed\n");
 
+  printf("\n==== L A L R  T A B L E ====\n");
   if(h_compile(p, PB_LALR, NULL)) {
     fprintf(stderr, "does not compile\n");
     return 2;
   }
   // print LALR(1) table
 
-
+  printf("\n==== P A R S E  R E S U L T ====\n");
   HParseResult *res = h_parse(p, (uint8_t *)"xyya", 4);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
