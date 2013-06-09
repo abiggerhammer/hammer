@@ -4,7 +4,8 @@
 #include "../parsers/parser_internal.h"
 
 
-/* Constructing the characteristic automaton (handle recognizer) */
+
+/* Data structures */
 
 //  - states are hashsets containing LRItems
 //  - LRItems contain an optional lookahead set (HStringMap)
@@ -19,8 +20,9 @@ typedef struct HLRDFA_ {
 } HLRDFA;
 
 typedef struct HLRTransition_ {
-  size_t from, to;      // indices into 'states' array
+  size_t from;              // index into 'states' array
   const HCFChoice *symbol;
+  size_t to;                // index into 'states' array
 } HLRTransition;
 
 typedef struct HLRItem_ {
@@ -30,6 +32,32 @@ typedef struct HLRItem_ {
   size_t mark;
   HStringMap *lookahead;    // optional
 } HLRItem;
+
+typedef struct HLRAction_ {
+  enum {HLR_SHIFT, HLR_REDUCE} type;
+  union {
+    size_t nextstate;   // used with SHIFT
+    struct {
+      HCFChoice *lhs;   // symbol carrying semantic actions etc.
+      size_t length;    // # of symbols in rhs
+                        // NB: the rhs symbols are not needed for the parse
+    } production;       // used with REDUCE
+  };
+} HLRAction;
+
+typedef struct HLRTable_ {
+  size_t     nrows;
+  HHashTable **rows;    // map symbols to HLRActions
+  HLRAction  **forall;  // shortcut to set an action for an entire row
+  HCFChoice  *start;    // start symbol
+  HSlist     *inadeq;   // indices of any inadequate states
+  HArena     *arena;
+  HAllocator *mm__;
+} HLRTable;
+
+
+
+/* Constructing the characteristic automaton (handle recognizer) */
 
 HLRItem *h_lritem_new(HArena *a, HCFChoice *lhs, HCFChoice **rhs, size_t mark)
 {
@@ -157,7 +185,7 @@ static HHashSet *closure(HCFGrammar *g, const HHashSet *items)
   return ret;
 }
 
-HLRDFA *h_lalr_dfa(HCFGrammar *g)
+HLRDFA *h_lr0_dfa(HCFGrammar *g)
 {
   HArena *arena = g->arena;
 
@@ -275,26 +303,24 @@ HLRDFA *h_lalr_dfa(HCFGrammar *g)
 
 
 
-/* LALR table generation */
+/* LR(0) table generation */
 
-typedef struct HLRAction_ {
-  enum {HLR_SHIFT, HLR_REDUCE} type;
-  union {
-    size_t nextstate;   // used with shift
-    struct {
-      HCFChoice *lhs;
-      HCFChoice **rhs;
-    } production;       // used with reduce
-  };
-} HLRAction;
+// XXX replace other hashtable iterations with this
+// XXX move to internal.h or something
+#define H_FOREACH_(HT) do {                                                 \
+    const HHashTable *ht = HT;                                              \
+    for(size_t i=0; i < ht->capacity; i++) {                                \
+      for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {  \
+        if(hte->key == NULL) continue;
 
-typedef struct HLRTable_ {
-  size_t     nrows;
-  HHashTable **rows;    // map symbols to HLRActions
-  HCFChoice  *start;    // start symbol
-  HArena     *arena;
-  HAllocator *mm__;
-} HLRTable;
+#define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_(HT)                        \
+        const KEYVAR = hte->key;                                            \
+        VALVAR = hte->value;
+
+#define H_END_FOREACH                                                       \
+      }                                                                     \
+    }                                                                       \
+  } while(0);
 
 HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows)
 {
@@ -313,91 +339,229 @@ HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows)
   return ret;
 }
 
-static HCFGrammar *transform_grammar(const HCFGrammar *g, const HLRTable *table,
-                                     const HLRDFA *dfa, HHashTable **syms)
+void h_lrtable_free(HLRTable *table)
 {
-  HCFGrammar *gt = h_cfgrammar_new(g->mm__);
-  HArena *arena = gt->arena;
+  HAllocator *mm__ = table->mm__;
+  h_delete_arena(table->arena);
+  h_free(table);
+}
 
-  // old grammar symbol -> 
-  //HHashTable *map = h_hashtable_new(
+static HLRAction *shift_action(HArena *arena, size_t nextstate)
+{
+  HLRAction *action = h_arena_malloc(arena, sizeof(HLRAction));
+  action->type = HLR_SHIFT;
+  action->nextstate = nextstate;
+  return action;
+}
 
+static HLRAction *reduce_action(HArena *arena, HCFChoice *lhs, size_t rhslen)
+{
+  HLRAction *action = h_arena_malloc(arena, sizeof(HLRAction));
+  action->type = HLR_REDUCE;
+  action->production.lhs = lhs;
+  action->production.length = rhslen;
+  return action;
+}
+
+HLRTable *h_lr0_table(HCFGrammar *g)
+{
+  HAllocator *mm__ = g->mm__;
+
+  // construct LR(0) DFA
+  HLRDFA *dfa = h_lr0_dfa(g);
+  if(!dfa) return NULL;
+
+  HLRTable *table = h_lrtable_new(mm__, dfa->nstates);
+  HArena *arena = table->arena;
+
+  // add shift entries
+  for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {
+    // for each transition x-A->y, add "shift, goto y" to table entry (x,A)
+    HLRTransition *t = x->elem;
+
+    HLRAction *action = shift_action(arena, t->to);
+    h_hashtable_put(table->rows[t->from], t->symbol, action);
+  }
+
+  // add reduce entries, record inadequate states
   for(size_t i=0; i<dfa->nstates; i++) {
-    const HLRState *state = dfa->states[i];
-
-    syms[i] = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
-    
-    
-  }
-
-  // iterate over g->nts
-  const HHashTable *ht = g->nts;
-  for(size_t i=0; i < ht->capacity; i++) {
-    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
-      if(hte->key == NULL)
-        continue;
-
-      const HCFChoice *A = hte->key;
-
-      // iterate over the productions of A
-      for(HCFSequence **p=A->seq; *p; p++) {
-        // find all transitions marked by A
-        // yields xAy -> rhs'
-        // trace rhs starting in state x and following the transitions
+    // find reducible items in state
+    H_FOREACH(dfa->states[i], HLRItem *item, void *v_)
+      if(item->mark == item->len) { // mark at the end
+        // XXX store more informative stuff in the inadeq records?
+        if(table->forall[i]) {
+          // reduce/reduce conflict with a previous item
+          h_slist_push(table->inadeq, (void *)(uintptr_t)i);
+        } else if(!h_hashtable_empty(table->rows[i])) {
+          // shift/reduce conflict with one of the row's entries
+          h_slist_push(table->inadeq, (void *)(uintptr_t)i);
+        } else {
+          // set reduce action for the entire row
+          table->forall[i] = reduce_action(arena, item->lhs, item->len);
+        }
       }
-    }
+    H_END_FOREACH
   }
 
-  return gt;
+  return table;
+}
+
+
+
+/* LALR-via-SLR grammar transformation */
+
+static inline size_t seqsize(void *p_)
+{
+  size_t n=0;
+  for(void **p=p_; *p; p++) n++;
+  return n+1;
+}
+
+static size_t follow_transition(const HLRTable *table, size_t x, HCFChoice *A)
+{
+  HLRAction *action = h_hashtable_get(table->rows[x], A);
+  assert(action != NULL);
+  assert(action->type == HLR_SHIFT);
+  return action->nextstate;
+}
+
+static HCFChoice *transform_symbol(const HLRTable *table, HHashTable *map,
+                                   size_t x, HCFChoice *B, size_t z);
+
+static HCFChoice *transform_productions(const HLRTable *table, HHashTable *map,
+                                         size_t x, HCFChoice *xAy)
+{
+  HArena *arena = map->arena;
+
+  HCFSequence **seq = h_arena_malloc(arena, seqsize(xAy->seq)
+                                            * sizeof(HCFSequence *));
+  HCFSequence **p, **q;
+  for(p=xAy->seq, q=seq; *p; p++, q++) {
+    // trace rhs starting in state x and following the transitions
+    // xAy -> xBz ...
+
+    HCFChoice **B = (*p)->items;
+    HCFChoice **xBz = h_arena_malloc(arena, seqsize(B) * sizeof(HCFChoice *));
+    for(; *B; B++, xBz++) {
+      size_t z = follow_transition(table, x, *B);
+      *xBz = transform_symbol(table, map, x, *B, z);
+      x=z;
+    }
+    *xBz = NULL;
+
+    *q = h_arena_malloc(arena, sizeof(HCFSequence));
+    (*q)->items = xBz;
+  }
+  *q = NULL;
+  xAy->seq = seq;
+
+  return xAy;   // pass-through
+}
+
+static inline HLRTransition *transition(HArena *arena,
+                                        size_t x, const HCFChoice *A, size_t y)
+{
+  HLRTransition *t = h_arena_malloc(arena, sizeof(HLRTransition));
+  t->from = x;
+  t->symbol = A;
+  t->to = y;
+  return t;
+}
+
+static HCFChoice *transform_symbol(const HLRTable *table, HHashTable *map,
+                                   size_t x, HCFChoice *B, size_t z)
+{
+  HArena *arena = map->arena;
+
+  // look up the transition in map, create symbol if not found
+  HLRTransition *x_B_z = transition(arena, x, B, z);
+  HCFChoice *xBz = h_hashtable_get(map, x_B_z);
+  if(!xBz) {
+    HCFChoice *xBz = h_arena_malloc(arena, sizeof(HCFChoice));
+    *xBz = *B;
+    h_hashtable_put(map, x_B_z, xBz);
+  }
+
+  return transform_productions(table, map, x, xBz);
+}
+
+static bool eq_transition(const void *p, const void *q)
+{
+  const HLRTransition *a=p, *b=q;
+  return (a->from == b->from && a->to == b->to && a->symbol == b->symbol);
+}
+
+static HHashValue hash_transition(const void *p)
+{
+  const HLRTransition *t = p;
+  return (h_hash_ptr(t->symbol) + t->from + t->to); // XXX ?
+}
+
+static HHashTable *enhance_grammar(const HCFGrammar *g, const HLRTable *tbl)
+{
+  HArena *arena = g->arena; // XXX ?
+  HHashTable *map = h_hashtable_new(arena, eq_transition, hash_transition);
+
+  // copy the start symbol over
+  HCFChoice *start = h_arena_malloc(arena, sizeof(HCFChoice));
+  *start = *(g->start);
+  h_hashtable_put(map, g->start, start);
+
+  transform_productions(tbl, map, 0, start);
+
+  return map;
+}
+
+
+
+/* LALR table generation */
+
+bool is_inadequate(HLRTable *table, size_t state)
+{
+  // XXX
+}
+
+bool has_conflicts(HLRTable *table)
+{
+  return !h_slist_empty(table->inadeq);
 }
 
 int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
 {
   // generate CFG from parser
-  // construct LR(0) DFA
-  // build parse table, shift-entries only
-  //   for each transition a--S-->b, add "shift, goto b" to table entry (a,S)
-  // determine lookahead "by conversion to SLR"
-  //   transform grammar to encode transitions in symbols
-  //   -> lookahead for an item is the transformed left-hand side's follow set
-  // finish table; for each state:
-  //   add reduce entries for its accepting items
-  //   in case of conflict, add lookahead info
+  // build LR(0) table
+  // if necessary, resolve conflicts "by conversion to SLR"
 
   HCFGrammar *g = h_cfgrammar(mm__, parser);
   if(g == NULL)     // backend not suitable (language not context-free)
     return -1;
 
-  HLRDFA *dfa = h_lalr_dfa(g);
-  if(dfa == NULL)   // this should actually not happen
+  HLRTable *table = h_lr0_table(g);
+  if(table == NULL) // this should normally not happen
     return -1;
 
-  // create table with shift actions
-  HLRTable *table = h_lrtable_new(mm__, dfa->nstates);
-  for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {
-    HLRTransition *t = x->elem;
-    HLRAction *action = h_arena_malloc(table->arena, sizeof(HLRAction));
-    action->type = HLR_SHIFT;
-    action->nextstate = t->to;
-    h_hashtable_put(table->rows[t->from], t->symbol, action);
+  if(has_conflicts(table)) {
+    HHashTable *map = enhance_grammar(g, table);
+    if(map == NULL) // this should normally not happen
+      return -1;
+
+    // XXX resolve conflicts
+    // iterate over dfa's transitions where 'from' state is inadequate
+    //   look up enhanced symbol corr. to the transition
+    //   for each terminal in follow set of enh. symbol:
+    //     put reduce action into table cell (state, terminal)
+    //     conflict if already occupied
   }
 
-  // mapping (state,item)-pairs to the symbols of the new grammar
-  HHashTable **syms = h_arena_malloc(g->arena, dfa->nstates * sizeof(HHashTable *));
-      // XXX use a different arena for this (and other things)
-
-  HCFGrammar *gt = transform_grammar(g, table, dfa, syms);
-  if(gt == NULL)   // this should actually not happen
-    return -1;
-
-  // XXX fill in reduce actions
-
-  return 0;
+  h_cfgrammar_free(g);
+  parser->backend_data = table;
+  return has_conflicts(table)? -1 : 0;
 }
 
 void h_lalr_free(HParser *parser)
 {
-  // XXX free data structures
+  HLRTable *table = parser->backend_data;
+  h_lrtable_free(table);
   parser->backend_data = NULL;
   parser->backend = PB_PACKRAT;
 }
@@ -538,7 +702,7 @@ int test_lalr(void)
   h_pprint_grammar(stdout, g, 0);
 
   printf("\n==== D F A ====\n");
-  HLRDFA *dfa = h_lalr_dfa(g);
+  HLRDFA *dfa = h_lr0_dfa(g);
   if(dfa)
     h_pprint_lrdfa(stdout, g, dfa, 0);
   else
