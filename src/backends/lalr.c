@@ -316,7 +316,7 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
 #define H_FOREACH_KEY(HT, KEYVAR) H_FOREACH_(HT)                            \
         const KEYVAR = hte__->key;                                          \
 
-#define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_KEY(HT)                     \
+#define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_KEY(HT, KEYVAR)             \
         VALVAR = hte__->value;
 
 #define H_END_FOREACH                                                       \
@@ -667,6 +667,40 @@ void h_pprint_lrdfa(FILE *f, const HCFGrammar *g,
   }
 }
 
+void pprint_lraction(FILE *f, const HCFGrammar *g, const HLRAction *action)
+{
+  if(action->type == HLR_SHIFT) {
+    fprintf(f, "s%lu", action->nextstate);
+  } else {
+    fputc('r', f);
+    // XXX reference the production somehow
+  }
+}
+
+void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
+                      unsigned int indent)
+{
+  for(size_t i=0; i<table->nrows; i++) {
+    for(unsigned int j=0; j<indent; j++) fputc(' ', f);
+    fprintf(f, "%4lu:", i);
+    if(table->forall[i] && h_hashtable_empty(table->rows[i])) {
+      fputs(" - ", f);
+      pprint_lraction(f, g, table->forall[i]);
+      fputs(" -", f);
+    }
+    H_FOREACH(table->rows[i], HCFChoice *symbol, HLRAction *action)
+      fputc(' ', f);    // separator
+      h_pprint_symbol(f, g, symbol);
+      fputc(':', f);
+      if(table->forall[i]) {
+        fputc(action->type == HLR_SHIFT? 's' : 'r', f);
+        fputc('/', f);
+        fputc(table->forall[i]->type == HLR_SHIFT? 's' : 'r', f);
+      }
+    H_END_FOREACH
+    fputc('\n', f);
+  }
+}
 
 
 
@@ -713,12 +747,19 @@ int test_lalr(void)
   else
     fprintf(stderr, "h_lalr_dfa failed\n");
 
+  printf("\n==== L R ( 0 )  T A B L E ====\n");
+  HLRTable *table0 = h_lr0_table(g);
+  if(table0)
+    h_pprint_lrtable(stdout, g, table0, 0);
+  else
+    fprintf(stderr, "h_lr0_table failed\n");
+
   printf("\n==== L A L R  T A B L E ====\n");
   if(h_compile(p, PB_LALR, NULL)) {
     fprintf(stderr, "does not compile\n");
     return 2;
   }
-  // print LALR(1) table
+  h_pprint_lrtable(stdout, g, (HLRTable *)p->backend_data, 0);
 
   printf("\n==== P A R S E  R E S U L T ====\n");
   HParseResult *res = h_parse(p, (uint8_t *)"xyya", 4);
