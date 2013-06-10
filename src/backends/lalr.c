@@ -307,14 +307,16 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
 
 // XXX replace other hashtable iterations with this
 // XXX move to internal.h or something
-#define H_FOREACH_(HT) do {                                                 \
+#define H_FOREACH_(HT) {                                                    \
     const HHashTable *ht__ = HT;                                            \
     for(size_t i__=0; i__ < ht__->capacity; i__++) {                        \
-      for(HHashTableEntry *hte__ = &ht__->contents[i]; hte__; hte__ = hte__->next) {  \
+      for(HHashTableEntry *hte__ = &ht__->contents[i__];                    \
+          hte__;                                                            \
+          hte__ = hte__->next) {                                            \
         if(hte__->key == NULL) continue;
 
 #define H_FOREACH_KEY(HT, KEYVAR) H_FOREACH_(HT)                            \
-        const KEYVAR = hte__->key;                                          \
+        const KEYVAR = hte__->key;
 
 #define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_KEY(HT, KEYVAR)             \
         VALVAR = hte__->value;
@@ -322,7 +324,7 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
 #define H_END_FOREACH                                                       \
       }                                                                     \
     }                                                                       \
-  } while(0);
+  }
 
 HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows)
 {
@@ -337,8 +339,10 @@ HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows)
   ret->arena = arena;
   ret->mm__ = mm__;
 
-  for(size_t i=0; i<nrows; i++)
+  for(size_t i=0; i<nrows; i++) {
     ret->rows[i] = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
+    ret->forall[i] = NULL;
+  }
 
   return ret;
 }
@@ -687,17 +691,20 @@ void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
       fputs(" - ", f);
       pprint_lraction(f, g, table->forall[i]);
       fputs(" -", f);
+    } else {
+      H_FOREACH(table->rows[i], HCFChoice *symbol, HLRAction *action)
+        fputc(' ', f);    // separator
+        h_pprint_symbol(f, g, symbol);
+        fputc(':', f);
+        if(table->forall[i]) {
+          fputc(action->type == HLR_SHIFT? 's' : 'r', f);
+          fputc('/', f);
+          fputc(table->forall[i]->type == HLR_SHIFT? 's' : 'r', f);
+        } else {
+          pprint_lraction(f, g, action);
+        }
+      H_END_FOREACH
     }
-    H_FOREACH(table->rows[i], HCFChoice *symbol, HLRAction *action)
-      fputc(' ', f);    // separator
-      h_pprint_symbol(f, g, symbol);
-      fputc(':', f);
-      if(table->forall[i]) {
-        fputc(action->type == HLR_SHIFT? 's' : 'r', f);
-        fputc('/', f);
-        fputc(table->forall[i]->type == HLR_SHIFT? 's' : 'r', f);
-      }
-    H_END_FOREACH
     fputc('\n', f);
   }
 }
@@ -753,6 +760,7 @@ int test_lalr(void)
     h_pprint_lrtable(stdout, g, table0, 0);
   else
     fprintf(stderr, "h_lr0_table failed\n");
+  h_lrtable_free(table0);
 
   printf("\n==== L A L R  T A B L E ====\n");
   if(h_compile(p, PB_LALR, NULL)) {
