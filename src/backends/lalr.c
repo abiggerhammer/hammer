@@ -308,14 +308,16 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
 // XXX replace other hashtable iterations with this
 // XXX move to internal.h or something
 #define H_FOREACH_(HT) do {                                                 \
-    const HHashTable *ht = HT;                                              \
-    for(size_t i=0; i < ht->capacity; i++) {                                \
-      for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {  \
-        if(hte->key == NULL) continue;
+    const HHashTable *ht__ = HT;                                            \
+    for(size_t i__=0; i__ < ht__->capacity; i__++) {                        \
+      for(HHashTableEntry *hte__ = &ht__->contents[i]; hte__; hte__ = hte__->next) {  \
+        if(hte__->key == NULL) continue;
 
-#define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_(HT)                        \
-        const KEYVAR = hte->key;                                            \
-        VALVAR = hte->value;
+#define H_FOREACH_KEY(HT, KEYVAR) H_FOREACH_(HT)                            \
+        const KEYVAR = hte__->key;                                          \
+
+#define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_KEY(HT)                     \
+        VALVAR = hte__->value;
 
 #define H_END_FOREACH                                                       \
       }                                                                     \
@@ -330,6 +332,8 @@ HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows)
   HLRTable *ret = h_new(HLRTable, 1);
   ret->nrows = nrows;
   ret->rows = h_arena_malloc(arena, nrows * sizeof(HHashTable *));
+  ret->forall = h_arena_malloc(arena, nrows * sizeof(HLRAction *));
+  ret->inadeq = h_slist_new(arena);
   ret->arena = arena;
   ret->mm__ = mm__;
 
@@ -386,7 +390,7 @@ HLRTable *h_lr0_table(HCFGrammar *g)
   // add reduce entries, record inadequate states
   for(size_t i=0; i<dfa->nstates; i++) {
     // find reducible items in state
-    H_FOREACH(dfa->states[i], HLRItem *item, void *v_)
+    H_FOREACH_KEY(dfa->states[i], HLRItem *item)
       if(item->mark == item->len) { // mark at the end
         // XXX store more informative stuff in the inadeq records?
         if(table->forall[i]) {
@@ -519,6 +523,7 @@ static HHashTable *enhance_grammar(const HCFGrammar *g, const HLRTable *tbl)
 bool is_inadequate(HLRTable *table, size_t state)
 {
   // XXX
+  return false;
 }
 
 bool has_conflicts(HLRTable *table)
