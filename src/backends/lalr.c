@@ -690,9 +690,13 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
         value->seq->elements[len-1-i] = v;
         value->seq->used++;
       }
-      // result position equals position of left-most symbol
-      value->index = v->index;
-      value->bit_offset = v->bit_offset;
+      if(v) {
+        // result position equals position of left-most symbol
+        value->index = v->index;
+        value->bit_offset = v->bit_offset;
+      } else {
+        // XXX how to get the position in this case?
+      }
 
       // perform token reshape if indicated
       if(symbol->reshape)
