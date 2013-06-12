@@ -398,6 +398,9 @@ HLRTable *h_lr0_table(HCFGrammar *g)
   HLRTable *table = h_lrtable_new(mm__, dfa->nstates);
   HArena *arena = table->arena;
 
+  // remember start symbol
+  table->start = g->start;
+
   // add shift entries
   for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {
     // for each transition x-A->y, add "shift, goto y" to table entry (x,A)
