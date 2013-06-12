@@ -7,11 +7,7 @@
 
 /* Data structures */
 
-//  - states are hashsets containing LRItems
-//  - LRItems contain an optional lookahead set (HStringMap)
-//  - states (hashsets) get hash and comparison functions that ignore the lookahead
-
-typedef HHashSet HLRState;
+typedef HHashSet HLRState;  // states are sets of LRItems
 
 typedef struct HLRDFA_ {
   size_t nstates;
@@ -30,7 +26,6 @@ typedef struct HLRItem_ {
   HCFChoice **rhs;          // NULL-terminated
   size_t len;               // number of elements in rhs
   size_t mark;
-  HStringMap *lookahead;    // optional
 } HLRItem;
 
 typedef struct HLRAction_ {
@@ -56,27 +51,28 @@ typedef struct HLRTable_ {
 } HLRTable;
 
 
-
-/* Constructing the characteristic automaton (handle recognizer) */
-
-HLRItem *h_lritem_new(HArena *a, HCFChoice *lhs, HCFChoice **rhs, size_t mark)
+// compare symbols - terminals by value, others by pointer
+static bool eq_symbol(const void *p, const void *q)
 {
-  HLRItem *ret = h_arena_malloc(a, sizeof(HLRItem));
-
-  size_t len = 0;
-  for(HCFChoice **p=rhs; *p; p++) len++;
-  assert(mark <= len);
-
-  ret->lhs = lhs;
-  ret->rhs = rhs;
-  ret->len = len;
-  ret->mark = mark;
-  ret->lookahead = NULL;
-
-  return ret;
+  const HCFChoice *x=p, *y=q;
+  return (x==y
+          || (x->type==HCF_END && y->type==HCF_END)
+          || (x->type==HCF_CHAR && y->type==HCF_CHAR && x->chr==y->chr));
 }
 
-// compare LALR items - ignores lookahead
+// hash symbols - terminals by value, others by pointer
+static HHashValue hash_symbol(const void *p)
+{
+  const HCFChoice *x=p;
+  if(x->type == HCF_END)
+    return 0;
+  else if(x->type == HCF_CHAR)
+    return x->chr * 33;
+  else
+    return h_hash_ptr(p);
+}
+
+// compare LALR items by value
 static bool eq_lalr_item(const void *p, const void *q)
 {
   const HLRItem *a=p, *b=q;
@@ -124,10 +120,79 @@ static HHashValue hash_lalr_itemset(const void *p)
   return hash;
 }
 
+HLRItem *h_lritem_new(HArena *a, HCFChoice *lhs, HCFChoice **rhs, size_t mark)
+{
+  HLRItem *ret = h_arena_malloc(a, sizeof(HLRItem));
+
+  size_t len = 0;
+  for(HCFChoice **p=rhs; *p; p++) len++;
+  assert(mark <= len);
+
+  ret->lhs = lhs;
+  ret->rhs = rhs;
+  ret->len = len;
+  ret->mark = mark;
+
+  return ret;
+}
+
 static inline HLRState *h_lrstate_new(HArena *arena)
 {
   return h_hashset_new(arena, eq_lalr_item, hash_lalr_item);
 }
+
+HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows)
+{
+  HArena *arena = h_new_arena(mm__, 0);    // default blocksize
+  assert(arena != NULL);
+
+  HLRTable *ret = h_new(HLRTable, 1);
+  ret->nrows = nrows;
+  ret->rows = h_arena_malloc(arena, nrows * sizeof(HHashTable *));
+  ret->forall = h_arena_malloc(arena, nrows * sizeof(HLRAction *));
+  ret->inadeq = h_slist_new(arena);
+  ret->arena = arena;
+  ret->mm__ = mm__;
+
+  for(size_t i=0; i<nrows; i++) {
+    ret->rows[i] = h_hashtable_new(arena, eq_symbol, hash_symbol);
+    ret->forall[i] = NULL;
+  }
+
+  return ret;
+}
+
+void h_lrtable_free(HLRTable *table)
+{
+  HAllocator *mm__ = table->mm__;
+  h_delete_arena(table->arena);
+  h_free(table);
+}
+
+// XXX replace other hashtable iterations with this
+// XXX move to internal.h or something
+#define H_FOREACH_(HT) {                                                    \
+    const HHashTable *ht__ = HT;                                            \
+    for(size_t i__=0; i__ < ht__->capacity; i__++) {                        \
+      for(HHashTableEntry *hte__ = &ht__->contents[i__];                    \
+          hte__;                                                            \
+          hte__ = hte__->next) {                                            \
+        if(hte__->key == NULL) continue;
+
+#define H_FOREACH_KEY(HT, KEYVAR) H_FOREACH_(HT)                            \
+        const KEYVAR = hte__->key;
+
+#define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_KEY(HT, KEYVAR)             \
+        VALVAR = hte__->value;
+
+#define H_END_FOREACH                                                       \
+      }                                                                     \
+    }                                                                       \
+  }
+
+
+
+/* Constructing the characteristic automaton (handle recognizer) */
 
 static HLRItem *advance_mark(HArena *arena, const HLRItem *item)
 {
@@ -224,7 +289,7 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
     HLRState *state = h_slist_pop(work);
 
     // maps edge symbols to neighbor states (item sets) of s
-    HHashTable *neighbors = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
+    HHashTable *neighbors = h_hashtable_new(arena, eq_symbol, hash_symbol);
 
     // iterate over closure and generate neighboring sets
     const HHashTable *ht = closure(g, state);
@@ -304,55 +369,6 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
 
 
 /* LR(0) table generation */
-
-// XXX replace other hashtable iterations with this
-// XXX move to internal.h or something
-#define H_FOREACH_(HT) {                                                    \
-    const HHashTable *ht__ = HT;                                            \
-    for(size_t i__=0; i__ < ht__->capacity; i__++) {                        \
-      for(HHashTableEntry *hte__ = &ht__->contents[i__];                    \
-          hte__;                                                            \
-          hte__ = hte__->next) {                                            \
-        if(hte__->key == NULL) continue;
-
-#define H_FOREACH_KEY(HT, KEYVAR) H_FOREACH_(HT)                            \
-        const KEYVAR = hte__->key;
-
-#define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_KEY(HT, KEYVAR)             \
-        VALVAR = hte__->value;
-
-#define H_END_FOREACH                                                       \
-      }                                                                     \
-    }                                                                       \
-  }
-
-HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows)
-{
-  HArena *arena = h_new_arena(mm__, 0);    // default blocksize
-  assert(arena != NULL);
-
-  HLRTable *ret = h_new(HLRTable, 1);
-  ret->nrows = nrows;
-  ret->rows = h_arena_malloc(arena, nrows * sizeof(HHashTable *));
-  ret->forall = h_arena_malloc(arena, nrows * sizeof(HLRAction *));
-  ret->inadeq = h_slist_new(arena);
-  ret->arena = arena;
-  ret->mm__ = mm__;
-
-  for(size_t i=0; i<nrows; i++) {
-    ret->rows[i] = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
-    ret->forall[i] = NULL;
-  }
-
-  return ret;
-}
-
-void h_lrtable_free(HLRTable *table)
-{
-  HAllocator *mm__ = table->mm__;
-  h_delete_arena(table->arena);
-  h_free(table);
-}
 
 static HLRAction *shift_action(HArena *arena, size_t nextstate)
 {
@@ -579,9 +595,125 @@ void h_lalr_free(HParser *parser)
 
 /* LR driver */
 
+const HLRAction *
+h_lr_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol)
+{
+  assert(state < table->nrows);
+  if(table->forall[state]) {
+    assert(h_hashtable_empty(table->rows[state]));  // that would be a conflict
+    return table->forall[state];
+  } else {
+    return h_hashtable_get(table->rows[state], symbol);
+  }
+}
+
+// XXX also, what about charsets!?
+
 HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
 {
-  return NULL;
+  HLRTable *table = parser->backend_data;
+  if(!table)
+    return NULL;
+
+  HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
+  HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
+  HSlist *left = h_slist_new(tarena);   // left stack; reductions happen here
+  HSlist *right = h_slist_new(tarena);  // right stack; input appears here
+
+  // stack layout:
+  // on the left stack, we put pairs:  (saved state, semantic value)
+  // on the right stack, we put pairs: (symbol, semantic value)
+
+  // run while the recognizer finds handles in the input
+  size_t state = 0;
+  while(1) {
+    // make sure there is input on the right stack
+    if(h_slist_empty(right)) {
+      HCFChoice *x = h_arena_malloc(tarena, sizeof(HCFChoice));
+      HParsedToken *v;
+
+      uint8_t c = h_read_bits(stream, 8, false);
+
+      if(stream->overrun) {     // end of input
+        x->type = HCF_END;
+        v = NULL;
+      } else {
+        x->type = HCF_CHAR;
+        x->chr = c;
+        v = h_arena_malloc(arena, sizeof(HParsedToken));
+        v->token_type = TT_UINT;
+        v->uint = c;
+      }
+
+      h_slist_push(right, v);
+      h_slist_push(right, x);
+    }
+
+    // peek at input symbol on the right side
+    HCFChoice *symbol = right->head->elem;
+
+    // table lookup
+    const HLRAction *action = h_lr_lookup(table, state, symbol);
+    if(action == NULL)
+      break;    // no handle recognizable in input, terminate parsing
+
+    if(action->type == HLR_SHIFT) {
+      h_slist_push(left, (void *)(uintptr_t)state);
+      h_slist_pop(right);                       // symbol (discard)
+      h_slist_push(left, h_slist_pop(right));   // semantic value
+      state = action->nextstate;
+    } else {
+      assert(action->type == HLR_REDUCE);
+      size_t len = action->production.length;
+      HCFChoice *symbol = action->production.lhs;
+
+      // semantic value of the reduction result
+      HParsedToken *value = h_arena_malloc(arena, sizeof(HParsedToken));
+      value->token_type = TT_SEQUENCE;
+      value->seq = h_carray_new_sized(arena, len);
+      
+      // pull values off the left stack, rewinding state accordingly
+      HParsedToken *v;
+      for(size_t i=0; i<len; i++) {
+        v = h_slist_pop(left);
+        state = (uintptr_t)h_slist_pop(left);
+
+        // collect values in result sequence
+        value->seq->elements[len-1-i] = v;
+        value->seq->used++;
+      }
+      // result position equals position of left-most symbol
+      value->index = v->index;
+      value->bit_offset = v->bit_offset;
+
+      // perform token reshape if indicated
+      if(symbol->reshape)
+        value = (HParsedToken *)symbol->reshape(make_result(arena, value));
+
+      // call validation and semantic action, if present
+      if(symbol->pred && !symbol->pred(make_result(tarena, value)))
+        break;  // validation failed -> no parse
+      if(symbol->action)
+        value = (HParsedToken *)symbol->action(make_result(arena, value));
+
+      // push result (value, symbol) onto the right stack
+      h_slist_push(right, value);
+      h_slist_push(right, symbol);
+    }
+  }
+
+  h_delete_arena(tarena);
+
+  // parsing was successful iff the start symbol is on top of the right stack
+  if(h_slist_pop(right) == table->start) {
+    // next on the right stack is the start symbol's semantic value
+    HParsedToken *result = h_slist_pop(right);
+    assert(result != NULL);
+    return make_result(arena, result);
+  } else {
+    h_delete_arena(arena);
+    return NULL;
+  }
 }
 
 
