@@ -35,7 +35,9 @@ typedef struct HLRAction_ {
     struct {
       HCFChoice *lhs;   // symbol carrying semantic actions etc.
       size_t length;    // # of symbols in rhs
-                        // NB: the rhs symbols are not needed for the parse
+#ifndef NDEBUG
+      HCFChoice **rhs;  // NB: the rhs symbols are not needed for the parse
+#endif
     } production;       // used with REDUCE
   };
 } HLRAction;
@@ -378,12 +380,15 @@ static HLRAction *shift_action(HArena *arena, size_t nextstate)
   return action;
 }
 
-static HLRAction *reduce_action(HArena *arena, HCFChoice *lhs, size_t rhslen)
+static HLRAction *reduce_action(HArena *arena, const HLRItem *item)
 {
   HLRAction *action = h_arena_malloc(arena, sizeof(HLRAction));
   action->type = HLR_REDUCE;
-  action->production.lhs = lhs;
-  action->production.length = rhslen;
+  action->production.lhs = item->lhs;
+  action->production.length = item->len;
+#ifndef NDEBUG
+  action->production.rhs = item->rhs;
+#endif
   return action;
 }
 
@@ -424,7 +429,7 @@ HLRTable *h_lr0_table(HCFGrammar *g)
           h_slist_push(table->inadeq, (void *)(uintptr_t)i);
         } else {
           // set reduce action for the entire row
-          table->forall[i] = reduce_action(arena, item->lhs, item->len);
+          table->forall[i] = reduce_action(arena, item);
         }
       }
     H_END_FOREACH
@@ -811,8 +816,15 @@ void pprint_lraction(FILE *f, const HCFGrammar *g, const HLRAction *action)
   if(action->type == HLR_SHIFT) {
     fprintf(f, "s%lu", action->nextstate);
   } else {
-    fputc('r', f);
-    // XXX reference the production somehow
+#ifdef NDEBUG
+    // if we can't print the production, at least print its length
+    fprintf(f, "r[%lu]", action->production.length);
+#else
+    fputs("r(", f);
+    HCFSequence seq = {action->production.rhs};
+    h_pprint_sequence(f, g, &seq);
+    fputc(')', f);
+#endif
   }
 }
 
