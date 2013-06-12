@@ -836,15 +836,17 @@ void pprint_lraction(FILE *f, const HCFGrammar *g, const HLRAction *action)
   if(action->type == HLR_SHIFT) {
     fprintf(f, "s%lu", action->nextstate);
   } else {
+    fputs("r(", f);
+    h_pprint_symbol(f, g, action->production.lhs);
+    fputs(" -> ", f);
 #ifdef NDEBUG
     // if we can't print the production, at least print its length
-    fprintf(f, "r[%lu]", action->production.length);
+    fprintf(f, "[%lu]", action->production.length);
 #else
-    fputs("r(", f);
     HCFSequence seq = {action->production.rhs};
     h_pprint_sequence(f, g, &seq);
-    fputc(')', f);
 #endif
+    fputc(')', f);
   }
 }
 
