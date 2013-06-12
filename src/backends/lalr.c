@@ -229,15 +229,33 @@ static HHashSet *closure(HCFGrammar *g, const HHashSet *items)
     HCFChoice *sym = item->rhs[item->mark]; // symbol after mark
 
     // if there is a non-terminal after the mark, follow it
-    // XXX: do we have to count HCF_CHARSET as nonterminal?
-    if(sym != NULL && sym->type == HCF_CHOICE) {
+    // NB: unlike LLk, we do consider HCF_CHARSET a non-terminal here
+    if(sym != NULL && (sym->type==HCF_CHOICE || sym->type==HCF_CHARSET)) {
       // add items corresponding to the productions of sym
-      for(HCFSequence **p=sym->seq; *p; p++) {
-        HLRItem *it = h_lritem_new(arena, sym, (*p)->items, 0);
-        if(!h_hashset_present(ret, it)) {
-          h_hashset_put(ret, it);
-          h_slist_push(work, it);
+      if(sym->type == HCF_CHOICE) {
+        for(HCFSequence **p=sym->seq; *p; p++) {
+          HLRItem *it = h_lritem_new(arena, sym, (*p)->items, 0);
+          if(!h_hashset_present(ret, it)) {
+            h_hashset_put(ret, it);
+            h_slist_push(work, it);
+          }
         }
+      } else {  // HCF_CHARSET
+        for(unsigned int i=0; i<256; i++) {
+          if(charset_isset(sym->charset, i)) {
+            HCFChoice **rhs = h_arena_malloc(arena, 2 * sizeof(HCFChoice *));
+            rhs[0] = h_arena_malloc(arena, sizeof(HCFChoice));
+            rhs[0]->type = HCF_CHAR;
+            rhs[0]->chr = i;
+            rhs[1] = NULL;
+            HLRItem *it = h_lritem_new(arena, sym, rhs, 0);
+            h_hashset_put(ret, it);
+            // single-character item needs no further work
+          }
+        }
+        // if sym is a non-terminal, we need a reshape on it
+        // this seems as good a place as any to set it
+        sym->reshape = h_act_first;
       }
 
       // if sym derives epsilon, also advance over it
@@ -615,8 +633,6 @@ h_lr_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol)
   }
 }
 
-// XXX also, what about charsets!?
-
 HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
 {
   HLRTable *table = parser->backend_data;
@@ -884,7 +900,7 @@ int test_lalr(void)
   */
 
   // XXX make LALR example
-  HParser *X = h_optional(h_ch('x'));
+  HParser *X = h_optional(h_in((uint8_t *)"rst", 3));
   HParser *Y = h_sequence(h_ch('y'), h_ch('y'), NULL);
   HParser *A = h_sequence(X, Y, h_ch('a'), NULL);
   HParser *B = h_sequence(Y, h_ch('b'), NULL);
@@ -921,7 +937,7 @@ int test_lalr(void)
   h_pprint_lrtable(stdout, g, (HLRTable *)p->backend_data, 0);
 
   printf("\n==== P A R S E  R E S U L T ====\n");
-  HParseResult *res = h_parse(p, (uint8_t *)"xyya", 4);
+  HParseResult *res = h_parse(p, (uint8_t *)"syya", 4);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
