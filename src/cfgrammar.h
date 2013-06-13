@@ -59,6 +59,7 @@ static inline HStringMap *h_stringmap_get_char(const HStringMap *m, const uint8_
  * A NULL return means we are unable to represent the parser as a CFG.
  */
 HCFGrammar *h_cfgrammar(HAllocator* mm__, const HParser *parser);
+HCFGrammar *h_cfgrammar_(HAllocator* mm__, HCFChoice *start);
 
 HCFGrammar *h_cfgrammar_new(HAllocator *mm__);
 

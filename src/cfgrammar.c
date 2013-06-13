@@ -51,6 +51,11 @@ HCFGrammar *h_cfgrammar(HAllocator* mm__, const HParser *parser)
   if(desugared == NULL)
     return NULL;  // -> backend not suitable for this parser
 
+  return h_cfgrammar_(mm__, desugared);
+}
+
+HCFGrammar *h_cfgrammar_(HAllocator* mm__, HCFChoice *desugared)
+{
   HCFGrammar *g = h_cfgrammar_new(mm__);
 
   // recursively traverse the desugared form and collect all HCFChoices that
