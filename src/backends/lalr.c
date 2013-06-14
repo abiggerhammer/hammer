@@ -215,6 +215,7 @@ static HLRItem *advance_mark(HArena *arena, const HLRItem *item)
 
 static HHashSet *closure(HCFGrammar *g, const HHashSet *items)
 {
+  HAllocator *mm__ = g->mm__;
   HArena *arena = g->arena;
   HHashSet *ret = h_lrstate_new(arena);
   HSlist *work = h_slist_new(arena);
@@ -251,8 +252,9 @@ static HHashSet *closure(HCFGrammar *g, const HHashSet *items)
       } else {  // HCF_CHARSET
         for(unsigned int i=0; i<256; i++) {
           if(charset_isset(sym->charset, i)) {
-            HCFChoice **rhs = h_arena_malloc(arena, 2 * sizeof(HCFChoice *));
-            rhs[0] = h_arena_malloc(arena, sizeof(HCFChoice));
+            // XXX allocatethese single-character symbols statically somewhere
+            HCFChoice **rhs = h_new(HCFChoice *, 2);
+            rhs[0] = h_new(HCFChoice, 1);
             rhs[0]->type = HCF_CHAR;
             rhs[0]->chr = i;
             rhs[1] = NULL;
@@ -558,7 +560,7 @@ static HLREnhGrammar *enhance_grammar(const HCFGrammar *g, const HLRDFA *dfa,
                                       const HLRTable *table)
 {
   HAllocator *mm__ = g->mm__;
-  HArena *arena = g->arena; // XXX ?
+  HArena *arena = g->arena;
 
   HLREnhGrammar *eg = h_arena_malloc(arena, sizeof(HLREnhGrammar));
   eg->tmap = h_hashtable_new(arena, eq_transition, hash_transition);
@@ -851,8 +853,8 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
   HParseResult *result = NULL;
   if(h_slist_pop(right) == table->start) {
     // next on the right stack is the start symbol's semantic value
+    assert(!h_slist_empty(right));
     HParsedToken *tok = h_slist_pop(right);
-    assert(tok != NULL);
     result = make_result(arena, tok);
   } else {
     h_delete_arena(arena);
