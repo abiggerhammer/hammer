@@ -667,6 +667,8 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
         H_FOREACH(eg->smap, HCFChoice *lhs, HLRTransition *t)
           if(t->symbol != item->lhs)
             continue;
+          assert(lhs->type == HCF_CHOICE);  // XXX could be CHARSET
+
           for(HCFSequence **p=lhs->seq; *p; p++) {
             HCFChoice **rhs = (*p)->items;
             if(!match_production(eg, rhs, item->rhs, state))
@@ -986,21 +988,21 @@ HParserBackendVTable h__lalr_backend_vtable = {
 // dummy!
 int test_lalr(void)
 {
-  /* for k=2:
-
-     S -> A | B
-     A -> X Y a
-     B -> Y b
-     X -> x | ''
-     Y -> y         -- for k=3 use "yy"
+  /* 
+     S -> E
+     E -> E '-' T
+        | T
+     T -> '(' E ')'
+        | N
+     N -> '0'               -- also try [0-9] for the charset paths
   */
 
-  // XXX make LALR example
-  HParser *X = h_optional(h_in((uint8_t *)"rst", 3));
-  HParser *Y = h_sequence(h_ch('y'), h_ch('y'), NULL);
-  HParser *A = h_sequence(X, Y, h_ch('a'), NULL);
-  HParser *B = h_sequence(Y, h_ch('b'), NULL);
-  HParser *p = h_choice(A, B, NULL);
+  HParser *N = h_sequence(h_ch('n'), NULL);
+  HParser *E = h_indirect();
+  HParser *T = h_choice(h_sequence(h_ch('('), E, h_ch(')'), NULL), N, NULL);
+  HParser *E_ = h_choice(h_sequence(E, h_ch('-'), T, NULL), T, NULL);
+  h_bind_indirect(E, E_);
+  HParser *p = h_sequence(E, NULL);
 
   printf("\n==== G R A M M A R ====\n");
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
