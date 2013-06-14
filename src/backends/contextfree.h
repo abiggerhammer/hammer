@@ -11,6 +11,7 @@ struct HCFStack_ {
   int count;
   int cap;
   HCFChoice *last_completed; // Last completed choice.
+  HCFChoice *prealloc;       // If not NULL, will serve as outermost choice.
 };
 
 #ifndef UNUSED
@@ -25,11 +26,13 @@ static HCFStack* h_cfstack_new(HAllocator *mm__) {
   stack->count = 0;
   stack->cap = 4;
   stack->stack = h_new(HCFChoice*, stack->cap);
+  stack->prealloc = NULL;
   return stack;
 }
 
 static void h_cfstack_free(HAllocator *mm__, HCFStack *stk__) UNUSED; 
 static void h_cfstack_free(HAllocator *mm__, HCFStack *stk__) {
+  h_free(stk__->prealloc);
   h_free(stk__->stack);
   h_free(stk__);
 }
@@ -56,7 +59,9 @@ static inline void h_cfstack_add_to_seq(HAllocator *mm__, HCFStack *stk__, HCFCh
 }
 
 static inline HCFChoice* h_cfstack_new_choice_raw(HAllocator *mm__, HCFStack *stk__) {
-  HCFChoice *ret = h_new(HCFChoice, 1);
+  HCFChoice *ret = stk__->prealloc? stk__->prealloc : h_new(HCFChoice, 1);
+  stk__->prealloc = NULL;
+
   ret->reshape = NULL;
   ret->action = NULL;
   ret->pred = NULL;
