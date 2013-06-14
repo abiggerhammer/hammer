@@ -11,7 +11,8 @@ struct HCFStack_ {
   int count;
   int cap;
   HCFChoice *last_completed; // Last completed choice.
-  HCFChoice *prealloc;       // If not NULL, will serve as outermost choice.
+                             // XXX is last_completed still needed?
+  HCFChoice *prealloc; // If not NULL, will be used for the outermost choice.
 };
 
 #ifndef UNUSED
