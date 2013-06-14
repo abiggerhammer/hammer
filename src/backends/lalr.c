@@ -845,18 +845,22 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
     }
   }
 
-  h_delete_arena(tarena);
+
 
   // parsing was successful iff the start symbol is on top of the right stack
+  HParseResult *result = NULL;
   if(h_slist_pop(right) == table->start) {
     // next on the right stack is the start symbol's semantic value
-    HParsedToken *result = h_slist_pop(right);
-    assert(result != NULL);
-    return make_result(arena, result);
+    HParsedToken *tok = h_slist_pop(right);
+    assert(tok != NULL);
+    result = make_result(arena, tok);
   } else {
     h_delete_arena(arena);
-    return NULL;
+    result = NULL;
   }
+
+  h_delete_arena(tarena);
+  return result;
 }
 
 
@@ -922,7 +926,7 @@ void h_pprint_lrstate(FILE *f, const HCFGrammar *g,
   }
 }
 
-void pprint_transition(FILE *f, const HCFGrammar *g, const HLRTransition *t)
+static void pprint_transition(FILE *f, const HCFGrammar *g, const HLRTransition *t)
 {
   fputs("-", f);
   h_pprint_symbol(f, g, t->symbol);
@@ -1062,7 +1066,7 @@ int test_lalr(void)
   h_pprint_lrtable(stdout, g, (HLRTable *)p->backend_data, 0);
 
   printf("\n==== P A R S E  R E S U L T ====\n");
-  HParseResult *res = h_parse(p, (uint8_t *)"n-(n-((n)))-n", 11);
+  HParseResult *res = h_parse(p, (uint8_t *)"n-(n-((n)))-n", 13);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
