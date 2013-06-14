@@ -147,6 +147,8 @@ void* h_hashtable_get(const HHashTable* ht, const void* key) {
   for (hte = &ht->contents[hashval & (ht->capacity - 1)];
        hte != NULL;
        hte = hte->next) {
+    if (hte->key == NULL)
+      continue;
     if (hte->hashval != hashval)
       continue;
     if (ht->equalFunc(key, hte->key))
