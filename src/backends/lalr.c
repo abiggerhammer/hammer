@@ -56,6 +56,7 @@ typedef struct HLREnhGrammar_ {
   HCFGrammar *grammar;  // enhanced grammar
   HHashTable *tmap;     // maps transitions to enhanced-grammar symbols
   HHashTable *smap;     // maps enhanced-grammar symbols to transitions
+  HHashTable *corr;     // maps symbols to sets of corresponding e. symbols
   HArena *arena;
 } HLREnhGrammar;
 
@@ -441,6 +442,7 @@ HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa)
     // find reducible items in state
     H_FOREACH_KEY(dfa->states[i], HLRItem *item)
       if(item->mark == item->len) { // mark at the end
+        // check for conflicts
         // XXX store more informative stuff in the inadeq records?
         if(table->forall[i]) {
           // reduce/reduce conflict with a previous item
@@ -448,10 +450,10 @@ HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa)
         } else if(!h_hashtable_empty(table->rows[i])) {
           // shift/reduce conflict with one of the row's entries
           h_slist_push(table->inadeq, (void *)(uintptr_t)i);
-        } else {
-          // set reduce action for the entire row
-          table->forall[i] = reduce_action(arena, item);
         }
+
+        // set reduce action for the entire row
+        table->forall[i] = reduce_action(arena, item);
       }
     H_END_FOREACH
   }
@@ -478,39 +480,6 @@ static size_t follow_transition(const HLRTable *table, size_t x, HCFChoice *A)
   return action->nextstate;
 }
 
-static HCFChoice *transform_symbol(const HLRTable *table, HLREnhGrammar *eg,
-                                   size_t x, HCFChoice *B, size_t z);
-
-static HCFChoice *transform_productions(const HLRTable *table, HLREnhGrammar *eg,
-                                         size_t x, HCFChoice *xAy)
-{
-  HArena *arena = eg->arena;
-
-  HCFSequence **seq = h_arena_malloc(arena, seqsize(xAy->seq)
-                                            * sizeof(HCFSequence *));
-  HCFSequence **p, **q;
-  for(p=xAy->seq, q=seq; *p; p++, q++) {
-    // trace rhs starting in state x and following the transitions
-    // xAy -> xBz ...
-
-    HCFChoice **B = (*p)->items;
-    HCFChoice **xBz = h_arena_malloc(arena, seqsize(B) * sizeof(HCFChoice *));
-    for(; *B; B++, xBz++) {
-      size_t z = follow_transition(table, x, *B);
-      *xBz = transform_symbol(table, eg, x, *B, z);
-      x=z;
-    }
-    *xBz = NULL;
-
-    *q = h_arena_malloc(arena, sizeof(HCFSequence));
-    (*q)->items = xBz;
-  }
-  *q = NULL;
-  xAy->seq = seq;
-
-  return xAy;   // pass-through
-}
-
 static inline HLRTransition *transition(HArena *arena,
                                         size_t x, const HCFChoice *A, size_t y)
 {
@@ -521,51 +490,101 @@ static inline HLRTransition *transition(HArena *arena,
   return t;
 }
 
-static HCFChoice *transform_symbol(const HLRTable *table, HLREnhGrammar *eg,
-                                   size_t x, HCFChoice *B, size_t z)
+// no-op on terminal symbols
+static void transform_productions(const HLRTable *table, HLREnhGrammar *eg,
+                                  size_t x, HCFChoice *xAy)
 {
+  if(xAy->type != HCF_CHOICE)
+    return;
+  // XXX CHARSET?
+
   HArena *arena = eg->arena;
 
-  // look up the transition in map, create symbol if not found
-  HLRTransition *x_B_z = transition(arena, x, B, z);
-  HCFChoice *xBz = h_hashtable_get(eg->tmap, x_B_z);
-  if(!xBz) {
-    HCFChoice *xBz = h_arena_malloc(arena, sizeof(HCFChoice));
-    *xBz = *B;
-    h_hashtable_put(eg->tmap, x_B_z, xBz);
-    h_hashtable_put(eg->smap, xBz, x_B_z);
-  }
+  HCFSequence **seq = h_arena_malloc(arena, seqsize(xAy->seq)
+                                            * sizeof(HCFSequence *));
+  HCFSequence **p, **q;
+  for(p=xAy->seq, q=seq; *p; p++, q++) {
+    // trace rhs starting in state x and following the transitions
+    // xAy -> ... iBj ...
 
-  return transform_productions(table, eg, x, xBz);
+    size_t i = x;
+    HCFChoice **B = (*p)->items;
+    HCFChoice **items = h_arena_malloc(arena, seqsize(B) * sizeof(HCFChoice *));
+    HCFChoice **iBj = items;
+    for(; *B; B++, iBj++) {
+      size_t j = follow_transition(table, i, *B);
+      HLRTransition *i_B_j = transition(arena, i, *B, j);
+      *iBj = h_hashtable_get(eg->tmap, i_B_j);
+      assert(*iBj != NULL);
+      i = j;
+    }
+    *iBj = NULL;
+
+    *q = h_arena_malloc(arena, sizeof(HCFSequence));
+    (*q)->items = items;
+  }
+  *q = NULL;
+  xAy->seq = seq;
 }
 
 static bool eq_transition(const void *p, const void *q)
 {
   const HLRTransition *a=p, *b=q;
-  return (a->from == b->from && a->to == b->to && a->symbol == b->symbol);
+  return (a->from == b->from && a->to == b->to && eq_symbol(a->symbol, b->symbol));
 }
 
 static HHashValue hash_transition(const void *p)
 {
   const HLRTransition *t = p;
-  return (h_hash_ptr(t->symbol) + t->from + t->to); // XXX ?
+  return (hash_symbol(t->symbol) + t->from + t->to); // XXX ?
 }
 
-static HLREnhGrammar *enhance_grammar(const HCFGrammar *g, const HLRTable *tbl)
+HCFChoice *new_enhanced_symbol(HLREnhGrammar *eg, const HCFChoice *sym)
+{
+  HArena *arena = eg->arena;
+  HCFChoice *esym = h_arena_malloc(arena, sizeof(HCFChoice));
+  *esym = *sym;
+
+  HHashSet *cs = h_hashtable_get(eg->corr, sym);
+  if(!cs) {
+    cs = h_hashset_new(arena, eq_symbol, hash_symbol);
+    h_hashtable_put(eg->corr, sym, cs);
+  }
+  h_hashset_put(cs, esym);
+
+  return esym;
+}
+static HLREnhGrammar *enhance_grammar(const HCFGrammar *g, const HLRDFA *dfa,
+                                      const HLRTable *table)
 {
   HAllocator *mm__ = g->mm__;
   HArena *arena = g->arena; // XXX ?
 
   HLREnhGrammar *eg = h_arena_malloc(arena, sizeof(HLREnhGrammar));
   eg->tmap = h_hashtable_new(arena, eq_transition, hash_transition);
-  eg->smap = h_hashtable_new(arena, eq_transition, hash_transition);
+  eg->smap = h_hashtable_new(arena, eq_symbol, hash_symbol);
+  eg->corr = h_hashtable_new(arena, eq_symbol, hash_symbol);
   eg->arena = arena;
 
-  // copy the start symbol over
-  HCFChoice *start = h_arena_malloc(arena, sizeof(HCFChoice));
-  *start = *(g->start);
+  // establish mapping between transitions and symbols
+  for(HSlistNode *x=dfa->transitions->head; x; x=x->next) {
+    HLRTransition *t = x->elem;
 
-  transform_productions(tbl, eg, 0, start);
+    assert(!h_hashtable_present(eg->tmap, t));
+
+    HCFChoice *sym = new_enhanced_symbol(eg, t->symbol);
+    h_hashtable_put(eg->tmap, t, sym);
+    h_hashtable_put(eg->smap, sym, t);
+  }
+
+  // transform the productions
+  H_FOREACH(eg->tmap, HLRTransition *t, HCFChoice *sym)
+    transform_productions(table, eg, t->from, sym);
+  H_END_FOREACH
+
+  // add the start symbol
+  HCFChoice *start = new_enhanced_symbol(eg, g->start);
+  transform_productions(table, eg, 0, start);
 
   eg->grammar = h_cfgrammar_(mm__, start);
   return eg;
@@ -638,7 +657,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
   if(has_conflicts(table)) {
     HArena *arena = table->arena;
 
-    HLREnhGrammar *eg = enhance_grammar(g, table);
+    HLREnhGrammar *eg = enhance_grammar(g, dfa, table);
     if(eg == NULL) {    // this should normally not happen
       h_cfgrammar_free(g);
       h_lrtable_free(table);
@@ -664,10 +683,10 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
         HLRAction *action = reduce_action(arena, item);
 
         // find all LR(0)-enhanced productions matching item
-        H_FOREACH(eg->smap, HCFChoice *lhs, HLRTransition *t)
-          if(t->symbol != item->lhs)
-            continue;
-          assert(lhs->type == HCF_CHOICE);  // XXX could be CHARSET
+        HHashSet *lhss = h_hashtable_get(eg->corr, item->lhs);
+        assert(lhss != NULL);
+        H_FOREACH_KEY(lhss, HCFChoice *lhs)
+          assert(lhs->type == HCF_CHOICE);  // XXX could be CHARSET?
 
           for(HCFSequence **p=lhs->seq; *p; p++) {
             HCFChoice **rhs = (*p)->items;
@@ -952,26 +971,35 @@ void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
   for(size_t i=0; i<table->nrows; i++) {
     for(unsigned int j=0; j<indent; j++) fputc(' ', f);
     fprintf(f, "%4lu:", i);
-    if(table->forall[i] && h_hashtable_empty(table->rows[i])) {
+    if(table->forall[i]) {
       fputs(" - ", f);
       pprint_lraction(f, g, table->forall[i]);
       fputs(" -", f);
-    } else {
-      H_FOREACH(table->rows[i], HCFChoice *symbol, HLRAction *action)
-        fputc(' ', f);    // separator
-        h_pprint_symbol(f, g, symbol);
-        fputc(':', f);
-        if(table->forall[i]) {
-          fputc(action->type == HLR_SHIFT? 's' : 'r', f);
-          fputc('/', f);
-          fputc(table->forall[i]->type == HLR_SHIFT? 's' : 'r', f);
-        } else {
-          pprint_lraction(f, g, action);
-        }
-      H_END_FOREACH
+      if(!h_hashtable_empty(table->rows[i]))
+        fputs(" !!", f);
     }
+    H_FOREACH(table->rows[i], HCFChoice *symbol, HLRAction *action)
+      fputc(' ', f);    // separator
+      h_pprint_symbol(f, g, symbol);
+      fputc(':', f);
+      if(table->forall[i]) {
+        fputc(action->type == HLR_SHIFT? 's' : 'r', f);
+        fputc('/', f);
+        fputc(table->forall[i]->type == HLR_SHIFT? 's' : 'r', f);
+      } else {
+        pprint_lraction(f, g, action);
+      }
+    H_END_FOREACH
     fputc('\n', f);
   }
+
+#if 0
+  fputs("inadeq=", f);
+  for(HSlistNode *x=table->inadeq->head; x; x=x->next) {
+    fprintf(f, "%lu ", (uintptr_t)x->elem);
+  }
+  fputc('\n', f);
+#endif
 }
 
 
@@ -993,13 +1021,12 @@ int test_lalr(void)
      E -> E '-' T
         | T
      T -> '(' E ')'
-        | N
-     N -> '0'               -- also try [0-9] for the charset paths
+        | 'n'               -- also try [0-9] for the charset paths
   */
 
-  HParser *N = h_sequence(h_ch('n'), NULL);
+  HParser *n = h_ch('n');
   HParser *E = h_indirect();
-  HParser *T = h_choice(h_sequence(h_ch('('), E, h_ch(')'), NULL), N, NULL);
+  HParser *T = h_choice(h_sequence(h_ch('('), E, h_ch(')'), NULL), n, NULL);
   HParser *E_ = h_choice(h_sequence(E, h_ch('-'), T, NULL), T, NULL);
   h_bind_indirect(E, E_);
   HParser *p = h_sequence(E, NULL);
@@ -1035,7 +1062,7 @@ int test_lalr(void)
   h_pprint_lrtable(stdout, g, (HLRTable *)p->backend_data, 0);
 
   printf("\n==== P A R S E  R E S U L T ====\n");
-  HParseResult *res = h_parse(p, (uint8_t *)"syya", 4);
+  HParseResult *res = h_parse(p, (uint8_t *)"n-(n-((n)))-n", 11);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
