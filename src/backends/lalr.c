@@ -61,6 +61,27 @@ typedef struct HLREnhGrammar_ {
 } HLREnhGrammar;
 
 
+// XXX move to internal.h or something
+// XXX replace other hashtable iterations with this
+#define H_FOREACH_(HT) {                                                    \
+    const HHashTable *ht__ = HT;                                            \
+    for(size_t i__=0; i__ < ht__->capacity; i__++) {                        \
+      for(HHashTableEntry *hte__ = &ht__->contents[i__];                    \
+          hte__;                                                            \
+          hte__ = hte__->next) {                                            \
+        if(hte__->key == NULL) continue;
+
+#define H_FOREACH_KEY(HT, KEYVAR) H_FOREACH_(HT)                            \
+        const KEYVAR = hte__->key;
+
+#define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_KEY(HT, KEYVAR)             \
+        VALVAR = hte__->value;
+
+#define H_END_FOREACH                                                       \
+      }                                                                     \
+    }                                                                       \
+  }
+
 // compare symbols - terminals by value, others by pointer
 static bool eq_symbol(const void *p, const void *q)
 {
@@ -117,15 +138,9 @@ static HHashValue hash_lalr_itemset(const void *p)
 {
   HHashValue hash = 0;
 
-  const HHashTable *ht = p;
-  for(size_t i=0; i < ht->capacity; i++) {
-    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
-      if(hte->key == NULL)
-        continue;
-
-      hash += hash_lalr_item(hte->key);
-    }
-  }
+  H_FOREACH_KEY((const HHashSet *)p, HLRItem *item)
+    hash += hash_lalr_item(item);
+  H_END_FOREACH
 
   return hash;
 }
@@ -179,27 +194,6 @@ void h_lrtable_free(HLRTable *table)
   h_free(table);
 }
 
-// XXX replace other hashtable iterations with this
-// XXX move to internal.h or something
-#define H_FOREACH_(HT) {                                                    \
-    const HHashTable *ht__ = HT;                                            \
-    for(size_t i__=0; i__ < ht__->capacity; i__++) {                        \
-      for(HHashTableEntry *hte__ = &ht__->contents[i__];                    \
-          hte__;                                                            \
-          hte__ = hte__->next) {                                            \
-        if(hte__->key == NULL) continue;
-
-#define H_FOREACH_KEY(HT, KEYVAR) H_FOREACH_(HT)                            \
-        const KEYVAR = hte__->key;
-
-#define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_KEY(HT, KEYVAR)             \
-        VALVAR = hte__->value;
-
-#define H_END_FOREACH                                                       \
-      }                                                                     \
-    }                                                                       \
-  }
-
 
 
 /* Constructing the characteristic automaton (handle recognizer) */
@@ -220,18 +214,11 @@ static HHashSet *closure(HCFGrammar *g, const HHashSet *items)
   HHashSet *ret = h_lrstate_new(arena);
   HSlist *work = h_slist_new(arena);
 
-  // iterate over items - initialize work list with them
-  const HHashTable *ht = items;
-  for(size_t i=0; i < ht->capacity; i++) {
-    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
-      if(hte->key == NULL)
-        continue;
-  
-      const HLRItem *item = hte->key;
+  // initialize work list with items
+  H_FOREACH_KEY(items, HLRItem *item)
       h_hashset_put(ret, item);
       h_slist_push(work, (void *)item);
-    }
-  }
+  H_END_FOREACH
 
   while(!h_slist_empty(work)) {
     const HLRItem *item = h_slist_pop(work);
@@ -322,75 +309,52 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
     HHashTable *neighbors = h_hashtable_new(arena, eq_symbol, hash_symbol);
 
     // iterate over closure and generate neighboring sets
-    const HHashTable *ht = closure(g, state);
-    for(size_t i=0; i < ht->capacity; i++) {
-      for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
-        if(hte->key == NULL)
-          continue;
+    H_FOREACH_KEY(closure(g, state), HLRItem *item)
+      HCFChoice *sym = item->rhs[item->mark]; // symbol after mark
 
-        const HLRItem *item = hte->key;
-        HCFChoice *sym = item->rhs[item->mark]; // symbol after mark
-
-        if(sym != NULL) { // mark was not at the end
-          // find or create prospective neighbor set
-          HLRState *neighbor = h_hashtable_get(neighbors, sym);
-          if(neighbor == NULL) {
-            neighbor = h_lrstate_new(arena);
-            h_hashtable_put(neighbors, sym, neighbor);
-          }
-
-          // ...and add the advanced item to it
-          h_hashset_put(neighbor, advance_mark(arena, item));
+      if(sym != NULL) { // mark was not at the end
+        // find or create prospective neighbor set
+        HLRState *neighbor = h_hashtable_get(neighbors, sym);
+        if(neighbor == NULL) {
+          neighbor = h_lrstate_new(arena);
+          h_hashtable_put(neighbors, sym, neighbor);
         }
+
+        // ...and add the advanced item to it
+        h_hashset_put(neighbor, advance_mark(arena, item));
       }
-    }
+    H_END_FOREACH
 
     // merge neighbor sets into the set of existing states
-    ht = neighbors;
-    for(size_t i=0; i < ht->capacity; i++) {
-      for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
-        if(hte->key == NULL)
-          continue;
-
-        const HCFChoice *symbol = hte->key;
-        HLRState *neighbor = hte->value;
-
-        // look up existing state, allocate new if not found
-        size_t neighbor_idx;
-        if(!h_hashset_present(states, neighbor)) {
-          neighbor_idx = states->used;
-          h_hashtable_put(states, neighbor, (void *)(uintptr_t)neighbor_idx);
-          h_slist_push(work, neighbor);
-          h_slist_push(work, (void *)(uintptr_t)neighbor_idx);
-        } else {
-          neighbor_idx = (uintptr_t)h_hashtable_get(states, neighbor);
-        }
-
-        // add transition "state --symbol--> neighbor"
-        HLRTransition *t = h_arena_malloc(arena, sizeof(HLRTransition));
-        t->from = state_idx;
-        t->to = neighbor_idx;
-        t->symbol = symbol;
-        h_slist_push(transitions, t);
+    H_FOREACH(neighbors, HCFChoice *symbol, HLRState *neighbor)
+      // look up existing state, allocate new if not found
+      size_t neighbor_idx;
+      if(!h_hashset_present(states, neighbor)) {
+        neighbor_idx = states->used;
+        h_hashtable_put(states, neighbor, (void *)(uintptr_t)neighbor_idx);
+        h_slist_push(work, neighbor);
+        h_slist_push(work, (void *)(uintptr_t)neighbor_idx);
+      } else {
+        neighbor_idx = (uintptr_t)h_hashtable_get(states, neighbor);
       }
-    }
+
+      // add transition "state --symbol--> neighbor"
+      HLRTransition *t = h_arena_malloc(arena, sizeof(HLRTransition));
+      t->from = state_idx;
+      t->to = neighbor_idx;
+      t->symbol = symbol;
+      h_slist_push(transitions, t);
+    H_END_FOREACH
   } // end while(work)
 
   // fill DFA struct
   HLRDFA *dfa = h_arena_malloc(arena, sizeof(HLRDFA));
   dfa->nstates = states->used;
   dfa->states = h_arena_malloc(arena, dfa->nstates*sizeof(HLRState *));
-  for(size_t i=0; i < states->capacity; i++) {
-    for(HHashTableEntry *hte = &states->contents[i]; hte; hte = hte->next) {
-      if(hte->key == NULL)
-        continue;
-
-      const HLRState *state = hte->key;
-      size_t idx = (uintptr_t)hte->value;
-
-      dfa->states[idx] = state;
-    }
-  }
+  H_FOREACH(states, HLRState *state, void *v)
+    size_t idx = (uintptr_t)v;
+    dfa->states[idx] = state;
+  H_END_FOREACH
   dfa->transitions = transitions;
 
   return dfa;
@@ -911,21 +875,13 @@ void h_pprint_lrstate(FILE *f, const HCFGrammar *g,
                       const HLRState *state, unsigned int indent)
 {
   bool first = true;
-  const HHashTable *ht = state;
-  for(size_t i=0; i < ht->capacity; i++) {
-    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
-      if(hte->key == NULL)
-        continue;
-  
-      const HLRItem *item = hte->key;
-
-      if(!first)
-        for(unsigned int i=0; i<indent; i++) fputc(' ', f);
-      first = false;
-      h_pprint_lritem(f, g, item);
-      fputc('\n', f);
-    }
-  }
+  H_FOREACH_KEY(state, HLRItem *item)
+    if(!first)
+      for(unsigned int i=0; i<indent; i++) fputc(' ', f);
+    first = false;
+    h_pprint_lritem(f, g, item);
+    fputc('\n', f);
+  H_END_FOREACH
 }
 
 static void pprint_transition(FILE *f, const HCFGrammar *g, const HLRTransition *t)
