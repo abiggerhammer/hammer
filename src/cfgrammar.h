@@ -49,6 +49,7 @@ void h_stringmap_replace(HStringMap *m, void *old, void *new);
 void *h_stringmap_get(const HStringMap *m, const uint8_t *str, size_t n, bool end);
 bool h_stringmap_present(const HStringMap *m, const uint8_t *str, size_t n, bool end);
 bool h_stringmap_present_epsilon(const HStringMap *m);
+bool h_stringmap_empty(const HStringMap *m);
 
 static inline HStringMap *h_stringmap_get_char(const HStringMap *m, const uint8_t c)
  { return h_hashtable_get(m->char_branches, (void *)char_key(c)); }

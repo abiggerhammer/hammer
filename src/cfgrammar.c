@@ -331,6 +331,12 @@ bool h_stringmap_present_epsilon(const HStringMap *m)
   return (m->epsilon_branch != NULL);
 }
 
+bool h_stringmap_empty(const HStringMap *m)
+{
+  return (m->epsilon_branch == NULL
+          && m->end_branch == NULL
+          && h_hashtable_empty(m->char_branches));
+}
 
 const HStringMap *h_first(size_t k, HCFGrammar *g, const HCFChoice *x)
 {

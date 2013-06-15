@@ -207,16 +207,14 @@ static HLRItem *advance_mark(HArena *arena, const HLRItem *item)
   return ret;
 }
 
-static HHashSet *closure(HCFGrammar *g, const HHashSet *items)
+static void expand_to_closure(HCFGrammar *g, HHashSet *items)
 {
   HAllocator *mm__ = g->mm__;
   HArena *arena = g->arena;
-  HHashSet *ret = h_lrstate_new(arena);
   HSlist *work = h_slist_new(arena);
 
   // initialize work list with items
   H_FOREACH_KEY(items, HLRItem *item)
-      h_hashset_put(ret, item);
       h_slist_push(work, (void *)item);
   H_END_FOREACH
 
@@ -231,22 +229,22 @@ static HHashSet *closure(HCFGrammar *g, const HHashSet *items)
       if(sym->type == HCF_CHOICE) {
         for(HCFSequence **p=sym->seq; *p; p++) {
           HLRItem *it = h_lritem_new(arena, sym, (*p)->items, 0);
-          if(!h_hashset_present(ret, it)) {
-            h_hashset_put(ret, it);
+          if(!h_hashset_present(items, it)) {
+            h_hashset_put(items, it);
             h_slist_push(work, it);
           }
         }
       } else {  // HCF_CHARSET
         for(unsigned int i=0; i<256; i++) {
           if(charset_isset(sym->charset, i)) {
-            // XXX allocatethese single-character symbols statically somewhere
+            // XXX allocate these single-character symbols statically somewhere
             HCFChoice **rhs = h_new(HCFChoice *, 2);
             rhs[0] = h_new(HCFChoice, 1);
             rhs[0]->type = HCF_CHAR;
             rhs[0]->chr = i;
             rhs[1] = NULL;
             HLRItem *it = h_lritem_new(arena, sym, rhs, 0);
-            h_hashset_put(ret, it);
+            h_hashset_put(items, it);
             // single-character item needs no further work
           }
         }
@@ -254,17 +252,8 @@ static HHashSet *closure(HCFGrammar *g, const HHashSet *items)
         // this seems as good a place as any to set it
         sym->reshape = h_act_first;
       }
-
-      // if sym derives epsilon, also advance over it
-      if(h_derives_epsilon(g, sym)) {
-        HLRItem *it = advance_mark(arena, item);
-        h_hashset_put(ret, it);
-        h_slist_push(work, it);
-      }
     }
   }
-
-  return ret;
 }
 
 HLRDFA *h_lr0_dfa(HCFGrammar *g)
@@ -287,15 +276,16 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
   assert(g->start->type == HCF_CHOICE);
   for(HCFSequence **p=g->start->seq; *p; p++)
     h_hashset_put(start, h_lritem_new(arena, g->start, (*p)->items, 0));
+  expand_to_closure(g, start);
   h_hashtable_put(states, start, 0);
   h_slist_push(work, start);
   h_slist_push(work, 0);
   
   // while work to do (on some state)
-  //   compute closure
   //   determine edge symbols
   //   for each edge symbol:
   //     advance respective items -> destination state (kernel)
+  //     compute closure
   //     if destination is a new state:
   //       add it to state set
   //       add transition to it
@@ -308,8 +298,8 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
     // maps edge symbols to neighbor states (item sets) of s
     HHashTable *neighbors = h_hashtable_new(arena, eq_symbol, hash_symbol);
 
-    // iterate over closure and generate neighboring sets
-    H_FOREACH_KEY(closure(g, state), HLRItem *item)
+    // iterate over state (closure) and generate neighboring sets
+    H_FOREACH_KEY(state, HLRItem *item)
       HCFChoice *sym = item->rhs[item->mark]; // symbol after mark
 
       if(sym != NULL) { // mark was not at the end
@@ -325,8 +315,10 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
       }
     H_END_FOREACH
 
-    // merge neighbor sets into the set of existing states
+    // merge expanded neighbor sets into the set of existing states
     H_FOREACH(neighbors, HCFChoice *symbol, HLRState *neighbor)
+      expand_to_closure(g, neighbor);
+
       // look up existing state, allocate new if not found
       size_t neighbor_idx;
       if(!h_hashset_present(states, neighbor)) {
@@ -528,8 +520,9 @@ static HLREnhGrammar *enhance_grammar(const HCFGrammar *g, const HLRDFA *dfa,
 
   HLREnhGrammar *eg = h_arena_malloc(arena, sizeof(HLREnhGrammar));
   eg->tmap = h_hashtable_new(arena, eq_transition, hash_transition);
-  eg->smap = h_hashtable_new(arena, eq_symbol, hash_symbol);
+  eg->smap = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
   eg->corr = h_hashtable_new(arena, eq_symbol, hash_symbol);
+  // XXX must use h_eq/hash_ptr for symbols! so enhanced CHARs are different
   eg->arena = arena;
 
   // establish mapping between transitions and symbols
@@ -663,6 +656,8 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
             // contribution to the lookahead
             const HStringMap *fs = h_follow(1, eg->grammar, lhs);
             assert(fs != NULL);
+            assert(fs->epsilon_branch == NULL);
+            assert(!h_stringmap_empty(fs));
 
             // for each lookahead symbol, put action into table cell
             if(fs->end_branch) {
@@ -734,6 +729,7 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
   while(1) {
     // make sure there is input on the right stack
     if(h_slist_empty(right)) {
+      // XXX use statically-allocated terminal symbols
       HCFChoice *x = h_arena_malloc(tarena, sizeof(HCFChoice));
       HParsedToken *v;
 
@@ -841,7 +837,7 @@ void h_pprint_lritem(FILE *f, const HCFGrammar *g, const HLRItem *item)
   HCFChoice **x = item->rhs;
   HCFChoice **mark = item->rhs + item->mark;
   if(*x == NULL) {
-    fputs("\"\"", f);
+    fputc('.', f);
   } else {
     while(*x) {
       if(x == mark)
@@ -986,12 +982,14 @@ int test_lalr(void)
         | 'n'               -- also try [0-9] for the charset paths
   */
 
+#if 0
   HParser *n = h_ch('n');
   HParser *E = h_indirect();
   HParser *T = h_choice(h_sequence(h_ch('('), E, h_ch(')'), NULL), n, NULL);
   HParser *E_ = h_choice(h_sequence(E, h_ch('-'), T, NULL), T, NULL);
   h_bind_indirect(E, E_);
-  HParser *p = h_sequence(E, NULL);
+#endif
+  HParser *p = h_choice(h_many(h_ch('x')), h_ch('n'), NULL); //h_sequence(E, NULL);
 
   printf("\n==== G R A M M A R ====\n");
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
@@ -1024,7 +1022,7 @@ int test_lalr(void)
   h_pprint_lrtable(stdout, g, (HLRTable *)p->backend_data, 0);
 
   printf("\n==== P A R S E  R E S U L T ====\n");
-  HParseResult *res = h_parse(p, (uint8_t *)"n-(n-((n)))-n", 13);
+  HParseResult *res = h_parse(p, (uint8_t *)"xxn-(n-((n)))-n", 13);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
