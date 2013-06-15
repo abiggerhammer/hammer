@@ -579,15 +579,16 @@ int h_lrtable_put(HLRTable *tbl, size_t state, HCFChoice *x, HLRAction *action)
 bool match_production(HLREnhGrammar *eg, HCFChoice **p,
                       HCFChoice **rhs, size_t endstate)
 {
-  HLRTransition *t;
+  size_t state = endstate;  // initialized to end in case of empty rhs
   for(; *p && *rhs; p++, rhs++) {
-    t = h_hashtable_get(eg->smap, *p);
+    HLRTransition *t = h_hashtable_get(eg->smap, *p);
     assert(t != NULL);
     if(!eq_symbol(t->symbol, *rhs))
       return false;
+    state = t->to;
   }
   return (*p == *rhs    // both NULL
-          && t->to == endstate);
+          && state == endstate);
 }
 
 int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
@@ -1022,7 +1023,7 @@ int test_lalr(void)
   h_pprint_lrtable(stdout, g, (HLRTable *)p->backend_data, 0);
 
   printf("\n==== P A R S E  R E S U L T ====\n");
-  HParseResult *res = h_parse(p, (uint8_t *)"xxn-(n-((n)))-n", 13);
+  HParseResult *res = h_parse(p, (uint8_t *)"xxn-(n-((n)))-n", 2);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
