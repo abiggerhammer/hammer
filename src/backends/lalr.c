@@ -108,12 +108,12 @@ static bool eq_lalr_item(const void *p, const void *q)
 {
   const HLRItem *a=p, *b=q;
 
-  if(a->lhs != b->lhs) return false;
+  if(!eq_symbol(a->lhs, b->lhs)) return false;
   if(a->mark != b->mark) return false;
   if(a->len != b->len) return false;
 
   for(size_t i=0; i<a->len; i++)
-    if(a->rhs[i] != b->rhs[i]) return false;
+    if(!eq_symbol(a->rhs[i], b->rhs[i])) return false;
 
   return true;
 }
@@ -128,9 +128,14 @@ static inline bool eq_lalr_itemset(const void *p, const void *q)
 static inline HHashValue hash_lalr_item(const void *p)
 {
   const HLRItem *x = p;
-  return (h_hash_ptr(x->lhs)
-          + h_djbhash((uint8_t *)x->rhs, x->len*sizeof(HCFChoice *))
-          + x->mark);   // XXX is it okay to just add mark?
+  HHashValue hash = 0;
+
+  hash += hash_symbol(x->lhs);
+  for(HCFChoice **p=x->rhs; *p; p++)
+    hash += hash_symbol(*p);
+  hash += x->mark;
+
+  return hash;
 }
 
 // hash LALR item sets (DFA states) - hash the elements and sum
@@ -215,7 +220,7 @@ static void expand_to_closure(HCFGrammar *g, HHashSet *items)
 
   // initialize work list with items
   H_FOREACH_KEY(items, HLRItem *item)
-      h_slist_push(work, (void *)item);
+    h_slist_push(work, (void *)item);
   H_END_FOREACH
 
   while(!h_slist_empty(work)) {
@@ -990,7 +995,7 @@ int test_lalr(void)
   HParser *E_ = h_choice(h_sequence(E, h_ch('-'), T, NULL), T, NULL);
   h_bind_indirect(E, E_);
 #endif
-  HParser *p = h_choice(h_many(h_ch('x')), h_ch('n'), NULL); //h_sequence(E, NULL);
+  HParser *p = h_whitespace(h_ch('n')); //h_sequence(E, NULL);
 
   printf("\n==== G R A M M A R ====\n");
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
@@ -1023,7 +1028,7 @@ int test_lalr(void)
   h_pprint_lrtable(stdout, g, (HLRTable *)p->backend_data, 0);
 
   printf("\n==== P A R S E  R E S U L T ====\n");
-  HParseResult *res = h_parse(p, (uint8_t *)"xxn-(n-((n)))-n", 2);
+  HParseResult *res = h_parse(p, (uint8_t *)"  n-(n-((n)))-n", 13);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
