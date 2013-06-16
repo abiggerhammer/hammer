@@ -8,7 +8,7 @@ static const size_t DEFAULT_KMAX = 1;
 
 /* Generating the LL(k) parse table */
 
-/* Maps each nonterminal (HCFChoice) of the grammar to a HCFStringMap that
+/* Maps each nonterminal (HCFChoice) of the grammar to a HStringMap that
  * maps lookahead strings to productions (HCFSequence).
  */
 typedef struct HLLkTable_ {
@@ -23,13 +23,13 @@ typedef struct HLLkTable_ {
 const HCFSequence *h_llk_lookup(const HLLkTable *table, const HCFChoice *x,
                                 HInputStream lookahead)
 {
-  const HCFStringMap *row = h_hashtable_get(table->rows, x);
+  const HStringMap *row = h_hashtable_get(table->rows, x);
   assert(row != NULL);  // the table should have one row for each nonterminal
 
   assert(!row->epsilon_branch); // would match without looking at the input
                                 // XXX cases where this could be useful?
 
-  const HCFStringMap *m = row;
+  const HStringMap *m = row;
   while(m) {
     if(m->epsilon_branch) {     // input matched
       // assert: another lookahead would not bring a more specific match.
@@ -103,7 +103,7 @@ static void *combine_entries(HHashSet *workset, void *dst, const void *src)
 // add the mappings of src to dst, marking conflicts and adding the conflicting
 // values to workset.
 // note: reuses parts of src to build dst!
-static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *src)
+static void stringmap_merge(HHashSet *workset, HStringMap *dst, HStringMap *src)
 {
   if(src->epsilon_branch) {
     if(dst->epsilon_branch)
@@ -135,10 +135,10 @@ static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *
         continue;
 
       HCharKey c = (HCharKey)hte->key;
-      HCFStringMap *src_ = hte->value;
+      HStringMap *src_ = hte->value;
 
       if(src_) {
-        HCFStringMap *dst_ = h_hashtable_get(dst->char_branches, (void *)c);
+        HStringMap *dst_ = h_hashtable_get(dst->char_branches, (void *)c);
         if(dst_)
           stringmap_merge(workset, dst_, src_);
         else
@@ -149,7 +149,7 @@ static void stringmap_merge(HHashSet *workset, HCFStringMap *dst, HCFStringMap *
 }
 
 /* Generate entries for the productions of A in the given table row. */
-static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
+static int fill_table_row(size_t kmax, HCFGrammar *g, HStringMap *row,
                           const HCFChoice *A)
 {
   HHashSet *workset;
@@ -177,7 +177,7 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HCFStringMap *row,
         assert(rhs != CONFLICT);  // just to be sure there's no mixup
 
         // calculate predict set; let values map to rhs
-        HCFStringMap *pred = h_predict(k, g, A, rhs);
+        HStringMap *pred = h_predict(k, g, A, rhs);
         h_stringmap_replace(pred, NULL, rhs);
 
         // merge predict set into the row
@@ -220,7 +220,7 @@ static int fill_table(size_t kmax, HCFGrammar *g, HLLkTable *table)
       assert(a->type == HCF_CHOICE);
 
       // create table row for this nonterminal
-      HCFStringMap *row = h_stringmap_new(table->arena);
+      HStringMap *row = h_stringmap_new(table->arena);
       h_hashtable_put(table->rows, a, row);
 
       if(fill_table_row(kmax, g, row, a) < 0) {
@@ -339,10 +339,12 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
     // the top of stack is such that there will be a result...
     HParsedToken *tok;  // will hold result token
+    tok = h_arena_malloc(arena, sizeof(HParsedToken));
+    tok->index = stream->index;
+    tok->bit_offset = stream->bit_offset;
     if(x == mark) {
       // hit stack frame boundary...
       // wrap the accumulated parse result, this sequence is finished
-      tok = h_arena_malloc(arena, sizeof(HParsedToken));
       tok->token_type = TT_SEQUENCE;
       tok->seq = seq;
 
@@ -361,13 +363,13 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       case HCF_END:
         if(!stream->overrun)
           goto no_parse;
+        h_arena_free(arena, tok);
         tok = NULL;
         break;
 
       case HCF_CHAR:
         if(input != x->chr)
           goto no_parse;
-        tok = h_arena_malloc(arena, sizeof(HParsedToken));
         tok->token_type = TT_UINT;
         tok->uint = x->chr;
         break;
@@ -377,7 +379,6 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
           goto no_parse;
         if(!charset_isset(x->charset, input))
           goto no_parse;
-        tok = h_arena_malloc(arena, sizeof(HParsedToken));
         tok->token_type = TT_UINT;
         tok->uint = input;
         break;
@@ -389,8 +390,6 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
     }
 
     // 'tok' has been parsed; process it
-
-    // XXX set tok->index and tok->bit_offset (don't take directly from stream, cuz peek!)
 
     // perform token reshape if indicated
     if(x->reshape)

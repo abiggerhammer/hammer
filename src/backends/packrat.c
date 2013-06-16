@@ -3,14 +3,6 @@
 #include "../internal.h"
 #include "../parsers/parser_internal.h"
 
-static uint32_t djbhash(const uint8_t *buf, size_t len) {
-  uint32_t hash = 5381;
-  while (len--) {
-    hash = hash * 33 + *buf++;
-  }
-  return hash;
-}
-
 // short-hand for constructing HCachedResult's
 static HCachedResult *cached_result(const HParseState *state, HParseResult *result) {
   HCachedResult *ret = a_new(HCachedResult, 1);
@@ -214,7 +206,7 @@ void h_packrat_free(HParser *parser) {
 }
 
 static uint32_t cache_key_hash(const void* key) {
-  return djbhash(key, sizeof(HParserCacheKey));
+  return h_djbhash(key, sizeof(HParserCacheKey));
 }
 static bool cache_key_equal(const void* key1, const void* key2) {
   return memcmp(key1, key2, sizeof(HParserCacheKey)) == 0;

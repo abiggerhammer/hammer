@@ -28,6 +28,7 @@ PARSERS := \
 BACKENDS := \
 	packrat \
 	llk \
+	lalr \
 	regex
 
 HAMMER_PARTS := \
