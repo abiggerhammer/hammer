@@ -10,7 +10,7 @@ static bool indirect_isValidCF(void *env) {
 }
 
 static void desugar_indirect(HAllocator *mm__, HCFStack *stk__, void *env) {
-  HCFS_DESUGAR( (HParser*)env );
+  HCFS_DESUGAR( (HParser *)env );
 }
 
 static const HParserVtable indirect_vt = {
