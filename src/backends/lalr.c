@@ -798,7 +798,7 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
       value->seq = h_carray_new_sized(arena, len);
       
       // pull values off the left stack, rewinding state accordingly
-      HParsedToken *v;
+      HParsedToken *v = NULL;
       for(size_t i=0; i<len; i++) {
         v = h_slist_pop(left);
         state = (uintptr_t)h_slist_pop(left);
