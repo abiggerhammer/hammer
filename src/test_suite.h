@@ -153,7 +153,7 @@
   } while(0)
 
 #define g_check_stringmap_absent(table, key) do {			\
-    bool end = (key[strlen(key)-2] == '$');				\
+    bool end = (key[strlen(key)-1] == '$');				\
     if(h_stringmap_present(table, (uint8_t *)key, strlen(key), end)) {	\
       g_test_message("Check failed: \"%s\" shouldn't have been in map, but was", key); \
       g_test_fail();							\

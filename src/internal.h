@@ -219,6 +219,7 @@ struct HBitWriter_ {
 // Backends {{{
 extern HParserBackendVTable h__packrat_backend_vtable;
 extern HParserBackendVTable h__llk_backend_vtable;
+extern HParserBackendVTable h__lalr_backend_vtable;
 // }}}
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
@@ -271,9 +272,11 @@ typedef HHashTable HHashSet;
 #define h_hashset_empty(ht)      h_hashtable_empty(ht)
 #define h_hashset_del(ht,el)     h_hashtable_del(ht,el)
 #define h_hashset_free(ht)       h_hashtable_free(ht)
+bool h_hashset_equal(const HHashSet *a, const HHashSet *b);
 
 bool h_eq_ptr(const void *p, const void *q);
 HHashValue h_hash_ptr(const void *p);
+uint32_t h_djbhash(const uint8_t *buf, size_t len);
 
 typedef struct HCFSequence_ HCFSequence;
 
