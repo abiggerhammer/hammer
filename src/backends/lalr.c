@@ -2,6 +2,7 @@
 #include "../internal.h"
 #include "../cfgrammar.h"
 #include "../parsers/parser_internal.h"
+#include "contextfree.h"
 
 
 
@@ -273,8 +274,6 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
   // to save lookups, we push two elements per state, the itemset and its
   // assigned index.
   HSlist *work = h_slist_new(arena);
-
-  // XXX augment grammar?!
 
   // make initial state (kernel)
   HLRState *start = h_lrstate_new(arena);
@@ -596,14 +595,33 @@ bool match_production(HLREnhGrammar *eg, HCFChoice **p,
           && state == endstate);
 }
 
+// desugar parser with a fresh start symbol
+// this guarantees that the start symbol will not occur in any productions
+static HCFChoice *augment(HAllocator *mm__, HParser *parser)
+{
+  HCFChoice *augmented = h_new(HCFChoice, 1);
+
+  HCFStack *stk__ = h_cfstack_new(mm__);
+  stk__->prealloc = augmented;
+  HCFS_BEGIN_CHOICE() {
+    HCFS_BEGIN_SEQ() {
+      HCFS_DESUGAR(parser);
+    } HCFS_END_SEQ();
+    HCFS_THIS_CHOICE->reshape = h_act_first;
+  } HCFS_END_CHOICE();
+  h_cfstack_free(mm__, stk__);
+
+  return augmented;
+}
+
 int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
 {
-  // generate CFG from parser
+  // generate (augmented) CFG from parser
   // construct LR(0) DFA
   // build LR(0) table
   // if necessary, resolve conflicts "by conversion to SLR"
 
-  HCFGrammar *g = h_cfgrammar(mm__, parser);
+  HCFGrammar *g = h_cfgrammar_(mm__, augment(mm__, parser));
   if(g == NULL)     // backend not suitable (language not context-free)
     return -1;
 
@@ -981,21 +999,18 @@ HParserBackendVTable h__lalr_backend_vtable = {
 int test_lalr(void)
 {
   /* 
-     S -> E
      E -> E '-' T
         | T
      T -> '(' E ')'
         | 'n'               -- also try [0-9] for the charset paths
   */
 
-#if 0
   HParser *n = h_ch('n');
   HParser *E = h_indirect();
   HParser *T = h_choice(h_sequence(h_ch('('), E, h_ch(')'), NULL), n, NULL);
   HParser *E_ = h_choice(h_sequence(E, h_ch('-'), T, NULL), T, NULL);
   h_bind_indirect(E, E_);
-#endif
-  HParser *p = h_whitespace(h_ch('n')); //h_sequence(E, NULL);
+  HParser *p = E;
 
   printf("\n==== G R A M M A R ====\n");
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
@@ -1028,7 +1043,7 @@ int test_lalr(void)
   h_pprint_lrtable(stdout, g, (HLRTable *)p->backend_data, 0);
 
   printf("\n==== P A R S E  R E S U L T ====\n");
-  HParseResult *res = h_parse(p, (uint8_t *)"  n-(n-((n)))-n", 13);
+  HParseResult *res = h_parse(p, (uint8_t *)"n-(n-((n)))-n", 13);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
