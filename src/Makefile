@@ -43,6 +43,8 @@ HAMMER_PARTS := \
 	benchmark.o \
 	cfgrammar.o \
 	glue.o \
+	backends/lr.o \
+	backends/lr0.o \
 	$(PARSERS:%=parsers/%.o) \
 	$(BACKENDS:%=backends/%.o)
 
