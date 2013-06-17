@@ -61,6 +61,16 @@ typedef struct HLREnhGrammar_ {
   HArena *arena;
 } HLREnhGrammar;
 
+typedef struct HLREngine_ {
+  const HLRTable *table;
+  HSlist *left;     // left stack; reductions happen here
+  HSlist *right;    // right stack; input appears here
+  size_t state;
+  bool running;
+  HArena *arena;    // will hold the results
+  HArena *tarena;   // tmp, deleted after parse
+} HLREngine;
+
 
 // XXX move to internal.h or something
 // XXX replace other hashtable iterations with this
@@ -733,6 +743,132 @@ h_lr_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol)
   }
 }
 
+HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table)
+{
+  HLREngine *engine = h_arena_malloc(tarena, sizeof(HLREngine));
+
+  engine->table = table;
+  engine->left = h_slist_new(tarena);
+  engine->right = h_slist_new(tarena);
+  engine->state = 0;
+  engine->running = 1;
+  engine->arena = arena;
+  engine->tarena = tarena;
+
+  return engine;
+}
+
+void h_lrengine_step(HLREngine *engine, HInputStream *stream)
+{
+  // short-hand names
+  HSlist *left = engine->left;
+  HSlist *right = engine->right;
+  HArena *arena = engine->arena;
+  HArena *tarena = engine->tarena;
+
+  // stack layout:
+  // on the left stack, we put pairs:  (saved state, semantic value)
+  // on the right stack, we put pairs: (symbol, semantic value)
+
+  // make sure there is input on the right stack
+  if(h_slist_empty(right)) {
+    // XXX use statically-allocated terminal symbols
+    HCFChoice *x = h_arena_malloc(tarena, sizeof(HCFChoice));
+    HParsedToken *v;
+
+    uint8_t c = h_read_bits(stream, 8, false);
+
+    if(stream->overrun) {     // end of input
+      x->type = HCF_END;
+      v = NULL;
+    } else {
+      x->type = HCF_CHAR;
+      x->chr = c;
+      v = h_arena_malloc(arena, sizeof(HParsedToken));
+      v->token_type = TT_UINT;
+      v->uint = c;
+    }
+
+    h_slist_push(right, v);
+    h_slist_push(right, x);
+  }
+
+  // peek at input symbol on the right side
+  HCFChoice *symbol = right->head->elem;
+
+  // table lookup
+  const HLRAction *action = h_lr_lookup(engine->table, engine->state, symbol);
+  if(action == NULL) {
+    // no handle recognizable in input, terminate
+    engine->running = false;
+    return;
+  }
+
+  if(action->type == HLR_SHIFT) {
+    h_slist_push(left, (void *)(uintptr_t)engine->state);
+    h_slist_pop(right);                       // symbol (discard)
+    h_slist_push(left, h_slist_pop(right));   // semantic value
+    engine->state = action->nextstate;
+  } else {
+    assert(action->type == HLR_REDUCE);
+    size_t len = action->production.length;
+    HCFChoice *symbol = action->production.lhs;
+
+    // semantic value of the reduction result
+    HParsedToken *value = h_arena_malloc(arena, sizeof(HParsedToken));
+    value->token_type = TT_SEQUENCE;
+    value->seq = h_carray_new_sized(arena, len);
+    
+    // pull values off the left stack, rewinding state accordingly
+    HParsedToken *v = NULL;
+    for(size_t i=0; i<len; i++) {
+      v = h_slist_pop(left);
+      engine->state = (uintptr_t)h_slist_pop(left);
+
+      // collect values in result sequence
+      value->seq->elements[len-1-i] = v;
+      value->seq->used++;
+    }
+    if(v) {
+      // result position equals position of left-most symbol
+      value->index = v->index;
+      value->bit_offset = v->bit_offset;
+    } else {
+      // XXX how to get the position in this case?
+    }
+
+    // perform token reshape if indicated
+    if(symbol->reshape)
+      value = (HParsedToken *)symbol->reshape(make_result(arena, value));
+
+    // call validation and semantic action, if present
+    if(symbol->pred && !symbol->pred(make_result(tarena, value))) {
+      // validation failed -> no parse; terminate
+      engine->running = false;
+      return;
+    }
+    if(symbol->action)
+      value = (HParsedToken *)symbol->action(make_result(arena, value));
+
+    // push result (value, symbol) onto the right stack
+    h_slist_push(right, value);
+    h_slist_push(right, symbol);
+  }
+}
+
+HParseResult *h_lrengine_result(HLREngine *engine)
+{
+  // parsing was successful iff the start symbol is on top of the right stack
+  if(h_slist_pop(engine->right) == engine->table->start) {
+    // next on the right stack is the start symbol's semantic value
+    assert(!h_slist_empty(engine->right));
+    HParsedToken *tok = h_slist_pop(engine->right);
+    return make_result(engine->arena, tok);
+  } else {
+    return NULL;
+  }
+}
+
 HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
 {
   HLRTable *table = parser->backend_data;
@@ -741,110 +877,15 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
 
   HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
   HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
-  HSlist *left = h_slist_new(tarena);   // left stack; reductions happen here
-  HSlist *right = h_slist_new(tarena);  // right stack; input appears here
-
-  // stack layout:
-  // on the left stack, we put pairs:  (saved state, semantic value)
-  // on the right stack, we put pairs: (symbol, semantic value)
+  HLREngine *engine = h_lrengine_new(arena, tarena, table);
 
   // run while the recognizer finds handles in the input
-  size_t state = 0;
-  while(1) {
-    // make sure there is input on the right stack
-    if(h_slist_empty(right)) {
-      // XXX use statically-allocated terminal symbols
-      HCFChoice *x = h_arena_malloc(tarena, sizeof(HCFChoice));
-      HParsedToken *v;
+  while(engine->running)
+    h_lrengine_step(engine, stream);
 
-      uint8_t c = h_read_bits(stream, 8, false);
-
-      if(stream->overrun) {     // end of input
-        x->type = HCF_END;
-        v = NULL;
-      } else {
-        x->type = HCF_CHAR;
-        x->chr = c;
-        v = h_arena_malloc(arena, sizeof(HParsedToken));
-        v->token_type = TT_UINT;
-        v->uint = c;
-      }
-
-      h_slist_push(right, v);
-      h_slist_push(right, x);
-    }
-
-    // peek at input symbol on the right side
-    HCFChoice *symbol = right->head->elem;
-
-    // table lookup
-    const HLRAction *action = h_lr_lookup(table, state, symbol);
-    if(action == NULL)
-      break;    // no handle recognizable in input, terminate parsing
-
-    if(action->type == HLR_SHIFT) {
-      h_slist_push(left, (void *)(uintptr_t)state);
-      h_slist_pop(right);                       // symbol (discard)
-      h_slist_push(left, h_slist_pop(right));   // semantic value
-      state = action->nextstate;
-    } else {
-      assert(action->type == HLR_REDUCE);
-      size_t len = action->production.length;
-      HCFChoice *symbol = action->production.lhs;
-
-      // semantic value of the reduction result
-      HParsedToken *value = h_arena_malloc(arena, sizeof(HParsedToken));
-      value->token_type = TT_SEQUENCE;
-      value->seq = h_carray_new_sized(arena, len);
-      
-      // pull values off the left stack, rewinding state accordingly
-      HParsedToken *v = NULL;
-      for(size_t i=0; i<len; i++) {
-        v = h_slist_pop(left);
-        state = (uintptr_t)h_slist_pop(left);
-
-        // collect values in result sequence
-        value->seq->elements[len-1-i] = v;
-        value->seq->used++;
-      }
-      if(v) {
-        // result position equals position of left-most symbol
-        value->index = v->index;
-        value->bit_offset = v->bit_offset;
-      } else {
-        // XXX how to get the position in this case?
-      }
-
-      // perform token reshape if indicated
-      if(symbol->reshape)
-        value = (HParsedToken *)symbol->reshape(make_result(arena, value));
-
-      // call validation and semantic action, if present
-      if(symbol->pred && !symbol->pred(make_result(tarena, value)))
-        break;  // validation failed -> no parse
-      if(symbol->action)
-        value = (HParsedToken *)symbol->action(make_result(arena, value));
-
-      // push result (value, symbol) onto the right stack
-      h_slist_push(right, value);
-      h_slist_push(right, symbol);
-    }
-  }
-
-
-
-  // parsing was successful iff the start symbol is on top of the right stack
-  HParseResult *result = NULL;
-  if(h_slist_pop(right) == table->start) {
-    // next on the right stack is the start symbol's semantic value
-    assert(!h_slist_empty(right));
-    HParsedToken *tok = h_slist_pop(right);
-    result = make_result(arena, tok);
-  } else {
+  HParseResult *result = h_lrengine_result(engine);
+  if(!result)
     h_delete_arena(arena);
-    result = NULL;
-  }
-
   h_delete_arena(tarena);
   return result;
 }
