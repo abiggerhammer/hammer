@@ -170,10 +170,18 @@ HLRAction *h_lr_conflict(HArena *arena, HLRAction *action, HLRAction *new)
     action->type = HLR_CONFLICT;
     action->branches = h_slist_new(arena);
     h_slist_push(action->branches, old);
+    h_slist_push(action->branches, new);
+  } else {
+    // check if 'new' is already among branches
+    HSlistNode *x;
+    for(x=action->branches->head; x; x=x->next) {
+      if(x->elem == new)
+        break;
+    }
+    // add 'new' if it is not already in list
+    if(x == NULL)
+      h_slist_push(action->branches, new);
   }
-
-  assert(action->type == HLR_CONFLICT);
-  h_slist_push(action->branches, new);
 
   return action;
 }
