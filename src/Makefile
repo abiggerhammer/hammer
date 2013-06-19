@@ -27,9 +27,10 @@ PARSERS := \
 
 BACKENDS := \
 	packrat \
+	regex \
 	llk \
 	lalr \
-	regex
+	glr
 
 HAMMER_PARTS := \
 	bitreader.o \

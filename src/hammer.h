@@ -37,8 +37,8 @@ typedef enum HParserBackend_ {
   PB_REGULAR,
   PB_LLk,
   PB_LALR,
-  PB_GLR,	// Not Implemented
-  PB_MAX = PB_LALR
+  PB_GLR,
+  PB_MAX = PB_GLR
 } HParserBackend;
 
 typedef enum HTokenType_ {
