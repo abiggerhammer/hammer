@@ -28,16 +28,22 @@ typedef struct HLRItem_ {
 } HLRItem;
 
 typedef struct HLRAction_ {
-  enum {HLR_SHIFT, HLR_REDUCE} type;
+  enum {HLR_SHIFT, HLR_REDUCE, HLR_CONFLICT} type;
   union {
-    size_t nextstate;   // used with SHIFT
+    // used with HLR_SHIFT
+    size_t nextstate;
+
+    // used with HLR_REDUCE
     struct {
       HCFChoice *lhs;   // symbol carrying semantic actions etc.
       size_t length;    // # of symbols in rhs
 #ifndef NDEBUG
       HCFChoice **rhs;  // NB: the rhs symbols are not needed for the parse
 #endif
-    } production;       // used with REDUCE
+    } production;
+
+    // used with HLR_CONFLICT
+    HSlist *branches;   // list of possible HLRActions
   };
 } HLRAction;
 
@@ -104,6 +110,7 @@ void h_lrtable_free(HLRTable *table);
 HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table);
 HLRAction *h_reduce_action(HArena *arena, const HLRItem *item);
 HLRAction *h_shift_action(HArena *arena, size_t nextstate);
+HLRAction *h_lr_conflict(HArena *arena, HLRAction *action, HLRAction *new);
 
 bool h_eq_symbol(const void *p, const void *q);
 bool h_eq_lr_itemset(const void *p, const void *q);

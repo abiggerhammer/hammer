@@ -182,23 +182,29 @@ HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa)
 
   // add reduce entries, record inadequate states
   for(size_t i=0; i<dfa->nstates; i++) {
+    bool inadeq = false;
+
     // find reducible items in state
     H_FOREACH_KEY(dfa->states[i], HLRItem *item)
       if(item->mark == item->len) { // mark at the end
-        // check for conflicts
-        // XXX store more informative stuff in the inadeq records?
+        HLRAction *reduce = h_reduce_action(arena, item);
+        
+        // check for reduce/reduce conflict on forall
         if(table->forall[i]) {
-          // reduce/reduce conflict with a previous item
-          h_slist_push(table->inadeq, (void *)(uintptr_t)i);
-        } else if(!h_hashtable_empty(table->rows[i])) {
-          // shift/reduce conflict with one of the row's entries
-          h_slist_push(table->inadeq, (void *)(uintptr_t)i);
+          reduce = h_lr_conflict(arena, table->forall[i], reduce);
+          inadeq = true;
         }
+        table->forall[i] = reduce;
 
-        // set reduce action for the entire row
-        table->forall[i] = h_reduce_action(arena, item);
+        // check for shift/reduce conflict with other entries
+        // NOTE: these are not recorded as HLR_CONFLICTs at this point
+        if(!h_hashtable_empty(table->rows[i]))
+          inadeq = true;
       }
     H_END_FOREACH
+
+    if(inadeq)
+      h_slist_push(table->inadeq, (void *)(uintptr_t)i);
   }
 
   return table;

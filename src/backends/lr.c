@@ -159,6 +159,25 @@ HLRAction *h_reduce_action(HArena *arena, const HLRItem *item)
   return action;
 }
 
+// adds 'new' to the branches of 'action'
+// returns a 'action' if it is already of type HLR_CONFLICT
+// allocates a new HLRAction otherwise
+HLRAction *h_lr_conflict(HArena *arena, HLRAction *action, HLRAction *new)
+{
+  if(action->type != HLR_CONFLICT) {
+    HLRAction *old = action;
+    action = h_arena_malloc(arena, sizeof(HLRAction));
+    action->type = HLR_CONFLICT;
+    action->branches = h_slist_new(arena);
+    h_slist_push(action->branches, old);
+  }
+
+  assert(action->type == HLR_CONFLICT);
+  h_slist_push(action->branches, new);
+
+  return action;
+}
+
 
 
 /* LR driver */
@@ -238,6 +257,8 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
 
   if(action == NULL)
     return false;   // no handle recognizable in input, terminate
+
+  assert(action->type == HLR_SHIFT || action->type == HLR_REDUCE);
 
   if(action->type == HLR_SHIFT) {
     h_slist_push(left, (void *)(uintptr_t)engine->state);

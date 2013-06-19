@@ -138,7 +138,8 @@ int h_lrtable_put(HLRTable *tbl, size_t state, HCFChoice *x, HLRAction *action)
   HLRAction *prev = h_hashtable_get(tbl->rows[state], x);
   if(prev && prev != action) {
     // conflict
-    h_slist_push(tbl->inadeq, (void *)(uintptr_t)state);
+    action = h_lr_conflict(tbl->arena, prev, action);
+    h_hashtable_put(tbl->rows[state], x, action);
     return -1;
   } else {
     h_hashtable_put(tbl->rows[state], x, action);
@@ -221,6 +222,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
     
     for(HSlistNode *x=inadeq->head; x; x=x->next) {
       size_t state = (uintptr_t)x->elem;
+      bool inadeq = false;
       
       // clear old forall entry, it's being replaced by more fine-grained ones
       table->forall[state] = NULL;
@@ -255,7 +257,8 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
             if(fs->end_branch) {
               HCFChoice *terminal = h_arena_malloc(arena, sizeof(HCFChoice));
               terminal->type = HCF_END;
-              h_lrtable_put(table, state, terminal, action);
+              if(h_lrtable_put(table, state, terminal, action) < 0)
+                inadeq = true;
             }
             H_FOREACH(fs->char_branches, void *key, HStringMap *m)
               if(!m->epsilon_branch)
@@ -265,10 +268,14 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
               terminal->type = HCF_CHAR; 
               terminal->chr = key_char((HCharKey)key);
 
-              h_lrtable_put(table, state, terminal, action);
+              if(h_lrtable_put(table, state, terminal, action) < 0)
+                inadeq = true;
             H_END_FOREACH  // lookahead character
         } H_END_FOREACH // enhanced production
       H_END_FOREACH  // reducible item
+
+      if(inadeq)
+        h_slist_push(table->inadeq, (void *)(uintptr_t)state);
     }
   }
 
