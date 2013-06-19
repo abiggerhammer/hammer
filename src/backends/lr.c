@@ -425,9 +425,11 @@ void h_pprint_lrdfa(FILE *f, const HCFGrammar *g,
 
 void pprint_lraction(FILE *f, const HCFGrammar *g, const HLRAction *action)
 {
-  if(action->type == HLR_SHIFT) {
+  switch(action->type) {
+  case HLR_SHIFT:
     fprintf(f, "s%lu", action->nextstate);
-  } else {
+    break;
+  case HLR_REDUCE:
     fputs("r(", f);
     h_pprint_symbol(f, g, action->production.lhs);
     fputs(" -> ", f);
@@ -439,6 +441,18 @@ void pprint_lraction(FILE *f, const HCFGrammar *g, const HLRAction *action)
     h_pprint_sequence(f, g, &seq);
 #endif
     fputc(')', f);
+    break;
+  case HLR_CONFLICT:
+    fputc('!', f);
+    for(HSlistNode *x=action->branches->head; x; x=x->next) {
+      HLRAction *branch = x->elem;
+      assert(branch->type != HLR_CONFLICT); // no nesting
+      pprint_lraction(f, g, branch);
+      if(x->next) fputc('/', f);            // separator
+    }
+    break;
+  default:
+    assert_message(0, "not reached");
   }
 }
 
@@ -459,13 +473,7 @@ void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
       fputc(' ', f);    // separator
       h_pprint_symbol(f, g, symbol);
       fputc(':', f);
-      if(table->forall[i]) {
-        fputc(action->type == HLR_SHIFT? 's' : 'r', f);
-        fputc('/', f);
-        fputc(table->forall[i]->type == HLR_SHIFT? 's' : 'r', f);
-      } else {
-        pprint_lraction(f, g, action);
-      }
+      pprint_lraction(f, g, action);
     H_END_FOREACH
     fputc('\n', f);
   }
