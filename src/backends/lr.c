@@ -190,17 +190,11 @@ HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table)
   return engine;
 }
 
-void h_lrengine_step(HLREngine *engine, HInputStream *stream)
+const HLRAction *h_lrengine_action(HLREngine *engine, HInputStream *stream)
 {
-  // short-hand names
-  HSlist *left = engine->left;
   HSlist *right = engine->right;
   HArena *arena = engine->arena;
   HArena *tarena = engine->tarena;
-
-  // stack layout:
-  // on the left stack, we put pairs:  (saved state, semantic value)
-  // on the right stack, we put pairs: (symbol, semantic value)
 
   // make sure there is input on the right stack
   if(h_slist_empty(right)) {
@@ -230,6 +224,18 @@ void h_lrengine_step(HLREngine *engine, HInputStream *stream)
 
   // table lookup
   const HLRAction *action = h_lr_lookup(engine->table, engine->state, symbol);
+
+  return action;
+}
+
+void h_lrengine_step(HLREngine *engine, const HLRAction *action)
+{
+  // short-hand names
+  HSlist *left = engine->left;
+  HSlist *right = engine->right;
+  HArena *arena = engine->arena;
+  HArena *tarena = engine->tarena;
+
   if(action == NULL) {
     // no handle recognizable in input, terminate
     engine->running = false;
@@ -313,7 +319,7 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
 
   // run while the recognizer finds handles in the input
   while(engine->running)
-    h_lrengine_step(engine, stream);
+    h_lrengine_step(engine, h_lrengine_action(engine, stream));
 
   HParseResult *result = h_lrengine_result(engine);
   if(!result)
