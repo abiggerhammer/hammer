@@ -1,6 +1,25 @@
 #include "lr.h"
 
 
+/* GLR compilation (LALR w/o failing on conflict) */
+
+int h_glr_compile(HAllocator* mm__, HParser* parser, const void* params)
+{
+  int result = h_lalr_compile(mm__, parser, params);
+
+  if(result == -1 && parser->backend_data) {
+    // table is there, just has conflicts? nevermind, that's okay.
+    result = 0;
+  }
+
+  return result;
+}
+
+void h_glr_free(HParser *parser)
+{
+  h_lalr_free(parser);
+}
+
 
 /* GLR driver */
 
@@ -12,12 +31,28 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
   HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
   HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
-  HLREngine *engine = h_lrengine_new(arena, tarena, table);
 
-  // iterate engine to completion
-  while(h_lrengine_step(engine, h_lrengine_action(engine, stream)));
+  HSlist *engines = h_slist_new(tarena);
+  h_slist_push(engines, h_lrengine_new(arena, tarena, table));
 
-  HParseResult *result = h_lrengine_result(engine);
+  HParseResult *result = NULL;
+  while(result == NULL && !h_slist_empty(engines)) {
+    for(HSlistNode **x = &engines->head; *x; ) {
+      HLREngine *engine = (*x)->elem;
+
+      const HLRAction *action = h_lrengine_action(engine, stream);
+      // XXX handle conflicts -> fork engine
+      bool running = h_lrengine_step(engine, action);
+
+      if(running) {
+        x = &(*x)->next;    // go to next
+      } else {
+        *x = (*x)->next;    // remove from list
+        result = h_lrengine_result(engine);
+      }
+    }
+  }
+
   if(!result)
     h_delete_arena(arena);
   h_delete_arena(tarena);
@@ -27,9 +62,9 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
 
 HParserBackendVTable h__glr_backend_vtable = {
-  .compile = h_lalr_compile,
+  .compile = h_glr_compile,
   .parse = h_glr_parse,
-  .free = h_lalr_free
+  .free = h_glr_free
 };
 
 
@@ -39,16 +74,13 @@ HParserBackendVTable h__glr_backend_vtable = {
 int test_glr(void)
 {
   /* 
-     E -> E '-' T
-        | T
-     T -> '(' E ')'
-        | 'n'               -- also try [0-9] for the charset paths
+     E -> E '+' E
+        | 'd'
   */
 
-  HParser *n = h_ch('n');
+  HParser *d = h_ch('d');
   HParser *E = h_indirect();
-  HParser *T = h_choice(h_sequence(h_ch('('), E, h_ch(')'), NULL), n, NULL);
-  HParser *E_ = h_choice(h_sequence(E, h_ch('-'), T, NULL), T, NULL);
+  HParser *E_ = h_choice(h_sequence(E, h_ch('+'), E, NULL), d, NULL);
   h_bind_indirect(E, E_);
   HParser *p = E;
 
@@ -83,7 +115,7 @@ int test_glr(void)
   h_pprint_lrtable(stdout, g, (HLRTable *)p->backend_data, 0);
 
   printf("\n==== P A R S E  R E S U L T ====\n");
-  HParseResult *res = h_parse(p, (uint8_t *)"n-(n-((n)))-n", 13);
+  HParseResult *res = h_parse(p, (uint8_t *)"d+d+d", 5);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else
