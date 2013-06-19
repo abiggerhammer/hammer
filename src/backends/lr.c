@@ -183,7 +183,6 @@ HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table)
   engine->left = h_slist_new(tarena);
   engine->right = h_slist_new(tarena);
   engine->state = 0;
-  engine->running = 1;
   engine->arena = arena;
   engine->tarena = tarena;
 
@@ -228,7 +227,8 @@ const HLRAction *h_lrengine_action(HLREngine *engine, HInputStream *stream)
   return action;
 }
 
-void h_lrengine_step(HLREngine *engine, const HLRAction *action)
+// run LR parser for one round; returns false when finished
+bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
 {
   // short-hand names
   HSlist *left = engine->left;
@@ -236,11 +236,8 @@ void h_lrengine_step(HLREngine *engine, const HLRAction *action)
   HArena *arena = engine->arena;
   HArena *tarena = engine->tarena;
 
-  if(action == NULL) {
-    // no handle recognizable in input, terminate
-    engine->running = false;
-    return;
-  }
+  if(action == NULL)
+    return false;   // no handle recognizable in input, terminate
 
   if(action->type == HLR_SHIFT) {
     h_slist_push(left, (void *)(uintptr_t)engine->state);
@@ -280,11 +277,8 @@ void h_lrengine_step(HLREngine *engine, const HLRAction *action)
       value = (HParsedToken *)symbol->reshape(make_result(arena, value));
 
     // call validation and semantic action, if present
-    if(symbol->pred && !symbol->pred(make_result(tarena, value))) {
-      // validation failed -> no parse; terminate
-      engine->running = false;
-      return;
-    }
+    if(symbol->pred && !symbol->pred(make_result(tarena, value)))
+      return false;     // validation failed -> no parse; terminate
     if(symbol->action)
       value = (HParsedToken *)symbol->action(make_result(arena, value));
 
@@ -292,6 +286,8 @@ void h_lrengine_step(HLREngine *engine, const HLRAction *action)
     h_slist_push(right, value);
     h_slist_push(right, symbol);
   }
+
+  return true;
 }
 
 HParseResult *h_lrengine_result(HLREngine *engine)
@@ -317,9 +313,8 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
   HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
   HLREngine *engine = h_lrengine_new(arena, tarena, table);
 
-  // run while the recognizer finds handles in the input
-  while(engine->running)
-    h_lrengine_step(engine, h_lrengine_action(engine, stream));
+  // iterate engine to completion
+  while(h_lrengine_step(engine, h_lrengine_action(engine, stream)));
 
   HParseResult *result = h_lrengine_result(engine);
   if(!result)

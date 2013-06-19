@@ -69,7 +69,6 @@ typedef struct HLREngine_ {
   HSlist *right;    // right stack; input appears here
 
   size_t state;
-  bool running;
   HArena *arena;    // will hold the results
   HArena *tarena;   // tmp, deleted after parse
 } HLREngine;
@@ -122,7 +121,7 @@ void h_lalr_free(HParser *parser);
 
 const HLRAction *h_lr_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol);
 const HLRAction *h_lrengine_action(HLREngine *engine, HInputStream *stream);
-void h_lrengine_step(HLREngine *engine, const HLRAction *action);
+bool h_lrengine_step(HLREngine *engine, const HLRAction *action);
 HParseResult *h_lrengine_result(HLREngine *engine);
 HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream);
 
