@@ -428,6 +428,17 @@ static void test_rightrec(gconstpointer backend) {
   g_check_parse_ok(rr_, (HParserBackend)GPOINTER_TO_INT(backend), "aaa", 3, "(u0x61 (u0x61 (u0x61)))");
 }
 
+static void test_ambiguous(gconstpointer backend) {
+  HParser *d_ = h_ch('d');
+  HParser *E_ = h_indirect();
+  h_bind_indirect(E_, h_choice(h_sequence(E_, h_ch('+'), E_, NULL), d_, NULL));
+
+  g_check_parse_ok(E_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "u0x64");
+  g_check_parse_ok(E_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d", 3, "(u0x64 u0x2b u0x64)");
+  g_check_parse_ok(E_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d+d", 5, "(u0x64 u0x2b (u0x64 u0x2b u0x64))");
+  g_check_parse_failed(E_, (HParserBackend)GPOINTER_TO_INT(backend), "d+", 2);
+}
+
 void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/token", GINT_TO_POINTER(PB_PACKRAT), test_token);
   g_test_add_data_func("/core/parser/packrat/ch", GINT_TO_POINTER(PB_PACKRAT), test_ch);
@@ -623,4 +634,5 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/glr/ignore", GINT_TO_POINTER(PB_GLR), test_ignore);
   g_test_add_data_func("/core/parser/glr/leftrec", GINT_TO_POINTER(PB_GLR), test_leftrec);
   g_test_add_data_func("/core/parser/glr/rightrec", GINT_TO_POINTER(PB_GLR), test_rightrec);
+  g_test_add_data_func("/core/parser/glr/ambiguous", GINT_TO_POINTER(PB_GLR), test_ambiguous);
 }
