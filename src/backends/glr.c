@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "lr.h"
 
 
@@ -23,6 +24,26 @@ void h_glr_free(HParser *parser)
 
 /* GLR driver */
 
+HLREngine *fork_engine(const HLREngine *engine)
+{
+  HLREngine *eng2 = h_arena_malloc(engine->tarena, sizeof(HLREngine));
+  eng2->table = engine->table;
+  eng2->state = engine->state;
+
+  // shallow-copy the stacks
+  // this works because h_slist_push and h_slist_pop never modify
+  // the underlying structure of HSlistNodes, only the head pointer.
+  // in fact, this gives us prefix sharing for free.
+  eng2->left = h_arena_malloc(engine->tarena, sizeof(HSlist));
+  eng2->right = h_arena_malloc(engine->tarena, sizeof(HSlist));
+  *eng2->left = *engine->left;
+  *eng2->right = *engine->right;
+
+  eng2->arena = engine->arena;
+  eng2->tarena = engine->tarena;
+  return eng2;
+}
+
 HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
 {
   HLRTable *table = parser->backend_data;
@@ -41,14 +62,44 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       HLREngine *engine = (*x)->elem;
 
       const HLRAction *action = h_lrengine_action(engine, stream);
-      // XXX handle conflicts -> fork engine
+
+      // fork engine on conflicts
+      if(action && action->type == HLR_CONFLICT) {
+        const HSlist *branches = action->branches;
+
+        // there should be at least two conflicting actions
+        assert(branches->head);
+        assert(branches->head->next);
+
+        // save first action for use with old engine below
+        action = branches->head->elem;
+
+        // fork a new engine for all the other actions
+        for(HSlistNode *x=branches->head->next; x; x=x->next) {
+          HLRAction *act = x->elem; 
+          HLREngine *eng = fork_engine(engine);
+
+          // perform one step; add engine to list if it wants to keep running
+          bool run = h_lrengine_step(eng, act);
+          if(run) {
+            h_slist_push(engines, eng);
+          } else {
+            HParseResult *res = h_lrengine_result(eng);
+            if(res)
+              result = res;
+          }
+        } 
+      }
+
       bool running = h_lrengine_step(engine, action);
 
       if(running) {
         x = &(*x)->next;    // go to next
       } else {
         *x = (*x)->next;    // remove from list
-        result = h_lrengine_result(engine);
+        HParseResult *res = h_lrengine_result(engine);
+        if(res)
+          result = res;
       }
     }
   }

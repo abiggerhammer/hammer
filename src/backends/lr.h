@@ -67,6 +67,7 @@ typedef struct HLREnhGrammar_ {
 
 typedef struct HLREngine_ {
   const HLRTable *table;
+  size_t state;
 
   // stack layout:
   // on the left stack, we put pairs:  (saved state, semantic value)
@@ -74,7 +75,6 @@ typedef struct HLREngine_ {
   HSlist *left;     // left stack; reductions happen here
   HSlist *right;    // right stack; input appears here
 
-  size_t state;
   HArena *arena;    // will hold the results
   HArena *tarena;   // tmp, deleted after parse
 } HLREngine;

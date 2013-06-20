@@ -270,8 +270,8 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
 
   if(action->type == HLR_SHIFT) {
     h_slist_push(left, (void *)(uintptr_t)engine->state);
-    h_slist_pop(right);                       // symbol (discard)
-    h_slist_push(left, h_slist_pop(right));   // semantic value
+    h_slist_drop(right);                      // symbol (discard)
+    h_slist_push(left, h_slist_drop(right));   // semantic value
     engine->state = action->nextstate;
   } else {
     assert(action->type == HLR_REDUCE);
@@ -286,8 +286,8 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
     // pull values off the left stack, rewinding state accordingly
     HParsedToken *v = NULL;
     for(size_t i=0; i<len; i++) {
-      v = h_slist_pop(left);
-      engine->state = (uintptr_t)h_slist_pop(left);
+      v = h_slist_drop(left);
+      engine->state = (uintptr_t)h_slist_drop(left);
 
       // collect values in result sequence
       value->seq->elements[len-1-i] = v;
@@ -322,10 +322,10 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
 HParseResult *h_lrengine_result(HLREngine *engine)
 {
   // parsing was successful iff the start symbol is on top of the right stack
-  if(h_slist_pop(engine->right) == engine->table->start) {
+  if(h_slist_drop(engine->right) == engine->table->start) {
     // next on the right stack is the start symbol's semantic value
     assert(!h_slist_empty(engine->right));
-    HParsedToken *tok = h_slist_pop(engine->right);
+    HParsedToken *tok = h_slist_drop(engine->right);
     return make_result(engine->arena, tok);
   } else {
     return NULL;
