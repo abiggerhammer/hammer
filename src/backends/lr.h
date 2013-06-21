@@ -68,6 +68,7 @@ typedef struct HLREnhGrammar_ {
 typedef struct HLREngine_ {
   const HLRTable *table;
   size_t state;
+  bool run;
 
   // stack layout:
   // on the left stack, we put pairs:  (saved state, semantic value)
@@ -128,7 +129,7 @@ void h_lalr_free(HParser *parser);
 
 const HLRAction *h_lr_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol);
 const HLRAction *h_lrengine_action(HLREngine *engine, HInputStream *stream);
-bool h_lrengine_step(HLREngine *engine, const HLRAction *action);
+void h_lrengine_step(HLREngine *engine, const HLRAction *action);
 HParseResult *h_lrengine_result(HLREngine *engine);
 HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream);
 HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream);

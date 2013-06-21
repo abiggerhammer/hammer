@@ -207,9 +207,10 @@ HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table)
   HLREngine *engine = h_arena_malloc(tarena, sizeof(HLREngine));
 
   engine->table = table;
+  engine->state = 0;
+  engine->run = true;
   engine->left = h_slist_new(tarena);
   engine->right = h_slist_new(tarena);
-  engine->state = 0;
   engine->arena = arena;
   engine->tarena = tarena;
 
@@ -255,7 +256,7 @@ const HLRAction *h_lrengine_action(HLREngine *engine, HInputStream *stream)
 }
 
 // run LR parser for one round; returns false when finished
-bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
+static bool h_lrengine_step_(HLREngine *engine, const HLRAction *action)
 {
   // short-hand names
   HSlist *left = engine->left;
@@ -308,19 +309,18 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
     // this is LR, building a right-most derivation bottom-up, so no reduce can
     // follow a reduce. we can also assume no conflict follows for GLR if we
     // use LALR tables, because only terminal symbols (lookahead) get reduces.
-    const HLRAction *next = h_lr_lookup(engine->table, engine->state, symbol);
-    if(next) {
-      assert(next->type == HLR_SHIFT);
+    const HLRAction *shift = h_lr_lookup(engine->table, engine->state, symbol);
+    if(shift == NULL)
+      return false;     // parse error
+    assert(shift->type == HLR_SHIFT);
 
-      // piggy-back the shift onto here, never touching the right stack
-      h_slist_push(left, (void *)(uintptr_t)engine->state);
-      h_slist_push(left, value);
-      engine->state = next->nextstate;
-    } else {
-      // fallback
-      h_slist_push(right, value);
-      h_slist_push(right, symbol);
-    }
+    // piggy-back the shift right here, never touching the input
+    h_slist_push(left, (void *)(uintptr_t)engine->state);
+    h_slist_push(left, value);
+    engine->state = shift->nextstate;
+
+    if(symbol == engine->table->start)
+      return false;     // reduced to start symbol; accept!
   } else {
     assert(action->type == HLR_SHIFT);
     h_slist_push(left, (void *)(uintptr_t)engine->state);
@@ -332,13 +332,18 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
   return true;
 }
 
+// run LR parser for one round; sets engine->run
+void h_lrengine_step(HLREngine *engine, const HLRAction *action)
+{
+  engine->run = h_lrengine_step_(engine, action);
+}
+
 HParseResult *h_lrengine_result(HLREngine *engine)
 {
-  // parsing was successful iff the start symbol is on top of the right stack
-  if(h_slist_drop(engine->right) == engine->table->start) {
-    // next on the right stack is the start symbol's semantic value
-    assert(!h_slist_empty(engine->right));
-    HParsedToken *tok = h_slist_drop(engine->right);
+  // parsing was successful iff after a shift the engine is back in state 0
+  if(engine->state == 0 && !h_slist_empty(engine->left)) {
+    // on top of the stack is the start symbol's semantic value
+    HParsedToken *tok = engine->left->head->elem;
     return make_result(engine->arena, tok);
   } else {
     return NULL;
@@ -356,7 +361,8 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
   HLREngine *engine = h_lrengine_new(arena, tarena, table);
 
   // iterate engine to completion
-  while(h_lrengine_step(engine, h_lrengine_action(engine, stream)));
+  while(engine->run)
+    h_lrengine_step(engine, h_lrengine_action(engine, stream));
 
   HParseResult *result = h_lrengine_result(engine);
   if(!result)

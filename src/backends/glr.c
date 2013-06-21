@@ -61,6 +61,20 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
     for(HSlistNode **x = &engines->head; *x; ) {
       HLREngine *engine = (*x)->elem;
 
+      // check for terminated engines
+      if(engine->run) {
+        x = &(*x)->next;    // advance x with no change
+      } else {
+        *x = (*x)->next;    // advance x, removing the current element
+
+        // check for parse success
+        HParseResult *res = h_lrengine_result(engine);
+        if(res)
+          result = res;
+
+        continue;
+      }
+
       const HLRAction *action = h_lrengine_action(engine, stream);
 
       // fork engine on conflicts
@@ -79,28 +93,13 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
           HLRAction *act = x->elem; 
           HLREngine *eng = fork_engine(engine);
 
-          // perform one step; add engine to list if it wants to keep running
-          bool run = h_lrengine_step(eng, act);
-          if(run) {
-            h_slist_push(engines, eng);
-          } else {
-            HParseResult *res = h_lrengine_result(eng);
-            if(res)
-              result = res;
-          }
+          // perform one step and add to list
+          h_lrengine_step(eng, act);
+          h_slist_push(engines, eng);
         } 
       }
 
-      bool running = h_lrengine_step(engine, action);
-
-      if(running) {
-        x = &(*x)->next;    // go to next
-      } else {
-        *x = (*x)->next;    // remove from list
-        HParseResult *res = h_lrengine_result(engine);
-        if(res)
-          result = res;
-      }
+      h_lrengine_step(engine, action);
     }
   }
 
@@ -119,6 +118,20 @@ HParserBackendVTable h__glr_backend_vtable = {
 };
 
 
+
+// XXX TODO
+// - eliminate right stack by always doing a shift after reduce
+//   (shift should always follow reduce because rightmost)
+// - split tables into
+//   - one mapping input bytes to actions (shift or reduce or conflict)
+//   - one mapping reduced-to lhs nonterminals to shift states
+//     - can there still be conflicts here?
+// - use HStringMap to represent lookahead sets and the "piggyback" table
+// - implement engine merging
+//   - triggered when two enter the same state
+//   - old stacks (/engines?) saved
+//   - new common suffix stack created
+//   - when rewinding (during reduce), watch for empty stack -> demerge
 
 
 // dummy!

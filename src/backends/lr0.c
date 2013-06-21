@@ -171,6 +171,11 @@ HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa)
   // remember start symbol
   table->start = g->start;
 
+  // add dummy shift entry for the start symbol so h_lrengine_step can always
+  // find a shift.
+  // NB: nextstate=0 is used for the "victory condition" by h_lrengine_result.
+  h_hashtable_put(table->rows[0], g->start, h_shift_action(arena, 0));
+
   // add shift entries
   for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {
     // for each transition x-A->y, add "shift, goto y" to table entry (x,A)
