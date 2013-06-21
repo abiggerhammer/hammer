@@ -314,6 +314,12 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
     // push result (value, symbol) onto the right stack
     h_slist_push(right, value);
     h_slist_push(right, symbol);
+
+    // this is LR, building a right-most derivation bottom-up, so no reduce can
+    // follow a reduce. we can also assume no conflict follows for GLR if we
+    // use LALR tables, because only terminal symbols (lookahead) get reduces.
+    const HLRAction *next = h_lr_lookup(engine->table, engine->state, symbol);
+    assert(next == NULL || next->type == HLR_SHIFT);
   }
 
   return true;
