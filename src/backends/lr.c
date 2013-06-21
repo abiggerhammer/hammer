@@ -268,12 +268,7 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
 
   assert(action->type == HLR_SHIFT || action->type == HLR_REDUCE);
 
-  if(action->type == HLR_SHIFT) {
-    h_slist_push(left, (void *)(uintptr_t)engine->state);
-    h_slist_drop(right);                      // symbol (discard)
-    h_slist_push(left, h_slist_drop(right));   // semantic value
-    engine->state = action->nextstate;
-  } else {
+  if(action->type == HLR_REDUCE) {
     assert(action->type == HLR_REDUCE);
     size_t len = action->production.length;
     HCFChoice *symbol = action->production.lhs;
@@ -318,8 +313,18 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
     // this is LR, building a right-most derivation bottom-up, so no reduce can
     // follow a reduce. we can also assume no conflict follows for GLR if we
     // use LALR tables, because only terminal symbols (lookahead) get reduces.
-    const HLRAction *next = h_lr_lookup(engine->table, engine->state, symbol);
-    assert(next == NULL || next->type == HLR_SHIFT);
+    action = h_lr_lookup(engine->table, engine->state, symbol);
+    if(action == NULL)
+      return false;     // no handle after reduce; terminate
+    assert(action->type == HLR_SHIFT);
+  }
+
+  // this could be the original action, or a shift piggy-backed onto reduce
+  if(action->type == HLR_SHIFT) {
+    h_slist_push(left, (void *)(uintptr_t)engine->state);
+    h_slist_drop(right);                      // symbol (discard)
+    h_slist_push(left, h_slist_drop(right));   // semantic value
+    engine->state = action->nextstate;
   }
 
   return true;
