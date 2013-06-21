@@ -32,7 +32,7 @@ HLREngine *fork_engine(const HLREngine *engine)
   eng2->input = engine->input;
 
   // shallow-copy the stack
-  // this works because h_slist_push and h_slist_pop never modify
+  // this works because h_slist_push and h_slist_drop never modify
   // the underlying structure of HSlistNodes, only the head pointer.
   // in fact, this gives us prefix sharing for free.
   eng2->stack = h_arena_malloc(engine->tarena, sizeof(HSlist));
