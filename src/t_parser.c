@@ -430,13 +430,15 @@ static void test_rightrec(gconstpointer backend) {
 
 static void test_ambiguous(gconstpointer backend) {
   HParser *d_ = h_ch('d');
+  HParser *p_ = h_ch('+');
   HParser *E_ = h_indirect();
-  h_bind_indirect(E_, h_choice(h_sequence(E_, h_ch('+'), E_, NULL), d_, NULL));
+  h_bind_indirect(E_, h_choice(h_sequence(E_, p_, E_, NULL), d_, NULL));
+  HParser *expr_ = h_action(E_, h_act_flatten);
 
-  g_check_parse_ok(E_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "u0x64");
-  g_check_parse_ok(E_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d", 3, "(u0x64 u0x2b u0x64)");
-  g_check_parse_ok(E_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d+d", 5, "(u0x64 u0x2b (u0x64 u0x2b u0x64))");
-  g_check_parse_failed(E_, (HParserBackend)GPOINTER_TO_INT(backend), "d+", 2);
+  g_check_parse_ok(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "(u0x64)");
+  g_check_parse_ok(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d", 3, "(u0x64 u0x2b u0x64)");
+  g_check_parse_ok(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d+d", 5, "(u0x64 u0x2b u0x64 u0x2b u0x64)");
+  g_check_parse_failed(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+", 2);
 }
 
 void register_parser_tests(void) {
