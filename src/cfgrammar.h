@@ -47,6 +47,7 @@ void h_stringmap_put_char(HStringMap *m, uint8_t c, void *v);
 void h_stringmap_update(HStringMap *m, const HStringMap *n);
 void h_stringmap_replace(HStringMap *m, void *old, void *new);
 void *h_stringmap_get(const HStringMap *m, const uint8_t *str, size_t n, bool end);
+void *h_stringmap_get_lookahead(const HStringMap *m, HInputStream lookahead);
 bool h_stringmap_present(const HStringMap *m, const uint8_t *str, size_t n, bool end);
 bool h_stringmap_present_epsilon(const HStringMap *m);
 bool h_stringmap_empty(const HStringMap *m);

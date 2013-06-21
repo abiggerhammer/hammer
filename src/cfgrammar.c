@@ -321,6 +321,31 @@ void *h_stringmap_get(const HStringMap *m, const uint8_t *str, size_t n, bool en
   return m->epsilon_branch;
 }
 
+void *h_stringmap_get_lookahead(const HStringMap *m, HInputStream lookahead)
+{
+  while(m) {
+    if(m->epsilon_branch) {     // input matched
+      // assert: another lookahead would not bring a more specific match.
+      //         this is for the table generator to ensure. (LLk)
+      return m->epsilon_branch;
+    }
+
+    // note the lookahead stream is passed by value, i.e. a copy.
+    // reading bits from it does not consume them from the real input.
+    uint8_t c = h_read_bits(&lookahead, 8, false);
+    
+    if(lookahead.overrun) {     // end of input
+      // XXX assumption of byte-wise grammar and input
+      return m->end_branch;
+    }
+
+    // no match yet, descend
+    m = h_stringmap_get_char(m, c);
+  }
+
+  return NULL;
+}
+
 bool h_stringmap_present(const HStringMap *m, const uint8_t *str, size_t n, bool end)
 {
   return (h_stringmap_get(m, str, n, end) != NULL);

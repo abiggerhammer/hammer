@@ -216,7 +216,7 @@ HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table,
 }
 
 static const HLRAction *
-terminal_lookup(const HLREngine *engine, const HCFChoice *symbol)
+terminal_lookup(const HLREngine *engine, const HInputStream *stream)
 {
   const HLRTable *table = engine->table;
   size_t state = engine->state;
@@ -226,11 +226,7 @@ terminal_lookup(const HLREngine *engine, const HCFChoice *symbol)
     assert(h_lrtable_row_empty(table, state));  // that would be a conflict
     return table->forall[state];
   } else {
-    // XXX use the lookahead stream directly here (cf. llk)
-    if(symbol->type == HCF_END)
-      return table->tmap[state]->end_branch;
-    else
-      return h_stringmap_get(table->tmap[state], &symbol->chr, 1, false);
+    return h_stringmap_get_lookahead(table->tmap[state], *stream);
   }
 }
 
@@ -248,22 +244,7 @@ nonterminal_lookup(const HLREngine *engine, const HCFChoice *symbol)
 
 const HLRAction *h_lrengine_action(const HLREngine *engine)
 {
-  HArena *tarena = engine->tarena;
-
-  // XXX use statically-allocated terminal symbols
-  HCFChoice *x = h_arena_malloc(tarena, sizeof(HCFChoice));
-
-  HInputStream lookahead = engine->input;
-  uint8_t c = h_read_bits(&lookahead, 8, false);
-
-  if(lookahead.overrun) {     // end of input
-    x->type = HCF_END;
-  } else {
-    x->type = HCF_CHAR;
-    x->chr = c;
-  }
-
-  return terminal_lookup(engine, x);
+  return terminal_lookup(engine, &engine->input);
 }
 
 static HParsedToken *consume_input(HLREngine *engine)
