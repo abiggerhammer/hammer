@@ -130,10 +130,10 @@ static inline bool has_conflicts(HLRTable *table)
   return !h_slist_empty(table->inadeq);
 }
 
-// place a new entry in tbl; records conflicts in tbl->inadeq
+// place a new terminal entry in tbl; records conflicts in tbl->inadeq
 // returns 0 on success, -1 on conflict
 // ignores forall entries
-int h_lrtable_put(HLRTable *tbl, size_t state, HCFChoice *x, HLRAction *action)
+static int terminal_put(HLRTable *tbl, size_t state, HCFChoice *x, HLRAction *action)
 {
   HLRAction *prev = h_hashtable_get(tbl->rows[state], x);
   if(prev && prev != action) {
@@ -257,7 +257,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
             if(fs->end_branch) {
               HCFChoice *terminal = h_arena_malloc(arena, sizeof(HCFChoice));
               terminal->type = HCF_END;
-              if(h_lrtable_put(table, state, terminal, action) < 0)
+              if(terminal_put(table, state, terminal, action) < 0)
                 inadeq = true;
             }
             H_FOREACH(fs->char_branches, void *key, HStringMap *m)
@@ -268,7 +268,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
               terminal->type = HCF_CHAR; 
               terminal->chr = key_char((HCharKey)key);
 
-              if(h_lrtable_put(table, state, terminal, action) < 0)
+              if(terminal_put(table, state, terminal, action) < 0)
                 inadeq = true;
             H_END_FOREACH  // lookahead character
         } H_END_FOREACH // enhanced production

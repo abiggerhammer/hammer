@@ -161,6 +161,14 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
 
 /* LR(0) table generation */
 
+static inline
+void put_shift(HLRTable *table, size_t state, const HCFChoice *symbol,
+               size_t nextstate)
+{
+  HLRAction *action = h_shift_action(table->arena, nextstate);
+  h_hashtable_put(table->rows[state], symbol, action);
+}
+
 HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa)
 {
   HAllocator *mm__ = g->mm__;
@@ -174,15 +182,14 @@ HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa)
   // add dummy shift entry for the start symbol so h_lrengine_step can always
   // find a shift.
   // NB: nextstate=0 is used for the "victory condition" by h_lrengine_result.
-  h_hashtable_put(table->rows[0], g->start, h_shift_action(arena, 0));
+  put_shift(table, 0, g->start, 0);
 
   // add shift entries
   for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {
     // for each transition x-A->y, add "shift, goto y" to table entry (x,A)
     HLRTransition *t = x->elem;
 
-    HLRAction *action = h_shift_action(arena, t->to);
-    h_hashtable_put(table->rows[t->from], t->symbol, action);
+    put_shift(table, t->from, t->symbol, t->to);
   }
 
   // add reduce entries, record inadequate states

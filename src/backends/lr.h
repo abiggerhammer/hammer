@@ -120,12 +120,10 @@ HHashValue h_hash_transition(const void *p);
 
 HLRDFA *h_lr0_dfa(HCFGrammar *g);
 HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa);
-int h_lrtable_put(HLRTable *tbl, size_t state, HCFChoice *x, HLRAction *action);
 
 int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params);
 void h_lalr_free(HParser *parser);
 
-const HLRAction *h_lr_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol);
 const HLRAction *h_lrengine_action(const HLREngine *engine);
 void h_lrengine_step(HLREngine *engine, const HLRAction *action);
 HParseResult *h_lrengine_result(HLREngine *engine);
