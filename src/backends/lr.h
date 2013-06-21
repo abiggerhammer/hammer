@@ -48,8 +48,9 @@ typedef struct HLRAction_ {
 } HLRAction;
 
 typedef struct HLRTable_ {
-  size_t     nrows;
-  HHashTable **rows;    // map symbols to HLRActions
+  size_t     nrows;     // dimension of the pointer arrays below
+  HHashTable **ntmap;   // map nonterminal symbols to HLRActions, per row
+  HStringMap **tmap;    // map lookahead strings to HLRActions, per row
   HLRAction  **forall;  // shortcut to set an action for an entire row
   HCFChoice  *start;    // start symbol
   HSlist     *inadeq;   // indices of any inadequate states
@@ -110,6 +111,7 @@ HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table,
 HLRAction *h_reduce_action(HArena *arena, const HLRItem *item);
 HLRAction *h_shift_action(HArena *arena, size_t nextstate);
 HLRAction *h_lr_conflict(HArena *arena, HLRAction *action, HLRAction *new);
+bool h_lrtable_row_empty(const HLRTable *table, size_t i);
 
 bool h_eq_symbol(const void *p, const void *q);
 bool h_eq_lr_itemset(const void *p, const void *q);

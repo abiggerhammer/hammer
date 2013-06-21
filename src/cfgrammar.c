@@ -813,27 +813,43 @@ void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, in
 #define BUFSIZE 512
 
 static bool
-pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n,
-                       const HStringMap *set)
+pprint_stringmap_elems(FILE *file, bool first, char *prefix, size_t n, char sep,
+                       void (*valprint)(FILE *f, void *env, void *val), void *env,
+                       const HStringMap *map)
 {
   assert(n < BUFSIZE-4);
 
-  if(set->epsilon_branch) {
-    if(!first) fputc(',', file); first=false;
-    if(n==0)
-      fputs("''", file);
-    else
+  if(map->epsilon_branch) {
+    if(!first) fputc(sep, file); first=false;
+    if(n==0) {
+      fputs("\"\"", file);
+    } else {
+      fputs("\"", file);
       fwrite(prefix, 1, n, file);
+      fputs("\"", file);
+    }
+
+    if(valprint) {
+      fputc(':', file);
+      valprint(file, env, map->epsilon_branch);
+    }
   }
 
-  if(set->end_branch) {
-    if(!first) fputc(',', file); first=false;
+  if(map->end_branch) {
+    if(!first) fputs(",\"", file); first=false;
+    if(n>0) fputs("\"\"", file);
     fwrite(prefix, 1, n, file);
-    fputc('$', file);
+    if(n>0) fputs("\"\"", file);
+    fputs("$", file);
+
+    if(valprint) {
+      fputc(':', file);
+      valprint(file, env, map->end_branch);
+    }
   }
 
-  // iterate over set->char_branches
-  HHashTable *ht = set->char_branches;
+  // iterate over map->char_branches
+  HHashTable *ht = map->char_branches;
   size_t i;
   HHashTableEntry *hte;
   for(i=0; i < ht->capacity; i++) {
@@ -859,11 +875,20 @@ pprint_stringset_elems(FILE *file, bool first, char *prefix, size_t n,
           n_ += sprintf(prefix+n_, "\\x%.2X", c);
       }
 
-      first = pprint_stringset_elems(file, first, prefix, n_, ends);
+      first = pprint_stringmap_elems(file, first, prefix, n_,
+                                     sep, valprint, env, ends);
     }
   }
 
   return first;
+}
+
+void h_pprint_stringmap(FILE *file, char sep,
+                        void (*valprint)(FILE *f, void *env, void *val), void *env,
+                        const HStringMap *map)
+{
+  char buf[BUFSIZE];
+  pprint_stringmap_elems(file, true, buf, 0, sep, valprint, env, map);
 }
 
 void h_pprint_stringset(FILE *file, const HStringMap *set, int indent)
@@ -871,8 +896,7 @@ void h_pprint_stringset(FILE *file, const HStringMap *set, int indent)
   int j;
   for(j=0; j<indent; j++) fputc(' ', file);
 
-  char buf[BUFSIZE];
   fputc('{', file);
-  pprint_stringset_elems(file, true, buf, 0, set);
+  h_pprint_stringmap(file, ',', NULL, NULL, set);
   fputs("}\n", file);
 }

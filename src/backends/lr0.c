@@ -166,7 +166,18 @@ void put_shift(HLRTable *table, size_t state, const HCFChoice *symbol,
                size_t nextstate)
 {
   HLRAction *action = h_shift_action(table->arena, nextstate);
-  h_hashtable_put(table->rows[state], symbol, action);
+
+  switch(symbol->type) {
+  case HCF_END:
+    h_stringmap_put_end(table->tmap[state], action);
+    break;
+  case HCF_CHAR:
+    h_stringmap_put_char(table->tmap[state], symbol->chr, action);
+    break;
+  default:
+    // nonterminal case
+    h_hashtable_put(table->ntmap[state], symbol, action);
+  }
 }
 
 HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa)
@@ -210,7 +221,8 @@ HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa)
 
         // check for shift/reduce conflict with other entries
         // NOTE: these are not recorded as HLR_CONFLICTs at this point
-        if(!h_hashtable_empty(table->rows[i]))
+
+        if(!h_lrtable_row_empty(table, i))
           inadeq = true;
       }
     H_END_FOREACH

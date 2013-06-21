@@ -97,4 +97,7 @@ void h_pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq);
 void h_pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x);
 void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, int indent);
 void h_pprint_stringset(FILE *file, const HStringMap *set, int indent);
+void h_pprint_stringmap(FILE *file, char sep,
+                        void (*valprint)(FILE *f, void *env, void *val), void *env,
+                        const HStringMap *map);
 void h_pprint_char(FILE *file, char c);

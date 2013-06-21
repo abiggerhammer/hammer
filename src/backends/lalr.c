@@ -13,9 +13,23 @@ static inline size_t seqsize(void *p_)
   return n+1;
 }
 
+static HLRAction *
+lrtable_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol)
+{
+  switch(symbol->type) {
+  case HCF_END:
+    return table->tmap[state]->end_branch;
+  case HCF_CHAR:
+    return h_stringmap_get(table->tmap[state], &symbol->chr, 1, false);
+  default:
+    // nonterminal case
+    return h_hashtable_get(table->ntmap[state], symbol);
+  }
+}
+
 static size_t follow_transition(const HLRTable *table, size_t x, HCFChoice *A)
 {
-  HLRAction *action = h_hashtable_get(table->rows[x], A);
+  HLRAction *action = lrtable_lookup(table, x, A);
   assert(action != NULL);
   assert(action->type == HLR_SHIFT);
   return action->nextstate;
@@ -130,21 +144,48 @@ static inline bool has_conflicts(HLRTable *table)
   return !h_slist_empty(table->inadeq);
 }
 
-// place a new terminal entry in tbl; records conflicts in tbl->inadeq
+// for each lookahead symbol (fs), put action into tmap
 // returns 0 on success, -1 on conflict
 // ignores forall entries
-static int terminal_put(HLRTable *tbl, size_t state, HCFChoice *x, HLRAction *action)
+static int terminals_put(HStringMap *tmap, const HStringMap *fs, HLRAction *action)
 {
-  HLRAction *prev = h_hashtable_get(tbl->rows[state], x);
-  if(prev && prev != action) {
-    // conflict
-    action = h_lr_conflict(tbl->arena, prev, action);
-    h_hashtable_put(tbl->rows[state], x, action);
-    return -1;
-  } else {
-    h_hashtable_put(tbl->rows[state], x, action);
-    return 0;
+  int ret = 0;
+
+  if(fs->epsilon_branch) {
+    HLRAction *prev = tmap->epsilon_branch;
+    if(prev && prev != action) {
+      // conflict
+      tmap->epsilon_branch = h_lr_conflict(tmap->arena, prev, action);
+      ret = -1;
+    } else {
+      tmap->epsilon_branch = action;
+    }
   }
+
+  if(fs->end_branch) {
+    HLRAction *prev = tmap->end_branch;
+    if(prev && prev != action) {
+      // conflict
+      tmap->end_branch = h_lr_conflict(tmap->arena, prev, action);
+      ret = -1;
+    } else {
+      tmap->end_branch = action;
+    }
+  }
+
+  H_FOREACH(fs->char_branches, void *key, HStringMap *fs_)
+    HStringMap *tmap_ = h_hashtable_get(tmap->char_branches, key);
+
+    if(!tmap_) {
+      tmap_ = h_stringmap_new(tmap->arena);
+      h_hashtable_put(tmap->char_branches, key, tmap_);
+    }
+
+    if(terminals_put(tmap_, fs_, action) < 0)
+      ret = -1;
+  H_END_FOREACH
+
+  return ret;
 }
 
 // check whether a sequence of enhanced-grammar symbols (p) matches the given
@@ -254,23 +295,8 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
             assert(!h_stringmap_empty(fs));
 
             // for each lookahead symbol, put action into table cell
-            if(fs->end_branch) {
-              HCFChoice *terminal = h_arena_malloc(arena, sizeof(HCFChoice));
-              terminal->type = HCF_END;
-              if(terminal_put(table, state, terminal, action) < 0)
-                inadeq = true;
-            }
-            H_FOREACH(fs->char_branches, void *key, HStringMap *m)
-              if(!m->epsilon_branch)
-                continue;
-
-              HCFChoice *terminal = h_arena_malloc(arena, sizeof(HCFChoice));
-              terminal->type = HCF_CHAR; 
-              terminal->chr = key_char((HCharKey)key);
-
-              if(terminal_put(table, state, terminal, action) < 0)
-                inadeq = true;
-            H_END_FOREACH  // lookahead character
+            if(terminals_put(table->tmap[state], fs, action) < 0)
+              inadeq = true;
         } H_END_FOREACH // enhanced production
       H_END_FOREACH  // reducible item
 
@@ -306,6 +332,8 @@ HParserBackendVTable h__lalr_backend_vtable = {
 // dummy!
 int test_lalr(void)
 {
+  HAllocator *mm__ = &system_allocator;
+
   /* 
      E -> E '-' T
         | T
@@ -321,7 +349,7 @@ int test_lalr(void)
   HParser *p = E;
 
   printf("\n==== G R A M M A R ====\n");
-  HCFGrammar *g = h_cfgrammar(&system_allocator, p);
+  HCFGrammar *g = h_cfgrammar_(mm__, augment(mm__, p));
   if(g == NULL) {
     fprintf(stderr, "h_cfgrammar failed\n");
     return 1;

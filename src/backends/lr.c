@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include "../parsers/parser_internal.h"
 #include "lr.h"
 
@@ -118,14 +119,16 @@ HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows)
 
   HLRTable *ret = h_new(HLRTable, 1);
   ret->nrows = nrows;
-  ret->rows = h_arena_malloc(arena, nrows * sizeof(HHashTable *));
+  ret->ntmap = h_arena_malloc(arena, nrows * sizeof(HHashTable *));
+  ret->tmap = h_arena_malloc(arena, nrows * sizeof(HStringMap *));
   ret->forall = h_arena_malloc(arena, nrows * sizeof(HLRAction *));
   ret->inadeq = h_slist_new(arena);
   ret->arena = arena;
   ret->mm__ = mm__;
 
   for(size_t i=0; i<nrows; i++) {
-    ret->rows[i] = h_hashtable_new(arena, h_eq_symbol, h_hash_symbol);
+    ret->ntmap[i] = h_hashtable_new(arena, h_eq_symbol, h_hash_symbol);
+    ret->tmap[i] = h_stringmap_new(arena);
     ret->forall[i] = NULL;
   }
 
@@ -186,6 +189,12 @@ HLRAction *h_lr_conflict(HArena *arena, HLRAction *action, HLRAction *new)
   return action;
 }
 
+bool h_lrtable_row_empty(const HLRTable *table, size_t i)
+{
+  return (h_hashtable_empty(table->ntmap[i])
+          && h_stringmap_empty(table->tmap[i]));
+}
+
 
 
 /* LR driver */
@@ -214,10 +223,14 @@ terminal_lookup(const HLREngine *engine, const HCFChoice *symbol)
 
   assert(state < table->nrows);
   if(table->forall[state]) {
-    assert(h_hashtable_empty(table->rows[state]));  // that would be a conflict
+    assert(h_lrtable_row_empty(table, state));  // that would be a conflict
     return table->forall[state];
   } else {
-    return h_hashtable_get(table->rows[state], symbol);
+    // XXX use the lookahead stream directly here (cf. llk)
+    if(symbol->type == HCF_END)
+      return table->tmap[state]->end_branch;
+    else
+      return h_stringmap_get(table->tmap[state], &symbol->chr, 1, false);
   }
 }
 
@@ -228,12 +241,9 @@ nonterminal_lookup(const HLREngine *engine, const HCFChoice *symbol)
   size_t state = engine->state;
 
   assert(state < table->nrows);
-  if(table->forall[state]) {
-    assert(h_hashtable_empty(table->rows[state]));  // that would be a conflict
-    return table->forall[state];
-  } else {
-    return h_hashtable_get(table->rows[state], symbol);
-  }
+  assert(!table->forall[state]);    // contains only reduce entries
+                                    // we are only looking for shifts
+  return h_hashtable_get(table->ntmap[state], symbol);
 }
 
 const HLRAction *h_lrengine_action(const HLREngine *engine)
@@ -500,6 +510,19 @@ void pprint_lraction(FILE *f, const HCFGrammar *g, const HLRAction *action)
   }
 }
 
+static void valprint_lraction(FILE *file, void *env, void *val)
+{
+  const HLRAction *action = val;
+  const HCFGrammar *grammar = env;
+  pprint_lraction(file, grammar, action);
+}
+
+static void pprint_lrtable_terminals(FILE *file, const HCFGrammar *g,
+                                     const HStringMap *map)
+{
+  h_pprint_stringmap(file, ' ', valprint_lraction, (void *)g, map);
+}
+
 void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
                       unsigned int indent)
 {
@@ -507,18 +530,19 @@ void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
     for(unsigned int j=0; j<indent; j++) fputc(' ', f);
     fprintf(f, "%4lu:", i);
     if(table->forall[i]) {
-      fputs(" - ", f);
+      fputc(' ', f);
       pprint_lraction(f, g, table->forall[i]);
-      fputs(" -", f);
-      if(!h_hashtable_empty(table->rows[i]))
+      if(!h_lrtable_row_empty(table, i))
         fputs(" !!", f);
     }
-    H_FOREACH(table->rows[i], HCFChoice *symbol, HLRAction *action)
+    H_FOREACH(table->ntmap[i], HCFChoice *symbol, HLRAction *action)
       fputc(' ', f);    // separator
       h_pprint_symbol(f, g, symbol);
       fputc(':', f);
       pprint_lraction(f, g, action);
     H_END_FOREACH
+    fputc(' ', f);    // separator
+    pprint_lrtable_terminals(f, g, table->tmap[i]);
     fputc('\n', f);
   }
 

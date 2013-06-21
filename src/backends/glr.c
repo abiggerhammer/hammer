@@ -119,11 +119,6 @@ HParserBackendVTable h__glr_backend_vtable = {
 
 
 // XXX TODO
-// - split tables into
-//   - one mapping input bytes to actions (shift or reduce or conflict)
-//   - one mapping reduced-to lhs nonterminals to shift states
-//     - can there still be conflicts here?
-// - use HStringMap to represent lookahead sets and the "piggyback" table
 // - implement engine merging
 //   - triggered when two enter the same state
 //   - old stacks (/engines?) saved
