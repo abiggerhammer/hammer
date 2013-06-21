@@ -207,7 +207,7 @@ static bool match_production(HLREnhGrammar *eg, HCFChoice **p,
 
 // desugar parser with a fresh start symbol
 // this guarantees that the start symbol will not occur in any productions
-static HCFChoice *augment(HAllocator *mm__, HParser *parser)
+HCFChoice *h_desugar_augmented(HAllocator *mm__, HParser *parser)
 {
   HCFChoice *augmented = h_new(HCFChoice, 1);
 
@@ -231,7 +231,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
   // build LR(0) table
   // if necessary, resolve conflicts "by conversion to SLR"
 
-  HCFGrammar *g = h_cfgrammar_(mm__, augment(mm__, parser));
+  HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, parser));
   if(g == NULL)     // backend not suitable (language not context-free)
     return -1;
 
@@ -349,7 +349,7 @@ int test_lalr(void)
   HParser *p = E;
 
   printf("\n==== G R A M M A R ====\n");
-  HCFGrammar *g = h_cfgrammar_(mm__, augment(mm__, p));
+  HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, p));
   if(g == NULL) {
     fprintf(stderr, "h_cfgrammar failed\n");
     return 1;

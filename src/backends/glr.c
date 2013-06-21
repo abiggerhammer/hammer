@@ -129,6 +129,8 @@ HParserBackendVTable h__glr_backend_vtable = {
 // dummy!
 int test_glr(void)
 {
+  HAllocator *mm__ = &system_allocator;
+
   /* 
      E -> E '+' E
         | 'd'
@@ -141,7 +143,7 @@ int test_glr(void)
   HParser *p = E;
 
   printf("\n==== G R A M M A R ====\n");
-  HCFGrammar *g = h_cfgrammar(&system_allocator, p);
+  HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, p));
   if(g == NULL) {
     fprintf(stderr, "h_cfgrammar failed\n");
     return 1;
