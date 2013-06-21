@@ -190,18 +190,6 @@ HLRAction *h_lr_conflict(HArena *arena, HLRAction *action, HLRAction *new)
 
 /* LR driver */
 
-const HLRAction *
-h_lr_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol)
-{
-  assert(state < table->nrows);
-  if(table->forall[state]) {
-    assert(h_hashtable_empty(table->rows[state]));  // that would be a conflict
-    return table->forall[state];
-  } else {
-    return h_hashtable_get(table->rows[state], symbol);
-  }
-}
-
 HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table,
                           const HInputStream *stream)
 {
@@ -216,6 +204,36 @@ HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table,
   engine->tarena = tarena;
 
   return engine;
+}
+
+static const HLRAction *
+terminal_lookup(const HLREngine *engine, const HCFChoice *symbol)
+{
+  const HLRTable *table = engine->table;
+  size_t state = engine->state;
+
+  assert(state < table->nrows);
+  if(table->forall[state]) {
+    assert(h_hashtable_empty(table->rows[state]));  // that would be a conflict
+    return table->forall[state];
+  } else {
+    return h_hashtable_get(table->rows[state], symbol);
+  }
+}
+
+static const HLRAction *
+nonterminal_lookup(const HLREngine *engine, const HCFChoice *symbol)
+{
+  const HLRTable *table = engine->table;
+  size_t state = engine->state;
+
+  assert(state < table->nrows);
+  if(table->forall[state]) {
+    assert(h_hashtable_empty(table->rows[state]));  // that would be a conflict
+    return table->forall[state];
+  } else {
+    return h_hashtable_get(table->rows[state], symbol);
+  }
 }
 
 const HLRAction *h_lrengine_action(const HLREngine *engine)
@@ -235,7 +253,7 @@ const HLRAction *h_lrengine_action(const HLREngine *engine)
     x->chr = c;
   }
 
-  return h_lr_lookup(engine->table, engine->state, x);
+  return terminal_lookup(engine, x);
 }
 
 static HParsedToken *consume_input(HLREngine *engine)
@@ -308,7 +326,7 @@ static bool h_lrengine_step_(HLREngine *engine, const HLRAction *action)
     // this is LR, building a right-most derivation bottom-up, so no reduce can
     // follow a reduce. we can also assume no conflict follows for GLR if we
     // use LALR tables, because only terminal symbols (lookahead) get reduces.
-    const HLRAction *shift = h_lr_lookup(engine->table, engine->state, symbol);
+    const HLRAction *shift = nonterminal_lookup(engine, symbol);
     if(shift == NULL)
       return false;     // parse error
     assert(shift->type == HLR_SHIFT);
