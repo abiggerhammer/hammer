@@ -70,11 +70,8 @@ typedef struct HLREngine_ {
   size_t state;
   bool run;
 
-  // stack layout:
-  // on the left stack, we put pairs:  (saved state, semantic value)
-  // on the right stack, we put pairs: (symbol, semantic value)
-  HSlist *left;     // left stack; reductions happen here
-  HSlist *right;    // right stack; input appears here
+  HSlist *stack;        // holds pairs: (saved state, semantic value)
+  HInputStream input;
 
   HArena *arena;    // will hold the results
   HArena *tarena;   // tmp, deleted after parse
@@ -108,7 +105,8 @@ HLRItem *h_lritem_new(HArena *a, HCFChoice *lhs, HCFChoice **rhs, size_t mark);
 HLRState *h_lrstate_new(HArena *arena);
 HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows);
 void h_lrtable_free(HLRTable *table);
-HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table);
+HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table,
+                          const HInputStream *stream);
 HLRAction *h_reduce_action(HArena *arena, const HLRItem *item);
 HLRAction *h_shift_action(HArena *arena, size_t nextstate);
 HLRAction *h_lr_conflict(HArena *arena, HLRAction *action, HLRAction *new);
@@ -128,7 +126,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params);
 void h_lalr_free(HParser *parser);
 
 const HLRAction *h_lr_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol);
-const HLRAction *h_lrengine_action(HLREngine *engine, HInputStream *stream);
+const HLRAction *h_lrengine_action(const HLREngine *engine);
 void h_lrengine_step(HLREngine *engine, const HLRAction *action);
 HParseResult *h_lrengine_result(HLREngine *engine);
 HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream);

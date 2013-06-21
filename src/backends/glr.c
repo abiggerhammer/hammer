@@ -29,15 +29,14 @@ HLREngine *fork_engine(const HLREngine *engine)
   HLREngine *eng2 = h_arena_malloc(engine->tarena, sizeof(HLREngine));
   eng2->table = engine->table;
   eng2->state = engine->state;
+  eng2->input = engine->input;
 
-  // shallow-copy the stacks
+  // shallow-copy the stack
   // this works because h_slist_push and h_slist_pop never modify
   // the underlying structure of HSlistNodes, only the head pointer.
   // in fact, this gives us prefix sharing for free.
-  eng2->left = h_arena_malloc(engine->tarena, sizeof(HSlist));
-  eng2->right = h_arena_malloc(engine->tarena, sizeof(HSlist));
-  *eng2->left = *engine->left;
-  *eng2->right = *engine->right;
+  eng2->stack = h_arena_malloc(engine->tarena, sizeof(HSlist));
+  *eng2->stack = *engine->stack;
 
   eng2->arena = engine->arena;
   eng2->tarena = engine->tarena;
@@ -54,7 +53,7 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
   HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
 
   HSlist *engines = h_slist_new(tarena);
-  h_slist_push(engines, h_lrengine_new(arena, tarena, table));
+  h_slist_push(engines, h_lrengine_new(arena, tarena, table, stream));
 
   HParseResult *result = NULL;
   while(result == NULL && !h_slist_empty(engines)) {
@@ -75,7 +74,7 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
         continue;
       }
 
-      const HLRAction *action = h_lrengine_action(engine, stream);
+      const HLRAction *action = h_lrengine_action(engine);
 
       // fork engine on conflicts
       if(action && action->type == HLR_CONFLICT) {
@@ -120,8 +119,6 @@ HParserBackendVTable h__glr_backend_vtable = {
 
 
 // XXX TODO
-// - eliminate right stack by always doing a shift after reduce
-//   (shift should always follow reduce because rightmost)
 // - split tables into
 //   - one mapping input bytes to actions (shift or reduce or conflict)
 //   - one mapping reduced-to lhs nonterminals to shift states

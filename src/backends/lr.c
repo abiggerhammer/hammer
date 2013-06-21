@@ -202,65 +202,64 @@ h_lr_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol)
   }
 }
 
-HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table)
+HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table,
+                          const HInputStream *stream)
 {
   HLREngine *engine = h_arena_malloc(tarena, sizeof(HLREngine));
 
   engine->table = table;
   engine->state = 0;
   engine->run = true;
-  engine->left = h_slist_new(tarena);
-  engine->right = h_slist_new(tarena);
+  engine->stack = h_slist_new(tarena);
+  engine->input = *stream;
   engine->arena = arena;
   engine->tarena = tarena;
 
   return engine;
 }
 
-const HLRAction *h_lrengine_action(HLREngine *engine, HInputStream *stream)
+const HLRAction *h_lrengine_action(const HLREngine *engine)
 {
-  HSlist *right = engine->right;
-  HArena *arena = engine->arena;
   HArena *tarena = engine->tarena;
 
-  // make sure there is input on the right stack
-  if(h_slist_empty(right)) {
-    // XXX use statically-allocated terminal symbols
-    HCFChoice *x = h_arena_malloc(tarena, sizeof(HCFChoice));
-    HParsedToken *v;
+  // XXX use statically-allocated terminal symbols
+  HCFChoice *x = h_arena_malloc(tarena, sizeof(HCFChoice));
 
-    uint8_t c = h_read_bits(stream, 8, false);
+  HInputStream lookahead = engine->input;
+  uint8_t c = h_read_bits(&lookahead, 8, false);
 
-    if(stream->overrun) {     // end of input
-      x->type = HCF_END;
-      v = NULL;
-    } else {
-      x->type = HCF_CHAR;
-      x->chr = c;
-      v = h_arena_malloc(arena, sizeof(HParsedToken));
-      v->token_type = TT_UINT;
-      v->uint = c;
-    }
-
-    h_slist_push(right, v);
-    h_slist_push(right, x);
+  if(lookahead.overrun) {     // end of input
+    x->type = HCF_END;
+  } else {
+    x->type = HCF_CHAR;
+    x->chr = c;
   }
 
-  // peek at input symbol on the right side
-  HCFChoice *symbol = right->head->elem;
+  return h_lr_lookup(engine->table, engine->state, x);
+}
 
-  // table lookup
-  const HLRAction *action = h_lr_lookup(engine->table, engine->state, symbol);
+static HParsedToken *consume_input(HLREngine *engine)
+{
+  HParsedToken *v;
 
-  return action;
+  uint8_t c = h_read_bits(&engine->input, 8, false);
+
+  if(engine->input.overrun) {     // end of input
+    v = NULL;
+  } else {
+    v = h_arena_malloc(engine->arena, sizeof(HParsedToken));
+    v->token_type = TT_UINT;
+    v->uint = c;
+  }
+
+  return v;
 }
 
 // run LR parser for one round; returns false when finished
 static bool h_lrengine_step_(HLREngine *engine, const HLRAction *action)
 {
   // short-hand names
-  HSlist *left = engine->left;
-  HSlist *right = engine->right;
+  HSlist *stack = engine->stack;
   HArena *arena = engine->arena;
   HArena *tarena = engine->tarena;
 
@@ -278,11 +277,11 @@ static bool h_lrengine_step_(HLREngine *engine, const HLRAction *action)
     value->token_type = TT_SEQUENCE;
     value->seq = h_carray_new_sized(arena, len);
     
-    // pull values off the left stack, rewinding state accordingly
+    // pull values off the stack, rewinding state accordingly
     HParsedToken *v = NULL;
     for(size_t i=0; i<len; i++) {
-      v = h_slist_drop(left);
-      engine->state = (uintptr_t)h_slist_drop(left);
+      v = h_slist_drop(stack);
+      engine->state = (uintptr_t)h_slist_drop(stack);
 
       // collect values in result sequence
       value->seq->elements[len-1-i] = v;
@@ -315,17 +314,17 @@ static bool h_lrengine_step_(HLREngine *engine, const HLRAction *action)
     assert(shift->type == HLR_SHIFT);
 
     // piggy-back the shift right here, never touching the input
-    h_slist_push(left, (void *)(uintptr_t)engine->state);
-    h_slist_push(left, value);
+    h_slist_push(stack, (void *)(uintptr_t)engine->state);
+    h_slist_push(stack, value);
     engine->state = shift->nextstate;
 
     if(symbol == engine->table->start)
       return false;     // reduced to start symbol; accept!
   } else {
     assert(action->type == HLR_SHIFT);
-    h_slist_push(left, (void *)(uintptr_t)engine->state);
-    h_slist_drop(right);                      // symbol (discard)
-    h_slist_push(left, h_slist_drop(right));   // semantic value
+    HParsedToken *value = consume_input(engine);
+    h_slist_push(stack, (void *)(uintptr_t)engine->state);
+    h_slist_push(stack, value);
     engine->state = action->nextstate;
   }
 
@@ -341,9 +340,9 @@ void h_lrengine_step(HLREngine *engine, const HLRAction *action)
 HParseResult *h_lrengine_result(HLREngine *engine)
 {
   // parsing was successful iff after a shift the engine is back in state 0
-  if(engine->state == 0 && !h_slist_empty(engine->left)) {
+  if(engine->state == 0 && !h_slist_empty(engine->stack)) {
     // on top of the stack is the start symbol's semantic value
-    HParsedToken *tok = engine->left->head->elem;
+    HParsedToken *tok = engine->stack->head->elem;
     return make_result(engine->arena, tok);
   } else {
     return NULL;
@@ -358,11 +357,11 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
 
   HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
   HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
-  HLREngine *engine = h_lrengine_new(arena, tarena, table);
+  HLREngine *engine = h_lrengine_new(arena, tarena, table, stream);
 
   // iterate engine to completion
   while(engine->run)
-    h_lrengine_step(engine, h_lrengine_action(engine, stream));
+    h_lrengine_step(engine, h_lrengine_action(engine));
 
   HParseResult *result = h_lrengine_result(engine);
   if(!result)
