@@ -43,6 +43,44 @@ HLREngine *fork_engine(const HLREngine *engine)
   return eng2;
 }
 
+static void stow_engine(HSlist *engines, HLREngine *engine)
+{
+  // XXX switch to one engine per state, and do the merge here
+  h_slist_push(engines, engine);
+}
+
+static const HLRAction *handle_conflict(HSlist *engines, const HLREngine *engine,
+                                        const HSlist *branches)
+{
+  // there should be at least two conflicting actions
+  assert(branches->head);
+  assert(branches->head->next);     // this is just a consistency check
+
+  // fork a new engine for all but the first action
+  for(HSlistNode *x=branches->head->next; x; x=x->next) {
+    HLRAction *act = x->elem; 
+    HLREngine *eng = fork_engine(engine);
+
+    // perform one step and add to list
+    h_lrengine_step(eng, act);
+    stow_engine(engines, eng);
+  } 
+
+  // return first action for use with original engine
+  return branches->head->elem;
+}
+
+static HLREngine *handle_demerge(HSlist *engines, HLREngine *engine,
+                                 const HLRAction *reduce)
+{
+  return engine; // XXX
+
+  for(size_t i=0; i<reduce->production.length; i++) {
+    // XXX if stack hits bottom, demerge
+  }
+  // XXX call step and stow on the newly-created engines
+}
+
 HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
 {
   HLRTable *table = parser->backend_data;
@@ -60,12 +98,11 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
     for(HSlistNode **x = &engines->head; *x; ) {
       HLREngine *engine = (*x)->elem;
 
-      // check for terminated engines
-      if(engine->run) {
-        x = &(*x)->next;    // advance x with no change
-      } else {
-        *x = (*x)->next;    // advance x, removing the current element
+      // remove engine from list; it may come back in below
+      *x = (*x)->next;    // advance x, removing the current element
 
+      // drop those engines that have terminated
+      if(!engine->run) {
         // check for parse success
         HParseResult *res = h_lrengine_result(engine);
         if(res)
@@ -76,29 +113,19 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
       const HLRAction *action = h_lrengine_action(engine);
 
-      // fork engine on conflicts
-      if(action && action->type == HLR_CONFLICT) {
-        const HSlist *branches = action->branches;
-
-        // there should be at least two conflicting actions
-        assert(branches->head);
-        assert(branches->head->next);
-
-        // save first action for use with old engine below
-        action = branches->head->elem;
-
-        // fork a new engine for all the other actions
-        for(HSlistNode *x=branches->head->next; x; x=x->next) {
-          HLRAction *act = x->elem; 
-          HLREngine *eng = fork_engine(engine);
-
-          // perform one step and add to list
-          h_lrengine_step(eng, act);
-          h_slist_push(engines, eng);
-        } 
+      // handle forks and demerges (~> spawn engines)
+      if(action) {
+        if(action->type == HLR_CONFLICT) {
+          // fork engine on conflicts
+          action = handle_conflict(engines, engine, action->branches);
+        } else if(action->type == HLR_REDUCE) {
+          // demerge as needed to ensure that stacks are deep enough
+          engine = handle_demerge(engines, engine, action);
+        }
       }
 
       h_lrengine_step(engine, action);
+      stow_engine(engines, engine);
     }
   }
 

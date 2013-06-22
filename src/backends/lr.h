@@ -74,8 +74,10 @@ typedef struct HLREngine_ {
   HSlist *stack;        // holds pairs: (saved state, semantic value)
   HInputStream input;
 
-  HArena *arena;    // will hold the results
-  HArena *tarena;   // tmp, deleted after parse
+  HSlist *merged;       // saved ancestor engines that merged to form this one
+
+  HArena *arena;        // will hold the results
+  HArena *tarena;       // tmp, deleted after parse
 } HLREngine;
 
 
