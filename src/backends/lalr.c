@@ -1,427 +1,6 @@
 #include <assert.h>
-#include "../internal.h"
-#include "../cfgrammar.h"
-#include "../parsers/parser_internal.h"
 #include "contextfree.h"
-
-
-
-/* Data structures */
-
-typedef HHashSet HLRState;  // states are sets of LRItems
-
-typedef struct HLRDFA_ {
-  size_t nstates;
-  const HLRState **states;  // array of size nstates
-  HSlist *transitions;
-} HLRDFA;
-
-typedef struct HLRTransition_ {
-  size_t from;              // index into 'states' array
-  const HCFChoice *symbol;
-  size_t to;                // index into 'states' array
-} HLRTransition;
-
-typedef struct HLRItem_ {
-  HCFChoice *lhs;
-  HCFChoice **rhs;          // NULL-terminated
-  size_t len;               // number of elements in rhs
-  size_t mark;
-} HLRItem;
-
-typedef struct HLRAction_ {
-  enum {HLR_SHIFT, HLR_REDUCE} type;
-  union {
-    size_t nextstate;   // used with SHIFT
-    struct {
-      HCFChoice *lhs;   // symbol carrying semantic actions etc.
-      size_t length;    // # of symbols in rhs
-#ifndef NDEBUG
-      HCFChoice **rhs;  // NB: the rhs symbols are not needed for the parse
-#endif
-    } production;       // used with REDUCE
-  };
-} HLRAction;
-
-typedef struct HLRTable_ {
-  size_t     nrows;
-  HHashTable **rows;    // map symbols to HLRActions
-  HLRAction  **forall;  // shortcut to set an action for an entire row
-  HCFChoice  *start;    // start symbol
-  HSlist     *inadeq;   // indices of any inadequate states
-  HArena     *arena;
-  HAllocator *mm__;
-} HLRTable;
-
-typedef struct HLREnhGrammar_ {
-  HCFGrammar *grammar;  // enhanced grammar
-  HHashTable *tmap;     // maps transitions to enhanced-grammar symbols
-  HHashTable *smap;     // maps enhanced-grammar symbols to transitions
-  HHashTable *corr;     // maps symbols to sets of corresponding e. symbols
-  HArena *arena;
-} HLREnhGrammar;
-
-
-// XXX move to internal.h or something
-// XXX replace other hashtable iterations with this
-#define H_FOREACH_(HT) {                                                    \
-    const HHashTable *ht__ = HT;                                            \
-    for(size_t i__=0; i__ < ht__->capacity; i__++) {                        \
-      for(HHashTableEntry *hte__ = &ht__->contents[i__];                    \
-          hte__;                                                            \
-          hte__ = hte__->next) {                                            \
-        if(hte__->key == NULL) continue;
-
-#define H_FOREACH_KEY(HT, KEYVAR) H_FOREACH_(HT)                            \
-        const KEYVAR = hte__->key;
-
-#define H_FOREACH(HT, KEYVAR, VALVAR) H_FOREACH_KEY(HT, KEYVAR)             \
-        VALVAR = hte__->value;
-
-#define H_END_FOREACH                                                       \
-      }                                                                     \
-    }                                                                       \
-  }
-
-// compare symbols - terminals by value, others by pointer
-static bool eq_symbol(const void *p, const void *q)
-{
-  const HCFChoice *x=p, *y=q;
-  return (x==y
-          || (x->type==HCF_END && y->type==HCF_END)
-          || (x->type==HCF_CHAR && y->type==HCF_CHAR && x->chr==y->chr));
-}
-
-// hash symbols - terminals by value, others by pointer
-static HHashValue hash_symbol(const void *p)
-{
-  const HCFChoice *x=p;
-  if(x->type == HCF_END)
-    return 0;
-  else if(x->type == HCF_CHAR)
-    return x->chr * 33;
-  else
-    return h_hash_ptr(p);
-}
-
-// compare LALR items by value
-static bool eq_lalr_item(const void *p, const void *q)
-{
-  const HLRItem *a=p, *b=q;
-
-  if(!eq_symbol(a->lhs, b->lhs)) return false;
-  if(a->mark != b->mark) return false;
-  if(a->len != b->len) return false;
-
-  for(size_t i=0; i<a->len; i++)
-    if(!eq_symbol(a->rhs[i], b->rhs[i])) return false;
-
-  return true;
-}
-
-// compare LALR item sets (DFA states)
-static inline bool eq_lalr_itemset(const void *p, const void *q)
-{
-  return h_hashset_equal(p, q);
-}
-
-// hash LALR items
-static inline HHashValue hash_lalr_item(const void *p)
-{
-  const HLRItem *x = p;
-  HHashValue hash = 0;
-
-  hash += hash_symbol(x->lhs);
-  for(HCFChoice **p=x->rhs; *p; p++)
-    hash += hash_symbol(*p);
-  hash += x->mark;
-
-  return hash;
-}
-
-// hash LALR item sets (DFA states) - hash the elements and sum
-static HHashValue hash_lalr_itemset(const void *p)
-{
-  HHashValue hash = 0;
-
-  H_FOREACH_KEY((const HHashSet *)p, HLRItem *item)
-    hash += hash_lalr_item(item);
-  H_END_FOREACH
-
-  return hash;
-}
-
-HLRItem *h_lritem_new(HArena *a, HCFChoice *lhs, HCFChoice **rhs, size_t mark)
-{
-  HLRItem *ret = h_arena_malloc(a, sizeof(HLRItem));
-
-  size_t len = 0;
-  for(HCFChoice **p=rhs; *p; p++) len++;
-  assert(mark <= len);
-
-  ret->lhs = lhs;
-  ret->rhs = rhs;
-  ret->len = len;
-  ret->mark = mark;
-
-  return ret;
-}
-
-static inline HLRState *h_lrstate_new(HArena *arena)
-{
-  return h_hashset_new(arena, eq_lalr_item, hash_lalr_item);
-}
-
-HLRTable *h_lrtable_new(HAllocator *mm__, size_t nrows)
-{
-  HArena *arena = h_new_arena(mm__, 0);    // default blocksize
-  assert(arena != NULL);
-
-  HLRTable *ret = h_new(HLRTable, 1);
-  ret->nrows = nrows;
-  ret->rows = h_arena_malloc(arena, nrows * sizeof(HHashTable *));
-  ret->forall = h_arena_malloc(arena, nrows * sizeof(HLRAction *));
-  ret->inadeq = h_slist_new(arena);
-  ret->arena = arena;
-  ret->mm__ = mm__;
-
-  for(size_t i=0; i<nrows; i++) {
-    ret->rows[i] = h_hashtable_new(arena, eq_symbol, hash_symbol);
-    ret->forall[i] = NULL;
-  }
-
-  return ret;
-}
-
-void h_lrtable_free(HLRTable *table)
-{
-  HAllocator *mm__ = table->mm__;
-  h_delete_arena(table->arena);
-  h_free(table);
-}
-
-
-
-/* Constructing the characteristic automaton (handle recognizer) */
-
-static HLRItem *advance_mark(HArena *arena, const HLRItem *item)
-{
-  assert(item->rhs[item->mark] != NULL);
-  HLRItem *ret = h_arena_malloc(arena, sizeof(HLRItem));
-  *ret = *item;
-  ret->mark++;
-  return ret;
-}
-
-static void expand_to_closure(HCFGrammar *g, HHashSet *items)
-{
-  HAllocator *mm__ = g->mm__;
-  HArena *arena = g->arena;
-  HSlist *work = h_slist_new(arena);
-
-  // initialize work list with items
-  H_FOREACH_KEY(items, HLRItem *item)
-    h_slist_push(work, (void *)item);
-  H_END_FOREACH
-
-  while(!h_slist_empty(work)) {
-    const HLRItem *item = h_slist_pop(work);
-    HCFChoice *sym = item->rhs[item->mark]; // symbol after mark
-
-    // if there is a non-terminal after the mark, follow it
-    // NB: unlike LLk, we do consider HCF_CHARSET a non-terminal here
-    if(sym != NULL && (sym->type==HCF_CHOICE || sym->type==HCF_CHARSET)) {
-      // add items corresponding to the productions of sym
-      if(sym->type == HCF_CHOICE) {
-        for(HCFSequence **p=sym->seq; *p; p++) {
-          HLRItem *it = h_lritem_new(arena, sym, (*p)->items, 0);
-          if(!h_hashset_present(items, it)) {
-            h_hashset_put(items, it);
-            h_slist_push(work, it);
-          }
-        }
-      } else {  // HCF_CHARSET
-        for(unsigned int i=0; i<256; i++) {
-          if(charset_isset(sym->charset, i)) {
-            // XXX allocate these single-character symbols statically somewhere
-            HCFChoice **rhs = h_new(HCFChoice *, 2);
-            rhs[0] = h_new(HCFChoice, 1);
-            rhs[0]->type = HCF_CHAR;
-            rhs[0]->chr = i;
-            rhs[1] = NULL;
-            HLRItem *it = h_lritem_new(arena, sym, rhs, 0);
-            h_hashset_put(items, it);
-            // single-character item needs no further work
-          }
-        }
-        // if sym is a non-terminal, we need a reshape on it
-        // this seems as good a place as any to set it
-        sym->reshape = h_act_first;
-      }
-    }
-  }
-}
-
-HLRDFA *h_lr0_dfa(HCFGrammar *g)
-{
-  HArena *arena = g->arena;
-
-  HHashSet *states = h_hashset_new(arena, eq_lalr_itemset, hash_lalr_itemset);
-      // maps itemsets to assigned array indices
-  HSlist *transitions = h_slist_new(arena);
-
-  // list of states that need to be processed
-  // to save lookups, we push two elements per state, the itemset and its
-  // assigned index.
-  HSlist *work = h_slist_new(arena);
-
-  // make initial state (kernel)
-  HLRState *start = h_lrstate_new(arena);
-  assert(g->start->type == HCF_CHOICE);
-  for(HCFSequence **p=g->start->seq; *p; p++)
-    h_hashset_put(start, h_lritem_new(arena, g->start, (*p)->items, 0));
-  expand_to_closure(g, start);
-  h_hashtable_put(states, start, 0);
-  h_slist_push(work, start);
-  h_slist_push(work, 0);
-  
-  // while work to do (on some state)
-  //   determine edge symbols
-  //   for each edge symbol:
-  //     advance respective items -> destination state (kernel)
-  //     compute closure
-  //     if destination is a new state:
-  //       add it to state set
-  //       add transition to it
-  //       add it to the work list
-
-  while(!h_slist_empty(work)) {
-    size_t state_idx = (uintptr_t)h_slist_pop(work);
-    HLRState *state = h_slist_pop(work);
-
-    // maps edge symbols to neighbor states (item sets) of s
-    HHashTable *neighbors = h_hashtable_new(arena, eq_symbol, hash_symbol);
-
-    // iterate over state (closure) and generate neighboring sets
-    H_FOREACH_KEY(state, HLRItem *item)
-      HCFChoice *sym = item->rhs[item->mark]; // symbol after mark
-
-      if(sym != NULL) { // mark was not at the end
-        // find or create prospective neighbor set
-        HLRState *neighbor = h_hashtable_get(neighbors, sym);
-        if(neighbor == NULL) {
-          neighbor = h_lrstate_new(arena);
-          h_hashtable_put(neighbors, sym, neighbor);
-        }
-
-        // ...and add the advanced item to it
-        h_hashset_put(neighbor, advance_mark(arena, item));
-      }
-    H_END_FOREACH
-
-    // merge expanded neighbor sets into the set of existing states
-    H_FOREACH(neighbors, HCFChoice *symbol, HLRState *neighbor)
-      expand_to_closure(g, neighbor);
-
-      // look up existing state, allocate new if not found
-      size_t neighbor_idx;
-      if(!h_hashset_present(states, neighbor)) {
-        neighbor_idx = states->used;
-        h_hashtable_put(states, neighbor, (void *)(uintptr_t)neighbor_idx);
-        h_slist_push(work, neighbor);
-        h_slist_push(work, (void *)(uintptr_t)neighbor_idx);
-      } else {
-        neighbor_idx = (uintptr_t)h_hashtable_get(states, neighbor);
-      }
-
-      // add transition "state --symbol--> neighbor"
-      HLRTransition *t = h_arena_malloc(arena, sizeof(HLRTransition));
-      t->from = state_idx;
-      t->to = neighbor_idx;
-      t->symbol = symbol;
-      h_slist_push(transitions, t);
-    H_END_FOREACH
-  } // end while(work)
-
-  // fill DFA struct
-  HLRDFA *dfa = h_arena_malloc(arena, sizeof(HLRDFA));
-  dfa->nstates = states->used;
-  dfa->states = h_arena_malloc(arena, dfa->nstates*sizeof(HLRState *));
-  H_FOREACH(states, HLRState *state, void *v)
-    size_t idx = (uintptr_t)v;
-    dfa->states[idx] = state;
-  H_END_FOREACH
-  dfa->transitions = transitions;
-
-  return dfa;
-}
-
-
-
-/* LR(0) table generation */
-
-static HLRAction *shift_action(HArena *arena, size_t nextstate)
-{
-  HLRAction *action = h_arena_malloc(arena, sizeof(HLRAction));
-  action->type = HLR_SHIFT;
-  action->nextstate = nextstate;
-  return action;
-}
-
-static HLRAction *reduce_action(HArena *arena, const HLRItem *item)
-{
-  HLRAction *action = h_arena_malloc(arena, sizeof(HLRAction));
-  action->type = HLR_REDUCE;
-  action->production.lhs = item->lhs;
-  action->production.length = item->len;
-#ifndef NDEBUG
-  action->production.rhs = item->rhs;
-#endif
-  return action;
-}
-
-HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa)
-{
-  HAllocator *mm__ = g->mm__;
-
-  HLRTable *table = h_lrtable_new(mm__, dfa->nstates);
-  HArena *arena = table->arena;
-
-  // remember start symbol
-  table->start = g->start;
-
-  // add shift entries
-  for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {
-    // for each transition x-A->y, add "shift, goto y" to table entry (x,A)
-    HLRTransition *t = x->elem;
-
-    HLRAction *action = shift_action(arena, t->to);
-    h_hashtable_put(table->rows[t->from], t->symbol, action);
-  }
-
-  // add reduce entries, record inadequate states
-  for(size_t i=0; i<dfa->nstates; i++) {
-    // find reducible items in state
-    H_FOREACH_KEY(dfa->states[i], HLRItem *item)
-      if(item->mark == item->len) { // mark at the end
-        // check for conflicts
-        // XXX store more informative stuff in the inadeq records?
-        if(table->forall[i]) {
-          // reduce/reduce conflict with a previous item
-          h_slist_push(table->inadeq, (void *)(uintptr_t)i);
-        } else if(!h_hashtable_empty(table->rows[i])) {
-          // shift/reduce conflict with one of the row's entries
-          h_slist_push(table->inadeq, (void *)(uintptr_t)i);
-        }
-
-        // set reduce action for the entire row
-        table->forall[i] = reduce_action(arena, item);
-      }
-    H_END_FOREACH
-  }
-
-  return table;
-}
+#include "lr.h"
 
 
 
@@ -434,9 +13,23 @@ static inline size_t seqsize(void *p_)
   return n+1;
 }
 
+static HLRAction *
+lrtable_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol)
+{
+  switch(symbol->type) {
+  case HCF_END:
+    return table->tmap[state]->end_branch;
+  case HCF_CHAR:
+    return h_stringmap_get(table->tmap[state], &symbol->chr, 1, false);
+  default:
+    // nonterminal case
+    return h_hashtable_get(table->ntmap[state], symbol);
+  }
+}
+
 static size_t follow_transition(const HLRTable *table, size_t x, HCFChoice *A)
 {
-  HLRAction *action = h_hashtable_get(table->rows[x], A);
+  HLRAction *action = lrtable_lookup(table, x, A);
   assert(action != NULL);
   assert(action->type == HLR_SHIFT);
   return action->nextstate;
@@ -489,19 +82,7 @@ static void transform_productions(const HLRTable *table, HLREnhGrammar *eg,
   xAy->seq = seq;
 }
 
-static bool eq_transition(const void *p, const void *q)
-{
-  const HLRTransition *a=p, *b=q;
-  return (a->from == b->from && a->to == b->to && eq_symbol(a->symbol, b->symbol));
-}
-
-static HHashValue hash_transition(const void *p)
-{
-  const HLRTransition *t = p;
-  return (hash_symbol(t->symbol) + t->from + t->to); // XXX ?
-}
-
-HCFChoice *new_enhanced_symbol(HLREnhGrammar *eg, const HCFChoice *sym)
+static HCFChoice *new_enhanced_symbol(HLREnhGrammar *eg, const HCFChoice *sym)
 {
   HArena *arena = eg->arena;
   HCFChoice *esym = h_arena_malloc(arena, sizeof(HCFChoice));
@@ -509,13 +90,14 @@ HCFChoice *new_enhanced_symbol(HLREnhGrammar *eg, const HCFChoice *sym)
 
   HHashSet *cs = h_hashtable_get(eg->corr, sym);
   if(!cs) {
-    cs = h_hashset_new(arena, eq_symbol, hash_symbol);
+    cs = h_hashset_new(arena, h_eq_symbol, h_hash_symbol);
     h_hashtable_put(eg->corr, sym, cs);
   }
   h_hashset_put(cs, esym);
 
   return esym;
 }
+
 static HLREnhGrammar *enhance_grammar(const HCFGrammar *g, const HLRDFA *dfa,
                                       const HLRTable *table)
 {
@@ -523,9 +105,9 @@ static HLREnhGrammar *enhance_grammar(const HCFGrammar *g, const HLRDFA *dfa,
   HArena *arena = g->arena;
 
   HLREnhGrammar *eg = h_arena_malloc(arena, sizeof(HLREnhGrammar));
-  eg->tmap = h_hashtable_new(arena, eq_transition, hash_transition);
+  eg->tmap = h_hashtable_new(arena, h_eq_transition, h_hash_transition);
   eg->smap = h_hashtable_new(arena, h_eq_ptr, h_hash_ptr);
-  eg->corr = h_hashtable_new(arena, eq_symbol, hash_symbol);
+  eg->corr = h_hashtable_new(arena, h_eq_symbol, h_hash_symbol);
   // XXX must use h_eq/hash_ptr for symbols! so enhanced CHARs are different
   eg->arena = arena;
 
@@ -562,32 +144,60 @@ static inline bool has_conflicts(HLRTable *table)
   return !h_slist_empty(table->inadeq);
 }
 
-// place a new entry in tbl; records conflicts in tbl->inadeq
+// for each lookahead symbol (fs), put action into tmap
 // returns 0 on success, -1 on conflict
 // ignores forall entries
-int h_lrtable_put(HLRTable *tbl, size_t state, HCFChoice *x, HLRAction *action)
+static int terminals_put(HStringMap *tmap, const HStringMap *fs, HLRAction *action)
 {
-  HLRAction *prev = h_hashtable_get(tbl->rows[state], x);
-  if(prev && prev != action) {
-    // conflict
-    h_slist_push(tbl->inadeq, (void *)(uintptr_t)state);
-    return -1;
-  } else {
-    h_hashtable_put(tbl->rows[state], x, action);
-    return 0;
+  int ret = 0;
+
+  if(fs->epsilon_branch) {
+    HLRAction *prev = tmap->epsilon_branch;
+    if(prev && prev != action) {
+      // conflict
+      tmap->epsilon_branch = h_lr_conflict(tmap->arena, prev, action);
+      ret = -1;
+    } else {
+      tmap->epsilon_branch = action;
+    }
   }
+
+  if(fs->end_branch) {
+    HLRAction *prev = tmap->end_branch;
+    if(prev && prev != action) {
+      // conflict
+      tmap->end_branch = h_lr_conflict(tmap->arena, prev, action);
+      ret = -1;
+    } else {
+      tmap->end_branch = action;
+    }
+  }
+
+  H_FOREACH(fs->char_branches, void *key, HStringMap *fs_)
+    HStringMap *tmap_ = h_hashtable_get(tmap->char_branches, key);
+
+    if(!tmap_) {
+      tmap_ = h_stringmap_new(tmap->arena);
+      h_hashtable_put(tmap->char_branches, key, tmap_);
+    }
+
+    if(terminals_put(tmap_, fs_, action) < 0)
+      ret = -1;
+  H_END_FOREACH
+
+  return ret;
 }
 
 // check whether a sequence of enhanced-grammar symbols (p) matches the given
 // (original-grammar) production rhs and terminates in the given end state.
-bool match_production(HLREnhGrammar *eg, HCFChoice **p,
-                      HCFChoice **rhs, size_t endstate)
+static bool match_production(HLREnhGrammar *eg, HCFChoice **p,
+                             HCFChoice **rhs, size_t endstate)
 {
   size_t state = endstate;  // initialized to end in case of empty rhs
   for(; *p && *rhs; p++, rhs++) {
     HLRTransition *t = h_hashtable_get(eg->smap, *p);
     assert(t != NULL);
-    if(!eq_symbol(t->symbol, *rhs))
+    if(!h_eq_symbol(t->symbol, *rhs))
       return false;
     state = t->to;
   }
@@ -597,7 +207,7 @@ bool match_production(HLREnhGrammar *eg, HCFChoice **p,
 
 // desugar parser with a fresh start symbol
 // this guarantees that the start symbol will not occur in any productions
-static HCFChoice *augment(HAllocator *mm__, HParser *parser)
+HCFChoice *h_desugar_augmented(HAllocator *mm__, HParser *parser)
 {
   HCFChoice *augmented = h_new(HCFChoice, 1);
 
@@ -621,7 +231,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
   // build LR(0) table
   // if necessary, resolve conflicts "by conversion to SLR"
 
-  HCFGrammar *g = h_cfgrammar_(mm__, augment(mm__, parser));
+  HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, parser));
   if(g == NULL)     // backend not suitable (language not context-free)
     return -1;
 
@@ -653,6 +263,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
     
     for(HSlistNode *x=inadeq->head; x; x=x->next) {
       size_t state = (uintptr_t)x->elem;
+      bool inadeq = false;
       
       // clear old forall entry, it's being replaced by more fine-grained ones
       table->forall[state] = NULL;
@@ -663,7 +274,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
           continue;
 
         // action to place in the table cells indicated by lookahead
-        HLRAction *action = reduce_action(arena, item);
+        HLRAction *action = h_reduce_action(arena, item);
 
         // find all LR(0)-enhanced productions matching item
         HHashSet *lhss = h_hashtable_get(eg->corr, item->lhs);
@@ -684,23 +295,13 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
             assert(!h_stringmap_empty(fs));
 
             // for each lookahead symbol, put action into table cell
-            if(fs->end_branch) {
-              HCFChoice *terminal = h_arena_malloc(arena, sizeof(HCFChoice));
-              terminal->type = HCF_END;
-              h_lrtable_put(table, state, terminal, action);
-            }
-            H_FOREACH(fs->char_branches, void *key, HStringMap *m)
-              if(!m->epsilon_branch)
-                continue;
-
-              HCFChoice *terminal = h_arena_malloc(arena, sizeof(HCFChoice));
-              terminal->type = HCF_CHAR; 
-              terminal->chr = key_char((HCharKey)key);
-
-              h_lrtable_put(table, state, terminal, action);
-            H_END_FOREACH  // lookahead character
+            if(terminals_put(table->tmap[state], fs, action) < 0)
+              inadeq = true;
         } H_END_FOREACH // enhanced production
       H_END_FOREACH  // reducible item
+
+      if(inadeq)
+        h_slist_push(table->inadeq, (void *)(uintptr_t)state);
     }
   }
 
@@ -719,273 +320,6 @@ void h_lalr_free(HParser *parser)
 
 
 
-/* LR driver */
-
-const HLRAction *
-h_lr_lookup(const HLRTable *table, size_t state, const HCFChoice *symbol)
-{
-  assert(state < table->nrows);
-  if(table->forall[state]) {
-    assert(h_hashtable_empty(table->rows[state]));  // that would be a conflict
-    return table->forall[state];
-  } else {
-    return h_hashtable_get(table->rows[state], symbol);
-  }
-}
-
-HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
-{
-  HLRTable *table = parser->backend_data;
-  if(!table)
-    return NULL;
-
-  HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
-  HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
-  HSlist *left = h_slist_new(tarena);   // left stack; reductions happen here
-  HSlist *right = h_slist_new(tarena);  // right stack; input appears here
-
-  // stack layout:
-  // on the left stack, we put pairs:  (saved state, semantic value)
-  // on the right stack, we put pairs: (symbol, semantic value)
-
-  // run while the recognizer finds handles in the input
-  size_t state = 0;
-  while(1) {
-    // make sure there is input on the right stack
-    if(h_slist_empty(right)) {
-      // XXX use statically-allocated terminal symbols
-      HCFChoice *x = h_arena_malloc(tarena, sizeof(HCFChoice));
-      HParsedToken *v;
-
-      uint8_t c = h_read_bits(stream, 8, false);
-
-      if(stream->overrun) {     // end of input
-        x->type = HCF_END;
-        v = NULL;
-      } else {
-        x->type = HCF_CHAR;
-        x->chr = c;
-        v = h_arena_malloc(arena, sizeof(HParsedToken));
-        v->token_type = TT_UINT;
-        v->uint = c;
-      }
-
-      h_slist_push(right, v);
-      h_slist_push(right, x);
-    }
-
-    // peek at input symbol on the right side
-    HCFChoice *symbol = right->head->elem;
-
-    // table lookup
-    const HLRAction *action = h_lr_lookup(table, state, symbol);
-    if(action == NULL)
-      break;    // no handle recognizable in input, terminate parsing
-
-    if(action->type == HLR_SHIFT) {
-      h_slist_push(left, (void *)(uintptr_t)state);
-      h_slist_pop(right);                       // symbol (discard)
-      h_slist_push(left, h_slist_pop(right));   // semantic value
-      state = action->nextstate;
-    } else {
-      assert(action->type == HLR_REDUCE);
-      size_t len = action->production.length;
-      HCFChoice *symbol = action->production.lhs;
-
-      // semantic value of the reduction result
-      HParsedToken *value = h_arena_malloc(arena, sizeof(HParsedToken));
-      value->token_type = TT_SEQUENCE;
-      value->seq = h_carray_new_sized(arena, len);
-      
-      // pull values off the left stack, rewinding state accordingly
-      HParsedToken *v = NULL;
-      for(size_t i=0; i<len; i++) {
-        v = h_slist_pop(left);
-        state = (uintptr_t)h_slist_pop(left);
-
-        // collect values in result sequence
-        value->seq->elements[len-1-i] = v;
-        value->seq->used++;
-      }
-      if(v) {
-        // result position equals position of left-most symbol
-        value->index = v->index;
-        value->bit_offset = v->bit_offset;
-      } else {
-        // XXX how to get the position in this case?
-      }
-
-      // perform token reshape if indicated
-      if(symbol->reshape)
-        value = (HParsedToken *)symbol->reshape(make_result(arena, value));
-
-      // call validation and semantic action, if present
-      if(symbol->pred && !symbol->pred(make_result(tarena, value)))
-        break;  // validation failed -> no parse
-      if(symbol->action)
-        value = (HParsedToken *)symbol->action(make_result(arena, value));
-
-      // push result (value, symbol) onto the right stack
-      h_slist_push(right, value);
-      h_slist_push(right, symbol);
-    }
-  }
-
-
-
-  // parsing was successful iff the start symbol is on top of the right stack
-  HParseResult *result = NULL;
-  if(h_slist_pop(right) == table->start) {
-    // next on the right stack is the start symbol's semantic value
-    assert(!h_slist_empty(right));
-    HParsedToken *tok = h_slist_pop(right);
-    result = make_result(arena, tok);
-  } else {
-    h_delete_arena(arena);
-    result = NULL;
-  }
-
-  h_delete_arena(tarena);
-  return result;
-}
-
-
-
-/* Pretty-printers */
-
-void h_pprint_lritem(FILE *f, const HCFGrammar *g, const HLRItem *item)
-{
-  h_pprint_symbol(f, g, item->lhs);
-  fputs(" ->", f);
-
-  HCFChoice **x = item->rhs;
-  HCFChoice **mark = item->rhs + item->mark;
-  if(*x == NULL) {
-    fputc('.', f);
-  } else {
-    while(*x) {
-      if(x == mark)
-        fputc('.', f);
-      else
-        fputc(' ', f);
-
-      if((*x)->type == HCF_CHAR) {
-        // condense character strings
-        fputc('"', f);
-        h_pprint_char(f, (*x)->chr);
-        for(x++; *x; x++) {
-          if(x == mark)
-            break;
-          if((*x)->type != HCF_CHAR)
-            break;
-          h_pprint_char(f, (*x)->chr);
-        }
-        fputc('"', f);
-      } else {
-        h_pprint_symbol(f, g, *x);
-        x++;
-      }
-    }
-    if(x == mark)
-      fputs(".", f);
-  }
-}
-
-void h_pprint_lrstate(FILE *f, const HCFGrammar *g,
-                      const HLRState *state, unsigned int indent)
-{
-  bool first = true;
-  H_FOREACH_KEY(state, HLRItem *item)
-    if(!first)
-      for(unsigned int i=0; i<indent; i++) fputc(' ', f);
-    first = false;
-    h_pprint_lritem(f, g, item);
-    fputc('\n', f);
-  H_END_FOREACH
-}
-
-static void pprint_transition(FILE *f, const HCFGrammar *g, const HLRTransition *t)
-{
-  fputs("-", f);
-  h_pprint_symbol(f, g, t->symbol);
-  fprintf(f, "->%lu", t->to);
-}
-
-void h_pprint_lrdfa(FILE *f, const HCFGrammar *g,
-                    const HLRDFA *dfa, unsigned int indent)
-{
-  for(size_t i=0; i<dfa->nstates; i++) {
-    unsigned int indent2 = indent + fprintf(f, "%4lu: ", i);
-    h_pprint_lrstate(f, g, dfa->states[i], indent2);
-    for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {
-      const HLRTransition *t = x->elem;
-      if(t->from == i) {
-        for(unsigned int i=0; i<indent2-2; i++) fputc(' ', f);
-        pprint_transition(f, g, t);
-        fputc('\n', f);
-      }
-    }
-  }
-}
-
-void pprint_lraction(FILE *f, const HCFGrammar *g, const HLRAction *action)
-{
-  if(action->type == HLR_SHIFT) {
-    fprintf(f, "s%lu", action->nextstate);
-  } else {
-    fputs("r(", f);
-    h_pprint_symbol(f, g, action->production.lhs);
-    fputs(" -> ", f);
-#ifdef NDEBUG
-    // if we can't print the production, at least print its length
-    fprintf(f, "[%lu]", action->production.length);
-#else
-    HCFSequence seq = {action->production.rhs};
-    h_pprint_sequence(f, g, &seq);
-#endif
-    fputc(')', f);
-  }
-}
-
-void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
-                      unsigned int indent)
-{
-  for(size_t i=0; i<table->nrows; i++) {
-    for(unsigned int j=0; j<indent; j++) fputc(' ', f);
-    fprintf(f, "%4lu:", i);
-    if(table->forall[i]) {
-      fputs(" - ", f);
-      pprint_lraction(f, g, table->forall[i]);
-      fputs(" -", f);
-      if(!h_hashtable_empty(table->rows[i]))
-        fputs(" !!", f);
-    }
-    H_FOREACH(table->rows[i], HCFChoice *symbol, HLRAction *action)
-      fputc(' ', f);    // separator
-      h_pprint_symbol(f, g, symbol);
-      fputc(':', f);
-      if(table->forall[i]) {
-        fputc(action->type == HLR_SHIFT? 's' : 'r', f);
-        fputc('/', f);
-        fputc(table->forall[i]->type == HLR_SHIFT? 's' : 'r', f);
-      } else {
-        pprint_lraction(f, g, action);
-      }
-    H_END_FOREACH
-    fputc('\n', f);
-  }
-
-#if 0
-  fputs("inadeq=", f);
-  for(HSlistNode *x=table->inadeq->head; x; x=x->next) {
-    fprintf(f, "%lu ", (uintptr_t)x->elem);
-  }
-  fputc('\n', f);
-#endif
-}
-
-
-
 HParserBackendVTable h__lalr_backend_vtable = {
   .compile = h_lalr_compile,
   .parse = h_lr_parse,
@@ -998,6 +332,8 @@ HParserBackendVTable h__lalr_backend_vtable = {
 // dummy!
 int test_lalr(void)
 {
+  HAllocator *mm__ = &system_allocator;
+
   /* 
      E -> E '-' T
         | T
@@ -1013,7 +349,7 @@ int test_lalr(void)
   HParser *p = E;
 
   printf("\n==== G R A M M A R ====\n");
-  HCFGrammar *g = h_cfgrammar(&system_allocator, p);
+  HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, p));
   if(g == NULL) {
     fprintf(stderr, "h_cfgrammar failed\n");
     return 1;

@@ -47,6 +47,7 @@ void h_stringmap_put_char(HStringMap *m, uint8_t c, void *v);
 void h_stringmap_update(HStringMap *m, const HStringMap *n);
 void h_stringmap_replace(HStringMap *m, void *old, void *new);
 void *h_stringmap_get(const HStringMap *m, const uint8_t *str, size_t n, bool end);
+void *h_stringmap_get_lookahead(const HStringMap *m, HInputStream lookahead);
 bool h_stringmap_present(const HStringMap *m, const uint8_t *str, size_t n, bool end);
 bool h_stringmap_present_epsilon(const HStringMap *m);
 bool h_stringmap_empty(const HStringMap *m);
@@ -97,4 +98,7 @@ void h_pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq);
 void h_pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x);
 void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, int indent);
 void h_pprint_stringset(FILE *file, const HStringMap *set, int indent);
+void h_pprint_stringmap(FILE *file, char sep,
+                        void (*valprint)(FILE *f, void *env, void *val), void *env,
+                        const HStringMap *map);
 void h_pprint_char(FILE *file, char c);

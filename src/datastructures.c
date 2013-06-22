@@ -62,6 +62,16 @@ HSlist* h_slist_copy(HSlist *slist) {
   return ret;
 }
 
+// like h_slist_pop, but does not deallocate the head node
+void* h_slist_drop(HSlist *slist) {
+  HSlistNode *head = slist->head;
+  if (!head)
+    return NULL;
+  void* ret = head->elem;
+  slist->head = head->next;
+  return ret;
+}
+
 void* h_slist_pop(HSlist *slist) {
   HSlistNode *head = slist->head;
   if (!head)
