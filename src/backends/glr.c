@@ -1,7 +1,7 @@
 #include <assert.h>
 #include "lr.h"
 
-static bool glr_step(HParseResult **result, HLREngine **engines,
+static bool glr_step(HParseResult **result, HSlist *engines,
                      HLREngine *engine, const HLRAction *action);
 
 
@@ -73,7 +73,7 @@ static inline HLREngine *respawn(HLREngine *eng, HSlist *stack)
 }
 
 static HLREngine *
-demerge(HParseResult **result, HLREngine **engines,
+demerge(HParseResult **result, HSlist *engines,
         HLREngine *engine, const HLRAction *action, size_t depth)
 {
   // no-op on engines that are not merged
@@ -126,7 +126,7 @@ HLREngine *fork_engine(const HLREngine *engine)
 }
 
 static const HLRAction *
-handle_conflict(HParseResult **result, HLREngine **engines,
+handle_conflict(HParseResult **result, HSlist *engines,
                 const HLREngine *engine, const HSlist *branches)
 {
   // there should be at least two conflicting actions
@@ -149,7 +149,7 @@ handle_conflict(HParseResult **result, HLREngine **engines,
 
 /* GLR driver */
 
-static bool glr_step(HParseResult **result, HLREngine **engines,
+static bool glr_step(HParseResult **result, HSlist *engines,
                      HLREngine *engine, const HLRAction *action)
 {
   // handle forks and demerges (~> spawn engines)
@@ -167,11 +167,17 @@ static bool glr_step(HParseResult **result, HLREngine **engines,
   bool run = h_lrengine_step(engine, action);
   
   if(run) {
-    // store engine in the array, merge if necessary
-    if(engines[engine->state] == NULL)
-      engines[engine->state] = engine;
-    else
-      engines[engine->state] = lrengine_merge(engines[engine->state], engine);
+    // store engine in the list, merge if necessary
+    HSlistNode *x;
+    for(x=engines->head; x; x=x->next) {
+      HLREngine *eng = x->elem;
+      if(eng->state == engine->state) {
+        x->elem = lrengine_merge(eng, engine);
+        break;
+      }
+    }
+    if(!x)  // no merge happened
+      h_slist_push(engines, engine);
   } else if(engine->state == HLR_SUCCESS) {
     // save the result
     *result = h_lrengine_result(engine);
@@ -189,40 +195,27 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
   HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
   HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
 
-  // allocate engine arrays (can hold one engine per state)
+  // allocate engine lists (will hold one engine per state)
   // these are swapped each iteration
-  HLREngine **engines = h_arena_malloc(tarena, table->nrows * sizeof(HLREngine *));
-  HLREngine **engback = h_arena_malloc(tarena, table->nrows * sizeof(HLREngine *));
-
-  assert(table->nrows > 0);
-  for(size_t i=0; i<table->nrows; i++) {
-    engines[i] = NULL;
-    engback[i] = NULL;
-  }
+  HSlist *engines = h_slist_new(tarena);
+  HSlist *engback = h_slist_new(tarena);
 
   // create initial engine
-  engines[0] = h_lrengine_new(arena, tarena, table, stream);
-  assert(engines[0]->state == 0);
+  h_slist_push(engines, h_lrengine_new(arena, tarena, table, stream));
 
   HParseResult *result = NULL;
-  size_t engines_left = 1;
-  while(engines_left && result == NULL) {
-    engines_left = 0;
+  while(result == NULL && !h_slist_empty(engines)) {
+    assert(h_slist_empty(engback));
 
-    for(size_t i=0; i<table->nrows; i++) {
-      HLREngine *engine = engines[i];
-      if(engine == NULL)
-        continue;
-      engines[i] = NULL;    // cleared for next iteration
-
-      // step all engines
-      bool run = glr_step(&result, engback, engine, h_lrengine_action(engine));
-      if(run)
-        engines_left++;
+    // step all engines
+    while(!h_slist_empty(engines)) {
+      HLREngine *engine = h_slist_pop(engines);
+      const HLRAction *action = h_lrengine_action(engine);
+      glr_step(&result, engback, engine, action);
     }
 
-    // swap the arrays
-    HLREngine **tmp = engines;
+    // swap the lists
+    HSlist *tmp = engines;
     engines = engback;
     engback = tmp;
   }
