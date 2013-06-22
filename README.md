@@ -12,8 +12,8 @@ Features
 * Parsing backends:
   * Packrat parsing
   * LL(k) 
-  * GLR (not yet implemented)
-  * LALR(8) (not yet implemented)
+  * GLR 
+  * LALR
   * Regular expressions 
 * Language bindings: 
   * C++ (not yet implemented)
