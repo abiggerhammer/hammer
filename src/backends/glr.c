@@ -1,6 +1,9 @@
 #include <assert.h>
 #include "lr.h"
 
+static bool glr_step(HParseResult **result, HLREngine **engines,
+                     HLREngine *engine, const HLRAction *action);
+
 
 /* GLR compilation (LALR w/o failing on conflict) */
 
@@ -22,7 +25,86 @@ void h_glr_free(HParser *parser)
 }
 
 
-/* GLR driver */
+/* Merging engines (when they converge on the same state) */
+
+static HLREngine *lrengine_merge(HLREngine *old, HLREngine *new)
+{
+  HArena *arena = old->arena;
+
+  HLREngine *ret = h_arena_malloc(arena, sizeof(HLREngine));
+
+  assert(old->state == new->state);
+  assert(old->input.input == new->input.input);
+
+  *ret = *old;
+  ret->stack = h_slist_new(arena);
+  ret->merged[0] = old;
+  ret->merged[1] = new;
+
+  return ret;
+}
+
+static HSlist *demerge_stack(HSlistNode *bottom, HSlist *stack)
+{
+  HArena *arena = stack->arena;
+
+  HSlist *ret = h_slist_new(arena);
+
+  // copy the stack from the top
+  HSlistNode **y = &ret->head;
+  for(HSlistNode *x=stack->head; x; x=x->next) {
+    HSlistNode *node = h_arena_malloc(arena, sizeof(HSlistNode));
+    node->elem = x->elem;
+    node->next = NULL;
+    *y = node;
+    y = &node->next;
+  }
+  *y = bottom;  // attach the ancestor stack
+
+  return ret;
+}
+
+static inline HLREngine *respawn(HLREngine *eng, HSlist *stack)
+{
+  // NB: this can be a destructive update because an engine is not used for
+  // anything after it is merged.
+  eng->stack = demerge_stack(eng->stack->head, stack);
+  return eng;
+}
+
+static HLREngine *
+demerge(HParseResult **result, HLREngine **engines,
+        HLREngine *engine, const HLRAction *action, size_t depth)
+{
+  // no-op on engines that are not merged
+  if(!engine->merged[0])
+    return engine;
+
+  HSlistNode *p = engine->stack->head;
+  for(size_t i=0; i<depth; i++) {
+    // if stack hits bottom, respawn ancestors
+    if(p == NULL) {
+      HLREngine *a = respawn(engine->merged[0], engine->stack);
+      HLREngine *b = respawn(engine->merged[1], engine->stack);
+
+      // continue demerge until final depth reached
+      a = demerge(result, engines, a, action, depth-i);
+      b = demerge(result, engines, b, action, depth-i);
+      
+      // step and stow one ancestor...
+      glr_step(result, engines, a, action);
+
+      // ...and return the other
+      return b;
+    }
+    p = p->next;
+  }
+
+  return engine;    // there is enough stack before the merge point
+}
+
+
+/* Forking engines (on conflicts */
 
 HLREngine *fork_engine(const HLREngine *engine)
 {
@@ -43,14 +125,9 @@ HLREngine *fork_engine(const HLREngine *engine)
   return eng2;
 }
 
-static void stow_engine(HSlist *engines, HLREngine *engine)
-{
-  // XXX switch to one engine per state, and do the merge here
-  h_slist_push(engines, engine);
-}
-
-static const HLRAction *handle_conflict(HSlist *engines, const HLREngine *engine,
-                                        const HSlist *branches)
+static const HLRAction *
+handle_conflict(HParseResult **result, HLREngine **engines,
+                const HLREngine *engine, const HSlist *branches)
 {
   // there should be at least two conflicting actions
   assert(branches->head);
@@ -61,63 +138,46 @@ static const HLRAction *handle_conflict(HSlist *engines, const HLREngine *engine
     HLRAction *act = x->elem; 
     HLREngine *eng = fork_engine(engine);
 
-    // perform one step and add to list
-    h_lrengine_step(eng, act);
-    stow_engine(engines, eng);
+    // perform one step and add to engines
+    glr_step(result, engines, eng, act);
   } 
 
   // return first action for use with original engine
   return branches->head->elem;
 }
 
-static HSlist *demerge_stack(HSlistNode *bottom, HSlistNode *mp, HSlist *stack)
+
+/* GLR driver */
+
+static bool glr_step(HParseResult **result, HLREngine **engines,
+                     HLREngine *engine, const HLRAction *action)
 {
-  HArena *arena = stack->arena;
-
-  HSlist *ret = h_slist_new(arena);
-
-  // copy the stack from the top
-  HSlistNode **y = &ret->head;
-  for(HSlistNode *x=stack->head; x && x!=mp; x=x->next) {
-    HSlistNode *node = h_arena_malloc(arena, sizeof(HSlistNode));
-    node->elem = x->elem;
-    node->next = NULL;
-    *y = node;
-    y = &node->next;
-  }
-  *y = bottom;  // attach the ancestor stack
-
-  return ret;
-}
-
-static void demerge(HSlist *engines, HLREngine *engine,
-                    const HLRAction *action, size_t depth)
-{
-  // no-op on engines that are not merged
-  if(!engine->merged)
-    return;
-
-  HSlistNode *p = engine->stack->head;
-  for(size_t i=0; i<depth; i++) {
-    // if stack hits mergepoint, respawn ancestor
-    if(p == engine->mp) {
-      HLREngine *eng = engine->merged;
-      eng->stack = demerge_stack(eng->stack->head, engine->mp, engine->stack);
-      demerge(engines, eng, action, depth-i);
-      
-      // call step and stow on restored ancestor
-      h_lrengine_step(eng, action);
-      stow_engine(engines, eng);
-      break;
+  // handle forks and demerges (~> spawn engines)
+  if(action) {
+    if(action->type == HLR_CONFLICT) {
+      // fork engine on conflicts
+      action = handle_conflict(result, engines, engine, action->branches);
+    } else if(action->type == HLR_REDUCE) {
+      // demerge/respawn as needed
+      size_t depth = action->production.length;
+      engine = demerge(result, engines, engine, action, depth);
     }
-    p = p->next;
   }
-}
 
-static inline void
-handle_demerge(HSlist *engines, HLREngine *engine, const HLRAction *reduce)
-{
-  demerge(engines, engine, reduce, reduce->production.length);
+  bool run = h_lrengine_step(engine, action);
+  
+  if(run) {
+    // store engine in the array, merge if necessary
+    if(engines[engine->state] == NULL)
+      engines[engine->state] = engine;
+    else
+      engines[engine->state] = lrengine_merge(engines[engine->state], engine);
+  } else if(engine->state == HLR_SUCCESS) {
+    // save the result
+    *result = h_lrengine_result(engine);
+  }
+
+  return run;
 }
 
 HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
@@ -129,43 +189,42 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
   HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
   HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
 
-  HSlist *engines = h_slist_new(tarena);
-  h_slist_push(engines, h_lrengine_new(arena, tarena, table, stream));
+  // allocate engine arrays (can hold one engine per state)
+  // these are swapped each iteration
+  HLREngine **engines = h_arena_malloc(tarena, table->nrows * sizeof(HLREngine *));
+  HLREngine **engback = h_arena_malloc(tarena, table->nrows * sizeof(HLREngine *));
+
+  assert(table->nrows > 0);
+  for(size_t i=0; i<table->nrows; i++) {
+    engines[i] = NULL;
+    engback[i] = NULL;
+  }
+
+  // create initial engine
+  engines[0] = h_lrengine_new(arena, tarena, table, stream);
+  assert(engines[0]->state == 0);
 
   HParseResult *result = NULL;
-  while(result == NULL && !h_slist_empty(engines)) {
-    for(HSlistNode **x = &engines->head; *x; ) {
-      HLREngine *engine = (*x)->elem;
+  size_t engines_left = 1;
+  while(engines_left && result == NULL) {
+    engines_left = 0;
 
-      // remove engine from list; it may come back in below
-      *x = (*x)->next;    // advance x, removing the current element
-
-      // drop those engines that have terminated
-      if(!engine->run) {
-        // check for parse success
-        HParseResult *res = h_lrengine_result(engine);
-        if(res)
-          result = res;
-
+    for(size_t i=0; i<table->nrows; i++) {
+      HLREngine *engine = engines[i];
+      if(engine == NULL)
         continue;
-      }
+      engines[i] = NULL;    // cleared for next iteration
 
-      const HLRAction *action = h_lrengine_action(engine);
-
-      // handle forks and demerges (~> spawn engines)
-      if(action) {
-        if(action->type == HLR_CONFLICT) {
-          // fork engine on conflicts
-          action = handle_conflict(engines, engine, action->branches);
-        } else if(action->type == HLR_REDUCE) {
-          // demerge/respawn as needed
-          handle_demerge(engines, engine, action);
-        }
-      }
-
-      h_lrengine_step(engine, action);
-      stow_engine(engines, engine);
+      // step all engines
+      bool run = glr_step(&result, engback, engine, h_lrengine_action(engine));
+      if(run)
+        engines_left++;
     }
+
+    // swap the arrays
+    HLREngine **tmp = engines;
+    engines = engback;
+    engback = tmp;
   }
 
   if(!result)
@@ -183,13 +242,6 @@ HParserBackendVTable h__glr_backend_vtable = {
 };
 
 
-
-// XXX TODO
-// - implement engine merging
-//   - triggered when two enter the same state
-//   - old stacks (/engines?) saved
-//   - new common suffix stack created
-//   - when rewinding (during reduce), watch for empty stack -> demerge
 
 
 // dummy!

@@ -190,10 +190,8 @@ HLRTable *h_lr0_table(HCFGrammar *g, const HLRDFA *dfa)
   // remember start symbol
   table->start = g->start;
 
-  // add dummy shift entry for the start symbol so h_lrengine_step can always
-  // find a shift.
-  // NB: nextstate=0 is used for the "victory condition" by h_lrengine_result.
-  put_shift(table, 0, g->start, 0);
+  // shift to the accepting end state for the start symbol
+  put_shift(table, 0, g->start, HLR_SUCCESS);
 
   // add shift entries
   for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {

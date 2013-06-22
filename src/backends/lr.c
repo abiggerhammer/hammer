@@ -206,11 +206,10 @@ HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table,
 
   engine->table = table;
   engine->state = 0;
-  engine->run = true;
   engine->stack = h_slist_new(tarena);
   engine->input = *stream;
-  engine->merged = NULL;
-  engine->mp = NULL;
+  engine->merged[0] = NULL;
+  engine->merged[1] = NULL;
   engine->arena = arena;
   engine->tarena = tarena;
 
@@ -267,7 +266,7 @@ static HParsedToken *consume_input(HLREngine *engine)
 }
 
 // run LR parser for one round; returns false when finished
-static bool h_lrengine_step_(HLREngine *engine, const HLRAction *action)
+bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
 {
   // short-hand names
   HSlist *stack = engine->stack;
@@ -329,8 +328,11 @@ static bool h_lrengine_step_(HLREngine *engine, const HLRAction *action)
     h_slist_push(stack, value);
     engine->state = shift->nextstate;
 
-    if(symbol == engine->table->start)
-      return false;     // reduced to start symbol; accept!
+    // check for success
+    if(engine->state == HLR_SUCCESS) {
+      assert(symbol == engine->table->start);
+      return false;
+    }
   } else {
     assert(action->type == HLR_SHIFT);
     HParsedToken *value = consume_input(engine);
@@ -342,17 +344,12 @@ static bool h_lrengine_step_(HLREngine *engine, const HLRAction *action)
   return true;
 }
 
-// run LR parser for one round; sets engine->run
-void h_lrengine_step(HLREngine *engine, const HLRAction *action)
-{
-  engine->run = h_lrengine_step_(engine, action);
-}
-
 HParseResult *h_lrengine_result(HLREngine *engine)
 {
-  // parsing was successful iff after a shift the engine is back in state 0
-  if(engine->state == 0 && !h_slist_empty(engine->stack)) {
+  // parsing was successful iff the engine reaches the end state
+  if(engine->state == HLR_SUCCESS) {
     // on top of the stack is the start symbol's semantic value
+    assert(!h_slist_empty(engine->stack));
     HParsedToken *tok = engine->stack->head->elem;
     return make_result(engine->arena, tok);
   } else {
@@ -371,8 +368,7 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
   HLREngine *engine = h_lrengine_new(arena, tarena, table, stream);
 
   // iterate engine to completion
-  while(engine->run)
-    h_lrengine_step(engine, h_lrengine_action(engine));
+  while(h_lrengine_step(engine, h_lrengine_action(engine)));
 
   HParseResult *result = h_lrengine_result(engine);
   if(!result)
@@ -464,7 +460,10 @@ void pprint_lraction(FILE *f, const HCFGrammar *g, const HLRAction *action)
 {
   switch(action->type) {
   case HLR_SHIFT:
-    fprintf(f, "s%lu", action->nextstate);
+    if(action->nextstate == HLR_SUCCESS)
+      fputs("s~", f);
+    else
+      fprintf(f, "s%lu", action->nextstate);
     break;
   case HLR_REDUCE:
     fputs("r(", f);

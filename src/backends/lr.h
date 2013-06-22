@@ -69,17 +69,17 @@ typedef struct HLREnhGrammar_ {
 typedef struct HLREngine_ {
   const HLRTable *table;
   size_t state;
-  bool run;
 
   HSlist *stack;        // holds pairs: (saved state, semantic value)
   HInputStream input;
 
-  struct HLREngine_ *merged;    // ancestor merged into this engine at mp
-  HSlistNode *mp;               // mergepoint: stack->head at time of merge
+  struct HLREngine_ *merged[2]; // ancestors merged into this engine
 
   HArena *arena;        // will hold the results
   HArena *tarena;       // tmp, deleted after parse
 } HLREngine;
+
+#define HLR_SUCCESS ((size_t)~0)    // parser end state
 
 
 // XXX move to internal.h or something
@@ -131,7 +131,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params);
 void h_lalr_free(HParser *parser);
 
 const HLRAction *h_lrengine_action(const HLREngine *engine);
-void h_lrengine_step(HLREngine *engine, const HLRAction *action);
+bool h_lrengine_step(HLREngine *engine, const HLRAction *action);
 HParseResult *h_lrengine_result(HLREngine *engine);
 HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream);
 HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream);
