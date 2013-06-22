@@ -70,15 +70,54 @@ static const HLRAction *handle_conflict(HSlist *engines, const HLREngine *engine
   return branches->head->elem;
 }
 
-static HLREngine *handle_demerge(HSlist *engines, HLREngine *engine,
-                                 const HLRAction *reduce)
+static HSlist *demerge_stack(HSlistNode *bottom, HSlistNode *mp, HSlist *stack)
 {
-  return engine; // XXX
+  HArena *arena = stack->arena;
 
-  for(size_t i=0; i<reduce->production.length; i++) {
-    // XXX if stack hits bottom, demerge
+  HSlist *ret = h_slist_new(arena);
+
+  // copy the stack from the top
+  HSlistNode **y = &ret->head;
+  for(HSlistNode *x=stack->head; x && x!=mp; x=x->next) {
+    HSlistNode *node = h_arena_malloc(arena, sizeof(HSlistNode));
+    node->elem = x->elem;
+    node->next = NULL;
+    *y = node;
+    y = &node->next;
   }
-  // XXX call step and stow on the newly-created engines
+  *y = bottom;  // attach the ancestor stack
+
+  return ret;
+}
+
+static void demerge(HSlist *engines, HLREngine *engine,
+                    const HLRAction *action, size_t depth)
+{
+  // no-op on engines that are not merged
+  if(!engine->merged)
+    return;
+
+  HSlistNode *p = engine->stack->head;
+  for(size_t i=0; i<depth; i++) {
+    // if stack hits mergepoint, respawn ancestor
+    if(p == engine->mp) {
+      HLREngine *eng = engine->merged;
+      eng->stack = demerge_stack(eng->stack->head, engine->mp, engine->stack);
+      demerge(engines, eng, action, depth-i);
+      
+      // call step and stow on restored ancestor
+      h_lrengine_step(eng, action);
+      stow_engine(engines, eng);
+      break;
+    }
+    p = p->next;
+  }
+}
+
+static inline void
+handle_demerge(HSlist *engines, HLREngine *engine, const HLRAction *reduce)
+{
+  demerge(engines, engine, reduce, reduce->production.length);
 }
 
 HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
@@ -119,8 +158,8 @@ HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream*
           // fork engine on conflicts
           action = handle_conflict(engines, engine, action->branches);
         } else if(action->type == HLR_REDUCE) {
-          // demerge as needed to ensure that stacks are deep enough
-          engine = handle_demerge(engines, engine, action);
+          // demerge/respawn as needed
+          handle_demerge(engines, engine, action);
         }
       }
 

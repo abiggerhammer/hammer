@@ -210,6 +210,7 @@ HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table,
   engine->stack = h_slist_new(tarena);
   engine->input = *stream;
   engine->merged = NULL;
+  engine->mp = NULL;
   engine->arena = arena;
   engine->tarena = tarena;
 
