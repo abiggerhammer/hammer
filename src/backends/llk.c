@@ -21,7 +21,7 @@ typedef struct HLLkTable_ {
 
 /* Interface to look up an entry in the parse table. */
 const HCFSequence *h_llk_lookup(const HLLkTable *table, const HCFChoice *x,
-                                HInputStream lookahead)
+                                const HInputStream *stream)
 {
   const HStringMap *row = h_hashtable_get(table->rows, x);
   assert(row != NULL);  // the table should have one row for each nonterminal
@@ -29,28 +29,7 @@ const HCFSequence *h_llk_lookup(const HLLkTable *table, const HCFChoice *x,
   assert(!row->epsilon_branch); // would match without looking at the input
                                 // XXX cases where this could be useful?
 
-  const HStringMap *m = row;
-  while(m) {
-    if(m->epsilon_branch) {     // input matched
-      // assert: another lookahead would not bring a more specific match.
-      //         this is for the table generator to ensure.
-      return m->epsilon_branch;
-    }
-
-    // note the lookahead stream is passed by value, i.e. a copy.
-    // reading bits from it does not consume them from the real input.
-    uint8_t c = h_read_bits(&lookahead, 8, false);
-    
-    if(lookahead.overrun) {     // end of input
-      // XXX assumption of byte-wise grammar and input
-      return m->end_branch;
-    }
-
-    // no match yet, descend
-    m = h_stringmap_get_char(m, c);
-  }
-
-  return NULL;
+  return h_stringmap_get_lookahead(row, *stream);
 }
 
 /* Allocate a new parse table. */
@@ -321,7 +300,7 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       seq = h_carray_new(arena);
 
       // look up applicable production in parse table
-      const HCFSequence *p = h_llk_lookup(table, x, *stream);
+      const HCFSequence *p = h_llk_lookup(table, x, stream);
       if(p == NULL)
         goto no_parse;
 

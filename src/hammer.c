@@ -31,6 +31,7 @@ static HParserBackendVTable *backends[PB_MAX + 1] = {
   &h__regex_backend_vtable,
   &h__llk_backend_vtable,
   &h__lalr_backend_vtable,
+  &h__glr_backend_vtable,
 };
 
 

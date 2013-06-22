@@ -220,6 +220,7 @@ struct HBitWriter_ {
 extern HParserBackendVTable h__packrat_backend_vtable;
 extern HParserBackendVTable h__llk_backend_vtable;
 extern HParserBackendVTable h__lalr_backend_vtable;
+extern HParserBackendVTable h__glr_backend_vtable;
 // }}}
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
@@ -247,6 +248,7 @@ void h_carray_append(HCountedArray *array, void* item);
 HSlist* h_slist_new(HArena *arena);
 HSlist* h_slist_copy(HSlist *slist);
 void* h_slist_pop(HSlist *slist);
+void* h_slist_drop(HSlist *slist);
 void h_slist_push(HSlist *slist, void* item);
 bool h_slist_find(HSlist *slist, const void* item);
 HSlist* h_slist_remove_all(HSlist *slist, const void* item);
