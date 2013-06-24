@@ -1,0 +1,59 @@
+Import('env')
+
+parsers = ['parsers/%s.c'%s for s in
+           ['action',
+            'and',
+            'attr_bool',
+            'bits',
+            'butnot',
+            'ch',
+            'charset',
+            'choice',
+            'difference',
+            'end',
+            'epsilon',
+            'ignore',
+            'ignoreseq',
+            'indirect',
+            'int_range',
+            'many',
+            'not',
+            'nothing',
+            'optional',
+            'sequence',
+            'token',
+            'unimplemented',
+            'whitespace',
+            'xor']] 
+
+backends = ['backends/%s.c' % s for s in
+            ['packrat', 'llk', 'regex']]
+
+misc_hammer_parts = [
+    'allocator.c',
+    'benchmark.c',
+    'bitreader.c',
+    'bitwriter.c',
+    'cfgrammar.c',
+    'datastructures.c',
+    'desugar.c',
+    'glue.c',
+    'hammer.c',
+    'pprint.c',
+    'system_allocator.c']
+
+tests = ['t_benchmark.c',
+         't_bitreader.c',
+         't_bitwriter.c',
+         't_parser.c',
+         't_grammar.c',
+         't_misc.c']
+
+libhammer = env.SharedLibrary('hammer', parsers + backends + misc_hammer_parts)
+libhammer = env.StaticLibrary('hammer', parsers + backends + misc_hammer_parts)
+
+testenv = env.Clone()
+testenv.ParseConfig('pkg-config --cflags --libs glib-2.0')
+testenv.Append(LIBS=['hammer'], LIBPATH=['.'])
+testenv.Program('test_suite', tests + ['test_suite.c'])
+    
