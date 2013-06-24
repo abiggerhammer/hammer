@@ -284,3 +284,19 @@ HHashValue h_hash_ptr(const void *p) {
   // XXX just djbhash it
   return (uintptr_t)p >> 4;
 }
+
+HSArray *h_sarray_new(HAllocator *mm__, size_t size) {
+  HSArray *ret = h_new(HSArray, 1);
+  ret->capacity = size;
+  ret->used = 0;
+  ret->nodes = h_new(HSArrayNode, size); // Does not actually need to be initialized.
+  ret->mm__ = mm__;
+  // TODO: Add the valgrind hooks to mark this initialized.
+  return ret;
+}
+
+void h_sarray_free(HSArray *arr) {
+  HAllocator *mm__ = arr->mm__;
+  h_free(arr->nodes);
+  h_free(arr);
+}
