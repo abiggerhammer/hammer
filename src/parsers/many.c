@@ -130,7 +130,7 @@ static bool many_ctrvm(HRVMProg *prog, void *env) {
   if (repeat->min_p) {
   h_rvm_insert_insn(prog, RVM_PUSH, 0);
     assert(repeat->count < 2); // TODO: The other cases should be supported later.
-    uint16_t end_fork;
+    uint16_t end_fork = 0xFFFF; // Shut up GCC
     if (repeat->count == 0)
       end_fork = h_rvm_insert_insn(prog, RVM_FORK, 0xFFFF);
     uint16_t goto_mid = h_rvm_insert_insn(prog, RVM_GOTO, 0xFFFF);
@@ -145,7 +145,8 @@ static bool many_ctrvm(HRVMProg *prog, void *env) {
     if (!h_compile_regex(prog, repeat->p))
       return false;
     h_rvm_insert_insn(prog, RVM_FORK, nxt);
-    h_rvm_patch_arg(prog, end_fork, h_rvm_get_ip(prog));
+    if (repeat->count == 0)
+      h_rvm_patch_arg(prog, end_fork, h_rvm_get_ip(prog));
     
     h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_make_sequence, NULL));
     return true;
