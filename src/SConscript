@@ -1,3 +1,4 @@
+# -*- python -*-
 Import('env')
 
 parsers = ['parsers/%s.c'%s for s in
@@ -27,7 +28,7 @@ parsers = ['parsers/%s.c'%s for s in
             'xor']] 
 
 backends = ['backends/%s.c' % s for s in
-            ['packrat', 'llk', 'regex']]
+            ['packrat', 'llk', 'regex', 'glr', 'lalr', 'lr', 'lr0']]
 
 misc_hammer_parts = [
     'allocator.c',

@@ -62,6 +62,16 @@ HSlist* h_slist_copy(HSlist *slist) {
   return ret;
 }
 
+// like h_slist_pop, but does not deallocate the head node
+void* h_slist_drop(HSlist *slist) {
+  HSlistNode *head = slist->head;
+  if (!head)
+    return NULL;
+  void* ret = head->elem;
+  slist->head = head->next;
+  return ret;
+}
+
 void* h_slist_pop(HSlist *slist) {
   HSlistNode *head = slist->head;
   if (!head)
@@ -147,6 +157,8 @@ void* h_hashtable_get(const HHashTable* ht, const void* key) {
   for (hte = &ht->contents[hashval & (ht->capacity - 1)];
        hte != NULL;
        hte = hte->next) {
+    if (hte->key == NULL)
+      continue;
     if (hte->hashval != hashval)
       continue;
     if (ht->equalFunc(key, hte->key))
@@ -201,7 +213,7 @@ void h_hashtable_update(HHashTable *dst, const HHashTable *src) {
   }
 }
 
-void h_hashtable_merge(void *(*combine)(void *v1, void *v2),
+void h_hashtable_merge(void *(*combine)(void *v1, const void *v2),
 	HHashTable *dst, const HHashTable *src) {
   size_t i;
   HHashTableEntry *hte;
@@ -209,13 +221,9 @@ void h_hashtable_merge(void *(*combine)(void *v1, void *v2),
     for(hte = &src->contents[i]; hte; hte = hte->next) {
       if(hte->key == NULL)
         continue;
-      void *oldvalue = h_hashtable_get(dst, hte->key);
-      void *newvalue;
-      if(oldvalue)
-        newvalue = combine(oldvalue, hte->value);
-      else
-        newvalue = hte->value;
-      h_hashtable_put(dst, hte->key, newvalue);
+      void *dstvalue = h_hashtable_get(dst, hte->key);
+      void *srcvalue = hte->value;
+      h_hashtable_put(dst, hte->key, combine(dstvalue, srcvalue));
     }
   }
 }
@@ -236,6 +244,7 @@ int   h_hashtable_present(const HHashTable* ht, const void* key) {
   }
   return false;
 }
+
 void  h_hashtable_del(HHashTable* ht, const void* key) {
   HHashValue hashval = ht->hashFunc(key);
 #ifdef CONSISTENCY_CHECK
@@ -261,6 +270,7 @@ void  h_hashtable_del(HHashTable* ht, const void* key) {
     }
   }
 }
+
 void  h_hashtable_free(HHashTable* ht) {
   for (size_t i = 0; i < ht->capacity; i++) {
     HHashTableEntry *hten, *hte = &ht->contents[i];
@@ -276,13 +286,74 @@ void  h_hashtable_free(HHashTable* ht) {
   h_arena_free(ht->arena, ht->contents);
 }
 
+// helper for hte_equal
+static bool hte_same_length(HHashTableEntry *xs, HHashTableEntry *ys) {
+  while(xs && ys) {
+    xs=xs->next;
+    ys=ys->next;
+    // skip NULL keys (= element not present)
+    while(xs && xs->key == NULL) xs=xs->next;
+    while(ys && ys->key == NULL) ys=ys->next;
+  }
+  return (xs == ys);    // both NULL
+}
+
+// helper for hte_equal: are all elements of xs present in ys?
+static bool hte_subset(HEqualFunc eq, HHashTableEntry *xs, HHashTableEntry *ys)
+{
+  for(; xs; xs=xs->next) {
+    if(xs->key == NULL) continue;   // element not present
+
+    HHashTableEntry *hte;
+    for(hte=ys; hte; hte=hte->next) {
+      if(hte->key == xs->key) break; // assume an element is equal to itself
+      if(hte->hashval != xs->hashval) continue; // shortcut
+      if(eq(hte->key, xs->key)) break;
+    }
+    if(hte == NULL) return false;   // element not found
+  }
+  return true;                      // all found
+}
+
+// compare two lists of HHashTableEntries
+static inline bool hte_equal(HEqualFunc eq, HHashTableEntry *xs, HHashTableEntry *ys) {
+  return (hte_same_length(xs, ys) && hte_subset(eq, xs, ys));
+}
+
+/* Set equality of HHashSets.
+ * Obviously, 'a' and 'b' must use the same equality function.
+ * Not strictly necessary, but we also assume the same hash function.
+ */
+bool h_hashset_equal(const HHashSet *a, const HHashSet *b) {
+  if(a->capacity == b->capacity) {
+    // iterate over the buckets in parallel
+    for(size_t i=0; i < a->capacity; i++) {
+      if(!hte_equal(a->equalFunc, &a->contents[i], &b->contents[i]))
+        return false;
+    }
+  } else {
+    assert_message(0, "h_hashset_equal called on sets of different capacity");
+    // TODO implement general case
+  }
+  return true;
+}
+
 bool h_eq_ptr(const void *p, const void *q) {
   return (p==q);
 }
 
 HHashValue h_hash_ptr(const void *p) {
-  // XXX just djbhash it
+  // XXX just djbhash it? it does make the benchmark ~7% slower.
+  //return h_djbhash((const uint8_t *)&p, sizeof(void *));
   return (uintptr_t)p >> 4;
+}
+
+uint32_t h_djbhash(const uint8_t *buf, size_t len) {
+  uint32_t hash = 5381;
+  while (len--) {
+    hash = hash * 33 + *buf++;
+  }
+  return hash;
 }
 
 HSArray *h_sarray_new(HAllocator *mm__, size_t size) {

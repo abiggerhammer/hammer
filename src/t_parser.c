@@ -405,9 +405,9 @@ static void test_not(gconstpointer backend) {
   g_check_parse_ok(not_2, (HParserBackend)GPOINTER_TO_INT(backend), "a+b", 3, "(u0x61 (u0x2b) u0x62)");
   g_check_parse_ok(not_2, (HParserBackend)GPOINTER_TO_INT(backend), "a++b", 4, "(u0x61 <2b.2b> u0x62)");
 }
-/*
+
 static void test_leftrec(gconstpointer backend) {
-  const HParser *a_ = h_ch('a');
+  HParser *a_ = h_ch('a');
 
   HParser *lr_ = h_indirect();
   h_bind_indirect(lr_, h_choice(h_sequence(lr_, a_, NULL), a_, NULL));
@@ -416,7 +416,31 @@ static void test_leftrec(gconstpointer backend) {
   g_check_parse_ok(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "(u0x61 u0x61)");
   g_check_parse_ok(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "aaa", 3, "((u0x61 u0x61) u0x61)");
 }
-*/
+
+static void test_rightrec(gconstpointer backend) {
+  HParser *a_ = h_ch('a');
+
+  HParser *rr_ = h_indirect();
+  h_bind_indirect(rr_, h_choice(h_sequence(a_, rr_, NULL), h_epsilon_p(), NULL));
+
+  g_check_parse_ok(rr_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
+  g_check_parse_ok(rr_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "(u0x61 (u0x61))");
+  g_check_parse_ok(rr_, (HParserBackend)GPOINTER_TO_INT(backend), "aaa", 3, "(u0x61 (u0x61 (u0x61)))");
+}
+
+static void test_ambiguous(gconstpointer backend) {
+  HParser *d_ = h_ch('d');
+  HParser *p_ = h_ch('+');
+  HParser *E_ = h_indirect();
+  h_bind_indirect(E_, h_choice(h_sequence(E_, p_, E_, NULL), d_, NULL));
+  HParser *expr_ = h_action(E_, h_act_flatten);
+
+  g_check_parse_ok(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "(u0x64)");
+  g_check_parse_ok(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d", 3, "(u0x64 u0x2b u0x64)");
+  g_check_parse_ok(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d+d", 5, "(u0x64 u0x2b u0x64 u0x2b u0x64)");
+  g_check_parse_failed(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+", 2);
+}
+
 void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/token", GINT_TO_POINTER(PB_PACKRAT), test_token);
   g_test_add_data_func("/core/parser/packrat/ch", GINT_TO_POINTER(PB_PACKRAT), test_ch);
@@ -460,6 +484,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/not", GINT_TO_POINTER(PB_PACKRAT), test_not);
   g_test_add_data_func("/core/parser/packrat/ignore", GINT_TO_POINTER(PB_PACKRAT), test_ignore);
   //  g_test_add_data_func("/core/parser/packrat/leftrec", GINT_TO_POINTER(PB_PACKRAT), test_leftrec);
+  g_test_add_data_func("/core/parser/packrat/rightrec", GINT_TO_POINTER(PB_PACKRAT), test_rightrec);
 
   g_test_add_data_func("/core/parser/llk/token", GINT_TO_POINTER(PB_LLk), test_token);
   g_test_add_data_func("/core/parser/llk/ch", GINT_TO_POINTER(PB_LLk), test_ch);
@@ -496,6 +521,8 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/llk/epsilon_p", GINT_TO_POINTER(PB_LLk), test_epsilon_p);
   g_test_add_data_func("/core/parser/llk/attr_bool", GINT_TO_POINTER(PB_LLk), test_attr_bool);
   g_test_add_data_func("/core/parser/llk/ignore", GINT_TO_POINTER(PB_LLk), test_ignore);
+  //g_test_add_data_func("/core/parser/llk/leftrec", GINT_TO_POINTER(PB_LLk), test_leftrec);
+  g_test_add_data_func("/core/parser/llk/rightrec", GINT_TO_POINTER(PB_LLk), test_rightrec);
 
   g_test_add_data_func("/core/parser/regex/token", GINT_TO_POINTER(PB_REGULAR), test_token);
   g_test_add_data_func("/core/parser/regex/ch", GINT_TO_POINTER(PB_REGULAR), test_ch);
@@ -533,4 +560,81 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/regex/epsilon_p", GINT_TO_POINTER(PB_REGULAR), test_epsilon_p);
   g_test_add_data_func("/core/parser/regex/attr_bool", GINT_TO_POINTER(PB_REGULAR), test_attr_bool);
   g_test_add_data_func("/core/parser/regex/ignore", GINT_TO_POINTER(PB_REGULAR), test_ignore);
+
+  g_test_add_data_func("/core/parser/lalr/token", GINT_TO_POINTER(PB_LALR), test_token);
+  g_test_add_data_func("/core/parser/lalr/ch", GINT_TO_POINTER(PB_LALR), test_ch);
+  g_test_add_data_func("/core/parser/lalr/ch_range", GINT_TO_POINTER(PB_LALR), test_ch_range);
+  g_test_add_data_func("/core/parser/lalr/int64", GINT_TO_POINTER(PB_LALR), test_int64);
+  g_test_add_data_func("/core/parser/lalr/int32", GINT_TO_POINTER(PB_LALR), test_int32);
+  g_test_add_data_func("/core/parser/lalr/int16", GINT_TO_POINTER(PB_LALR), test_int16);
+  g_test_add_data_func("/core/parser/lalr/int8", GINT_TO_POINTER(PB_LALR), test_int8);
+  g_test_add_data_func("/core/parser/lalr/uint64", GINT_TO_POINTER(PB_LALR), test_uint64);
+  g_test_add_data_func("/core/parser/lalr/uint32", GINT_TO_POINTER(PB_LALR), test_uint32);
+  g_test_add_data_func("/core/parser/lalr/uint16", GINT_TO_POINTER(PB_LALR), test_uint16);
+  g_test_add_data_func("/core/parser/lalr/uint8", GINT_TO_POINTER(PB_LALR), test_uint8);
+  g_test_add_data_func("/core/parser/lalr/int_range", GINT_TO_POINTER(PB_LALR), test_int_range);
+#if 0
+  g_test_add_data_func("/core/parser/lalr/float64", GINT_TO_POINTER(PB_LALR), test_float64);
+  g_test_add_data_func("/core/parser/lalr/float32", GINT_TO_POINTER(PB_LALR), test_float32);
+#endif
+  g_test_add_data_func("/core/parser/lalr/whitespace", GINT_TO_POINTER(PB_LALR), test_whitespace);
+  g_test_add_data_func("/core/parser/lalr/left", GINT_TO_POINTER(PB_LALR), test_left);
+  g_test_add_data_func("/core/parser/lalr/right", GINT_TO_POINTER(PB_LALR), test_right);
+  g_test_add_data_func("/core/parser/lalr/middle", GINT_TO_POINTER(PB_LALR), test_middle);
+  g_test_add_data_func("/core/parser/lalr/action", GINT_TO_POINTER(PB_LALR), test_action);
+  g_test_add_data_func("/core/parser/lalr/in", GINT_TO_POINTER(PB_LALR), test_in);
+  g_test_add_data_func("/core/parser/lalr/not_in", GINT_TO_POINTER(PB_LALR), test_not_in);
+  g_test_add_data_func("/core/parser/lalr/end_p", GINT_TO_POINTER(PB_LALR), test_end_p);
+  g_test_add_data_func("/core/parser/lalr/nothing_p", GINT_TO_POINTER(PB_LALR), test_nothing_p);
+  g_test_add_data_func("/core/parser/lalr/sequence", GINT_TO_POINTER(PB_LALR), test_sequence);
+  g_test_add_data_func("/core/parser/lalr/choice", GINT_TO_POINTER(PB_LALR), test_choice);
+  g_test_add_data_func("/core/parser/lalr/many", GINT_TO_POINTER(PB_LALR), test_many);
+  g_test_add_data_func("/core/parser/lalr/many1", GINT_TO_POINTER(PB_LALR), test_many1);
+  g_test_add_data_func("/core/parser/lalr/optional", GINT_TO_POINTER(PB_LALR), test_optional);
+  g_test_add_data_func("/core/parser/lalr/sepBy", GINT_TO_POINTER(PB_LALR), test_sepBy);
+  g_test_add_data_func("/core/parser/lalr/sepBy1", GINT_TO_POINTER(PB_LALR), test_sepBy1);
+  g_test_add_data_func("/core/parser/lalr/epsilon_p", GINT_TO_POINTER(PB_LALR), test_epsilon_p);
+  g_test_add_data_func("/core/parser/lalr/attr_bool", GINT_TO_POINTER(PB_LALR), test_attr_bool);
+  g_test_add_data_func("/core/parser/lalr/ignore", GINT_TO_POINTER(PB_LALR), test_ignore);
+  g_test_add_data_func("/core/parser/lalr/leftrec", GINT_TO_POINTER(PB_LALR), test_leftrec);
+  g_test_add_data_func("/core/parser/lalr/rightrec", GINT_TO_POINTER(PB_LALR), test_rightrec);
+
+  g_test_add_data_func("/core/parser/glr/token", GINT_TO_POINTER(PB_GLR), test_token);
+  g_test_add_data_func("/core/parser/glr/ch", GINT_TO_POINTER(PB_GLR), test_ch);
+  g_test_add_data_func("/core/parser/glr/ch_range", GINT_TO_POINTER(PB_GLR), test_ch_range);
+  g_test_add_data_func("/core/parser/glr/int64", GINT_TO_POINTER(PB_GLR), test_int64);
+  g_test_add_data_func("/core/parser/glr/int32", GINT_TO_POINTER(PB_GLR), test_int32);
+  g_test_add_data_func("/core/parser/glr/int16", GINT_TO_POINTER(PB_GLR), test_int16);
+  g_test_add_data_func("/core/parser/glr/int8", GINT_TO_POINTER(PB_GLR), test_int8);
+  g_test_add_data_func("/core/parser/glr/uint64", GINT_TO_POINTER(PB_GLR), test_uint64);
+  g_test_add_data_func("/core/parser/glr/uint32", GINT_TO_POINTER(PB_GLR), test_uint32);
+  g_test_add_data_func("/core/parser/glr/uint16", GINT_TO_POINTER(PB_GLR), test_uint16);
+  g_test_add_data_func("/core/parser/glr/uint8", GINT_TO_POINTER(PB_GLR), test_uint8);
+  g_test_add_data_func("/core/parser/glr/int_range", GINT_TO_POINTER(PB_GLR), test_int_range);
+#if 0
+  g_test_add_data_func("/core/parser/glr/float64", GINT_TO_POINTER(PB_GLR), test_float64);
+  g_test_add_data_func("/core/parser/glr/float32", GINT_TO_POINTER(PB_GLR), test_float32);
+#endif
+  g_test_add_data_func("/core/parser/glr/whitespace", GINT_TO_POINTER(PB_GLR), test_whitespace);
+  g_test_add_data_func("/core/parser/glr/left", GINT_TO_POINTER(PB_GLR), test_left);
+  g_test_add_data_func("/core/parser/glr/right", GINT_TO_POINTER(PB_GLR), test_right);
+  g_test_add_data_func("/core/parser/glr/middle", GINT_TO_POINTER(PB_GLR), test_middle);
+  g_test_add_data_func("/core/parser/glr/action", GINT_TO_POINTER(PB_GLR), test_action);
+  g_test_add_data_func("/core/parser/glr/in", GINT_TO_POINTER(PB_GLR), test_in);
+  g_test_add_data_func("/core/parser/glr/not_in", GINT_TO_POINTER(PB_GLR), test_not_in);
+  g_test_add_data_func("/core/parser/glr/end_p", GINT_TO_POINTER(PB_GLR), test_end_p);
+  g_test_add_data_func("/core/parser/glr/nothing_p", GINT_TO_POINTER(PB_GLR), test_nothing_p);
+  g_test_add_data_func("/core/parser/glr/sequence", GINT_TO_POINTER(PB_GLR), test_sequence);
+  g_test_add_data_func("/core/parser/glr/choice", GINT_TO_POINTER(PB_GLR), test_choice);
+  g_test_add_data_func("/core/parser/glr/many", GINT_TO_POINTER(PB_GLR), test_many);
+  g_test_add_data_func("/core/parser/glr/many1", GINT_TO_POINTER(PB_GLR), test_many1);
+  g_test_add_data_func("/core/parser/glr/optional", GINT_TO_POINTER(PB_GLR), test_optional);
+  g_test_add_data_func("/core/parser/glr/sepBy", GINT_TO_POINTER(PB_GLR), test_sepBy);
+  g_test_add_data_func("/core/parser/glr/sepBy1", GINT_TO_POINTER(PB_GLR), test_sepBy1);
+  g_test_add_data_func("/core/parser/glr/epsilon_p", GINT_TO_POINTER(PB_GLR), test_epsilon_p);
+  g_test_add_data_func("/core/parser/glr/attr_bool", GINT_TO_POINTER(PB_GLR), test_attr_bool);
+  g_test_add_data_func("/core/parser/glr/ignore", GINT_TO_POINTER(PB_GLR), test_ignore);
+  g_test_add_data_func("/core/parser/glr/leftrec", GINT_TO_POINTER(PB_GLR), test_leftrec);
+  g_test_add_data_func("/core/parser/glr/rightrec", GINT_TO_POINTER(PB_GLR), test_rightrec);
+  g_test_add_data_func("/core/parser/glr/ambiguous", GINT_TO_POINTER(PB_GLR), test_ambiguous);
 }

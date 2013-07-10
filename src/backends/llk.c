@@ -3,13 +3,13 @@
 #include "../cfgrammar.h"
 #include "../parsers/parser_internal.h"
 
-// XXX despite the names, this is all LL(1) right now. TODO
+static const size_t DEFAULT_KMAX = 1;
 
 
 /* Generating the LL(k) parse table */
 
-/* Maps each nonterminal (HCFChoice) of the grammar to another hash table that
- * maps lookahead tokens (HCFToken) to productions (HCFSequence).
+/* Maps each nonterminal (HCFChoice) of the grammar to a HStringMap that
+ * maps lookahead strings to productions (HCFSequence).
  */
 typedef struct HLLkTable_ {
   HHashTable *rows;
@@ -19,29 +19,17 @@ typedef struct HLLkTable_ {
 } HLLkTable;
 
 
-// XXX adaptation to LL(1), to be removed
-typedef HCharKey HCFToken;
-static const HCFToken end_token = 0x200;
-#define char_token char_key
-
 /* Interface to look up an entry in the parse table. */
 const HCFSequence *h_llk_lookup(const HLLkTable *table, const HCFChoice *x,
-                                HInputStream lookahead)
+                                const HInputStream *stream)
 {
-  // note the lookahead stream is passed by value, i.e. a copy.
-  // reading bits from it does not consume them from the real input.
-  HCFToken tok;
-  uint8_t c = h_read_bits(&lookahead, 8, false);
-  if(lookahead.overrun)
-    tok = end_token;
-  else
-    tok = char_token(c);
-
-  const HHashTable *row = h_hashtable_get(table->rows, x);
+  const HStringMap *row = h_hashtable_get(table->rows, x);
   assert(row != NULL);  // the table should have one row for each nonterminal
 
-  const HCFSequence *production = h_hashtable_get(row, (void *)tok);
-  return production;
+  assert(!row->epsilon_branch); // would match without looking at the input
+                                // XXX cases where this could be useful?
+
+  return h_stringmap_get_lookahead(row, *stream);
 }
 
 /* Allocate a new parse table. */
@@ -72,58 +60,131 @@ void h_llktable_free(HLLkTable *table)
   h_free(table);
 }
 
-/* Compute the predict set of production "A -> rhs". */
-HHashSet *h_predict(HCFGrammar *g, const HCFChoice *A, const HCFSequence *rhs)
+void *const CONFLICT = (void *)(uintptr_t)(-1);
+
+// helper for stringmap_merge
+static void *combine_entries(HHashSet *workset, void *dst, const void *src)
 {
-  // predict(A -> rhs) = first(rhs) u follow(A)  if "" can be derived from rhs
-  // predict(A -> rhs) = first(rhs)              otherwise
-  const HCFStringMap *first_rhs = h_first_seq(1, g, rhs->items);
-  const HCFStringMap *follow_A = h_follow(1, g, A);
-  HHashSet *ret = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+  assert(dst != NULL);
+  assert(src != NULL);
 
-  h_hashset_put_all(ret, first_rhs->char_branches);
-  if(first_rhs->end_branch)
-    h_hashset_put(ret, (void *)end_token);
-
-  if(h_derives_epsilon_seq(g, rhs->items)) {
-    h_hashset_put_all(ret, follow_A->char_branches);
-    if(follow_A->end_branch)
-      h_hashset_put(ret, (void *)end_token);
+  if(dst == CONFLICT) {                 // previous conflict
+    h_hashset_put(workset, src);
+  } else if(dst != src) {               // new conflict
+    h_hashset_put(workset, dst);
+    h_hashset_put(workset, src);
+    dst = CONFLICT;
   }
 
-  return ret;
+  return dst;
 }
 
-/* Generate entries for the production "A -> rhs" in the given table row. */
-static
-int fill_table_row(HCFGrammar *g, HHashTable *row,
-                   const HCFChoice *A, HCFSequence *rhs)
+// add the mappings of src to dst, marking conflicts and adding the conflicting
+// values to workset.
+// note: reuses parts of src to build dst!
+static void stringmap_merge(HHashSet *workset, HStringMap *dst, HStringMap *src)
 {
-  // iterate over predict(A -> rhs)
-  HHashSet *pred = h_predict(g, A, rhs);
-
-  size_t i;
-  HHashTableEntry *hte;
-  for(i=0; i < pred->capacity; i++) {
-    for(hte = &pred->contents[i]; hte; hte = hte->next) {
-      if(hte->key == NULL)
-        continue;
-      HCFToken x = (uintptr_t)hte->key;
-
-      if(h_hashtable_present(row, (void *)x))
-        return -1;  // table would be ambiguous
-
-      h_hashtable_put(row, (void *)x, rhs);
-    }
+  if(src->epsilon_branch) {
+    if(dst->epsilon_branch)
+      dst->epsilon_branch =
+	combine_entries(workset, dst->epsilon_branch, src->epsilon_branch);
+    else
+      dst->epsilon_branch = src->epsilon_branch;
+  } else {
+    // if there is a non-conflicting value on the left (dst) side, it means
+    // that prediction is already unambiguous. we can drop the right (src)
+    // side we were going to extend with.
+    if(dst->epsilon_branch && dst->epsilon_branch != CONFLICT)
+      return;
   }
 
-  return 0;
+  if(src->end_branch) {
+    if(dst->end_branch)
+      dst->end_branch =
+	combine_entries(workset, dst->end_branch, src->end_branch);
+    else
+      dst->end_branch = src->end_branch;
+  }
+
+  // iterate over src->char_branches
+  const HHashTable *ht = src->char_branches;
+  for(size_t i=0; i < ht->capacity; i++) {
+    for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+      if(hte->key == NULL)
+        continue;
+
+      HCharKey c = (HCharKey)hte->key;
+      HStringMap *src_ = hte->value;
+
+      if(src_) {
+        HStringMap *dst_ = h_hashtable_get(dst->char_branches, (void *)c);
+        if(dst_)
+          stringmap_merge(workset, dst_, src_);
+        else
+          h_hashtable_put(dst->char_branches, (void *)c, src_);
+      }
+    }
+  }
+}
+
+/* Generate entries for the productions of A in the given table row. */
+static int fill_table_row(size_t kmax, HCFGrammar *g, HStringMap *row,
+                          const HCFChoice *A)
+{
+  HHashSet *workset;
+
+  // initialize working set to the productions of A
+  workset = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+  for(HCFSequence **s = A->seq; *s; s++)
+    h_hashset_put(workset, *s);
+
+  // run until workset exhausted or kmax hit
+  size_t k;
+  for(k=1; k<=kmax; k++) {
+    // allocate a fresh workset for the next round
+    HHashSet *nextset = h_hashset_new(g->arena, h_eq_ptr, h_hash_ptr);
+
+    // iterate over the productions in workset...
+    const HHashTable *ht = workset;
+    for(size_t i=0; i < ht->capacity; i++) {
+      for(HHashTableEntry *hte = &ht->contents[i]; hte; hte = hte->next) {
+        if(hte->key == NULL)
+          continue;
+
+        HCFSequence *rhs = (void *)hte->key;
+        assert(rhs != NULL);
+        assert(rhs != CONFLICT);  // just to be sure there's no mixup
+
+        // calculate predict set; let values map to rhs
+        HStringMap *pred = h_predict(k, g, A, rhs);
+        h_stringmap_replace(pred, NULL, rhs);
+
+        // merge predict set into the row
+        // accumulates conflicts in new workset
+        stringmap_merge(nextset, row, pred);
+      }
+    }
+
+    // switch to the updated workset
+    h_hashset_free(workset);
+    workset = nextset;
+
+    // if the workset is empty, row is without conflict; we're done
+    if(h_hashset_empty(workset))
+      break;
+
+    // clear conflict markers for next iteration
+    h_stringmap_replace(row, CONFLICT, NULL);
+  }
+
+  h_hashset_free(workset);
+  return (k>kmax)? -1 : 0;
 }
 
 /* Generate the LL(k) parse table from the given grammar.
  * Returns -1 on error, 0 on success.
  */
-static int fill_table(HCFGrammar *g, HLLkTable *table)
+static int fill_table(size_t kmax, HCFGrammar *g, HLLkTable *table)
 {
   table->start = g->start;
 
@@ -138,18 +199,14 @@ static int fill_table(HCFGrammar *g, HLLkTable *table)
       assert(a->type == HCF_CHOICE);
 
       // create table row for this nonterminal
-      HHashTable *row = h_hashtable_new(table->arena, h_eq_ptr, h_hash_ptr);
+      HStringMap *row = h_stringmap_new(table->arena);
       h_hashtable_put(table->rows, a, row);
 
-      // iterate over a's productions
-      HCFSequence **s;
-      for(s = a->seq; *s; s++) {
-        // record this production in row as appropriate
-        // this can signal an ambiguity conflict.
+      if(fill_table_row(kmax, g, row, a) < 0) {
+        // unresolvable conflicts in row
         // NB we don't worry about deallocating anything, h_llk_compile will
         //    delete the whole arena for us.
-        if(fill_table_row(g, row, a, *s) < 0)
-          return -1;
+        return -1;
       }
     }
   }
@@ -159,6 +216,9 @@ static int fill_table(HCFGrammar *g, HLLkTable *table)
 
 int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
 {
+  size_t kmax = params? (uintptr_t)params : DEFAULT_KMAX;
+  assert(kmax>0);
+
   // Convert parser to a CFG. This can fail as indicated by a NULL return.
   HCFGrammar *grammar = h_cfgrammar(mm__, parser);
   if(grammar == NULL)
@@ -170,7 +230,7 @@ int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
 
   // generate table and store in parser->backend_data.
   HLLkTable *table = h_llktable_new(mm__);
-  if(fill_table(grammar, table) < 0) {
+  if(fill_table(kmax, grammar, table) < 0) {
     // the table was ambiguous
     h_cfgrammar_free(grammar);
     h_llktable_free(table);
@@ -240,9 +300,12 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       seq = h_carray_new(arena);
 
       // look up applicable production in parse table
-      const HCFSequence *p = h_llk_lookup(table, x, *stream);
+      const HCFSequence *p = h_llk_lookup(table, x, stream);
       if(p == NULL)
         goto no_parse;
+
+      // an infinite loop case that shouldn't happen
+      assert(!p->items[0] || p->items[0] != x);
 
       // push production's rhs onto the stack (in reverse order)
       HCFChoice **s;
@@ -255,10 +318,12 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
     // the top of stack is such that there will be a result...
     HParsedToken *tok;  // will hold result token
+    tok = h_arena_malloc(arena, sizeof(HParsedToken));
+    tok->index = stream->index;
+    tok->bit_offset = stream->bit_offset;
     if(x == mark) {
       // hit stack frame boundary...
       // wrap the accumulated parse result, this sequence is finished
-      tok = h_arena_malloc(arena, sizeof(HParsedToken));
       tok->token_type = TT_SEQUENCE;
       tok->seq = seq;
 
@@ -277,13 +342,13 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       case HCF_END:
         if(!stream->overrun)
           goto no_parse;
+        h_arena_free(arena, tok);
         tok = NULL;
         break;
 
       case HCF_CHAR:
         if(input != x->chr)
           goto no_parse;
-        tok = h_arena_malloc(arena, sizeof(HParsedToken));
         tok->token_type = TT_UINT;
         tok->uint = x->chr;
         break;
@@ -293,7 +358,6 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
           goto no_parse;
         if(!charset_isset(x->charset, input))
           goto no_parse;
-        tok = h_arena_malloc(arena, sizeof(HParsedToken));
         tok->token_type = TT_UINT;
         tok->uint = input;
         break;
@@ -305,8 +369,6 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
     }
 
     // 'tok' has been parsed; process it
-
-    // XXX set tok->index and tok->bit_offset (don't take directly from stream, cuz peek!)
 
     // perform token reshape if indicated
     if(x->reshape)
@@ -328,10 +390,10 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
   h_delete_arena(tarena);
   return make_result(arena, seq->elements[0]);
 
-  no_parse:
-    h_delete_arena(tarena);
-    h_delete_arena(arena);
-    return NULL;
+ no_parse:
+  h_delete_arena(tarena);
+  h_delete_arena(arena);
+  return NULL;
 }
 
 
@@ -357,9 +419,11 @@ int test_llk(void)
      Y -> y         -- for k=3 use "yy"
   */
 
-  HParser *c = h_many(h_ch('x'));
-  HParser *q = h_sequence(c, h_ch('y'), NULL);
-  HParser *p = h_choice(q, h_end_p(), NULL);
+  HParser *X = h_optional(h_ch('x'));
+  HParser *Y = h_sequence(h_ch('y'), h_ch('y'), NULL);
+  HParser *A = h_sequence(X, Y, h_ch('a'), NULL);
+  HParser *B = h_sequence(Y, h_ch('b'), NULL);
+  HParser *p = h_choice(A, B, NULL);
 
   HCFGrammar *g = h_cfgrammar(&system_allocator, p);
 
@@ -372,13 +436,16 @@ int test_llk(void)
   printf("derive epsilon: ");
   h_pprint_symbolset(stdout, g, g->geneps, 0);
   printf("first(A) = ");
-  h_pprint_stringset(stdout, g, h_first(2, g, g->start), 0);
-  printf("follow(C) = ");
-  h_pprint_stringset(stdout, g, h_follow(2, g, h_desugar(&system_allocator, NULL, c)), 0);
+  h_pprint_stringset(stdout, h_first(3, g, g->start), 0);
+  //  printf("follow(C) = ");
+  //  h_pprint_stringset(stdout, h_follow(3, g, h_desugar(&system_allocator, NULL, c)), 0);
 
-  h_compile(p, PB_LLk, NULL);
+  if(h_compile(p, PB_LLk, (void *)3)) {
+    fprintf(stderr, "does not compile\n");
+    return 2;
+  }
 
-  HParseResult *res = h_parse(p, (uint8_t *)"xxy", 3);
+  HParseResult *res = h_parse(p, (uint8_t *)"xyya", 4);
   if(res)
     h_pprint(stdout, res->ast, 0, 2);
   else

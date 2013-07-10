@@ -65,10 +65,10 @@ void* h_arena_malloc(HArena *arena, size_t size) {
   if (size <= arena->head->free) {
     // fast path..
     void* ret = arena->head->rest + arena->head->used;
-    arena->used += size + 1;
+    arena->used += size;
     arena->wasted -= size;
-    arena->head->used += size + 1;
-    arena->head->free -= size + 1;
+    arena->head->used += size;
+    arena->head->free -= size;
     return ret;
   } else if (size > arena->block_size) {
     // We need a new, dedicated block for it, because it won't fit in a standard sized one.

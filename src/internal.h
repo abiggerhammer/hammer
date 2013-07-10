@@ -279,6 +279,8 @@ struct HBitWriter_ {
 // Backends {{{
 extern HParserBackendVTable h__packrat_backend_vtable;
 extern HParserBackendVTable h__llk_backend_vtable;
+extern HParserBackendVTable h__lalr_backend_vtable;
+extern HParserBackendVTable h__glr_backend_vtable;
 // }}}
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
@@ -306,6 +308,7 @@ void h_carray_append(HCountedArray *array, void* item);
 HSlist* h_slist_new(HArena *arena);
 HSlist* h_slist_copy(HSlist *slist);
 void* h_slist_pop(HSlist *slist);
+void* h_slist_drop(HSlist *slist);
 void h_slist_push(HSlist *slist, void* item);
 bool h_slist_find(HSlist *slist, const void* item);
 HSlist* h_slist_remove_all(HSlist *slist, const void* item);
@@ -316,7 +319,7 @@ HHashTable* h_hashtable_new(HArena *arena, HEqualFunc equalFunc, HHashFunc hashF
 void* h_hashtable_get(const HHashTable* ht, const void* key);
 void  h_hashtable_put(HHashTable* ht, const void* key, void* value);
 void  h_hashtable_update(HHashTable* dst, const HHashTable *src);
-void  h_hashtable_merge(void *(*combine)(void *v1, void *v2),
+void  h_hashtable_merge(void *(*combine)(void *v1, const void *v2),
                         HHashTable *dst, const HHashTable *src);
 int   h_hashtable_present(const HHashTable* ht, const void* key);
 void  h_hashtable_del(HHashTable* ht, const void* key);
@@ -331,9 +334,11 @@ typedef HHashTable HHashSet;
 #define h_hashset_empty(ht)      h_hashtable_empty(ht)
 #define h_hashset_del(ht,el)     h_hashtable_del(ht,el)
 #define h_hashset_free(ht)       h_hashtable_free(ht)
+bool h_hashset_equal(const HHashSet *a, const HHashSet *b);
 
 bool h_eq_ptr(const void *p, const void *q);
 HHashValue h_hash_ptr(const void *p);
+uint32_t h_djbhash(const uint8_t *buf, size_t len);
 
 typedef struct HCFSequence_ HCFSequence;
 

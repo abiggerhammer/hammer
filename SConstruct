@@ -8,7 +8,7 @@ AddOption("--variant",
           dest="variant",
           nargs=1, type="choice",
           choices=["debug", "opt"],
-          default="debug",
+          default="opt",
           action="store",
           help="Build variant (debug or opt)")
 
@@ -28,3 +28,5 @@ Export('env')
 
 env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
 env.SConscript(["examples/SConscript"], variant_dir='build/$VARIANT/examples')
+
+env.Command('test', 'build/$VARIANT/src/test_suite', 'env LD_LIBRARY_PATH=build/$VARIANT/src $SOURCE')

@@ -16,7 +16,7 @@ typedef struct HCFGrammar_ {
 
   // constant set containing only the empty string.
   // this is only a member of HCFGrammar because it needs a pointer to arena.
-  const struct HCFStringMap_ *singleton_epsilon;
+  const struct HStringMap_ *singleton_epsilon;
 } HCFGrammar;
 
 
@@ -32,21 +32,28 @@ static inline uint8_t key_char(HCharKey k) { return (0xFF & k); }
  * input tokens.
  * Each path through the tree represents the string along its branches.
  */
-typedef struct HCFStringMap_ {
+typedef struct HStringMap_ {
   void *epsilon_branch;         // points to leaf value
   void *end_branch;             // points to leaf value
-  HHashTable *char_branches;    // maps to inner nodes (HCFStringMaps)
+  HHashTable *char_branches;    // maps to inner nodes (HStringMaps)
   HArena *arena;
-} HCFStringMap;
+} HStringMap;
 
-HCFStringMap *h_stringmap_new(HArena *a);
-void h_stringmap_put_end(HCFStringMap *m, void *v);
-void h_stringmap_put_epsilon(HCFStringMap *m, void *v);
-void h_stringmap_put_char(HCFStringMap *m, uint8_t c, void *v);
-void h_stringmap_update(HCFStringMap *m, const HCFStringMap *n);
-void *h_stringmap_get(const HCFStringMap *m, const uint8_t *str, size_t n, bool end);
-bool h_stringmap_present(const HCFStringMap *m, const uint8_t *str, size_t n, bool end);
-bool h_stringmap_present_epsilon(const HCFStringMap *m);
+HStringMap *h_stringmap_new(HArena *a);
+void h_stringmap_put_end(HStringMap *m, void *v);
+void h_stringmap_put_epsilon(HStringMap *m, void *v);
+void h_stringmap_put_after(HStringMap *m, uint8_t c, HStringMap *ends);
+void h_stringmap_put_char(HStringMap *m, uint8_t c, void *v);
+void h_stringmap_update(HStringMap *m, const HStringMap *n);
+void h_stringmap_replace(HStringMap *m, void *old, void *new);
+void *h_stringmap_get(const HStringMap *m, const uint8_t *str, size_t n, bool end);
+void *h_stringmap_get_lookahead(const HStringMap *m, HInputStream lookahead);
+bool h_stringmap_present(const HStringMap *m, const uint8_t *str, size_t n, bool end);
+bool h_stringmap_present_epsilon(const HStringMap *m);
+bool h_stringmap_empty(const HStringMap *m);
+
+static inline HStringMap *h_stringmap_get_char(const HStringMap *m, const uint8_t c)
+ { return h_hashtable_get(m->char_branches, (void *)char_key(c)); }
 
 
 /* Convert 'parser' into CFG representation by desugaring and compiling the set
@@ -54,6 +61,9 @@ bool h_stringmap_present_epsilon(const HCFStringMap *m);
  * A NULL return means we are unable to represent the parser as a CFG.
  */
 HCFGrammar *h_cfgrammar(HAllocator* mm__, const HParser *parser);
+HCFGrammar *h_cfgrammar_(HAllocator* mm__, HCFChoice *start);
+
+HCFGrammar *h_cfgrammar_new(HAllocator *mm__);
 
 /* Frees the given grammar and associated data.
  * Does *not* free parsers' CFG forms as created by h_desugar.
@@ -67,16 +77,28 @@ bool h_derives_epsilon(HCFGrammar *g, const HCFChoice *symbol);
 bool h_derives_epsilon_seq(HCFGrammar *g, HCFChoice **s);
 
 /* Compute first_k set of symbol x. Memoized. */
-const HCFStringMap *h_first(size_t k, HCFGrammar *g, const HCFChoice *x);
+const HStringMap *h_first(size_t k, HCFGrammar *g, const HCFChoice *x);
 
 /* Compute first_k set of sentential form s. s NULL-terminated. */
-const HCFStringMap *h_first_seq(size_t k, HCFGrammar *g, HCFChoice **s);
+const HStringMap *h_first_seq(size_t k, HCFGrammar *g, HCFChoice **s);
 
 /* Compute follow_k set of symbol x. Memoized. */
-const HCFStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x);
+const HStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x);
+
+/* Compute the predict_k set of production "A -> rhs".
+ * Always returns a newly-allocated HStringMap.
+ */
+HStringMap *h_predict(size_t k, HCFGrammar *g,
+                        const HCFChoice *A, const HCFSequence *rhs);
 
 
 /* Pretty-printers for grammars and associated data. */
 void h_pprint_grammar(FILE *file, const HCFGrammar *g, int indent);
+void h_pprint_sequence(FILE *f, const HCFGrammar *g, const HCFSequence *seq);
+void h_pprint_symbol(FILE *f, const HCFGrammar *g, const HCFChoice *x);
 void h_pprint_symbolset(FILE *file, const HCFGrammar *g, const HHashSet *set, int indent);
-void h_pprint_stringset(FILE *file, const HCFGrammar *g, const HCFStringMap *set, int indent);
+void h_pprint_stringset(FILE *file, const HStringMap *set, int indent);
+void h_pprint_stringmap(FILE *file, char sep,
+                        void (*valprint)(FILE *f, void *env, void *val), void *env,
+                        const HStringMap *map);
+void h_pprint_char(FILE *file, char c);

@@ -34,11 +34,11 @@ typedef struct HParseState_ HParseState;
 typedef enum HParserBackend_ {
   PB_MIN = 0,
   PB_PACKRAT = PB_MIN, // PB_MIN is always the default.
-  PB_REGULAR,	// 
-  PB_LLk,	//
-  PB_LALR,	// Not Implemented
-  PB_GLR,	// Not Implemented
-  PB_MAX = PB_LLk
+  PB_REGULAR,
+  PB_LLk,
+  PB_LALR,
+  PB_GLR,
+  PB_MAX = PB_GLR
 } HParserBackend;
 
 typedef enum HTokenType_ {
