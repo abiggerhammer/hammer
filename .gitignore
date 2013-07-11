@@ -14,7 +14,6 @@ TAGS
 *.swp
 *.swo
 \#*
-.*
 docs/milestone2.dot.pdf
 *.dot.pdf
 Session.vim
