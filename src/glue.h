@@ -182,7 +182,7 @@ HParsedToken *h_make_sint(HArena *arena, int64_t val);
 HParsedToken *h_make_uint(HArena *arena, uint64_t val);
 
 // Standard short-hands to make tokens in an action.
-#define H_MAKE(TYP, VAL)  h_make(p->arena, TT_ ## TYP, VAL)
+#define H_MAKE(TYP, VAL)  h_make(p->arena, (HTokenType)TT_ ## TYP, VAL)
 #define H_MAKE_SEQ()      h_make_seq(p->arena)
 #define H_MAKE_SEQN(N)    h_make_seqn(p->arena, N)
 #define H_MAKE_BYTES(LEN) h_make_bytes(p->arena, LEN)
