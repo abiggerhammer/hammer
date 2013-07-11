@@ -6,6 +6,8 @@
 SUBDIRS = src examples jni
 
 include config.mk
+TOPLEVEL=.
+include common.mk
 
 CONFIG_VARS= INCLUDE_TESTS
 

@@ -17,6 +17,7 @@
 
 #ifndef HAMMER_INTERNAL__H
 #define HAMMER_INTERNAL__H
+#include <assert.h>
 #include <err.h>
 #include <string.h>
 #include "hammer.h"
@@ -71,6 +72,65 @@ typedef struct HSlist_ {
   HSlistNode *head;
   struct HArena_ *arena;
 } HSlist;
+
+// {{{ HSArray
+
+typedef struct HSArrayNode_ {
+  size_t elem;
+  size_t index;
+  void* content;
+} HSArrayNode;
+
+typedef struct HSArray_ {
+  // Sparse array
+  // Element n is valid iff arr->nodes[n].index < arr.used && arr.nodes[arr.nodes[n].index].elem == n
+  HSArrayNode *nodes; // content for node at index n is stored at position n.
+  size_t capacity;
+  size_t used;
+  HAllocator *mm__;
+} HSArray;
+
+HSArray *h_sarray_new(HAllocator *mm__, size_t size);
+void h_sarray_free(HSArray *arr);
+static inline bool h_sarray_isset(HSArray *arr, size_t n) {
+  assert(n < arr->capacity);
+  return (arr->nodes[n].index < arr->used && arr->nodes[arr->nodes[n].index].elem == n);
+}
+static inline void* h_sarray_get(HSArray *arr, size_t n) {
+  assert(n < arr->capacity);
+  if (h_sarray_isset(arr, n))
+    return arr->nodes[n].content;
+  return NULL;
+}
+
+static inline void* h_sarray_set(HSArray *arr, size_t n, void* val) {
+  assert(n < arr->capacity);
+  arr->nodes[n].content = val;
+  if (h_sarray_isset(arr, n))
+    return val;
+  arr->nodes[arr->used].elem = n;
+  arr->nodes[n].index = arr->used++;
+  return val;
+}
+
+static inline void h_sarray_clear(HSArray *arr) {
+  arr->used = 0;
+}
+
+#define H__APPEND2(a,b) a##b
+#define H__APPEND(a,b) H__APPEND2(a,b)
+#define H__INTVAR(pfx) H__APPEND(intvar__##pfx##__,__COUNTER__)
+
+#define H_SARRAY_FOREACH_KV_(var,idx,arr,intvar)			\
+  for (size_t intvar = 0, idx = (var = (arr)->nodes[(arr)->nodes[intvar].elem].content,(arr)->nodes[intvar].elem); \
+       intvar < (arr)->used;						\
+       idx = (arr)->nodes[intvar].elem, var = (arr)->nodes[(arr)->nodes[intvar].elem].content, intvar=intvar+1)
+
+#define H_SARRAY_FOREACH_KV(var,index,arr) H_SARRAY_FOREACH_KV_(var,index,arr,H__INTVAR(idx))
+#define H_SARRAY_FOREACH_V(var,arr) H_SARRAY_FOREACH_KV_(var,H__INTVAR(elem),arr,H__INTVAR(idx))
+#define H_SARRAY_FOREACH_K(index,arr) H_SARRAY_FOREACH_KV_(H__INTVAR(val),index,arr,H__INTVAR(idx))
+
+// }}}
 
 typedef unsigned int *HCharset;
 

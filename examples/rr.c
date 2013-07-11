@@ -181,7 +181,7 @@ HParser* init_rdata(uint16_t type) {
   parsers[16] = txt;
 
   // All parsers must consume their input exactly.
-  for(uint16_t i; i<sizeof(parsers); i++) {
+  for(uint16_t i = 0; i<RDATA_TYPE_MAX+1; i++) {
     if(parsers[i]) {
       parsers[i] = h_action(h_sequence(parsers[i], h_end_p(), NULL),
 			    act_index0);

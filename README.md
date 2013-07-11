@@ -28,7 +28,7 @@ Features
 Installing
 ==========
 ### Prerequisites
-* make
+* SCons
 * a JDK
 
 ### Optional Dependencies
@@ -36,11 +36,15 @@ Installing
 * glib-2.0 (>= 2.29) (for `make test`)
 * glib-2.0-dev (for `make test`)
 
-To install, type `make`. To run the built-in test suite, type `make test`.
+To build, type `scons`. To run the built-in test suite, type `scons test`. For a debug build, add `--variant=debug`
 
-If jni.h and jni_md.h aren't already somewhere on your include path, prepend `C_INCLUDE_PATH=/path/to/jdk/include` to that.
+If jni.h and jni_md.h aren't already somewhere on your include path, prepend
+`C_INCLUDE_PATH=/path/to/jdk/include` to that.
 
-There is not currently a `make install` target; to make Hammer available system-wide, copy `libhammer.a` to `/usr/lib/` (or `/usr/local/lib/`, or wherever ld will find it) and `hammer.h` to `/usr/include/`. 
+There is currently no `install` target; to make Hammer available system-wide,
+copy `libhammer.a` and `libhammer.so` from `build/opt/src` to `/usr/lib/` (or
+`/usr/local/lib/`, or wherever ld will find it) and `hammer.h` to
+`/usr/include/`. 
 
 Usage
 =====

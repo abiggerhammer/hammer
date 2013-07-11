@@ -11,6 +11,7 @@ HCFChoice *h_desugar(HAllocator *mm__, HCFStack *stk__, const HParser *parser) {
     if(nstk__->prealloc == NULL)
       nstk__->prealloc = h_new(HCFChoice, 1);
     // we're going to do something naughty and cast away the const to memoize
+    assert(parser->vtable->desugar != NULL);
     ((HParser *)parser)->desugared = nstk__->prealloc;
     parser->vtable->desugar(mm__, nstk__, parser->env);
     if (stk__ == NULL)

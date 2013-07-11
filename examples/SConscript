@@ -1,0 +1,9 @@
+Import('env')
+
+example = env.Clone()
+example.Append(LIBS="hammer", LIBPATH="../src")
+
+example.Program('dns', ['dns.c', 'rr.c', 'dns_common.c'])
+example.Program('base64', 'base64.c')
+example.Program('base64_sem1', 'base64_sem1.c')
+example.Program('base64_sem2', 'base64_sem2.c')

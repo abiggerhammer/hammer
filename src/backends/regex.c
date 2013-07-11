@@ -50,18 +50,14 @@ HRVMTrace *invert_trace(HRVMTrace *trace) {
 
 void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_t len) {
   HArena *arena = h_new_arena(mm__, 0);
-  HRVMTrace **heads_p = a_new(HRVMTrace*, prog->length),
-    **heads_n = a_new(HRVMTrace*, prog->length);
+  HSArray *heads_n = h_sarray_new(mm__, prog->length), // Both of these contain HRVMTrace*'s
+    *heads_p = h_sarray_new(mm__, prog->length);
 
   HRVMTrace *ret_trace = NULL;
   
   uint8_t *insn_seen = a_new(uint8_t, prog->length); // 0 -> not seen, 1->processed, 2->queued
   HRVMThread *ip_queue = a_new(HRVMThread, prog->length);
   size_t ipq_top;
-
-  
-  
-  
 
 #define THREAD ip_queue[ipq_top-1]
 #define PUSH_SVM(op_, arg_) do { \
@@ -72,34 +68,30 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
 	  nt->input_pos = off;		       \
 	  THREAD.trace = nt;		       \
   } while(0)
-    
-  heads_n[0] = a_new(HRVMTrace, 1); // zeroing
-  heads_n[0]->opcode = SVM_NOP;
 
+  ((HRVMTrace*)h_sarray_set(heads_n, 0, a_new(HRVMTrace, 1)))->opcode = SVM_NOP; // Initial thread
+  
   size_t off = 0;
-  int live_threads = 1;
+  int live_threads = 1; // May be redundant
   for (off = 0; off <= len; off++) {
     uint8_t ch = ((off == len) ? 0 : input[off]);
-    size_t ip_s; // BUG: there was an unused variable ip. Not sure if
-		 // I intended to use it somewhere.
     /* scope */ {
-      HRVMTrace **heads_t;
+      HSArray *heads_t;
       heads_t = heads_n;
       heads_n = heads_p;
       heads_p = heads_t;
-      memset(heads_n, 0, prog->length * sizeof(*heads_n));
+      h_sarray_clear(heads_n);
     }
     memset(insn_seen, 0, prog->length); // no insns seen yet
     if (!live_threads)
       goto match_fail;
     live_threads = 0;
-    for (ip_s = 0; ip_s < prog->length; ip_s++) {
+    HRVMTrace *tr_head;
+    H_SARRAY_FOREACH_KV(tr_head,ip_s,heads_p) {
       ipq_top = 1;
       // TODO: Write this as a threaded VM
-      if (!heads_p[ip_s])
-	continue;
       THREAD.ip = ip_s;
-      THREAD.trace = heads_p[ip_s];
+      THREAD.trace = tr_head;
       uint8_t hi, lo;
       uint16_t arg;
       while(ipq_top > 0) {
@@ -155,7 +147,7 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
 	case RVM_STEP:
 	  // save thread
 	  live_threads++;
-	  heads_n[++THREAD.ip] = THREAD.trace;
+	  h_sarray_set(heads_n, ++THREAD.ip, THREAD.trace);
 	  ipq_top--;
 	  goto next_insn;
 	}

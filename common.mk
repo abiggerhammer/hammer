@@ -1,3 +1,7 @@
+ifneq ($(REALLY_USE_OBSOLETE_BUILD_SYSTEM),yes)
+$(error This is the old build system. Use "scons" to build, or use $(MAKE) REALLY_USE_OBSOLETE_BUILD_SYSTEM=yes)
+endif
+
 # Check to make sure variables are properly set
 ifeq ($(TOPLEVEL),)
 $(error $$TOPLEVEL is unset)
