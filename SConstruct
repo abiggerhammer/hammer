@@ -1,8 +1,8 @@
-
+# -*- python -*-
+import os
 env = Environment()
 
 env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -lrt")
-env['MODE'] = 'shared'
 
 AddOption("--variant",
           dest="variant",
@@ -24,6 +24,10 @@ if GetOption("variant") == 'debug':
     env = dbg
 else:
     env = opt
+
+if os.getenv("CC") == "clang":
+    env.Replace(CC="clang",
+                CXX="clang++")
 Export('env')
 
 env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
