@@ -72,6 +72,7 @@ namespace hammer {
   template<class T> class Many1;
   template<class T> class Optional;
   template<class T> class RepeatN;
+  template<class T> class IntRange;
 
   template<typename T>
   class Parser {
@@ -83,9 +84,11 @@ namespace hammer {
     RepeatN<T> many(size_t n);
     Optional<T> optional();
     RepeatN<T> operator[](size_t n);
-    HParser* parser() { return _parser; }
-    HParser* _parser;
+    const HParser* parser() { return _parser; }
+  protected:
+    const HParser* _parser;
     Parser() { }
+    //    Parser(const Parser &p) : _parser(p.parser()) { } // hopefully we don't need a copy constructor...
   };
 
   class Token : public Parser<BytesResult> {
@@ -118,16 +121,6 @@ namespace hammer {
     uint8_t _lower, _upper;
   };
 
-  class IntRange : public Parser<IntResult> {
-  public:
-    IntRange(Parser &p, const int64_t lower, const int64_t upper) : _p(p), _lower(lower), _upper(upper) {
-      _parser = h_int_range(p.parser(), lower, upper);
-    }
-  private:
-    Parser _p;
-    int64_t _lower, _upper;
-  };
-
   class SignedBits : public Parser<IntResult> {
   public:
     SignedBits(size_t len) : _len(len) {
@@ -151,7 +144,7 @@ namespace hammer {
     Int64() {
       _parser = h_int64();
     }
-    Int64 in_range(const int64_t lower, const int64_t upper);
+    IntRange<IntResult> in_range(const int64_t lower, const int64_t upper);
   };
 
   class Int32 : public Parser<IntResult> {
@@ -159,7 +152,7 @@ namespace hammer {
     Int32() {
       _parser = h_int32();
     }
-    Int32 in_range(const int32_t lower, const int32_t upper);
+    IntRange<IntResult> in_range(const int32_t lower, const int32_t upper);
   };
 
   class Int16 : public Parser<IntResult> {
@@ -167,7 +160,7 @@ namespace hammer {
     Int16() { 
       _parser = h_int16();
     }
-    Int16 in_range(const int16_t lower, const int16_t upper);
+    IntRange<IntResult> in_range(const int16_t lower, const int16_t upper);
   };
 
   class Int8 : public Parser<IntResult> {
@@ -175,7 +168,7 @@ namespace hammer {
     Int8() {
       _parser = h_int8();
     }
-    Int8 in_range(const int8_t lower, const int8_t upper);
+    IntRange<IntResult> in_range(const int8_t lower, const int8_t upper);
   };
 
   class Uint64 : public Parser<UintResult> {
@@ -183,7 +176,7 @@ namespace hammer {
     Uint64() {
       _parser = h_uint64(); 
     }
-    Uint64 in_range(const uint64_t lower, const uint64_t upper);
+    IntRange<UintResult> in_range(const uint64_t lower, const uint64_t upper);
   };
 
   class Uint32 : public Parser<UintResult> {
@@ -191,7 +184,7 @@ namespace hammer {
     Uint32() { 
       _parser = h_uint32();
     }
-    Uint32 in_range(const uint32_t lower, const uint32_t upper);
+    IntRange<UintResult> in_range(const uint32_t lower, const uint32_t upper);
   };
 
   class Uint16 : public Parser<UintResult> {
@@ -199,7 +192,7 @@ namespace hammer {
     Uint16() {
       _parser = h_uint16(); 
     }
-    Uint16 in_range(const uint16_t lower, const uint16_t upper);
+    IntRange<UintResult> in_range(const uint16_t lower, const uint16_t upper);
   };
 
   class Uint8 : public Parser<UintResult> {
@@ -207,7 +200,18 @@ namespace hammer {
     Uint8() { 
       _parser = h_uint8();
     } 
-    Uint8 in_range(const uint8_t lower, const uint8_t upper);
+    IntRange<UintResult> in_range(const uint8_t lower, const uint8_t upper);
+  };
+
+  template<class T>
+  class IntRange : public Parser<T> {
+  public:
+    IntRange(Parser<T> &p, const int64_t lower, const int64_t upper) : _p(p), _lower(lower), _upper(upper) {
+      this->_parser = h_int_range(p.parser(), lower, upper);
+    }
+  private:
+    Parser<T> _p;
+    int64_t _lower, _upper;
   };
 
   template<class T>
@@ -299,12 +303,13 @@ namespace hammer {
   };
 
   class Sequence : public Parser<SequenceResult> {
+    friend class Parser;
   public:
     Sequence(list<Parser> &ps) : _ps(ps) { 
       void *parsers[ps.size()];
       size_t i = 0;
       for (list<Parser>::iterator it=ps.begin(); it != ps.end(); ++it, ++i) {
-	parsers[i] = it->parser();
+	parsers[i] = const_cast<HParser*>(it->parser());
       }
       _parser = h_sequence__a(parsers);
     }
@@ -319,7 +324,7 @@ namespace hammer {
       void *parsers[ps.size()];
       size_t i = 0;
       for (list<Parser<SequenceResult> >::iterator it=ps.begin(); it != ps.end(); ++it, ++i) {
-	parsers[i] = it->parser();
+	parsers[i] = const_cast<HParser*>(it->parser());
       }
       _parser = h_choice__a(parsers);      
     }
