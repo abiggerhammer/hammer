@@ -27,7 +27,13 @@
 #define BIT_LITTLE_ENDIAN 0x0
 #define BYTE_LITTLE_ENDIAN 0x0
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef __cplusplus
 typedef int bool;
+#endif
 
 typedef struct HParseState_ HParseState;
 
@@ -616,5 +622,9 @@ HAMMER_FN_DECL(HBenchmarkResults *, h_benchmark, HParser* parser, HParserTestcas
 void h_benchmark_report(FILE* stream, HBenchmarkResults* results);
 void h_benchmark_dump_optimized_code(FILE* stream, HBenchmarkResults* results);
 // }}}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // #ifndef HAMMER_HAMMER__H
