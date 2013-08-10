@@ -69,9 +69,9 @@ namespace hammer {
 
   /* forward declarations */
   template<class T> class Many;
-  template<class T> class Many1;
+  class Many1;
   template<class T> class Optional;
-  template<class T> class RepeatN;
+  class RepeatN;
   template<class T> class IntRange;
 
   template<typename T>
@@ -81,12 +81,12 @@ namespace hammer {
     result_type parse(const string &input);
     result_type parse(const uint8_t *input, size_t length);
     Many<T> many();
-    RepeatN<T> many(size_t n);
+    RepeatN many(size_t n);
     Optional<T> optional();
-    RepeatN<T> operator[](size_t n);
-    const HParser* parser() { return _parser; }
+    RepeatN operator[](size_t n);
+    HParser* parser() { return _parser; }
   protected:
-    const HParser* _parser;
+    HParser* _parser;
     Parser() { }
     //    Parser(const Parser &p) : _parser(p.parser()) { } // hopefully we don't need a copy constructor...
   };
@@ -105,6 +105,7 @@ namespace hammer {
 
   class Ch : public Parser<UintResult> {
   public:
+    friend class Parser;
     Ch(const uint8_t c) : _c(c) {
       _parser = h_ch(c);
     }
@@ -378,24 +379,22 @@ namespace hammer {
     Parser<T> _p;
   };
 
-  template<class T>
   class Many1 : public Parser<SequenceResult> {
   public:
-    Many1(Parser<T> &p) : _p(p) {
+    Many1(Parser &p) : _p(p) {
       _parser = h_many1(p.parser());
     }
   private:
-    Parser<T> _p;
+    Parser _p;
   };
 
-  template<class T>
   class RepeatN: public Parser<SequenceResult> {
   public:
-    RepeatN(Parser<T> &p, const size_t n) : _p(p), _n(n) {
+    RepeatN(Parser &p, const size_t n) : _p(p), _n(n) {
       _parser = h_repeat_n(p.parser(), n);
     }
   private:
-    Parser<T> _p;
+    Parser _p;
     size_t _n;
   };
   
@@ -410,36 +409,31 @@ namespace hammer {
     Parser<T> _p;
   };
 
-  template<class T>
   class Ignore : public Parser<NullResult> {
   public:
-    Ignore(Parser<T> &p) : _p(p) {
+    Ignore(Parser &p) : _p(p) {
       _parser = h_ignore(p.parser());
     }
   private:
-    Parser<T> _p;
+    Parser _p;
   };
 
-  template<class T, class U>
   class SepBy : public Parser<SequenceResult> {
   public:
-    SepBy(Parser<T> &p, Parser<U> &sep) : _p(p), _sep(sep) {
+    SepBy(Parser &p, Parser &sep) : _p(p), _sep(sep) {
       _parser = h_sepBy(p.parser(), sep.parser()); 
     }
   private:
-    Parser<T> _p;
-    Parser<U> _sep;
+    Parser _p, _sep;
   };
 
-  template<class T, class U>
   class SepBy1 : public Parser<SequenceResult> {
   public:
-    SepBy1(Parser<T> &p, Parser<U> &sep) : _p(p), _sep(sep) {
+    SepBy1(Parser &p, Parser &sep) : _p(p), _sep(sep) {
       _parser = h_sepBy1(p.parser(), sep.parser());
     }
   private:
-    Parser<T> _p;
-    Parser<U> _sep;
+    Parser _p, _sep;
   };
 
   class Epsilon : public Parser<NullResult> {
@@ -462,29 +456,28 @@ namespace hammer {
 
   /* FIXME attr_bool */
 
-  template<class T>
   class And : public Parser<NullResult> {
   public:
-    And(Parser<T> &p) : _p(p) {
+    And(Parser &p) : _p(p) {
       _parser = h_and(p.parser());
     }
   private:
-    Parser<T> _p;
+    Parser _p;
   };
 
-  template<class T>
   class Not : public Parser<NullResult> {
   public:
     Not(Parser &p) : _p(p) {
       _parser = h_not(p.parser());
     }
   private:
-    Parser<T> _p;
+    Parser _p;
   };
 
   template<class T>
   class Indirect : public Parser<T> {
   public:
+    typedef typename T::result_type result_type;
     Indirect(Parser<T> &p) : _p(p) {
       this->_parser = h_indirect();
       h_bind_indirect(this->_parser, p.parser());

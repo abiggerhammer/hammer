@@ -98,12 +98,17 @@ namespace hammer {
 
   template<class T>
   Many<T> Parser<T>::many() {
-    return Many<T>(this);
+    return Many<T>(*this);
+  }
+
+  template<>
+  Many<UintResult> Parser<UintResult>::many() {
+    return Many<UintResult>(*this);
   }
 
   template<class T>
-  RepeatN<T> Parser<T>::many(size_t n) {
-    return RepeatN<T>(this, n);
+  RepeatN Parser<T>::many(size_t n) {
+    return RepeatN(this, n);
   }
 
   template<class T>
@@ -112,8 +117,8 @@ namespace hammer {
   }
 
   template<class T>
-  RepeatN<T> Parser<T>::operator[](size_t n) {
-    return RepeatN<T>(this, n);
+  RepeatN Parser<T>::operator[](size_t n) {
+    return RepeatN(this, n);
   }
 
   IntRange<IntResult> Int64::in_range(const int64_t lower, const int64_t upper) {
