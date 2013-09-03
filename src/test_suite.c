@@ -25,6 +25,9 @@ extern void register_parser_tests();
 extern void register_grammar_tests();
 extern void register_misc_tests();
 extern void register_benchmark_tests();
+#ifdef __cplusplus
+extern void register_cxx_tests();
+#endif
 
 int main(int argc, char** argv) {
   g_test_init(&argc, &argv, NULL);
@@ -36,6 +39,9 @@ int main(int argc, char** argv) {
   register_grammar_tests();
   register_misc_tests();
   register_benchmark_tests();
+  #ifdef __cplusplus
+  register_cxx_tests();
+  #endif
 
   g_test_run();
 }
