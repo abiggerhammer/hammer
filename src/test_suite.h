@@ -19,16 +19,6 @@
 #define HAMMER_TEST_SUITE__H
 #include <stdlib.h>
 
-#ifdef __cplusplus
-extern "C" {
-#include <string>
-#include <boost/variant.hpp>
-#endif
-
-#ifndef __cplusplus
-typedef int bool;
-#endif
-
 // Equivalent to g_assert_*, but not using g_assert...
 #define g_check_inttype(fmt, typ, n1, op, n2) do {				\
     typ _n1 = (n1);							\
@@ -61,19 +51,6 @@ typedef int bool;
       g_test_fail();					\
     }							\
   } while(0)
-
-#ifdef __cplusplus
-#define g_check_string_cxx(n1, op, n2) do {		\
-    std::string _n1 = (n1);				\
-    std::string _n2 = (n2);				\
-    if (!(_n1.compare(_n2) op 0)) {			\
-      g_test_message("Check failed: (%s) (%s %s %s)",	\
-		     #n1 " " #op " " #n2,		\
-		     _n1.c_str(), #op, _n2.c_str());	\
-      g_test_fail();					\
-    }							\
-  } while(0)
-#endif
 
 #define g_check_regular(lang) do {			\
     if (!lang->isValidRegular(lang->env)) {		\
@@ -118,21 +95,6 @@ typedef int bool;
       g_test_fail();							\
     }									\
   } while(0)
- 
-#ifdef __cplusplus
-#define g_check_parse_failed_cxx(parser, backend, input) do {	\
-    int skip = parser.compile((HParserBackend)backend, NULL);	\
-    if(skip != 0) {	\
-      g_test_message("Backend not applicable, skipping test");	\
-      break;	\
-    }	\
-    parser::result_type result = parser.parse(input);		\
-    if (NULL != result) {						\
-      g_test_message("Check failed: shouldn't have succeeded, but did"); \
-      g_test_fail();							\
-    }									\
-  } while(0)
-#endif
 
 #define g_check_parse_ok(parser, backend, input, inp_len, result) do {	\
     int skip = h_compile((HParser *)(parser), (HParserBackend) backend, NULL); \
@@ -157,34 +119,6 @@ typedef int bool;
       h_delete_arena(res->arena);					\
     }									\
   } while(0)
-
-#ifdef __cplusplus
-#define g_check_parse_ok_cxx(parser, backend, input, result) do {	\
-    int skip = parser.compile((HParserBackend)backend, NULL); \
-    if(skip) {	\
-        g_test_message("Backend not applicable, skipping test");	\
-        break;	\
-    }									\
-    parser::result_type res = parser.parse((std::string)input); \
-    if (!res) {								\
-	g_test_message("Parse failed on line %d", __LINE__);		\
-	g_test_fail();							\
-    } else {								\
-	std::string& cres = h_write_result_unamb(res);			\
-	g_check_string_cxx(cres, ==, (std::string)result);		\
-	/*
-	system_allocator.free(&system_allocator, cres);			\
-	HArenaStats stats;						\
-	h_allocator_stats(res->arena, &stats);				\
-	g_test_message("Parse used %zd bytes, wasted %zd bytes. "	\
-		       "Inefficiency: %5f%%",				\
-		       stats.used, stats.wasted,			\
-		       stats.wasted * 100. / (stats.used+stats.wasted)); \
-	h_delete_arena(res->arena);					\
-	*/ // FIXME might've made a memory leak there
-    }									\
-  } while(0)
-#endif
 
 #define g_check_hashtable_present(table, key) do {			\
     if(!h_hashtable_present(table, key)) {				\
@@ -263,8 +197,6 @@ typedef int bool;
 #define g_check_cmpfloat(n1, op, n2) g_check_inttype("%g", float, n1, op, n2)
 #define g_check_cmpdouble(n1, op, n2) g_check_inttype("%g", double, n1, op, n2)
 
-#ifdef __cplusplus
-}
-#endif
+
 
 #endif // #ifndef HAMMER_TEST_SUITE__H

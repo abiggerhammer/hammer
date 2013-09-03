@@ -72,8 +72,6 @@ namespace hammer {
   class Many1;
   template<class T> class Optional;
   class RepeatN;
-  class Ignore;
-  class Indirect;
   template<class T> class IntRange;
 
   template<typename T>
@@ -85,12 +83,8 @@ namespace hammer {
     Many<T> many();
     RepeatN many(size_t n);
     Optional<T> optional();
-    Ignore ignore();
     RepeatN operator[](size_t n);
     HParser* parser() { return _parser; }
-    int compile(HParserBackend backend, const void* params) {
-	return h_compile(_parser, backend, params);
-    }
   protected:
     HParser* _parser;
     Parser() { }
@@ -484,14 +478,7 @@ namespace hammer {
   class Indirect : public Parser<T> {
   public:
     typedef typename T::result_type result_type;
-    /*
     Indirect(Parser<T> &p) : _p(p) {
-      this->_parser = h_indirect();
-      h_bind_indirect(this->_parser, p.parser());
-    }
-    */
-    Indirect() : _p(0) {}
-    bind(Parser<T> &p) {
       this->_parser = h_indirect();
       h_bind_indirect(this->_parser, p.parser());
     }

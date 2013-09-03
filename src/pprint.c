@@ -22,14 +22,6 @@
 #include "internal.h"
 #include <stdlib.h>
 
-#ifdef __cplusplus
-#include "hammer.hxx"
-#include <string>
-#include <sstream>
-
-using std::string; using std::stringstream;
-#endif
-
 typedef struct pp_state {
   int delta;
   int indent_amt;
@@ -180,13 +172,7 @@ char* h_write_result_unamb__m(HAllocator* mm__, const HParsedToken* tok) {
   unamb_sub(tok, &buf);
   append_buf_c(&buf, 0);
   return buf.output;
+}
+  
 
-#ifdef __cplusplus
-template<typename T>
-string& h_write_result_unamb(ParseResult<T> tok) {
-  stringstream s;
-  s << boost::get<T>(tok.result()[0]);
-  return s.str();
-}
-#endif
-}
+
