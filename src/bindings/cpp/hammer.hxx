@@ -34,7 +34,7 @@ namespace hammer {
   public:
     typedef uint64_t result_type;
     UintResult(const uint64_t res) : _uint(res) { }
-    const result_type result();
+    result_type result();
   private:
     UintResult() { }
     result_type _uint;
@@ -44,7 +44,7 @@ namespace hammer {
   public:
     typedef int64_t result_type;
     IntResult(const int64_t res) : _sint(res) { }
-    const result_type result();
+    result_type result();
   private:
     IntResult() { }
     result_type _sint;
@@ -54,7 +54,7 @@ namespace hammer {
   public:
     NullResult() { }
     typedef void* result_type;
-    const result_type result() { return NULL; }
+    result_type result() { return NULL; }
   };
 
   class SequenceResult : public ParseResult<vector<variant<BytesResult, UintResult, IntResult, NullResult, SequenceResult> > > {
@@ -73,7 +73,7 @@ namespace hammer {
   template<class T> class Optional;
   class RepeatN;
   class Ignore;
-  class Indirect;
+  template<class T> class Indirect;
   template<class T> class IntRange;
 
   template<typename T>
@@ -491,9 +491,11 @@ namespace hammer {
     }
     */
     Indirect() : _p(0) {}
-    bind(Parser<T> &p) {
+    Indirect bind(Parser<T> &p) {
       this->_parser = h_indirect();
+      this->_p = p;
       h_bind_indirect(this->_parser, p.parser());
+      return *this;
     }
   private:
     Parser<T> _p;

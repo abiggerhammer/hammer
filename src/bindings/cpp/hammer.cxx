@@ -5,8 +5,8 @@ namespace hammer {
   typedef variant<BytesResult, UintResult, IntResult, NullResult, SequenceResult> AnyResult;
 
   const BytesResult::result_type BytesResult::result() { return _bytes; }
-  const UintResult::result_type UintResult::result() { return _uint; }
-  const IntResult::result_type IntResult::result() { return _sint; }
+  UintResult::result_type UintResult::result() { return _uint; }
+  IntResult::result_type IntResult::result() { return _sint; }
   const SequenceResult::result_type SequenceResult::result() { return _seq; }
 
   template<>
@@ -47,13 +47,13 @@ namespace hammer {
 
   template<>
   NullResult Parser<NullResult>::parse(const string &input) {
-    HParseResult *res = h_parse(_parser, reinterpret_cast<const uint8_t*>(input.c_str()), input.size());
+    h_parse(_parser, reinterpret_cast<const uint8_t*>(input.c_str()), input.size());
     return NullResult();
   }
 
   template<>
   NullResult Parser<NullResult>::parse(const uint8_t *input, size_t length) {
-    HParseResult *res = h_parse(_parser, input, length);
+    h_parse(_parser, input, length);
     return NullResult();
   }
 
