@@ -1,0 +1,14 @@
+# -*- python -*-
+
+print "In CPP"
+
+Import("libhammer_shared")
+Import("libhammer_static")
+Import("env")
+
+env.Append(CPPPATH=["../.."])
+
+binding_sources = ['hammer.cxx']
+
+libhammerxx_shared = env.SharedLibrary("hammer++", binding_sources + [libhammer_shared])
+libhammerxx_static = env.StaticLibrary("hammer++", binding_sources + [libhammer_static])
