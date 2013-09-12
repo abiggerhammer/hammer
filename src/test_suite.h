@@ -25,10 +25,6 @@ extern "C" {
 #include <boost/variant.hpp>
 #endif
 
-#ifndef __cplusplus
-typedef int bool;
-#endif
-
 // Equivalent to g_assert_*, but not using g_assert...
 #define g_check_inttype(fmt, typ, n1, op, n2) do {				\
     typ _n1 = (n1);							\
