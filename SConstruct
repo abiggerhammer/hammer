@@ -29,7 +29,12 @@ else:
 if os.getenv("CC") == "clang":
     env.Replace(CC="clang",
                 CXX="clang++")
+
+#rootpath = env['ROOTPATH'] = os.path.abspath('.')
+#env.Append(CPPPATH=os.path.join('#', "hammer"))
+
 Export('env')
+
 
 env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
 env.SConscript(["examples/SConscript"], variant_dir='build/$VARIANT/examples')
