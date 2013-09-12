@@ -1,5 +1,6 @@
 # -*- python -*-
 import os
+import os.path
 env = Environment()
 
 env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -lrt")
@@ -28,7 +29,12 @@ else:
 if os.getenv("CC") == "clang":
     env.Replace(CC="clang",
                 CXX="clang++")
+
+#rootpath = env['ROOTPATH'] = os.path.abspath('.')
+#env.Append(CPPPATH=os.path.join('#', "hammer"))
+
 Export('env')
+
 
 env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
 env.SConscript(["examples/SConscript"], variant_dir='build/$VARIANT/examples')
