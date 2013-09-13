@@ -5,6 +5,10 @@ compiler:
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq libboost1.48-dev
-script: scons
+  - sudo pip install cpp-coveralls --use-mirrors
+script: 
+  - scons --coverage
+after_success:
+  - coveralls
 notifications:
   irc: "irc.upstandinghackers.com#hammer"

@@ -4,6 +4,7 @@ Hammer is written in C, but will provide bindings for other languages. If you do
 
 Hammer currently builds under Linux. (Windows and OSX are coming.)
 
+[![Build Status](https://travis-ci.org/UpstandingHackers/hammer.png)](https://travis-ci.org/UpstandingHackers/hammer)
 Features
 ========
 * Bit-oriented -- grammars can include single-bit flags or multi-bit constructs that span character boundaries, with no hassle
