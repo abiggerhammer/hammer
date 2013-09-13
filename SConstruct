@@ -41,6 +41,7 @@ if GetOption("coverage"):
 if os.getenv("CC") == "clang":
     env.Replace(CC="clang",
                 CXX="clang++")
+    env.Append(LIBS=["profile_rt"])
 
 #rootpath = env['ROOTPATH'] = os.path.abspath('.')
 #env.Append(CPPPATH=os.path.join('#', "hammer"))
