@@ -2,7 +2,10 @@
 import os
 env = Environment()
 
-env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -lrt")
+env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes")
+
+if not env['PLATFORM'] == 'darwin':
+    env.MergeFlags("-lrt")
 
 AddOption("--variant",
           dest="variant",
@@ -37,7 +40,7 @@ if GetOption("coverage"):
                LDFLAGS=["-fprofile-arcs", "-ftest-coverage"],
                LIBS=['gcov'])
 
-if os.getenv("CC") == "clang":
+if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",
                 CXX="clang++")
 Export('env')
