@@ -1,8 +1,9 @@
 # -*- python -*-
 import os
-env = Environment()
+import os.path
+env = Environment(ENV = {'PATH' : os.environ['PATH']})
 
-env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes")
+env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -lrt")
 
 if not env['PLATFORM'] == 'darwin':
     env.MergeFlags("-lrt")
@@ -43,7 +44,12 @@ if GetOption("coverage"):
 if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",
                 CXX="clang++")
+
+#rootpath = env['ROOTPATH'] = os.path.abspath('.')
+#env.Append(CPPPATH=os.path.join('#', "hammer"))
+
 Export('env')
+
 
 env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
 env.SConscript(["examples/SConscript"], variant_dir='build/$VARIANT/examples')

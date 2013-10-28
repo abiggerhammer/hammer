@@ -1,6 +1,8 @@
 # -*- python -*-
 Import('env')
 
+bindings = []
+
 parsers = ['parsers/%s.c'%s for s in
            ['action',
             'and',
@@ -50,11 +52,17 @@ tests = ['t_benchmark.c',
          't_grammar.c',
          't_misc.c']
 
-libhammer = env.SharedLibrary('hammer', parsers + backends + misc_hammer_parts)
-libhammer = env.StaticLibrary('hammer', parsers + backends + misc_hammer_parts)
+libhammer_shared = env.SharedLibrary('hammer', parsers + backends + misc_hammer_parts)
+libhammer_static = env.StaticLibrary('hammer', parsers + backends + misc_hammer_parts)
+
+
 
 testenv = env.Clone()
 testenv.ParseConfig('pkg-config --cflags --libs glib-2.0')
 testenv.Append(LIBS=['hammer'], LIBPATH=['.'])
 testenv.Program('test_suite', tests + ['test_suite.c'])
     
+Export("libhammer_static libhammer_shared")
+
+for b in bindings:
+    env.SConscript(["bindings/%s/SConscript" % b])
