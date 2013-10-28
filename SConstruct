@@ -1,8 +1,9 @@
 # -*- python -*-
 import os
-env = Environment()
+import os.path
+env = Environment(ENV = {'PATH' : os.environ['PATH']})
 
-env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes")
+env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -lrt")
 
 AddOption("--variant",
           dest="variant",
