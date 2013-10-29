@@ -48,7 +48,7 @@ and library files in `/usr/local/lib` by default; to install elsewhere, add a `p
 
 Usage
 =====
-Just `#include <hammer.h>` and link with `-lhammer`.
+Just `#include <hammer/hammer.h>` and link with `-lhammer`.
 
 Examples
 ========
