@@ -42,10 +42,9 @@ To build, type `scons`. To run the built-in test suite, type `scons test`. For a
 If jni.h and jni_md.h aren't already somewhere on your include path, prepend
 `C_INCLUDE_PATH=/path/to/jdk/include` to that.
 
-There is currently no `install` target; to make Hammer available system-wide,
-copy `libhammer.a` and `libhammer.so` from `build/opt/src` to `/usr/lib/` (or
-`/usr/local/lib/`, or wherever ld will find it) and `hammer.h` to
-`/usr/include/`. 
+To make Hammer available system-wide, use `scons install`. This places include files in `/usr/local/include/hammer` 
+and library files in `/usr/local/lib` by default; to install elsewhere, add a `prefix=<destination>` argument, e.g. 
+`scons install prefix=$HOME`.
 
 Usage
 =====
