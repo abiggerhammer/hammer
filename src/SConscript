@@ -3,6 +3,12 @@ Import('env')
 
 bindings = []
 
+dist_headers = [
+    "hammer.h",
+    "allocator.h",
+    "glue.h"
+]
+
 parsers = ['parsers/%s.c'%s for s in
            ['action',
             'and',
@@ -55,13 +61,14 @@ tests = ['t_benchmark.c',
 libhammer_shared = env.SharedLibrary('hammer', parsers + backends + misc_hammer_parts)
 libhammer_static = env.StaticLibrary('hammer', parsers + backends + misc_hammer_parts)
 
-
+env.Install("$libpath", [libhammer_static, libhammer_shared])
+env.Install("$incpath", dist_headers)
 
 testenv = env.Clone()
 testenv.ParseConfig('pkg-config --cflags --libs glib-2.0')
 testenv.Append(LIBS=['hammer'], LIBPATH=['.'])
 testenv.Program('test_suite', tests + ['test_suite.c'])
-    
+
 Export("libhammer_static libhammer_shared")
 
 for b in bindings:
