@@ -8,21 +8,21 @@
 static void test_token(gconstpointer backend) {
   const HParser *token_ = h_token((const uint8_t*)"95\xa2", 3);
 
-  g_check_parse_ok(token_, (HParserBackend)GPOINTER_TO_INT(backend), "95\xa2", 3, "<39.35.a2>");
+  g_check_parse_match(token_, (HParserBackend)GPOINTER_TO_INT(backend), "95\xa2", 3, "<39.35.a2>");
   g_check_parse_failed(token_, (HParserBackend)GPOINTER_TO_INT(backend), "95", 2);
 }
 
 static void test_ch(gconstpointer backend) {
   const HParser *ch_ = h_ch(0xa2);
 
-  g_check_parse_ok(ch_, (HParserBackend)GPOINTER_TO_INT(backend), "\xa2", 1, "u0xa2");
+  g_check_parse_match(ch_, (HParserBackend)GPOINTER_TO_INT(backend), "\xa2", 1, "u0xa2");
   g_check_parse_failed(ch_, (HParserBackend)GPOINTER_TO_INT(backend), "\xa3", 1);
 }
 
 static void test_ch_range(gconstpointer backend) {
   const HParser *range_ = h_ch_range('a', 'c');
 
-  g_check_parse_ok(range_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_match(range_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
   g_check_parse_failed(range_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
 }
 
@@ -30,62 +30,62 @@ static void test_ch_range(gconstpointer backend) {
 static void test_int64(gconstpointer backend) {
   const HParser *int64_ = h_int64();
 
-  g_check_parse_ok(int64_, (HParserBackend)GPOINTER_TO_INT(backend), "\xff\xff\xff\xfe\x00\x00\x00\x00", 8, "s-0x200000000");
+  g_check_parse_match(int64_, (HParserBackend)GPOINTER_TO_INT(backend), "\xff\xff\xff\xfe\x00\x00\x00\x00", 8, "s-0x200000000");
   g_check_parse_failed(int64_, (HParserBackend)GPOINTER_TO_INT(backend), "\xff\xff\xff\xfe\x00\x00\x00", 7);
 }
 
 static void test_int32(gconstpointer backend) {
   const HParser *int32_ = h_int32();
 
-  g_check_parse_ok(int32_, (HParserBackend)GPOINTER_TO_INT(backend), "\xff\xfe\x00\x00", 4, "s-0x20000");
+  g_check_parse_match(int32_, (HParserBackend)GPOINTER_TO_INT(backend), "\xff\xfe\x00\x00", 4, "s-0x20000");
   g_check_parse_failed(int32_, (HParserBackend)GPOINTER_TO_INT(backend), "\xff\xfe\x00", 3);
 
-  g_check_parse_ok(int32_, (HParserBackend)GPOINTER_TO_INT(backend), "\x00\x02\x00\x00", 4, "s0x20000");
+  g_check_parse_match(int32_, (HParserBackend)GPOINTER_TO_INT(backend), "\x00\x02\x00\x00", 4, "s0x20000");
   g_check_parse_failed(int32_, (HParserBackend)GPOINTER_TO_INT(backend), "\x00\x02\x00", 3);
 }
 
 static void test_int16(gconstpointer backend) {
   const HParser *int16_ = h_int16();
 
-  g_check_parse_ok(int16_, (HParserBackend)GPOINTER_TO_INT(backend), "\xfe\x00", 2, "s-0x200");
+  g_check_parse_match(int16_, (HParserBackend)GPOINTER_TO_INT(backend), "\xfe\x00", 2, "s-0x200");
   g_check_parse_failed(int16_, (HParserBackend)GPOINTER_TO_INT(backend), "\xfe", 1);
 
-  g_check_parse_ok(int16_, (HParserBackend)GPOINTER_TO_INT(backend), "\x02\x00", 2, "s0x200");
+  g_check_parse_match(int16_, (HParserBackend)GPOINTER_TO_INT(backend), "\x02\x00", 2, "s0x200");
   g_check_parse_failed(int16_, (HParserBackend)GPOINTER_TO_INT(backend), "\x02", 1);
 }
 
 static void test_int8(gconstpointer backend) {
   const HParser *int8_ = h_int8();
 
-  g_check_parse_ok(int8_, (HParserBackend)GPOINTER_TO_INT(backend), "\x88", 1, "s-0x78");
+  g_check_parse_match(int8_, (HParserBackend)GPOINTER_TO_INT(backend), "\x88", 1, "s-0x78");
   g_check_parse_failed(int8_, (HParserBackend)GPOINTER_TO_INT(backend), "", 0);
 }
 
 static void test_uint64(gconstpointer backend) {
   const HParser *uint64_ = h_uint64();
 
-  g_check_parse_ok(uint64_, (HParserBackend)GPOINTER_TO_INT(backend), "\x00\x00\x00\x02\x00\x00\x00\x00", 8, "u0x200000000");
+  g_check_parse_match(uint64_, (HParserBackend)GPOINTER_TO_INT(backend), "\x00\x00\x00\x02\x00\x00\x00\x00", 8, "u0x200000000");
   g_check_parse_failed(uint64_, (HParserBackend)GPOINTER_TO_INT(backend), "\x00\x00\x00\x02\x00\x00\x00", 7);
 }
 
 static void test_uint32(gconstpointer backend) {
   const HParser *uint32_ = h_uint32();
 
-  g_check_parse_ok(uint32_, (HParserBackend)GPOINTER_TO_INT(backend), "\x00\x02\x00\x00", 4, "u0x20000");
+  g_check_parse_match(uint32_, (HParserBackend)GPOINTER_TO_INT(backend), "\x00\x02\x00\x00", 4, "u0x20000");
   g_check_parse_failed(uint32_, (HParserBackend)GPOINTER_TO_INT(backend), "\x00\x02\x00", 3);
 }
 
 static void test_uint16(gconstpointer backend) {
   const HParser *uint16_ = h_uint16();
 
-  g_check_parse_ok(uint16_, (HParserBackend)GPOINTER_TO_INT(backend), "\x02\x00", 2, "u0x200");
+  g_check_parse_match(uint16_, (HParserBackend)GPOINTER_TO_INT(backend), "\x02\x00", 2, "u0x200");
   g_check_parse_failed(uint16_, (HParserBackend)GPOINTER_TO_INT(backend), "\x02", 1);
 }
 
 static void test_uint8(gconstpointer backend) {
   const HParser *uint8_ = h_uint8();
 
-  g_check_parse_ok(uint8_, (HParserBackend)GPOINTER_TO_INT(backend), "\x78", 1, "u0x78");
+  g_check_parse_match(uint8_, (HParserBackend)GPOINTER_TO_INT(backend), "\x78", 1, "u0x78");
   g_check_parse_failed(uint8_, (HParserBackend)GPOINTER_TO_INT(backend), "", 0);
 }
 //@MARK_END
@@ -93,7 +93,7 @@ static void test_uint8(gconstpointer backend) {
 static void test_int_range(gconstpointer backend) {
   const HParser *int_range_ = h_int_range(h_uint8(), 3, 10);
   
-  g_check_parse_ok(int_range_, (HParserBackend)GPOINTER_TO_INT(backend), "\x05", 1, "u0x5");
+  g_check_parse_match(int_range_, (HParserBackend)GPOINTER_TO_INT(backend), "\x05", 1, "u0x5");
   g_check_parse_failed(int_range_, (HParserBackend)GPOINTER_TO_INT(backend), "\xb", 1);
 }
 
@@ -101,14 +101,14 @@ static void test_int_range(gconstpointer backend) {
 static void test_float64(gconstpointer backend) {
   const HParser *float64_ = h_float64();
 
-  g_check_parse_ok(float64_, (HParserBackend)GPOINTER_TO_INT(backend), "\x3f\xf0\x00\x00\x00\x00\x00\x00", 8, 1.0);
+  g_check_parse_match(float64_, (HParserBackend)GPOINTER_TO_INT(backend), "\x3f\xf0\x00\x00\x00\x00\x00\x00", 8, 1.0);
   g_check_parse_failed(float64_, (HParserBackend)GPOINTER_TO_INT(backend), "\x3f\xf0\x00\x00\x00\x00\x00", 7);
 }
 
 static void test_float32(gconstpointer backend) {
   const HParser *float32_ = h_float32();
 
-  g_check_parse_ok(float32_, (HParserBackend)GPOINTER_TO_INT(backend), "\x3f\x80\x00\x00", 4, 1.0);
+  g_check_parse_match(float32_, (HParserBackend)GPOINTER_TO_INT(backend), "\x3f\x80\x00\x00", 4, 1.0);
   g_check_parse_failed(float32_, (HParserBackend)GPOINTER_TO_INT(backend), "\x3f\x80\x00");
 }
 #endif
@@ -118,21 +118,21 @@ static void test_whitespace(gconstpointer backend) {
   const HParser *whitespace_ = h_whitespace(h_ch('a'));
   const HParser *whitespace_end = h_whitespace(h_end_p());
 
-  g_check_parse_ok(whitespace_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
-  g_check_parse_ok(whitespace_, (HParserBackend)GPOINTER_TO_INT(backend), " a", 2, "u0x61");
-  g_check_parse_ok(whitespace_, (HParserBackend)GPOINTER_TO_INT(backend), "  a", 3, "u0x61");
-  g_check_parse_ok(whitespace_, (HParserBackend)GPOINTER_TO_INT(backend), "\ta", 2, "u0x61");
+  g_check_parse_match(whitespace_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
+  g_check_parse_match(whitespace_, (HParserBackend)GPOINTER_TO_INT(backend), " a", 2, "u0x61");
+  g_check_parse_match(whitespace_, (HParserBackend)GPOINTER_TO_INT(backend), "  a", 3, "u0x61");
+  g_check_parse_match(whitespace_, (HParserBackend)GPOINTER_TO_INT(backend), "\ta", 2, "u0x61");
   g_check_parse_failed(whitespace_, (HParserBackend)GPOINTER_TO_INT(backend), "_a", 2);
 
-  g_check_parse_ok(whitespace_end, (HParserBackend)GPOINTER_TO_INT(backend), "", 0, "NULL");
-  g_check_parse_ok(whitespace_end, (HParserBackend)GPOINTER_TO_INT(backend),"  ", 2, "NULL");
+  g_check_parse_match(whitespace_end, (HParserBackend)GPOINTER_TO_INT(backend), "", 0, "NULL");
+  g_check_parse_match(whitespace_end, (HParserBackend)GPOINTER_TO_INT(backend),"  ", 2, "NULL");
   g_check_parse_failed(whitespace_end, (HParserBackend)GPOINTER_TO_INT(backend),"  x", 3);
 }
 
 static void test_left(gconstpointer backend) {
   const HParser *left_ = h_left(h_ch('a'), h_ch(' '));
 
-  g_check_parse_ok(left_, (HParserBackend)GPOINTER_TO_INT(backend), "a ", 2, "u0x61");
+  g_check_parse_match(left_, (HParserBackend)GPOINTER_TO_INT(backend), "a ", 2, "u0x61");
   g_check_parse_failed(left_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1);
   g_check_parse_failed(left_, (HParserBackend)GPOINTER_TO_INT(backend), " ", 1);
   g_check_parse_failed(left_, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2);
@@ -141,7 +141,7 @@ static void test_left(gconstpointer backend) {
 static void test_right(gconstpointer backend) {
   const HParser *right_ = h_right(h_ch(' '), h_ch('a'));
 
-  g_check_parse_ok(right_, (HParserBackend)GPOINTER_TO_INT(backend), " a", 2, "u0x61");
+  g_check_parse_match(right_, (HParserBackend)GPOINTER_TO_INT(backend), " a", 2, "u0x61");
   g_check_parse_failed(right_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1);
   g_check_parse_failed(right_, (HParserBackend)GPOINTER_TO_INT(backend), " ", 1);
   g_check_parse_failed(right_, (HParserBackend)GPOINTER_TO_INT(backend), "ba", 2);
@@ -150,7 +150,7 @@ static void test_right(gconstpointer backend) {
 static void test_middle(gconstpointer backend) {
   const HParser *middle_ = h_middle(h_ch(' '), h_ch('a'), h_ch(' '));
 
-  g_check_parse_ok(middle_, (HParserBackend)GPOINTER_TO_INT(backend), " a ", 3, "u0x61");
+  g_check_parse_match(middle_, (HParserBackend)GPOINTER_TO_INT(backend), " a ", 3, "u0x61");
   g_check_parse_failed(middle_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1);
   g_check_parse_failed(middle_, (HParserBackend)GPOINTER_TO_INT(backend), " ", 1);
   g_check_parse_failed(middle_, (HParserBackend)GPOINTER_TO_INT(backend), " a", 2);
@@ -204,15 +204,15 @@ static void test_action(gconstpointer backend) {
 					       NULL), 
 				    upcase);
   
-  g_check_parse_ok(action_, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2, "(u0x41 u0x42)");
-  g_check_parse_ok(action_, (HParserBackend)GPOINTER_TO_INT(backend), "AB", 2, "(u0x41 u0x42)");
+  g_check_parse_match(action_, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2, "(u0x41 u0x42)");
+  g_check_parse_match(action_, (HParserBackend)GPOINTER_TO_INT(backend), "AB", 2, "(u0x41 u0x42)");
   g_check_parse_failed(action_, (HParserBackend)GPOINTER_TO_INT(backend), "XX", 2);
 }
 
 static void test_in(gconstpointer backend) {
   uint8_t options[3] = { 'a', 'b', 'c' };
   const HParser *in_ = h_in(options, 3);
-  g_check_parse_ok(in_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_match(in_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
   g_check_parse_failed(in_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
 
 }
@@ -220,14 +220,14 @@ static void test_in(gconstpointer backend) {
 static void test_not_in(gconstpointer backend) {
   uint8_t options[3] = { 'a', 'b', 'c' };
   const HParser *not_in_ = h_not_in(options, 3);
-  g_check_parse_ok(not_in_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "u0x64");
+  g_check_parse_match(not_in_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "u0x64");
   g_check_parse_failed(not_in_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1);
 
 }
 
 static void test_end_p(gconstpointer backend) {
   const HParser *end_p_ = h_sequence(h_ch('a'), h_end_p(), NULL);
-  g_check_parse_ok(end_p_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
+  g_check_parse_match(end_p_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
   g_check_parse_failed(end_p_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2);
 }
 
@@ -240,19 +240,19 @@ static void test_sequence(gconstpointer backend) {
   const HParser *sequence_1 = h_sequence(h_ch('a'), h_ch('b'), NULL);
   const HParser *sequence_2 = h_sequence(h_ch('a'), h_whitespace(h_ch('b')), NULL);
 
-  g_check_parse_ok(sequence_1, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2, "(u0x61 u0x62)");
+  g_check_parse_match(sequence_1, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2, "(u0x61 u0x62)");
   g_check_parse_failed(sequence_1, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1);
   g_check_parse_failed(sequence_1, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1);
-  g_check_parse_ok(sequence_2, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2, "(u0x61 u0x62)");
-  g_check_parse_ok(sequence_2, (HParserBackend)GPOINTER_TO_INT(backend), "a b", 3, "(u0x61 u0x62)");
-  g_check_parse_ok(sequence_2, (HParserBackend)GPOINTER_TO_INT(backend), "a  b", 4, "(u0x61 u0x62)");  
+  g_check_parse_match(sequence_2, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2, "(u0x61 u0x62)");
+  g_check_parse_match(sequence_2, (HParserBackend)GPOINTER_TO_INT(backend), "a b", 3, "(u0x61 u0x62)");
+  g_check_parse_match(sequence_2, (HParserBackend)GPOINTER_TO_INT(backend), "a  b", 4, "(u0x61 u0x62)");  
 }
 
 static void test_choice(gconstpointer backend) {
   const HParser *choice_ = h_choice(h_ch('a'), h_ch('b'), NULL);
 
-  g_check_parse_ok(choice_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
-  g_check_parse_ok(choice_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_match(choice_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
+  g_check_parse_match(choice_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
   g_check_parse_failed(choice_, (HParserBackend)GPOINTER_TO_INT(backend), "c", 1);
 }
 
@@ -260,24 +260,24 @@ static void test_butnot(gconstpointer backend) {
   const HParser *butnot_1 = h_butnot(h_ch('a'), h_token((const uint8_t*)"ab", 2));
   const HParser *butnot_2 = h_butnot(h_ch_range('0', '9'), h_ch('6'));
 
-  g_check_parse_ok(butnot_1, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
+  g_check_parse_match(butnot_1, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
   g_check_parse_failed(butnot_1, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2);
-  g_check_parse_ok(butnot_1, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "u0x61");
+  g_check_parse_match(butnot_1, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "u0x61");
   g_check_parse_failed(butnot_2, (HParserBackend)GPOINTER_TO_INT(backend), "6", 1);
 }
 
 static void test_difference(gconstpointer backend) {
   const HParser *difference_ = h_difference(h_token((const uint8_t*)"ab", 2), h_ch('a'));
 
-  g_check_parse_ok(difference_, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2, "<61.62>");
+  g_check_parse_match(difference_, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2, "<61.62>");
   g_check_parse_failed(difference_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1);
 }
 
 static void test_xor(gconstpointer backend) {
   const HParser *xor_ = h_xor(h_ch_range('0', '6'), h_ch_range('5', '9'));
 
-  g_check_parse_ok(xor_, (HParserBackend)GPOINTER_TO_INT(backend), "0", 1, "u0x30");
-  g_check_parse_ok(xor_, (HParserBackend)GPOINTER_TO_INT(backend), "9", 1, "u0x39");
+  g_check_parse_match(xor_, (HParserBackend)GPOINTER_TO_INT(backend), "0", 1, "u0x30");
+  g_check_parse_match(xor_, (HParserBackend)GPOINTER_TO_INT(backend), "9", 1, "u0x39");
   g_check_parse_failed(xor_, (HParserBackend)GPOINTER_TO_INT(backend), "5", 1);
   g_check_parse_failed(xor_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1);
 }
@@ -285,26 +285,26 @@ static void test_xor(gconstpointer backend) {
 static void test_many(gconstpointer backend) {
   const HParser *many_ = h_many(h_choice(h_ch('a'), h_ch('b'), NULL));
 
-  g_check_parse_ok(many_, (HParserBackend)GPOINTER_TO_INT(backend), "", 0, "()");
-  g_check_parse_ok(many_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
-  //  g_check_parse_ok(many_, (HParserBackend)GPOINTER_TO_INT(backend), "adef", 4, "(u0x61)");
-  g_check_parse_ok(many_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "(u0x62)");
-  //  g_check_parse_ok(many_, (HParserBackend)GPOINTER_TO_INT(backend), "bdef", 4, "(u0x62)");
-  g_check_parse_ok(many_, (HParserBackend)GPOINTER_TO_INT(backend), "aabbaba", 7, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
-  //  g_check_parse_ok(many_, (HParserBackend)GPOINTER_TO_INT(backend), "aabbabadef", 10, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
-  //  g_check_parse_ok(many_, (HParserBackend)GPOINTER_TO_INT(backend), "daabbabadef", 11, "()");
+  g_check_parse_match(many_, (HParserBackend)GPOINTER_TO_INT(backend), "", 0, "()");
+  g_check_parse_match(many_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
+  //  g_check_parse_match(many_, (HParserBackend)GPOINTER_TO_INT(backend), "adef", 4, "(u0x61)");
+  g_check_parse_match(many_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "(u0x62)");
+  //  g_check_parse_match(many_, (HParserBackend)GPOINTER_TO_INT(backend), "bdef", 4, "(u0x62)");
+  g_check_parse_match(many_, (HParserBackend)GPOINTER_TO_INT(backend), "aabbaba", 7, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
+  //  g_check_parse_match(many_, (HParserBackend)GPOINTER_TO_INT(backend), "aabbabadef", 10, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
+  //  g_check_parse_match(many_, (HParserBackend)GPOINTER_TO_INT(backend), "daabbabadef", 11, "()");
 }
 
 static void test_many1(gconstpointer backend) {
   const HParser *many1_ = h_many1(h_choice(h_ch('a'), h_ch('b'), NULL));
 
   g_check_parse_failed(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "", 0);
-  g_check_parse_ok(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
-  //  g_check_parse_ok(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "adef", 4, "(u0x61)");
-  g_check_parse_ok(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "(u0x62)");
-  //  g_check_parse_ok(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "bdef", 4, "(u0x62)");
-  g_check_parse_ok(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "aabbaba", 7, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
-  //  g_check_parse_ok(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "aabbabadef", 10, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
+  g_check_parse_match(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
+  //  g_check_parse_match(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "adef", 4, "(u0x61)");
+  g_check_parse_match(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "(u0x62)");
+  //  g_check_parse_match(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "bdef", 4, "(u0x62)");
+  g_check_parse_match(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "aabbaba", 7, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
+  //  g_check_parse_match(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "aabbabadef", 10, "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)");
   g_check_parse_failed(many1_, (HParserBackend)GPOINTER_TO_INT(backend), "daabbabadef", 11);  
 }
 
@@ -312,16 +312,16 @@ static void test_repeat_n(gconstpointer backend) {
   const HParser *repeat_n_ = h_repeat_n(h_choice(h_ch('a'), h_ch('b'), NULL), 2);
 
   g_check_parse_failed(repeat_n_, (HParserBackend)GPOINTER_TO_INT(backend), "adef", 4);
-  g_check_parse_ok(repeat_n_, (HParserBackend)GPOINTER_TO_INT(backend), "abdef", 5, "(u0x61 u0x62)");
+  g_check_parse_match(repeat_n_, (HParserBackend)GPOINTER_TO_INT(backend), "abdef", 5, "(u0x61 u0x62)");
   g_check_parse_failed(repeat_n_, (HParserBackend)GPOINTER_TO_INT(backend), "dabdef", 6);
 }
 
 static void test_optional(gconstpointer backend) {
   const HParser *optional_ = h_sequence(h_ch('a'), h_optional(h_choice(h_ch('b'), h_ch('c'), NULL)), h_ch('d'), NULL);
   
-  g_check_parse_ok(optional_, (HParserBackend)GPOINTER_TO_INT(backend), "abd", 3, "(u0x61 u0x62 u0x64)");
-  g_check_parse_ok(optional_, (HParserBackend)GPOINTER_TO_INT(backend), "acd", 3, "(u0x61 u0x63 u0x64)");
-  g_check_parse_ok(optional_, (HParserBackend)GPOINTER_TO_INT(backend), "ad", 2, "(u0x61 null u0x64)");
+  g_check_parse_match(optional_, (HParserBackend)GPOINTER_TO_INT(backend), "abd", 3, "(u0x61 u0x62 u0x64)");
+  g_check_parse_match(optional_, (HParserBackend)GPOINTER_TO_INT(backend), "acd", 3, "(u0x61 u0x63 u0x64)");
+  g_check_parse_match(optional_, (HParserBackend)GPOINTER_TO_INT(backend), "ad", 2, "(u0x61 null u0x64)");
   g_check_parse_failed(optional_, (HParserBackend)GPOINTER_TO_INT(backend), "aed", 3);
   g_check_parse_failed(optional_, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2);
   g_check_parse_failed(optional_, (HParserBackend)GPOINTER_TO_INT(backend), "ac", 2);
@@ -330,27 +330,27 @@ static void test_optional(gconstpointer backend) {
 static void test_ignore(gconstpointer backend) {
   const HParser *ignore_ = h_sequence(h_ch('a'), h_ignore(h_ch('b')), h_ch('c'), NULL);
 
-  g_check_parse_ok(ignore_, (HParserBackend)GPOINTER_TO_INT(backend), "abc", 3, "(u0x61 u0x63)");
+  g_check_parse_match(ignore_, (HParserBackend)GPOINTER_TO_INT(backend), "abc", 3, "(u0x61 u0x63)");
   g_check_parse_failed(ignore_, (HParserBackend)GPOINTER_TO_INT(backend), "ac", 2);
 }
 
 static void test_sepBy(gconstpointer backend) {
   const HParser *sepBy_ = h_sepBy(h_choice(h_ch('1'), h_ch('2'), h_ch('3'), NULL), h_ch(','));
 
-  g_check_parse_ok(sepBy_, (HParserBackend)GPOINTER_TO_INT(backend), "1,2,3", 5, "(u0x31 u0x32 u0x33)");
-  g_check_parse_ok(sepBy_, (HParserBackend)GPOINTER_TO_INT(backend), "1,3,2", 5, "(u0x31 u0x33 u0x32)");
-  g_check_parse_ok(sepBy_, (HParserBackend)GPOINTER_TO_INT(backend), "1,3", 3, "(u0x31 u0x33)");
-  g_check_parse_ok(sepBy_, (HParserBackend)GPOINTER_TO_INT(backend), "3", 1, "(u0x33)");
-  g_check_parse_ok(sepBy_, (HParserBackend)GPOINTER_TO_INT(backend), "", 0, "()");
+  g_check_parse_match(sepBy_, (HParserBackend)GPOINTER_TO_INT(backend), "1,2,3", 5, "(u0x31 u0x32 u0x33)");
+  g_check_parse_match(sepBy_, (HParserBackend)GPOINTER_TO_INT(backend), "1,3,2", 5, "(u0x31 u0x33 u0x32)");
+  g_check_parse_match(sepBy_, (HParserBackend)GPOINTER_TO_INT(backend), "1,3", 3, "(u0x31 u0x33)");
+  g_check_parse_match(sepBy_, (HParserBackend)GPOINTER_TO_INT(backend), "3", 1, "(u0x33)");
+  g_check_parse_match(sepBy_, (HParserBackend)GPOINTER_TO_INT(backend), "", 0, "()");
 }
 
 static void test_sepBy1(gconstpointer backend) {
   const HParser *sepBy1_ = h_sepBy1(h_choice(h_ch('1'), h_ch('2'), h_ch('3'), NULL), h_ch(','));
 
-  g_check_parse_ok(sepBy1_, (HParserBackend)GPOINTER_TO_INT(backend), "1,2,3", 5, "(u0x31 u0x32 u0x33)");
-  g_check_parse_ok(sepBy1_, (HParserBackend)GPOINTER_TO_INT(backend), "1,3,2", 5, "(u0x31 u0x33 u0x32)");
-  g_check_parse_ok(sepBy1_, (HParserBackend)GPOINTER_TO_INT(backend), "1,3", 3, "(u0x31 u0x33)");
-  g_check_parse_ok(sepBy1_, (HParserBackend)GPOINTER_TO_INT(backend), "3", 1, "(u0x33)");
+  g_check_parse_match(sepBy1_, (HParserBackend)GPOINTER_TO_INT(backend), "1,2,3", 5, "(u0x31 u0x32 u0x33)");
+  g_check_parse_match(sepBy1_, (HParserBackend)GPOINTER_TO_INT(backend), "1,3,2", 5, "(u0x31 u0x33 u0x32)");
+  g_check_parse_match(sepBy1_, (HParserBackend)GPOINTER_TO_INT(backend), "1,3", 3, "(u0x31 u0x33)");
+  g_check_parse_match(sepBy1_, (HParserBackend)GPOINTER_TO_INT(backend), "3", 1, "(u0x33)");
   g_check_parse_failed(sepBy1_, (HParserBackend)GPOINTER_TO_INT(backend), "", 0);
 }
 
@@ -359,9 +359,9 @@ static void test_epsilon_p(gconstpointer backend) {
   const HParser *epsilon_p_2 = h_sequence(h_epsilon_p(), h_ch('a'), NULL);
   const HParser *epsilon_p_3 = h_sequence(h_ch('a'), h_epsilon_p(), NULL);
   
-  g_check_parse_ok(epsilon_p_1, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2, "(u0x61 u0x62)");
-  g_check_parse_ok(epsilon_p_2, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
-  g_check_parse_ok(epsilon_p_3, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
+  g_check_parse_match(epsilon_p_1, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2, "(u0x61 u0x62)");
+  g_check_parse_match(epsilon_p_2, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
+  g_check_parse_match(epsilon_p_3, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
 }
 
 bool validate_test_ab(HParseResult *p) {
@@ -378,8 +378,8 @@ static void test_attr_bool(gconstpointer backend) {
   const HParser *ab_ = h_attr_bool(h_many1(h_choice(h_ch('a'), h_ch('b'), NULL)),
 				   validate_test_ab);
 
-  g_check_parse_ok(ab_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "(u0x61 u0x61)");
-  g_check_parse_ok(ab_, (HParserBackend)GPOINTER_TO_INT(backend), "bb", 2, "(u0x62 u0x62)");
+  g_check_parse_match(ab_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "(u0x61 u0x61)");
+  g_check_parse_match(ab_, (HParserBackend)GPOINTER_TO_INT(backend), "bb", 2, "(u0x62 u0x62)");
   g_check_parse_failed(ab_, (HParserBackend)GPOINTER_TO_INT(backend), "ab", 2);
 }
 
@@ -388,9 +388,9 @@ static void test_and(gconstpointer backend) {
   const HParser *and_2 = h_sequence(h_and(h_ch('0')), h_ch('1'), NULL);
   const HParser *and_3 = h_sequence(h_ch('1'), h_and(h_ch('2')), NULL);
 
-  g_check_parse_ok(and_1, (HParserBackend)GPOINTER_TO_INT(backend), "0", 1, "(u0x30)");
+  g_check_parse_match(and_1, (HParserBackend)GPOINTER_TO_INT(backend), "0", 1, "(u0x30)");
   g_check_parse_failed(and_2, (HParserBackend)GPOINTER_TO_INT(backend), "0", 1);
-  g_check_parse_ok(and_3, (HParserBackend)GPOINTER_TO_INT(backend), "12", 2, "(u0x31)");
+  g_check_parse_match(and_3, (HParserBackend)GPOINTER_TO_INT(backend), "12", 2, "(u0x31)");
 }
 
 static void test_not(gconstpointer backend) {
@@ -400,10 +400,10 @@ static void test_not(gconstpointer backend) {
 					  h_token((const uint8_t*)"++", 2),
 					  NULL), h_ch('b'), NULL);
 
-  g_check_parse_ok(not_1, (HParserBackend)GPOINTER_TO_INT(backend), "a+b", 3, "(u0x61 u0x2b u0x62)");
+  g_check_parse_match(not_1, (HParserBackend)GPOINTER_TO_INT(backend), "a+b", 3, "(u0x61 u0x2b u0x62)");
   g_check_parse_failed(not_1, (HParserBackend)GPOINTER_TO_INT(backend), "a++b", 4);
-  g_check_parse_ok(not_2, (HParserBackend)GPOINTER_TO_INT(backend), "a+b", 3, "(u0x61 (u0x2b) u0x62)");
-  g_check_parse_ok(not_2, (HParserBackend)GPOINTER_TO_INT(backend), "a++b", 4, "(u0x61 <2b.2b> u0x62)");
+  g_check_parse_match(not_2, (HParserBackend)GPOINTER_TO_INT(backend), "a+b", 3, "(u0x61 (u0x2b) u0x62)");
+  g_check_parse_match(not_2, (HParserBackend)GPOINTER_TO_INT(backend), "a++b", 4, "(u0x61 <2b.2b> u0x62)");
 }
 
 static void test_leftrec(gconstpointer backend) {
@@ -412,9 +412,9 @@ static void test_leftrec(gconstpointer backend) {
   HParser *lr_ = h_indirect();
   h_bind_indirect(lr_, h_choice(h_sequence(lr_, a_, NULL), a_, NULL));
 
-  g_check_parse_ok(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
-  g_check_parse_ok(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "(u0x61 u0x61)");
-  g_check_parse_ok(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "aaa", 3, "((u0x61 u0x61) u0x61)");
+  g_check_parse_match(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
+  g_check_parse_match(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "(u0x61 u0x61)");
+  g_check_parse_match(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "aaa", 3, "((u0x61 u0x61) u0x61)");
 }
 
 static void test_rightrec(gconstpointer backend) {
@@ -423,9 +423,9 @@ static void test_rightrec(gconstpointer backend) {
   HParser *rr_ = h_indirect();
   h_bind_indirect(rr_, h_choice(h_sequence(a_, rr_, NULL), h_epsilon_p(), NULL));
 
-  g_check_parse_ok(rr_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
-  g_check_parse_ok(rr_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "(u0x61 (u0x61))");
-  g_check_parse_ok(rr_, (HParserBackend)GPOINTER_TO_INT(backend), "aaa", 3, "(u0x61 (u0x61 (u0x61)))");
+  g_check_parse_match(rr_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
+  g_check_parse_match(rr_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "(u0x61 (u0x61))");
+  g_check_parse_match(rr_, (HParserBackend)GPOINTER_TO_INT(backend), "aaa", 3, "(u0x61 (u0x61 (u0x61)))");
 }
 
 static void test_ambiguous(gconstpointer backend) {
@@ -435,9 +435,9 @@ static void test_ambiguous(gconstpointer backend) {
   h_bind_indirect(E_, h_choice(h_sequence(E_, p_, E_, NULL), d_, NULL));
   HParser *expr_ = h_action(E_, h_act_flatten);
 
-  g_check_parse_ok(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "(u0x64)");
-  g_check_parse_ok(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d", 3, "(u0x64 u0x2b u0x64)");
-  g_check_parse_ok(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d+d", 5, "(u0x64 u0x2b u0x64 u0x2b u0x64)");
+  g_check_parse_match(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "(u0x64)");
+  g_check_parse_match(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d", 3, "(u0x64 u0x2b u0x64)");
+  g_check_parse_match(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+d+d", 5, "(u0x64 u0x2b u0x64 u0x2b u0x64)");
   g_check_parse_failed(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+", 2);
 }
 
