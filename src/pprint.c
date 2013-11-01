@@ -81,14 +81,13 @@ void h_pprint(FILE* stream, const HParsedToken* tok, int indent, int delta) {
 
 struct result_buf {
   char* output;
-  HAllocator *mm__;
   size_t len;
   size_t capacity;
 };
 
 static inline void ensure_capacity(struct result_buf *buf, int amt) {
   while (buf->len + amt >= buf->capacity)
-    buf->output = buf->mm__->realloc(buf->mm__, buf->output, buf->capacity *= 2);
+    buf->output = realloc(buf->output, buf->capacity *= 2);
 }
 
 static inline void append_buf(struct result_buf *buf, const char* input, int len) {
@@ -161,13 +160,9 @@ static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
   
 
 char* h_write_result_unamb(const HParsedToken* tok) {
-  return h_write_result_unamb__m(&system_allocator, tok);
-}
-char* h_write_result_unamb__m(HAllocator* mm__, const HParsedToken* tok) {
   struct result_buf buf = {
-    .output = mm__->alloc(mm__, 16),
+    .output = malloc(16),
     .len = 0,
-    .mm__ = mm__,
     .capacity = 16
   };
   unamb_sub(tok, &buf);

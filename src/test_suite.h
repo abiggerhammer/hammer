@@ -109,7 +109,7 @@
     } else {								\
       char* cres = h_write_result_unamb(res->ast);			\
       g_check_string(cres, ==, result);					\
-      system_allocator.free(&system_allocator, cres);			\
+      free(cres);							\
       HArenaStats stats;						\
       h_allocator_stats(res->arena, &stats);				\
       g_test_message("Parse used %zd bytes, wasted %zd bytes. "		\
@@ -161,6 +161,7 @@
   } while(0)
 
 
+// This stuff needs to be made internal-only; it has no use in user-level test suites
 #define g_check_terminal(grammar, parser) \
   g_check_hashtable_absent(grammar->nts, h_desugar(&system_allocator, NULL, parser))
 
