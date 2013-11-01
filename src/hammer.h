@@ -565,7 +565,7 @@ HAMMER_FN_DECL(void, h_parse_result_free, HParseResult *result);
  * Format token into a compact unambiguous form. Useful for parser test cases.
  * Caller is responsible for freeing the result.
  */
-HAMMER_FN_DECL(char*, h_write_result_unamb, const HParsedToken* tok);
+char* h_write_result_unamb(const HParsedToken* tok);
 /**
  * Format token to the given output stream. Indent starting at
  * [indent] spaces, with [delta] spaces between levels.
