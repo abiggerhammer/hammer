@@ -96,12 +96,33 @@
     }									\
   } while(0)
 
-#define g_check_parse_ok(parser, backend, input, inp_len, result) do {	\
+#define g_check_parse_ok(parser, backend, input, inp_len) do {		\
     int skip = h_compile((HParser *)(parser), (HParserBackend) backend, NULL); \
-  if(skip) {	\
-      g_test_message("Backend not applicable, skipping test");	\
-      break;	\
-    }	\
+    if(skip) {								\
+      g_test_message("Backend not applicable, skipping test");		\
+      break;								\
+    }									\
+    HParseResult *res = h_parse(parser, (const uint8_t*)input, inp_len); \
+    if (!res) {								\
+      g_test_message("Parse failed on line %d", __LINE__);		\
+      g_test_fail();							\
+    } else {								\
+      HArenaStats stats;						\
+      h_allocator_stats(res->arena, &stats);				\
+      g_test_message("Parse used %zd bytes, wasted %zd bytes. "		\
+                     "Inefficiency: %5f%%",				\
+		     stats.used, stats.wasted,				\
+		     stats.wasted * 100. / (stats.used+stats.wasted));	\
+      h_delete_arena(res->arena);					\
+    }									\
+  } while(0)
+
+#define g_check_parse_match(parser, backend, input, inp_len, result) do { \
+    int skip = h_compile((HParser *)(parser), (HParserBackend) backend, NULL); \
+    if(skip) {								\
+      g_test_message("Backend not applicable, skipping test");		\
+      break;								\
+    }									\
     HParseResult *res = h_parse(parser, (const uint8_t*)input, inp_len); \
     if (!res) {								\
       g_test_message("Parse failed on line %d", __LINE__);		\
