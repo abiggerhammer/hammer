@@ -124,6 +124,7 @@ typedef struct HCFChoice_ HCFChoice;
 typedef struct HRVMProg_ HRVMProg;
 typedef struct HParserVtable_ HParserVtable;
 
+// TODO: Make this internal
 typedef struct HParser_ {
   const HParserVtable *vtable;
   HParserBackend backend;
@@ -570,7 +571,7 @@ char* h_write_result_unamb(const HParsedToken* tok);
  * Format token to the given output stream. Indent starting at
  * [indent] spaces, with [delta] spaces between levels.
  */
-HAMMER_FN_DECL(void, h_pprint, FILE* stream, const HParsedToken* tok, int indent, int delta);
+void h_pprint(FILE* stream, const HParsedToken* tok, int indent, int delta);
 
 /**
  * Build parse tables for the given parser backend. See the
