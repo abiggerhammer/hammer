@@ -8,7 +8,7 @@ vars = Variables(None, ARGUMENTS)
 vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
 
-env = Environment(ENV = os.environ, variables = vars)
+env = Environment(ENV = {'PATH' : os.environ['PATH']}, variables = vars)
 
 def calcInstallPath(*elements):
     path = os.path.abspath(os.path.join(*map(env.subst, elements)))
