@@ -3,13 +3,12 @@ import os
 import os.path
 import sys
 
-env = Environment(ENV = {'PATH' : os.environ['PATH']})
 
 vars = Variables(None, ARGUMENTS)
 vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
 
-env = Environment(variables=vars)
+env = Environment(ENV = os.environ, variables = vars)
 
 def calcInstallPath(*elements):
     path = os.path.abspath(os.path.join(*map(env.subst, elements)))
@@ -31,7 +30,7 @@ env['libpath'] = calcInstallPath("$prefix", "lib")
 env['incpath'] = calcInstallPath("$prefix", "include", "hammer")
 # TODO: Add pkgconfig
 
-env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -lrt")
+env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes")
 
 if not env['PLATFORM'] == 'darwin':
     env.MergeFlags("-lrt")
