@@ -1,0 +1,8 @@
+require 'rake/extensiontask'
+
+#spec = Gem::Specification.load('hammer-parser-ruby.gemspec')
+#Rake::ExtensionTask.new('hammer_ext', spec)
+
+Rake::ExtensionTask.new 'hammer_ext' do |ext|
+  ext.lib_dir = 'lib/hammer'
+end
