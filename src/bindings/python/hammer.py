@@ -263,7 +263,7 @@ def _toHParsedToken(arena, pyobj):
     cobj = _ffi.new_handle(pyobj)
     _parser_result_holder.stash(cobj)
 
-    hpt = _ffi.cast("HParsedToken*", _lib.h_arena_malloc(_ffi.sizeof(parseResult.arena, "HParsedToken")))
+    hpt = _ffi.cast("HParsedToken*", _lib.h_arena_malloc(arena, _ffi.sizeof("HParsedToken")))
     hpt.token_type = _lib.TT_PYTHON
     hpt.user = cobj
     hpt.bit_offset = chr(127)
@@ -293,7 +293,7 @@ def _to_hpredicate(fn):
         if type(res) != bool:
             raise TypeError("Predicates should return a bool")
         return res
-    return _ffi.callback("bool(HParseResult*)", action)
+    return _ffi.callback("bool(HParseResult*)", predicate)
 
 class Parser(object):
     # TODO: Map these to individually garbage-collected blocks of
@@ -352,7 +352,7 @@ def ch_range(chr1, chr2):
 def int_range(parser, i1, i2):
     if type(parser) != BitsParser:
         raise TypeError("int_range is only valid when used with a bits parser")
-    return Parser(_lib.h_int_range(parser._parser, i1, i2), (_parser,))
+    return Parser(_lib.h_int_range(parser._parser, i1, i2), (parser,))
 
 def bits(length, signedp):
     return BitsParser(_lib.h_bits(length, signedp), ())
@@ -373,17 +373,18 @@ def left(p1, p2):
 def right(p1, p2):
     return Parser(_lib.h_right(p1._parser, p2._parser), (p1, p2))
 def middle(p1, p2, p3):
-    return Parser(_lib.h_middle(p1._parser, p2._parser, p3.parser), (p1, p2, p3))
+    return Parser(_lib.h_middle(p1._parser, p2._parser, p3._parser), (p1, p2, p3))
 def action(parser, action):
     caction = _to_haction(action)
     return Parser(_lib.h_action(parser._parser, caction), (parser, caction))
+
 def in_(charset):
-    if typeof(charset) is not str:
+    if not isinstance(charset, str):
         # TODO/Python3: change str to bytes
         raise TypeError("in_ can't deal with unicode")
     return Parser(_lib.h_in(charset, len(charset)), ())
 def not_in(charset):
-    if typeof(charset) is not str:
+    if not isinstance(charset, str):
         # TODO/Python3: change str to bytes
         raise TypeError("in_ can't deal with unicode")
     return Parser(_lib.h_not_in(charset, len(charset)), ())
@@ -402,7 +403,7 @@ def choice(*parsers):
 def butnot(p1, p2):
     return Parser(_lib.h_butnot(p1._parser, p2._parser), (p1, p2))
 def difference(p1, p2):
-    return Parser(_lib.h_difference(p1, _parser, p2._parser), (p1, p2))
+    return Parser(_lib.h_difference(p1._parser, p2._parser), (p1, p2))
 def xor(p1, p2):
     return Parser(_lib.h_xor(p1._parser, p2._parser), (p1, p2))
 def many(p1):
