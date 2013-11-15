@@ -9,8 +9,10 @@ module Hammer
     def parse(data)
       raise RuntimeError, '@h_parser is nil' if @h_parser.nil?
       raise ArgumentError, 'expecting a String' unless data.is_a? String # TODO: Not needed, FFI checks that.
-      result = Hammer::Internal.h_parse(@h_parser, data, data.length);
+      result = Hammer::Internal.h_parse(@h_parser, data, data.length)
       # TODO: Do something with the data
+      #       (wrap in garbage-collected object, call h_parse_result_free when destroyed by GC)
+      Hammer::Internal.h_parse_result_free(result)
       !result.null?
     end
 

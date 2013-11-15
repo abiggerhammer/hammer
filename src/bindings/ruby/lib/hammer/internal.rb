@@ -53,7 +53,7 @@ module Hammer
     # h_bind_indirect
 
     # free the parse result
-    # h_parse_result_free
+    attach_function :h_parse_result_free, [:pointer], :void
 
     # TODO: Does the HParser* need to be freed?
   end
