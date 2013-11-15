@@ -91,7 +91,7 @@ typedef struct HParsedToken_ {
  */
 typedef struct HParseResult_ {
   const HParsedToken *ast;
-  long long bit_length;
+  int64_t bit_length;
   HArena * arena;
 } HParseResult;
 
@@ -589,7 +589,7 @@ HBitWriter *h_bit_writer_new(HAllocator* mm__);
 /**
  * TODO: Document me
  */
-void h_bit_writer_put(HBitWriter* w, unsigned long long data, size_t nbits);
+void h_bit_writer_put(HBitWriter* w, uint64_t data, size_t nbits);
 
 /**
  * TODO: Document me

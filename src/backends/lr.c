@@ -436,14 +436,14 @@ static void pprint_transition(FILE *f, const HCFGrammar *g, const HLRTransition 
 {
   fputs("-", f);
   h_pprint_symbol(f, g, t->symbol);
-  fprintf(f, "->%lu", t->to);
+  fprintf(f, "->%zu", t->to);
 }
 
 void h_pprint_lrdfa(FILE *f, const HCFGrammar *g,
                     const HLRDFA *dfa, unsigned int indent)
 {
   for(size_t i=0; i<dfa->nstates; i++) {
-    unsigned int indent2 = indent + fprintf(f, "%4lu: ", i);
+    unsigned int indent2 = indent + fprintf(f, "%4zu: ", i);
     h_pprint_lrstate(f, g, dfa->states[i], indent2);
     for(HSlistNode *x = dfa->transitions->head; x; x = x->next) {
       const HLRTransition *t = x->elem;
@@ -463,7 +463,7 @@ void pprint_lraction(FILE *f, const HCFGrammar *g, const HLRAction *action)
     if(action->nextstate == HLR_SUCCESS)
       fputs("s~", f);
     else
-      fprintf(f, "s%lu", action->nextstate);
+      fprintf(f, "s%zu", action->nextstate);
     break;
   case HLR_REDUCE:
     fputs("r(", f);
@@ -471,7 +471,7 @@ void pprint_lraction(FILE *f, const HCFGrammar *g, const HLRAction *action)
     fputs(" -> ", f);
 #ifdef NDEBUG
     // if we can't print the production, at least print its length
-    fprintf(f, "[%lu]", action->production.length);
+    fprintf(f, "[%zu]", action->production.length);
 #else
     HCFSequence seq = {action->production.rhs};
     h_pprint_sequence(f, g, &seq);
@@ -510,7 +510,7 @@ void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
 {
   for(size_t i=0; i<table->nrows; i++) {
     for(unsigned int j=0; j<indent; j++) fputc(' ', f);
-    fprintf(f, "%4lu:", i);
+    fprintf(f, "%4zu:", i);
     if(table->forall[i]) {
       fputc(' ', f);
       pprint_lraction(f, g, table->forall[i]);
@@ -531,7 +531,7 @@ void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
 #if 0
   fputs("inadeq=", f);
   for(HSlistNode *x=table->inadeq->head; x; x=x->next) {
-    fprintf(f, "%lu ", (uintptr_t)x->elem);
+    fprintf(f, "%zu ", (uintptr_t)x->elem);
   }
   fputc('\n', f);
 #endif
