@@ -17,11 +17,14 @@ module Hammer
     end
 
     def self.token(string)
-        h_parser = Hammer::Internal.h_token(string, string.length)
+      h_string = string.dup
+      h_parser = Hammer::Internal.h_token(h_string, h_string.length)
 
-        parser = Hammer::Parser.new
-        parser.instance_variable_set :@h_parser, h_parser
-        return parser
+      parser = Hammer::Parser.new
+      parser.instance_variable_set :@h_parser, h_parser
+      # prevent string from getting garbage-collected
+      parser.instance_variable_set :@h_string, h_string
+      return parser
     end
 
     def self.ch(char)

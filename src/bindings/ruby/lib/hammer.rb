@@ -52,3 +52,9 @@ p parser.parse 'Hello Mom!'
 h = Hammer::Parser
 parser = h.sequence(h.token('Hello '), h.choice(h.token('Mom'), h.token('Dad')), h.token('!'))
 p parser.parse 'Hello Mom!'
+
+s = 'blah'
+parser = h.token(s)
+p parser.parse 'BLAH' # => false
+s.upcase!
+p parser.parse 'BLAH' # => false
