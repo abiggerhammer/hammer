@@ -25,7 +25,7 @@ module Hammer
 
     def build
       if @parsers.length > 1
-        Hammer::Parser::Sequence.new(*@parsers)
+        Hammer::Parser.sequence(*@parsers)
       else
         @parsers.first
       end
@@ -40,14 +40,12 @@ module Hammer
 
 
     def token(str)
-      #@h_parsers << Hammer::Internal.h_token(str, str.length)
-      @parsers << Hammer::Parser::Token.new(str)
+      @parsers << Hammer::Parser.token(str)
       return self
     end
 
     def ch(char)
-      #@h_parsers << Hammer::Internal.h_ch(char.ord)
-      @parsers << Hammer::Parser::Ch.new(char)
+      @parsers << Hammer::Parser.ch(char)
       return self
     end
 
@@ -57,17 +55,13 @@ module Hammer
       @parsers += parsers
       @parsers << Docile.dsl_eval(ParserBuilder.new, &block).build if block_given?
       return self
-      #builder = Hammer::ParserBuilder.new
-      #builder.instance_eval &block
-      #@parsers << Hammer::Parser::Sequence.new(*builder.parsers)
-      ## TODO: Save original receiver and redirect missing methods!
     end
 
     def choice(*parsers, &block)
       if block_given?
         parsers += Docile.dsl_eval(ParserBuilder.new, &block).parsers
       end
-      @parsers << Hammer::Parser::Choice.new(*parsers)
+      @parsers << Hammer::Parser.choice(*parsers)
       return self
     end
   end

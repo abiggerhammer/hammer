@@ -47,7 +47,7 @@ Also possible:
 ```ruby
 parser = Hammer::ParserBuilder.new
   .token('Hello ')
-  .choice(Hammer::Parser::Token.new('Mom'), Hammer::Parser::Token.new('Dad'))
+  .choice(Hammer::Parser.token('Mom'), Hammer::Parser.token('Dad'))
   .token('!')
   .build
 ```
@@ -56,7 +56,7 @@ More like hammer in C:
 
 ```ruby
 h = Hammer::Parser
-parser = h.sequence(h.token('Hello'), h.choice(h.token('Mom'), h.token('Dad')), h.token('!'))
+parser = h.sequence(h.token('Hello '), h.choice(h.token('Mom'), h.token('Dad')), h.token('!'))
 ```
 
 ### Parsing

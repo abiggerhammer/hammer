@@ -32,16 +32,6 @@ if parser
   p parser.parse 'blah'
 end
 
-parser = Hammer::Parser::Sequence.new(
-  Hammer::Parser::Token.new('Hello '),
-  Hammer::Parser::Choice.new(
-    Hammer::Parser::Token.new('Mom'),
-    Hammer::Parser::Token.new('Dad')
-  ),
-  Hammer::Parser::Token.new('!')
-)
-p parser.parse 'Hello Mom!'
-
 parser = Hammer::Parser.build {
   token 'Hello '
   choice {
@@ -54,12 +44,11 @@ p parser.parse 'Hello Mom!'
 
 parser = Hammer::ParserBuilder.new
   .token('Hello ')
-  .choice(Hammer::Parser::Token.new('Mom'), Hammer::Parser::Token.new('Dad'))
+  .choice(Hammer::Parser.token('Mom'), Hammer::Parser.token('Dad'))
   .token('!')
   .build
 p parser.parse 'Hello Mom!'
 
-# not yet working
-#h = Hammer::Parser
-#parser = h.sequence(h.token('Hello'), h.choice(h.token('Mom'), h.token('Dad')), h.token('!'))
-#p parser.parse 'Hello Mom!'
+h = Hammer::Parser
+parser = h.sequence(h.token('Hello '), h.choice(h.token('Mom'), h.token('Dad')), h.token('!'))
+p parser.parse 'Hello Mom!'
