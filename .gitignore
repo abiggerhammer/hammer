@@ -18,3 +18,6 @@ docs/milestone2.dot.pdf
 *.dot.pdf
 Session.vim
 *.gcov
+cscope.out
+build/
+.sconsign.dblite

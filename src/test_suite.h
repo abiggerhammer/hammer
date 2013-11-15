@@ -17,7 +17,9 @@
 
 #ifndef HAMMER_TEST_SUITE__H
 #define HAMMER_TEST_SUITE__H
+#include <stdint.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 // Equivalent to g_assert_*, but not using g_assert...
 #define g_check_inttype(fmt, typ, n1, op, n2) do {				\
@@ -159,7 +161,7 @@
     size_t expected = n;						\
     size_t actual = (table)->used;					\
     if(actual != expected) {						\
-      g_test_message("Check failed: table size should have been %lu, but was %lu", \
+      g_test_message("Check failed: table size should have been %zu, but was %zu", \
 		     expected, actual);					\
       g_test_fail();							\
     }									\
@@ -210,12 +212,10 @@
 
 
 
-#define g_check_cmpint(n1, op, n2) g_check_inttype("%d", int, n1, op, n2)
-#define g_check_cmplong(n1, op, n2) g_check_inttype("%ld", long, n1, op, n2)
-#define g_check_cmplonglong(n1, op, n2) g_check_inttype("%lld", long long, n1, op, n2)
-#define g_check_cmpuint(n1, op, n2) g_check_inttype("%u", unsigned int, n1, op, n2)
-#define g_check_cmpulong(n1, op, n2) g_check_inttype("%lu", unsigned long, n1, op, n2)
-#define g_check_cmpulonglong(n1, op, n2) g_check_inttype("%llu", unsigned long long, n1, op, n2)
+#define g_check_cmp_int32(n1, op, n2) g_check_inttype("%d", int32_t, n1, op, n2)
+#define g_check_cmp_int64(n1, op, n2) g_check_inttype("%" PRId64, int64_t, n1, op, n2)
+#define g_check_cmp_uint32(n1, op, n2) g_check_inttype("%u", uint32_t, n1, op, n2)
+#define g_check_cmp_uint64(n1, op, n2) g_check_inttype("%" PRIu64, uint64_t, n1, op, n2)
 #define g_check_cmpfloat(n1, op, n2) g_check_inttype("%g", float, n1, op, n2)
 #define g_check_cmpdouble(n1, op, n2) g_check_inttype("%g", double, n1, op, n2)
 

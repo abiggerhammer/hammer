@@ -3,12 +3,12 @@
 #include "hammer.h"
 
 static void test_tt_user(void) {
-  g_check_cmpint(TT_USER, >, TT_NONE);
-  g_check_cmpint(TT_USER, >, TT_BYTES);
-  g_check_cmpint(TT_USER, >, TT_SINT);
-  g_check_cmpint(TT_USER, >, TT_UINT);
-  g_check_cmpint(TT_USER, >, TT_SEQUENCE);
-  g_check_cmpint(TT_USER, >, TT_ERR);
+  g_check_cmp_int32(TT_USER, >, TT_NONE);
+  g_check_cmp_int32(TT_USER, >, TT_BYTES);
+  g_check_cmp_int32(TT_USER, >, TT_SINT);
+  g_check_cmp_int32(TT_USER, >, TT_UINT);
+  g_check_cmp_int32(TT_USER, >, TT_SEQUENCE);
+  g_check_cmp_int32(TT_USER, >, TT_ERR);
 }
 
 void register_misc_tests(void) {
