@@ -17,7 +17,9 @@
 
 #ifndef HAMMER_HAMMER__H
 #define HAMMER_HAMMER__H
+#ifndef HAMMER_INTERNAL__NO_STDARG_H
 #include <stdarg.h>
+#endif // HAMMER_INTERNAL__NO_STDARG_H
 #include <stdint.h>
 #include <stdio.h>
 #include "allocator.h"
@@ -174,12 +176,13 @@ typedef struct HBenchmarkResults_ {
   rtype_t name(__VA_ARGS__) attr;					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__) attr
 
+#ifndef HAMMER_INTERNAL__NO_STDARG_H
 #define HAMMER_FN_DECL_VARARGS(rtype_t, name, ...)			\
   rtype_t name(__VA_ARGS__, ...);					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...);		\
   rtype_t name##__mv(HAllocator* mm__, __VA_ARGS__, va_list ap);	\
-  rtype_t name##__v(__VA_ARGS__, va_list ap);   \
-  rtype_t name##__a(void *args[]);  \
+  rtype_t name##__v(__VA_ARGS__, va_list ap);				\
+  rtype_t name##__a(void *args[]);					\
   rtype_t name##__ma(HAllocator *mm__, void *args[])
 
 // Note: this drops the attributes on the floor for the __v versions
@@ -187,10 +190,23 @@ typedef struct HBenchmarkResults_ {
   rtype_t name(__VA_ARGS__, ...) attr;					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...) attr;		\
   rtype_t name##__mv(HAllocator* mm__, __VA_ARGS__, va_list ap);	\
-  rtype_t name##__v(__VA_ARGS__, va_list ap); \
-  rtype_t name##__a(void *args[]);  \
+  rtype_t name##__v(__VA_ARGS__, va_list ap);				\
+  rtype_t name##__a(void *args[]);					\
+  rtype_t name##__ma(HAllocator *mm__, void *args[])
+#else
+#define HAMMER_FN_DECL_VARARGS(rtype_t, name, ...)			\
+  rtype_t name(__VA_ARGS__, ...);					\
+  rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...);		\
+  rtype_t name##__a(void *args[]);					\
   rtype_t name##__ma(HAllocator *mm__, void *args[])
 
+// Note: this drops the attributes on the floor for the __v versions
+#define HAMMER_FN_DECL_VARARGS_ATTR(attr, rtype_t, name, ...)		\
+  rtype_t name(__VA_ARGS__, ...) attr;					\
+  rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...) attr;		\
+  rtype_t name##__a(void *args[]);					\
+  rtype_t name##__ma(HAllocator *mm__, void *args[])
+#endif // HAMMER_INTERNAL__NO_STDARG_H
 // }}}
 
 
