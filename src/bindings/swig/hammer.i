@@ -1,5 +1,5 @@
 %module hammer
 
-%import "hammer/allocator.h"
-%import "hammer/hammer.h"
+%import "allocator.h"
+%import "hammer.h"
 
