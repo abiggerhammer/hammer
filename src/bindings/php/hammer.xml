@@ -40,8 +40,6 @@
       <description>
 	Free the memory allocated to a parse result when the result is no longer needed.
       </description>
-      <code>
-      </code>
     </function>    
   </class>
 
@@ -51,8 +49,6 @@
       <summary>Output benchmarking results in a human-readable format</summary>
       <description>
       </description>
-      <code>
-      </code>
     </function>
   </class>
 
@@ -61,8 +57,6 @@
       <proto>object HParseResult parse(string str)</proto>
       <summary>Parse an input</summary>
       <description>Top-level function to call a parser that has been built over some piece of input.</description>
-      <code>
-      </code>
     </function> -->
     <function name="compile">
       <proto>int compile(string backend, array params)</proto>
@@ -72,16 +66,12 @@
 	
 	Returns -1 if the grammar cannot be compiled with the specified options; 0 otherwise.
       </description>
-      <code>
-      </code>
     </function>
     <function name="benchmark">
       <proto>object HBenchmarkResults benchmark(array testcases)</proto>
       <summary>Benchmark this parser using all the applicable parsing backends against a set of test cases you provide</summary>
       <description>
       </description>
-      <code>
-      </code>
     </function>
   </class>
 
@@ -105,8 +95,6 @@
 
       Result token type: string
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_ch_range">
@@ -117,8 +105,6 @@
 
       Result token type: string
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_int_range">
@@ -129,8 +115,6 @@
 
       Result token type: int
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_bits">
@@ -141,8 +125,6 @@
 
       Result token type: int
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_int64">
@@ -153,8 +135,6 @@
 
       Result token type: int
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_int32">
@@ -165,8 +145,6 @@
 
       Result token type: int
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_int16">
@@ -177,8 +155,6 @@
 
       Result token type: int
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_int8">
@@ -189,8 +165,6 @@
 
       Result token type: int
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_uint64">
@@ -201,8 +175,6 @@
 
       Result token type: int
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_uint32">
@@ -213,8 +185,6 @@
 
       Result token type: int
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_uint16">
@@ -225,8 +195,6 @@
 
       Result token type: int
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_uint8">
@@ -237,8 +205,6 @@
 
       Result token type: int
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_whitespace">
@@ -249,8 +215,6 @@
 
       Result token type: p's result type
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_left">
@@ -261,8 +225,6 @@
 
       Result token type: p's result type
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_right">
@@ -273,8 +235,6 @@
 
       Result token type: q's result type
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_middle">
@@ -285,8 +245,6 @@
 
       Result token type: x's result type
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_action">
@@ -297,8 +255,6 @@
 
       Result token type: any
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_in">
@@ -309,8 +265,6 @@
 
       Result token type: string
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_not_in">
@@ -321,8 +275,6 @@
 
       Result token type: string
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_end_p">
@@ -333,8 +285,6 @@
 
       Result token type: none.
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_nothing_p">
@@ -345,8 +295,6 @@
 
       Result token type: there is no result token for this parser.
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_sequence">
@@ -357,8 +305,6 @@
 
       Result token type: array
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_choice">
@@ -369,8 +315,6 @@
 
       Result token type: the type of the first successful parser's result
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_butnot">
@@ -384,8 +328,6 @@
 
       Result token type: p1's result type.
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_difference">
@@ -399,8 +341,6 @@
 
       Result token type: p1's result type.
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_xor">
@@ -411,8 +351,6 @@
 
       Result token type: the result type of whichever parser succeeded
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_many">
@@ -423,8 +361,6 @@
 
       Result token type: array
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_many1">
@@ -435,8 +371,6 @@
 
       Result token type: array
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_repeat_n">
@@ -447,8 +381,6 @@
 
       Result token type: array
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_optional">
@@ -459,8 +391,6 @@
 
       Result token type: If p succeeded, the type of its result; if not, nothing.
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_ignore">
@@ -471,8 +401,6 @@
 
       Result token type: none.
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_sepBy">
@@ -483,8 +411,6 @@
 
       Result token type: array
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_sepBy1">
@@ -495,8 +421,6 @@
       
       Result token type: array
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_epsilon_p">
@@ -507,8 +431,6 @@
 
       Result token type: none
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_length_value">
@@ -519,8 +441,6 @@
 
       Result token type: array
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_attr_bool">
@@ -533,8 +453,6 @@
 
       Result token type: p's result type if pred succeeds, otherwise the parse fails.
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_and">
@@ -553,8 +471,6 @@
 
       Result token type: none
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_not">
@@ -575,8 +491,6 @@
       
       Result token type: none
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_indirect">
@@ -587,8 +501,6 @@
 
       Result token type: the type of whatever parser is bound to it with hammer_bind_indirect().
     </description>
-    <code>
-    </code>
   </function>
 
   <function role="public" name="hammer_bind_indirect">
@@ -597,8 +509,6 @@
     <description>
       See hammer_indirect() for details.
     </description>
-    <code>
-    </code>
   </function>
 
 </extension>
