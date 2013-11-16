@@ -58,12 +58,12 @@
 
   <class name="HParser">
     <function name="parse">
-      <proto>HParseResult parse(string input)</proto>
+      <proto>object HParseResult parse(string str)</proto>
       <summary>Parse an input</summary>
       <description>Top-level function to call a parser that has been built over some piece of input.</description>
       <code>
       </code>
-    </function>
+    </function> -->
     <function name="compile">
       <proto>int compile(string backend, array params)</proto>
       <summary>Generate parse tables for the given parsing backend</summary>
@@ -76,7 +76,7 @@
       </code>
     </function>
     <function name="benchmark">
-      <proto>object benchmark(array testcases)</proto>
+      <proto>object HBenchmarkResults benchmark(array testcases)</proto>
       <summary>Benchmark this parser using all the applicable parsing backends against a set of test cases you provide</summary>
       <description>
       </description>
@@ -86,7 +86,7 @@
   </class>
 
   <function role="public" name="hammer_token">
-    <proto>HParseResult hammer_token(string token)</proto>
+    <proto>object HParser hammer_token(string token)</proto>
     <summary>Parse a token (primitive)</summary>
     <description>
       Given a string, returns a parser that parses that string value.
@@ -98,7 +98,7 @@
   </function>
 
   <function role="public" name="hammer_ch">
-    <proto>HParseResult hammer_ch(string ch)</proto>
+    <proto>object HParser hammer_ch(string ch)</proto>
     <summary>Parse a character (primitive)</summary>
     <description>
       Given a single character, returns a parser that parses that character.
@@ -110,7 +110,7 @@
   </function>
 
   <function role="public" name="hammer_ch_range">
-    <proto>HParseResult hammer_ch_range(string lower, string upper)</proto>
+    <proto>object HParser hammer_ch_range(string lower, string upper)</proto>
     <summary>Parse a character within the given range (primitive)</summary>
     <description>
       Given two single-character bounds, lower and upper, returns a parser that parses a single character within the range [lower, upper] (inclusive).
@@ -122,7 +122,7 @@
   </function>
 
   <function role="public" name="hammer_int_range">
-    <proto>HParseResult hammer_int_range(HParser p, int lower, int upper)</proto>
+    <proto>object HParser hammer_int_range(object HParser p, int lower, int upper)</proto>
     <summary>Parse an integer within the given range (primitive)</summary>
     <description>
       Given an integer parser, p, and two integer bounds, lower and upper, returns a parser that parses an integral value within the range [lower, upper] (inclusive).
@@ -134,7 +134,7 @@
   </function>
 
   <function role="public" name="hammer_bits">
-    <proto>HParseResult hammer_bits(int len, bool sign)</proto>
+    <proto>object HParser hammer_bits(int len, bool sign)</proto>
     <summary>Parse a specified number of bits (primitive)</summary>
     <description>
       Returns a parser that parses the specified number of bits. sign == true if signed, false if unsigned.
@@ -146,7 +146,7 @@
   </function>
 
   <function role="public" name="hammer_int64">
-    <proto>HParseResult hammer_int64()</proto>
+    <proto>object HParser hammer_int64()</proto>
     <summary>Parse a 64-bit signed integer (primitive)</summary>
     <description>
       Returns a parser that parses a signed 8-byte integer value.
@@ -158,7 +158,7 @@
   </function>
 
   <function role="public" name="hammer_int32">
-    <proto>HParseResult hammer_int32()</proto>
+    <proto>object HParser hammer_int32()</proto>
     <summary>Parse a 32-bit signed integer (primitive)</summary>
     <description>
       Returns a parser that parses a signed 4-byte integer value.
@@ -170,7 +170,7 @@
   </function>
 
   <function role="public" name="hammer_int16">
-    <proto>HParseResult hammer_int16()</proto>
+    <proto>object HParser hammer_int16()</proto>
     <summary>Parse a 16-bit signed integer (primitive)</summary>
     <description>
       Returns a parser that parses a signed 2-byte integer value.
@@ -182,7 +182,7 @@
   </function>
 
   <function role="public" name="hammer_int8">
-    <proto>HParseResult hammer_int8()</proto>
+    <proto>object HParser hammer_int8()</proto>
     <summary>Parse an 8-bit signed integer (primitive)</summary>
     <description>
       Returns a parser that parses a signed 1-byte integer value.
@@ -194,7 +194,7 @@
   </function>
 
   <function role="public" name="hammer_uint64">
-    <proto>HParseResult hammer_uint64()</proto>
+    <proto>object HParser hammer_uint64()</proto>
     <summary>Parse a 64-bit unsigned integer (primitive)</summary>
     <description>
       Returns a parser that parses an unsigned 8-byte integer value.
@@ -206,7 +206,7 @@
   </function>
 
   <function role="public" name="hammer_uint32">
-    <proto>HParseResult hammer_uint32()</proto>
+    <proto>object HParser hammer_uint32()</proto>
     <summary>Parse a 32-bit unsigned integer (primitive)</summary>
     <description>
       Returns a parser that parses an unsigned 4-byte integer value.
@@ -218,7 +218,7 @@
   </function>
 
   <function role="public" name="hammer_uint16">
-    <proto>HParseResult hammer_uint16()</proto>
+    <proto>object HParser hammer_uint16()</proto>
     <summary>Parse a 16-bit unsigned integer (primitive)</summary>
     <description>
       Returns a parser that parses an unsigned 2-byte integer value.
@@ -230,7 +230,7 @@
   </function>
 
   <function role="public" name="hammer_uint8">
-    <proto>HParseResult hammer_uint8()</proto>
+    <proto>object HParser hammer_uint8()</proto>
     <summary>Parse an 8-bit unsigned integer (primitive)</summary>
     <description>
       Returns a parser that parses an unsigned 1-byte integer value.
@@ -242,7 +242,7 @@
   </function>
 
   <function role="public" name="hammer_whitespace">
-    <proto>HParseResult hammer_whitespace(HParser p)</proto>
+    <proto>object HParser hammer_whitespace(object HParser p)</proto>
     <summary>Parse something preceded by whitespace (higher-order)</summary>
     <description>
       Given a parser, p, returns a parser that skips any whitespace and then applies p.
@@ -254,7 +254,7 @@
   </function>
 
   <function role="public" name="hammer_left">
-    <proto>HParseResult hammer_left(HParser p, HParser q)</proto>
+    <proto>object HParser hammer_left(object HParser p, object HParser q)</proto>
     <summary>Take the leftmost result of two parsers (higher-order)</summary>
     <description>
       Given two parsers, p and q, returns a parser that parses them in sequence but only returns p's result.
@@ -266,7 +266,7 @@
   </function>
 
   <function role="public" name="hammer_right">
-    <proto>HParseResult hammer_right(HParser p, HParser q)</proto>
+    <proto>object HParser hammer_right(object HParser p, object HParser q)</proto>
     <summary>Take the rightmost result of two parsers (higher-order)</summary>
     <description>
       Given two parsers, p and q, returns a parser that parses them in sequence but only returns q's result.
@@ -278,7 +278,7 @@
   </function>
 
   <function role="public" name="hammer_middle">
-    <proto>HParseResult hammer_middle(HParser p, HParser x, HParser q)</proto>
+    <proto>object HParser hammer_middle(object HParser p, object HParser x, object HParser q)</proto>
     <summary>Take the middle result of three parsers (higher-order)</summary>
     <description>
       Given three parsers, p, x, and q, returns a parser that parses them in sequence but only returns x's result.
@@ -290,7 +290,7 @@
   </function>
 
   <function role="public" name="hammer_action">
-    <proto>HParseResult hammer_action(HParser p, callable f)</proto>
+    <proto>object HParser hammer_action(object HParser p, callback f)</proto>
     <summary>Attach a semantic action to a parser (higher-order)</summary>
     <description>
       Given another parser, p, and a function, f, returns a parser that applies p, then applies f to everything in the AST of p's result.
@@ -302,7 +302,7 @@
   </function>
 
   <function role="public" name="hammer_in">
-    <proto>HParseResult hammer_in(string charset)</proto>
+    <proto>object HParser hammer_in(string charset)</proto>
     <summary>Parse a character that appears in charset (primitive)</summary>
     <description>
       Parse a single character in the given charset.
@@ -314,7 +314,7 @@
   </function>
 
   <function role="public" name="hammer_not_in">
-    <proto>HParseResult hammer_not_in(string charset)</proto>
+    <proto>object HParser hammer_not_in(string charset)</proto>
     <summary>Parse a character that does not appear in charset (primitive)</summary>
     <description>
       Parse a single character *not* in the given charset.
@@ -326,7 +326,7 @@
   </function>
 
   <function role="public" name="hammer_end_p">
-    <proto>HParseResult hammer_end_p()</proto>
+    <proto>object HParser hammer_end_p()</proto>
     <summary>Recognize the end-of-input (primitive)</summary>
     <description>
       A no-argument parser that succeeds if there is no more input to parse.
@@ -338,7 +338,7 @@
   </function>
 
   <function role="public" name="hammer_nothing_p">
-    <proto>HParseResult hammer_nothing_p()</proto>
+    <proto>object HParser hammer_nothing_p()</proto>
     <summary>This parser always fails (primitive)</summary>
     <description>
       hammer_nothing_p is primarily useful when stubbing out a larger parser. If you define a rule as hammer_nothing_p(), the top-level parser will run, but if a rule containing hammer_nothing_p is invoked, the parse will fail.
@@ -350,7 +350,7 @@
   </function>
 
   <function role="public" name="hammer_sequence">
-    <proto>HParseResult hammer_sequence(array p_array)</proto>
+    <proto>object HParser hammer_sequence(array p_array)</proto>
     <summary>Apply a list of parsers sequentially (higher-order)</summary>
     <description>
       Given an array of parsers, p_array, apply each parser in order. The parse succeeds only if all parsers succeed.
@@ -362,7 +362,7 @@
   </function>
 
   <function role="public" name="hammer_choice">
-    <proto>HParseResult hammer_choice(array p_array)</proto>
+    <proto>object HParser hammer_choice(array p_array)</proto>
     <summary>Apply any one of a list of parsers (higher-order)</summary>
     <description>
       Given an array of parsers, p_array, apply each parser in order. The first parser to succeed produces the result; if no parsers succeed, the parse fails.
@@ -374,7 +374,7 @@
   </function>
 
   <function role="public" name="hammer_butnot">
-    <proto>HParseResult hammer_butnot(HParser p1, HParser p2)</proto>
+    <proto>object HParser hammer_butnot(object HParser p1, object HParser p2)</proto>
     <summary>Parse p1 but not p2 (higher-order)</summary>
     <description>
       Given two parsers, p1 and p2, this parser succeeds in the following cases:
@@ -389,7 +389,7 @@
   </function>
 
   <function role="public" name="hammer_difference">
-    <proto>HParseResult hammer_difference(HParser p1, HParser p2)</proto>
+    <proto>object HParser hammer_difference(object HParser p1, object HParser p2)</proto>
     <summary>Parse p1 but not p2 (higher-order)</summary>
     <description>
       Given two parsers, p1 and p2, this parser succeeds in the following cases:
@@ -404,7 +404,7 @@
   </function>
 
   <function role="public" name="hammer_xor">
-    <proto>HParseResult hammer_xor(HParser p1, HParser p2)</proto>
+    <proto>object HParser hammer_xor(object HParser p1, object HParser p2)</proto>
     <summary>Parse p1 or p2 but not both (higher-order)</summary>
     <description>
       Given two parsers, p1 and p2, this parser suceeds if *either* p1 or p2 succeed, but not if they both do.
@@ -416,7 +416,7 @@
   </function>
 
   <function role="public" name="hammer_many">
-    <proto>HParseResult hammer_many(HParser p)</proto>
+    <proto>object HParser hammer_many(object HParser p)</proto>
     <summary>Parse zero or more instances of p (higher-order)</summary>
     <description>
       Given a parser, p, this parser succeeds for zero or more repetitions of p.
@@ -428,7 +428,7 @@
   </function>
 
   <function role="public" name="hammer_many1">
-    <proto>HParseResult hammer_many1(HParser p)</proto>
+    <proto>object HParser hammer_many1(object HParser p)</proto>
     <summary>Parse one or more instances of p (higher-order)</summary>
     <description>
       Given a parser, p, this parser succeeds for one or more repetitions of p.
@@ -440,7 +440,7 @@
   </function>
 
   <function role="public" name="hammer_repeat_n">
-    <proto>HParseResult hammer_repeat_n(HParser p, int n)</proto>
+    <proto>object HParser hammer_repeat_n(object HParser p, int n)</proto>
     <summary>Parse exactly n instances of p (higher-order)</summary>
     <description>
       Given a parser, p, this parser succeeds for exactly N repetitions of p.
@@ -452,7 +452,7 @@
   </function>
 
   <function role="public" name="hammer_optional">
-    <proto>HParseResult hammer_optional(HParser p)</proto>
+    <proto>object HParser hammer_optional(object HParser p)</proto>
     <summary>Mark a parser as optional, like ? in regular expressions (higher-order)</summary>
     <description>
       Given a parser, p, this parser succeeds with the value p parsed or with an empty result.
@@ -464,7 +464,7 @@
   </function>
 
   <function role="public" name="hammer_ignore">
-    <proto>HParseResult hammer_ignore(HParser p)</proto>
+    <proto>object HParser hammer_ignore(object HParser p)</proto>
     <summary>Apply p but leave its result out of the final AST (higher-order)</summary>
     <description>
       Given a parser, p, this parser succeeds if p succeeds, but doesn't include p's result in the final result.
@@ -476,7 +476,7 @@
   </function>
 
   <function role="public" name="hammer_sepBy">
-    <proto>HParseResult hammer_sepBy(HParser p, HParser sep)</proto>
+    <proto>object HParser hammer_sepBy(object HParser p, object HParser sep)</proto>
     <summary>Parse a (possibly empty) sequence of values separated by a separator (higher-order)</summary>
     <description>
       Given a parser, p, and a parser for a separator, sep, this parser matches a (possibly empty) list of things that p can parse, separated by sep. For example, if p is hammer_many1(hammer_ch_range('0', '9')) and sep is hammer_ch(','), hammer_sepBy(p, sep) will match a comma-separated list of integers.
@@ -488,7 +488,7 @@
   </function>
 
   <function role="public" name="hammer_sepBy1">
-    <proto>HParseResult hammer_sepBy1(HParser p, HParser sep)</proto>
+    <proto>object HParser hammer_sepBy1(object HParser p, object HParser sep)</proto>
     <summary>Parse a sequence of values separated by a separator (higher-order)</summary>
     <description>
       Given a parser, p, and a parser for a separator, sep, this parser matches a list of things that p can parse, separated by sep. Unlike hammer_sepBy, this ensures that the result has at least one element. For example, if p is hammer_many(hammer_ch_range('0', '9')), hammer_sepBy1(p, sep) will match a comma-separated list of integers.
@@ -500,7 +500,7 @@
   </function>
 
   <function role="public" name="hammer_epsilon_p">
-    <proto>HParseResult hammer_epsilon_p()</proto>
+    <proto>object HParser hammer_epsilon_p()</proto>
     <summary>Parse the empty string (primitive)</summary>
     <description>
       This parser always returns a zero-length match, i.e., the empty string.
@@ -512,7 +512,7 @@
   </function>
 
   <function role="public" name="hammer_length_value">
-    <proto>HParseResult hammer_length_value(HParser length, HParser value)</proto>
+    <proto>object HParser hammer_length_value(object HParser length, object HParser value)</proto>
     <summary>Parse (length) repetitions of (value) (higher-order)</summary>
     <description>
       This parser applies its first argument to read an unsigned integer value, then applies its second argument that many times. length should produce an integer value; this is checked at runtime. Specifically, length's token type must be int.
@@ -524,7 +524,7 @@
   </function>
 
   <function role="public" name="hammer_attr_bool">
-    <proto>HParseResult hammer_attr_bool(HParser p, callable pred)</proto>
+    <proto>object HParser hammer_attr_bool(object HParser p, callback pred)</proto>
     <summary>Ensure that some property holds for the AST (higher-order)</summary>
     <description>
       This parser attaches a predicate function, which returns true or false, to a parser. The function is evaluated over the parser's result. The parse only succeeds if pred returns true. 
@@ -538,7 +538,7 @@
   </function>
 
   <function role="public" name="hammer_and">
-    <proto>HParseResult hammer_and(HParser p)</proto>
+    <proto>object HParser hammer_and(object HParser p)</proto>
     <summary>Verify that p succeeds, but don't actually apply it (higher-order)</summary>
     <description>
       This parser asserts that a conditional syntax is satisfied, but doesn't consume that conditional syntax. This is useful for lookahead. As an example:
@@ -558,7 +558,7 @@
   </function>
 
   <function role="public" name="hammer_not">
-    <proto>HParseResult hammer_not(HParser p)</proto>
+    <proto>object HParser hammer_not(object HParser p)</proto>
     <summary>Verify that p does not succeed, and don't consume any input (higher-order)</summary>
     <description>
       This parser asserts that a conditional syntax is *not* satisfied, and doesn't consume the additional syntax. As a somewhat contrived example:
@@ -580,7 +580,7 @@
   </function>
 
   <function role="public" name="hammer_indirect">
-    <proto>HParseResult hammer_indirect()</proto>
+    <proto>object HParser hammer_indirect()</proto>
     <summary>Forward-declare a parser to be used recursively (higher-order)</summary>
     <description>
       Create a parser that calls out to another, as yet unknown, parser. Note that the inner parser must be bound later, using hammer_bind_indirect(). This can be used to create recursive parsers.
@@ -592,7 +592,7 @@
   </function>
 
   <function role="public" name="hammer_bind_indirect">
-    <proto>void hammer_bind_indirect(HParser p)</proto>
+    <proto>void hammer_bind_indirect(object HParser p)</proto>
     <summary>Set the inner parser of an indirect parser.</summary>
     <description>
       See hammer_indirect() for details.
