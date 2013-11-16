@@ -1,5 +1,11 @@
 %module hammer
 
-%import "allocator.h"
-%import "hammer.h"
+%{
+#include "allocator.h"
+#include "hammer.h"
+#include "internal.h"
+%}
+%include "allocator.h"
+%include "hammer.h"
+
 
