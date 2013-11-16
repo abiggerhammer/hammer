@@ -29,7 +29,9 @@
 #define BIT_LITTLE_ENDIAN 0x0
 #define BYTE_LITTLE_ENDIAN 0x0
 
+#ifndef HAMMER_INTERNAL__NO_STDARG_H
 typedef int bool;
+#endif // HAMMER_INTERNAL__NO_STDARG_H
 
 typedef struct HParseState_ HParseState;
 
@@ -177,7 +179,7 @@ typedef struct HBenchmarkResults_ {
   rtype_t name(__VA_ARGS__) attr;					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__) attr
 
-#ifndef HAMMER_INTERNAL__NO_STDARG_H
+#ifndef SWIG
 #define HAMMER_FN_DECL_VARARGS(rtype_t, name, ...)			\
   rtype_t name(__VA_ARGS__, ...);					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...);		\
@@ -195,17 +197,17 @@ typedef struct HBenchmarkResults_ {
   rtype_t name##__a(void *args[]);					\
   rtype_t name##__ma(HAllocator *mm__, void *args[])
 #else
-#define HAMMER_FN_DECL_VARARGS(rtype_t, name, ...)			\
-  rtype_t name(__VA_ARGS__, ...);					\
-  rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...);		\
-  rtype_t name##__a(void *args[]);					\
+#define HAMMER_FN_DECL_VARARGS(rtype_t, name, params...)  \
+  rtype_t name(params, ...);				  \
+  rtype_t name##__m(HAllocator* mm__, params, ...);    	  \
+  rtype_t name##__a(void *args[]);			 \
   rtype_t name##__ma(HAllocator *mm__, void *args[])
 
 // Note: this drops the attributes on the floor for the __v versions
-#define HAMMER_FN_DECL_VARARGS_ATTR(attr, rtype_t, name, ...)		\
-  rtype_t name(__VA_ARGS__, ...) attr;					\
-  rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...) attr;		\
-  rtype_t name##__a(void *args[]);					\
+#define HAMMER_FN_DECL_VARARGS_ATTR(attr, rtype_t, name, params...)		\
+  rtype_t name(params, ...);				\
+  rtype_t name##__m(HAllocator* mm__, params, ...);       	\
+  rtype_t name##__a(void *args[]);				\
   rtype_t name##__ma(HAllocator *mm__, void *args[])
 #endif // HAMMER_INTERNAL__NO_STDARG_H
 // }}}
