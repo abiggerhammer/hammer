@@ -24,9 +24,9 @@
 
   <deps language="c" platform="unix">
     <with testfile="include/hammer/hammer.h">Hammer C library</with>
-    <header name="allocator.h"/>
-    <header name="glue.h"/>
-    <header name="hammer.h"/>
+    <header name="allocator.h" path="include/hammer"/>
+    <header name="glue.h" path="include/hammer"/>
+    <header name="hammer.h" path="include/hammer"/>
     <lib name="hammer" platform="unix"/>
   </deps>
 
