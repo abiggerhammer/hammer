@@ -660,7 +660,7 @@ HParsedToken *h_act_ignore(const HParseResult *p, void* userdata);
 // {{{ Benchmark functions
 HAMMER_FN_DECL(HBenchmarkResults *, h_benchmark, HParser* parser, HParserTestcase* testcases);
 void h_benchmark_report(FILE* stream, HBenchmarkResults* results);
-void h_benchmark_dump_optimized_code(FILE* stream, HBenchmarkResults* results);
+//void h_benchmark_dump_optimized_code(FILE* stream, HBenchmarkResults* results);
 // }}}
 
 // {{{ Token type registry
