@@ -17,6 +17,7 @@
 
 #ifndef HAMMER_INTERNAL__H
 #define HAMMER_INTERNAL__H
+#include <stdint.h>
 #include <assert.h>
 #include <err.h>
 #include <string.h>
@@ -285,7 +286,7 @@ extern HParserBackendVTable h__glr_backend_vtable;
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
 
-long long h_read_bits(HInputStream* state, int count, char signed_p);
+int64_t h_read_bits(HInputStream* state, int count, char signed_p);
 // need to decide if we want to make this public. 
 HParseResult* h_do_parse(const HParser* parser, HParseState *state);
 void put_cached(HParseState *ps, const HParser *p, HParseResult *cached);

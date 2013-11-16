@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <string.h>
 #include <assert.h>
 #include "hammer.h"
@@ -43,7 +44,7 @@ static void h_bit_writer_reserve(HBitWriter* w, size_t nbits) {
 }
 
 
-void h_bit_writer_put(HBitWriter* w, unsigned long long data, size_t nbits) {
+void h_bit_writer_put(HBitWriter* w, uint64_t data, size_t nbits) {
   assert(nbits > 0); // Less than or equal to zero makes complete nonsense
 
   // expand size...

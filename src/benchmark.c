@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -108,7 +109,7 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
       // TODO: replace this with a posix timer-based benchmark. (cf. timerfd_create, timer_create, setitimer)
       int count = 1, cur;
       struct timespec ts_start, ts_end;
-      long long time_diff;
+      int64_t time_diff;
       do {
 	count *= 2; // Yes, this means that the first run will run the function twice. This is fine, as we want multiple runs anyway.
   h_benchmark_clock_gettime(&ts_start);
@@ -129,11 +130,11 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
 
 void h_benchmark_report(FILE* stream, HBenchmarkResults* result) {
   for (size_t i=0; i<result->len; ++i) {
-    fprintf(stream, "Backend %ld ... \n", i);
+    fprintf(stream, "Backend %zd ... \n", i);
     for (size_t j=0; j<result->results[i].n_testcases; ++j) {
       if(result->results[i].cases == NULL)
         continue;
-      fprintf(stream, "Case %ld: %ld ns/parse\n", j,  result->results[i].cases[j].parse_time);
+      fprintf(stream, "Case %zd: %zd ns/parse\n", j,  result->results[i].cases[j].parse_time);
     }
   }
 }

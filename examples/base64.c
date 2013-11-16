@@ -8,6 +8,7 @@
 // base64_sem1.c and base64_sem2.c for examples how to attach appropriate
 // semantic actions to the grammar.
 
+#include <inttypes.h>
 #include "../src/hammer.h"
 
 const HParser* document = NULL;
@@ -49,12 +50,12 @@ int main(int argc, char **argv)
     init_parser();
 
     inputsize = fread(input, 1, sizeof(input), stdin);
-    fprintf(stderr, "inputsize=%lu\ninput=", inputsize);
+    fprintf(stderr, "inputsize=%zu\ninput=", inputsize);
     fwrite(input, 1, inputsize, stderr);
     result = h_parse(document, input, inputsize);
 
     if(result) {
-        fprintf(stderr, "parsed=%lld bytes\n", result->bit_length/8);
+        fprintf(stderr, "parsed=%" PRId64 " bytes\n", result->bit_length/8);
         h_pprint(stdout, result->ast, 0, 0);
         return 0;
     } else {
