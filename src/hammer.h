@@ -76,8 +76,21 @@ typedef struct HBytes_ {
   size_t len;
 } HBytes;
 
+#ifdef SWIG
+typedef union {
+  HBytes bytes;
+  int64_t sint;
+  uint64_t uint;
+  double dbl;
+  float flt;
+  HCountedArray *seq;
+  void *user;
+} HTokenData;
+#endif
+
 typedef struct HParsedToken_ {
   HTokenType token_type;
+#ifndef SWIG
   union {
     HBytes bytes;
     int64_t sint;
@@ -87,6 +100,9 @@ typedef struct HParsedToken_ {
     HCountedArray *seq; // a sequence of HParsedToken's
     void *user;
   };
+#else
+  HTokenData token_data;
+#endif
   size_t index;
   char bit_offset;
 } HParsedToken;
@@ -150,12 +166,23 @@ typedef struct HParserTestcase_ {
   char* output_unambiguous;
 } HParserTestcase;
 
+#ifdef SWIG
+typedef union {
+  const char* actual_results;
+  size_t parse_time;
+} HResultTiming;
+#endif
+
 typedef struct HCaseResult_ {
   bool success;
+#ifndef SWIG
   union {
     const char* actual_results; // on failure, filled in with the results of h_write_result_unamb
     size_t parse_time; // on success, filled in with time for a single parse, in nsec
   };
+#else
+  HResultTiming timestamp;
+#endif
 } HCaseResult;
 
 typedef struct HBackendResults_ {
