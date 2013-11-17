@@ -131,6 +131,7 @@
   #warning no uint8_t* typemaps defined
 #endif
 
+//%include "typemaps.i"
  // All the include paths are relative to the build, i.e., ../../. If you need to build these manually (i.e., not with scons), keep that in mind.
 %{
 #include "allocator.h"
@@ -344,3 +345,5 @@ def int64(): return _h_int64()
 %}
 
 #endif
+//%apply const char* { const uint8_t* }
+
