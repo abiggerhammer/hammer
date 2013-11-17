@@ -1,7 +1,7 @@
 # -*- python -*-
 Import('env')
 
-bindings = []
+bindings = ['php']
 
 dist_headers = [
     "hammer.h",
