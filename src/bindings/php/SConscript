@@ -1,10 +1,12 @@
 # -*- python -*-
 Import('env')
 
-phpenv = env.Clone()
+phpenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
 
 phpenv.Append(CPPPATH = ['../../', '/usr/include/php5', '/usr/include/php5/main', '/usr/include/php5/Zend', '/usr/include/php5/TSRM'])
-phpenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error']) 
+phpenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error'])
+phpenv.Append(LIBS = ['hammer'])
+phpenv.Append(LIBPATH = ['../../']) 
 phpenv.Append(SWIGFLAGS = ['-DHAMMER_INTERNAL__NO_STDARG_H', '-Isrc/', '-php'])
 
 phpenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
