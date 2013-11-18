@@ -4,7 +4,7 @@ Import('env')
 phpenv = env.Clone()
 
 phpenv.Append(CPPPATH = ['../../', '/usr/include/php5', '/usr/include/php5/main', '/usr/include/php5/Zend', '/usr/include/php5/TSRM'])
-phpenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error']) #'-Wno-unused-variable', '-Wno-unused-label', '-Wno-unused-function', '-Wno-missing-field-initializers', '-Wno-sign-compare'])
+phpenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error']) 
 phpenv.Append(SWIGFLAGS = ['-DHAMMER_INTERNAL__NO_STDARG_H', '-Isrc/', '-php'])
 
 phpenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
