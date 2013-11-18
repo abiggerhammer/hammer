@@ -5,8 +5,10 @@ phpenv = env.Clone()
 
 phpenv.Append(CPPPATH = ['../../', '/usr/include/php5', '/usr/include/php5/main', '/usr/include/php5/Zend', '/usr/include/php5/TSRM'])
 phpenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-unused-variable', '-Wno-unused-label', '-Wno-unused-function', '-Wno-missing-field-initializers'])
-phpenv.Append(SWIGFLAGS = '-DHAMMER_INTERNAL__NO_STDARG_H -Isrc/ -php')
+phpenv.Append(SWIGFLAGS = ['-DHAMMER_INTERNAL__NO_STDARG_H', '-Isrc/', '-php', '-outdir', 'build/$VARIANT/src/bindings/php/'])
 
-swig = ['../swig/hammer.i']
+phpenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
+
+swig = ['hammer.i']
 
 libhammer_php = phpenv.SharedLibrary('hammer', swig)
