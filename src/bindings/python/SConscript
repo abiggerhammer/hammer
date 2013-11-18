@@ -1,0 +1,14 @@
+# -*- python -*-
+Import('env')
+
+pythonenv = env.Clone()
+
+pythonenv.Append(CPPPATH = ['../../', '/usr/include/python2.7'])
+pythonenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error'])
+pythonenv.Append(SWIGFLAGS = ['-DHAMMER_INTERNAL__NO_STDARG_H', '-Isrc/', '-python'])
+
+pythonenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
+
+swig = ['hammer.i']
+
+libhammer_python = pythonenv.SharedLibrary('hammer', swig)
