@@ -1,7 +1,7 @@
 # -*- python -*-
 Import('env')
 
-pythonenv = env.Clone()
+pythonenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
 
 pythonenv.Append(CPPPATH = ['../../', '/usr/include/python2.7'])
 pythonenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error'])
