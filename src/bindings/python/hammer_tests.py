@@ -17,7 +17,7 @@ class TestChParser(unittest.TestCase):
         cls.parser_chr = h.h_ch("\xa2")
     def test_success(self):
         self.assertEqual(h.h_parse(self.parser_int, "\xa2", 1).ast.token_data.uint, 0xa2)
-        self.assertEqual(h.h_parse(self.parser_chr, "\xa2", 1).ast.token_data.bytes, "\xa2")
+        self.assertEqual(h.h_parse(self.parser_chr, "\xa2", 1).ast.token_data.uint, ord("\xa2"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser_int, "\xa3", 1), None)
         self.assertEqual(h.h_parse(self.parser_chr, "\xa3", 1), None)
@@ -27,7 +27,7 @@ class TestChRange(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_ch_range("a", "c")
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "b", 1).ast.token_data.bytes, "b")
+        self.assertEqual(h.h_parse(self.parser, "b", 1).ast.token_data.uint, ord("b"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "d", 1), None)
 
@@ -121,10 +121,10 @@ class TestWhitespace(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_whitespace(h.h_ch("a"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.bytes, "a")
-        self.assertEqual(h.h_parse(self.parser, " a", 2).ast.token_data.bytes, "a")
-        self.assertEqual(h.h_parse(self.parser, "  a", 3).ast.token_data.bytes, "a")
-        self.assertEqual(h.h_parse(self.parser, "\ta", 2).ast.token_data.bytes, "a")
+        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.uint, ord("a"))
+        self.assertEqual(h.h_parse(self.parser, " a", 2).ast.token_data.uint, ord("a"))
+        self.assertEqual(h.h_parse(self.parser, "  a", 3).ast.token_data.uint, ord("a"))
+        self.assertEqual(h.h_parse(self.parser, "\ta", 2).ast.token_data.uint, ord("a"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "_a", 2), None)
 
@@ -143,7 +143,7 @@ class TestLeft(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_left(h.h_ch("a"), h.h_ch(" "))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a ", 2).ast.token_data.bytes, "a")
+        self.assertEqual(h.h_parse(self.parser, "a ", 2).ast.token_data.uint, ord("a"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a", 1), None)
         self.assertEqual(h.h_parse(self.parser, " ", 1), None)
@@ -154,7 +154,7 @@ class TestRight(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_right(h.h_ch(" "), h.h_ch("a"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, " a", 2).ast.token_data.bytes, "a")
+        self.assertEqual(h.h_parse(self.parser, " a", 2).ast.token_data.uint, ord("a"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a", 1), None)
         self.assertEqual(h.h_parse(self.parser, " ", 1), None)
@@ -165,7 +165,7 @@ class TestMiddle(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_middle(h.h_ch(" "), h.h_ch("a"), h.h_ch(" "))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, " a ", 3).ast.token_data.bytes, "a")
+        self.assertEqual(h.h_parse(self.parser, " a ", 3).ast.token_data.uint, ord("a"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a", 1), None)
         self.assertEqual(h.h_parse(self.parser, " ", 1), None)
@@ -190,7 +190,7 @@ class TestIn(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_in("abc", 3)
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "b", 1).ast.token_data.bytes, "b") # segfaulting when looking at bytes!
+        self.assertEqual(h.h_parse(self.parser, "b", 1).ast.token_data.uint, ord("b")) 
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "d", 1), None)
 
@@ -208,8 +208,9 @@ class TestEndP(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("a"), h.h_end_p())
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.seq, ["a"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a", 1).ast.token_data.seq], [ord(y) for y in ["a"]])
     def test_failure(self):
+        ### failing: parses a single 'a', dunno why
         self.assertEqual(h.h_parse(self.parser, "aa", 2), None)
 
 class TestNothingP(unittest.TestCase):
@@ -226,7 +227,7 @@ class TestSequence(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("a"), h.h_ch("b"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "ab", 2).ast.token_data.seq, ["a", "b"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "ab", 2).ast.token_data.seq], [ord(y) for y in ["a", "b"]])
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a", 1), None)
         self.assertEqual(h.h_parse(self.parser, "b", 1), None)
@@ -236,9 +237,9 @@ class TestSequenceWhitespace(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("a"), h.h_whitespace(h.h_ch("b")))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "ab", 2).ast.token_data.seq, ["a", "b"])
-        self.assertEqual(h.h_parse(self.parser, "a b", 3).ast.token_data.seq, ["a", "b"])
-        self.assertEqual(h.h_parse(self.parser, "a  b", 4).ast.token_data.seq, ["a", "b"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "ab", 2).ast.token_data.seq], [ord(y) for y in ["a", "b"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a b", 3).ast.token_data.seq], [ord(y) for y in ["a", "b"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a  b", 4).ast.token_data.seq], [ord(y) for y in ["a", "b"]])
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a  c", 4), None)
 
@@ -247,8 +248,8 @@ class TestChoice(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_choice(h.h_ch("a"), h.h_ch("b"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.uint, "a")
-        self.assertEqual(h.h_parse(self.parser, "b", 1).ast.token_data.bytes, "b")
+        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.uint, ord("a"))
+        self.assertEqual(h.h_parse(self.parser, "b", 1).ast.token_data.uint, ord("b"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "c", 1), None)
 
@@ -257,8 +258,8 @@ class TestButNot(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_butnot(h.h_ch("a"), h.h_token("ab", 2))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.bytes, "a")
-        self.assertEqual(h.h_parse(self.parser, "aa", 2).ast.token_data.bytes, "a")
+        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.uint, ord("a"))
+        self.assertEqual(h.h_parse(self.parser, "aa", 2).ast.token_data.uint, ord("a"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "ab", 2), None)
 
@@ -267,7 +268,7 @@ class TestButNotRange(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_butnot(h.h_ch_range("0", "9"), h.h_ch("6"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "4", 1).ast.token_data.bytes, "4")
+        self.assertEqual(h.h_parse(self.parser, "4", 1).ast.token_data.uint, ord("4"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "6", 1), None)
 
@@ -285,8 +286,8 @@ class TestXor(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_xor(h.h_ch_range("0", "6"), h.h_ch_range("5", "9"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "0", 1).ast.token_data.bytes, "0")
-        self.assertEqual(h.h_parse(self.parser, "9", 1).ast.token_data.bytes, "9")
+        self.assertEqual(h.h_parse(self.parser, "0", 1).ast.token_data.uint, ord("0"))
+        self.assertEqual(h.h_parse(self.parser, "9", 1).ast.token_data.uint, ord("9"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "5", 1), None)
         self.assertEqual(h.h_parse(self.parser, "a", 1), None)
@@ -297,9 +298,9 @@ class TestMany(unittest.TestCase):
         cls.parser = h.h_many(h.h_choice(h.h_ch("a"), h.h_ch("b")))
     def test_success(self):
         self.assertEqual(h.h_parse(self.parser, "", 0).ast.token_data.seq, [])
-        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.seq, ["a"])
-        self.assertEqual(h.h_parse(self.parser, "b", 1).ast.token_data.seq, ["b"])
-        self.assertEqual(h.h_parse(self.parser, "aabbaba", 7).ast.token_data.seq, ["a", "a", "b", "b", "a", "b", "a"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a", 1).ast.token_data.seq], [ord(y) for y in ["a"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "b", 1).ast.token_data.seq], [ord(y) for y in ["b"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "aabbaba", 7).ast.token_data.seq], [ord(y) for y in ["a", "a", "b", "b", "a", "b", "a"]])
     def test_failure(self):
         pass
 
@@ -308,9 +309,9 @@ class TestMany1(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_many1(h.h_choice(h.h_ch("a"), h.h_ch("b")))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.seq, ["a"])
-        self.assertEqual(h.h_parse(self.parser, "b", 1).ast.token_data.seq, ["b"])
-        self.assertEqual(h.h_parse(self.parser, "aabbaba", 7).ast.token_data.seq, ["a", "a", "b", "b", "a", "b", "a"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a", 1).ast.token_data.seq], [ord(y) for y in ["a"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "b", 1).ast.token_data.seq], [ord(y) for y in ["b"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "aabbaba", 7).ast.token_data.seq], [ord(y) for y in ["a", "a", "b", "b", "a", "b", "a"]])
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "", 0), None)
         self.assertEqual(h.h_parse(self.parser, "daabbabadef", 11), None)
@@ -330,9 +331,9 @@ class TestOptional(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("a"), h.h_optional(h.h_choice(h.h_ch("b"), h.h_ch("c"))), h.h_ch("d"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "abd", 3).ast.token_data.seq, ["a", "b", "d"])
-        self.assertEqual(h.h_parse(self.parser, "acd", 3).ast.token_data.seq, ["a", "c", "d"])
-        self.assertEqual(h.h_parse(self.parser, "ad", 2).ast.token_data.seq, ["a", None, "d"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "abd", 3).ast.token_data.seq], [ord(y) for y in ["a", "b", "d"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "acd", 3).ast.token_data.seq], [ord(y) for y in ["a", "c", "d"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "ad", 2).ast.token_data.seq if x is not None], [ord(y)["a", "d"]])
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "aed", 3), None)
         self.assertEqual(h.h_parse(self.parser, "ab", 2), None)
@@ -343,7 +344,7 @@ class TestIgnore(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("a"), h.h_ignore(h.h_ch("b")), h.h_ch("c"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "abc", 3).ast.token_data.seq, ["a", "c"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "abc", 3).ast.token_data.seq], [ord(y) for y in ["a", "c"]])
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "ac", 2), None)
 
@@ -352,10 +353,10 @@ class TestSepBy(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sepBy(h.h_choice(h.h_ch("1"), h.h_ch("2"), h.h_ch("3")), h.h_ch(","))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "1,2,3", 5).ast.token_data.seq, ["1", "2", "3"])
-        self.assertEqual(h.h_parse(self.parser, "1,3,2", 5).ast.token_data.seq, ["1", "3", "2"])
-        self.assertEqual(h.h_parse(self.parser, "1,3", 3).ast.token_data.seq, ["1", "3"])
-        self.assertEqual(h.h_parse(self.parser, "3", 1).ast.token_data.seq, ["3"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "1,2,3", 5).ast.token_data.seq], [ord(y) for y in ["1", "2", "3"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "1,3,2", 5).ast.token_data.seq], [ord(y) for y in ["1", "3", "2"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "1,3", 3).ast.token_data.seq], [ord(y) for y in ["1", "3"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "3", 1).ast.token_data.seq], [ord(y) for y in ["3"]])
         self.assertEqual(h.h_parse(self.parser, "", 0).ast.token_data.seq, [])
     def test_failure(self):
         pass
@@ -365,10 +366,10 @@ class TestSepBy1(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sepBy1(h.h_choice(h.h_ch("1"), h.h_ch("2"), h.h_ch("3")), h.h_ch(","))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "1,2,3", 5).ast.token_data.seq, ["1", "2", "3"])
-        self.assertEqual(h.h_parse(self.parser, "1,3,2", 5).ast.token_data.seq, ["1", "3", "2"])
-        self.assertEqual(h.h_parse(self.parser, "1,3", 3).ast.token_data.seq, ["1", "3"])
-        self.assertEqual(h.h_parse(self.parser, "3", 1).ast.token_data.seq, ["3"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "1,2,3", 5).ast.token_data.seq], [ord(y) for y in ["1", "2", "3"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "1,3,2", 5).ast.token_data.seq], [ord(y) for y in ["1", "3", "2"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "1,3", 3).ast.token_data.seq], [ord(y) for y in ["1", "3"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "3", 1).ast.token_data.seq], [ord(y) for y in ["3"]])
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "", 0), None)
 
@@ -377,7 +378,7 @@ class TestEpsilonP1(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("a"), h.h_epsilon_p(), h.h_ch("b"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "ab", 2).ast.token_data.seq, ["a", "b"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "ab", 2).ast.token_data.seq], [ord(y) for y in ["a", "b"]])
     def test_failure(self):
         pass
 
@@ -386,7 +387,7 @@ class TestEpsilonP2(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_epsilon_p(), h.h_ch("a"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.seq, ["a"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a", 1).ast.token_data.seq], [ord(y) for y in ["a"]])
     def test_failure(self):
         pass
 
@@ -395,7 +396,7 @@ class TestEpsilonP3(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("a"), h.h_epsilon_p())
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.seq, ["a"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a", 1).ast.token_data.seq], [ord(y) for y in ["a"]])
     def test_failure(self):
         pass
 
@@ -414,6 +415,7 @@ class TestAnd1(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_and(h.h_ch("0")), h.h_ch("0"))
     def test_success(self):
+        ### failing: [] != ["0"]. Token type is sequence.
         self.assertEqual(h.h_parse(self.parser, "0", 1).ast.token_data.seq, ["0"])
     def test_failure(self):
         pass
@@ -425,14 +427,15 @@ class TestAnd2(unittest.TestCase):
     def test_success(self):
         pass
     def test_failure(self):
-        self.assertEqual(h.h_parse(self.parser, "0", 1), None)
+        ### failing: [] is not None, parse should have failed
+        self.assertEqual(h.h_parse(self.parser, "0", 1).ast.token_data.seq, None)
 
 class TestAnd3(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("1"), h.h_and(h.h_ch("2")))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "12", 2).ast.token_data.seq, ["1"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "12", 2).ast.token_data.seq], [ord(y) for y in ["1"]])
     def test_failure(self):
         pass
 
@@ -441,7 +444,7 @@ class TestNot1(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("a"), h.h_choice(h.h_ch("+"), h.h_token("++", 2)), h.h_ch("b"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a+b", 3).ast.token_data.seq, ["a", "+", "b"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a+b", 3).ast.token_data.seq], [ord(y) for y in ["a", "+", "b"]])
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a++b", 4), None)
 
@@ -450,23 +453,24 @@ class TestNot2(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("a"), h.h_choice(h.h_sequence(h.h_ch("+"), h.h_not(h.h_ch("+"))), h.h_token("++", 2)), h.h_ch("b"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a+b", 3).ast.token_data.seq, ["a", ["+"], "b"])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a+b", 3).ast.token_data.seq], ["a", ["+"], "b"])
         self.assertEqual(h.h_parse(self.parser, "a++b", 4).ast.token_data.seq, ["a", "++", "b"])
     def test_failure(self):
         pass
 
-class TestLeftrec(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.parser = h.h_indirect()
-        a = h.h_ch("a")
-        h.h_bind_indirect(cls.parser, h.h_choice(h.h_sequence(cls.parser, a), a))
-    def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.bytes, "a")
-        self.assertEqual(h.h_parse(self.parser, "aa", 2).ast.token_data.seq, ["a", "a"])
-        self.assertEqual(h.h_parse(self.parser, "aaa", 3).ast.token_data.seq, ["a", "a", "a"])
-    def test_failure(self):
-        pass
+### this is commented out for packrat in C ...
+#class TestLeftrec(unittest.TestCase):
+#    @classmethod
+#    def setUpClass(cls):
+#        cls.parser = h.h_indirect()
+#        a = h.h_ch("a")
+#        h.h_bind_indirect(cls.parser, h.h_choice(h.h_sequence(cls.parser, a), a))
+#    def test_success(self):
+#        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.bytes, "a")
+#        self.assertEqual(h.h_parse(self.parser, "aa", 2).ast.token_data.seq, ["a", "a"])
+#        self.assertEqual(h.h_parse(self.parser, "aaa", 3).ast.token_data.seq, ["a", "a", "a"])
+#    def test_failure(self):
+#        pass
 
 class TestRightrec(unittest.TestCase):
     @classmethod
@@ -475,24 +479,25 @@ class TestRightrec(unittest.TestCase):
         a = h.h_ch("a")
         h.h_bind_indirect(cls.parser, h.h_choice(h.h_sequence(a, cls.parser), h.h_epsilon_p()))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.seq, ["a"])
-        self.assertEqual(h.h_parse(self.parser, "aa", 2).ast.token_data.seq, ["a", ["a"]])
-        self.assertEqual(h.h_parse(self.parser, "aaa", 3).ast.token_data.seq, ["a", ["a", ["a"]]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a", 1).ast.token_data.seq], [ord(y) for y in ["a"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "aa", 2).ast.token_data.seq], ["a", ["a"]])
+        self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "aaa", 3).ast.token_data.seq], ["a", ["a", ["a"]]])
     def test_failure(self):
         pass
 
-class TestAmbiguous(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.parser = h.h_indirect()
-        d = h.h_ch("d")
-        p = h.h_ch("+")
-        h.h_bind_indirect(cls.parser, h.h_choice(h.h_sequence(cls.parser, p, cls.parser), d))
-        # this is supposed to be flattened
-    def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "d", 1).ast.token_data.seq, ["d"])
-        self.assertEqual(h.h_parse(self.parser, "d+d", 3).ast.token_data.seq, ["d", "+", "d"])
-        self.assertEqual(h.h_parse(self.parser, "d+d+d", 5).ast.token_data.seq, ["d", "+", "d", "+", "d"])
-    def test_failure(self):
-        self.assertEqual(h.h_parse(self.parser, "d+", 2), None)
+### this is just for GLR
+#class TestAmbiguous(unittest.TestCase):
+#    @classmethod
+#    def setUpClass(cls):
+#        cls.parser = h.h_indirect()
+#        d = h.h_ch("d")
+#        p = h.h_ch("+")
+#        h.h_bind_indirect(cls.parser, h.h_choice(h.h_sequence(cls.parser, p, cls.parser), d))
+#        # this is supposed to be flattened
+#    def test_success(self):
+#        self.assertEqual(h.h_parse(self.parser, "d", 1).ast.token_data.seq, ["d"])
+#        self.assertEqual(h.h_parse(self.parser, "d+d", 3).ast.token_data.seq, ["d", "+", "d"])
+#        self.assertEqual(h.h_parse(self.parser, "d+d+d", 5).ast.token_data.seq, ["d", "+", "d", "+", "d"])
+#    def test_failure(self):
+#        self.assertEqual(h.h_parse(self.parser, "d+", 2), None)
 
