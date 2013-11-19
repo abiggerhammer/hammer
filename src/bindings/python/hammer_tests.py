@@ -477,18 +477,24 @@ class TestNot2(unittest.TestCase):
 # #    def test_failure(self):
 # #        pass
 
-# class TestRightrec(unittest.TestCase):
-#     @classmethod
-#     def setUpClass(cls):
-#         cls.parser = h.h_indirect()
-#         a = h.h_ch("a")
-#         h.h_bind_indirect(cls.parser, h.h_choice__a([h.h_sequence__a([a, cls.parser, None]), h.h_epsilon_p()]))
-#     def test_success(self):
-#         self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "a", 1).ast.token_data.seq], [ord(y) for y in ["a"]])
-#         self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "aa", 2).ast.token_data.seq], ["a", ["a"]])
-#         self.assertEqual([x.token_data.uint for x in h.h_parse(self.parser, "aaa", 3).ast.token_data.seq], ["a", ["a", ["a"]]])
-#     def test_failure(self):
-#         pass
+class TestARightrec(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.parser = h.h_indirect()
+        a = h.h_ch("a")
+        h.h_bind_indirect(cls.parser, h.h_choice__a([h.h_sequence__a([a, cls.parser, None]), h.h_epsilon_p(), None]))
+    def test_success(self):
+        tree = h.h_parse(self.parser, "a", 1).ast.token_data.seq
+        self.assertEqual(tree[0].token_data.uint, ord("a"))
+        tree = h_parse(self.parser, "aa", 2).ast.token_data.seq
+        self.assertEqual(tree[0].token_data.uint, ord("a"))
+        self.assertEqual(tree[1].token_data.seq[0].token_data.uint, ord("a"))
+        tree = h_parse(self.parser, "aaa", 3).ast.token_data.seq
+        self.assertEqual(tree[0].token_data.uint, ord("a"))
+        self.assertEqual(tree[1].token_data.seq[0].token_data.uint, ord("a"))
+        self.assertEqual(tree[1].token_data.seq[1].token_data.seq[0].uint, ord("a"))
+    def test_failure(self):
+        pass
 
 # ### this is just for GLR
 # #class TestAmbiguous(unittest.TestCase):
