@@ -4,7 +4,7 @@ compiler:
   - clang
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq swig python-dev
+  - sudo apt-get install -qq swig python-dev python-nose
 script: 
   - scons
 notifications:
