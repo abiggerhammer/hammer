@@ -1,4 +1,5 @@
 %module hammer
+%nodefaultctor;
 
 %include "stdint.i"
  //%include "typemaps.i"
@@ -7,10 +8,30 @@
 #if defined(SWIGPYTHON)
 %ignore HCountedArray_;
 %typemap(in) uint8_t* {
+  Py_INCREF($input);
   $1 = (uint8_t*)PyString_AsString($input);
  }
 %typemap(out) uint8_t* {
   $result = PyString_FromString((char*)$1);
+ }
+%typemap(in) void*[] {
+  if (PyList_Check($input)) {
+    Py_INCREF($input);
+    int size = PyList_Size($input);
+    int i = 0;
+    int res = 0;
+    $1 = (void**)malloc(size*sizeof(HParser*));
+    for (i=0; i<size; i++) {
+      PyObject *o = PyList_GetItem($input, i);
+      res = SWIG_ConvertPtr(o, &($1[i]), SWIGTYPE_p_HParser_, 0 | 0);
+      if (!SWIG_IsOK(res)) {
+	SWIG_exception_fail(SWIG_ArgError(res), "that wasn't an HParser" );
+      }
+    }
+  } else {
+    PyErr_SetString(PyExc_TypeError, "__a functions take lists of parsers as their argument");
+    return NULL;
+  }
  }
 %typemap(in) uint8_t {
   if (PyInt_Check($input)) {
@@ -23,11 +44,6 @@
     $1 = *(uint8_t*)PyString_AsString($input);
   }
  }
-/*
-%typemap(out) uint8_t {
-  $result = PyString_FromString(&$1);
- }
-*/
 %typemap(out) HBytes* {
   $result = PyString_FromStringAndSize((char*)$1->token, $1->len);
  }
