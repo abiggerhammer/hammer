@@ -6,7 +6,7 @@ class TestTokenParser(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_token("95\xa2", 3)
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "95\xa2", 3).ast.token_data.bytes.token, "95\xa2")
+        self.assertEqual(h.h_parse(self.parser, "95\xa2", 3).ast.token_data.bytes, "95\xa2")
     def test_partial_fails(self):
         self.assertEqual(h.h_parse(self.parser, "95", 2), None)
 
@@ -226,7 +226,7 @@ class TestSequence(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence(h.h_ch("a"), h.h_ch("b"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "ab").ast.token_data.seq, ["a", "b"])
+        self.assertEqual(h.h_parse(self.parser, "ab", 2).ast.token_data.seq, ["a", "b"])
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a", 1), None)
         self.assertEqual(h.h_parse(self.parser, "b", 1), None)
@@ -255,7 +255,7 @@ class TestChoice(unittest.TestCase):
 class TestButNot(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.parser = h.h_butnot(h.h_ch("a"), h.h_token("ab"))
+        cls.parser = h.h_butnot(h.h_ch("a"), h.h_token("ab", 2))
     def test_success(self):
         self.assertEqual(h.h_parse(self.parser, "a", 1).ast.token_data.bytes, "a")
         self.assertEqual(h.h_parse(self.parser, "aa", 2).ast.token_data.bytes, "a")
@@ -439,7 +439,7 @@ class TestAnd3(unittest.TestCase):
 class TestNot1(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.parser = h.h_sequence(h.h_ch("a"), h.h_choice(h.h_ch("+"), h.h_token("++")), h.h_ch("b"))
+        cls.parser = h.h_sequence(h.h_ch("a"), h.h_choice(h.h_ch("+"), h.h_token("++", 2)), h.h_ch("b"))
     def test_success(self):
         self.assertEqual(h.h_parse(self.parser, "a+b", 3).ast.token_data.seq, ["a", "+", "b"])
     def test_failure(self):
@@ -448,7 +448,7 @@ class TestNot1(unittest.TestCase):
 class TestNot2(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.parser = h.h_sequence(h.h_ch("a"), h.h_choice(h.h_sequence(h.h_ch("+"), h.h_not(h.h_ch("+"))), h.h_token("++")), h.h_ch("b"))
+        cls.parser = h.h_sequence(h.h_ch("a"), h.h_choice(h.h_sequence(h.h_ch("+"), h.h_not(h.h_ch("+"))), h.h_token("++", 2)), h.h_ch("b"))
     def test_success(self):
         self.assertEqual(h.h_parse(self.parser, "a+b", 3).ast.token_data.seq, ["a", ["+"], "b"])
         self.assertEqual(h.h_parse(self.parser, "a++b", 4).ast.token_data.seq, ["a", "++", "b"])
