@@ -26,12 +26,12 @@
 #define LDB(range,i) (((i)>>LSB(range))&((1<<(MSB(range)-LSB(range)+1))-1))
 
 
-long long h_read_bits(HInputStream* state, int count, char signed_p) {
+int64_t h_read_bits(HInputStream* state, int count, char signed_p) {
   // BUG: Does not 
-  long long out = 0;
+  int64_t out = 0;
   int offset = 0;
   int final_shift = 0;
-  long long msb = ((signed_p ? 1LL:0) << (count - 1)); // 0 if unsigned, else 1 << (nbits - 1)
+  int64_t msb = ((signed_p ? 1LL:0) << (count - 1)); // 0 if unsigned, else 1 << (nbits - 1)
   
   
   // overflow check...

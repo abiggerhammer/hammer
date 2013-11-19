@@ -17,7 +17,9 @@
 
 #ifndef HAMMER_HAMMER__H
 #define HAMMER_HAMMER__H
+#ifndef HAMMER_INTERNAL__NO_STDARG_H
 #include <stdarg.h>
+#endif // HAMMER_INTERNAL__NO_STDARG_H
 #include <stdint.h>
 #include <stdio.h>
 #include "allocator.h"
@@ -97,7 +99,7 @@ typedef struct HParsedToken_ {
  */
 typedef struct HParseResult_ {
   const HParsedToken *ast;
-  long long bit_length;
+  int64_t bit_length;
   HArena * arena;
 } HParseResult;
 
@@ -180,12 +182,13 @@ typedef struct HBenchmarkResults_ {
   rtype_t name(__VA_ARGS__) attr;					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__) attr
 
+#ifndef HAMMER_INTERNAL__NO_STDARG_H
 #define HAMMER_FN_DECL_VARARGS(rtype_t, name, ...)			\
   rtype_t name(__VA_ARGS__, ...);					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...);		\
   rtype_t name##__mv(HAllocator* mm__, __VA_ARGS__, va_list ap);	\
-  rtype_t name##__v(__VA_ARGS__, va_list ap);   \
-  rtype_t name##__a(void *args[]);  \
+  rtype_t name##__v(__VA_ARGS__, va_list ap);				\
+  rtype_t name##__a(void *args[]);					\
   rtype_t name##__ma(HAllocator *mm__, void *args[])
 
 // Note: this drops the attributes on the floor for the __v versions
@@ -193,10 +196,23 @@ typedef struct HBenchmarkResults_ {
   rtype_t name(__VA_ARGS__, ...) attr;					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...) attr;		\
   rtype_t name##__mv(HAllocator* mm__, __VA_ARGS__, va_list ap);	\
-  rtype_t name##__v(__VA_ARGS__, va_list ap); \
-  rtype_t name##__a(void *args[]);  \
+  rtype_t name##__v(__VA_ARGS__, va_list ap);				\
+  rtype_t name##__a(void *args[]);					\
+  rtype_t name##__ma(HAllocator *mm__, void *args[])
+#else
+#define HAMMER_FN_DECL_VARARGS(rtype_t, name, ...)			\
+  rtype_t name(__VA_ARGS__, ...);					\
+  rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...);		\
+  rtype_t name##__a(void *args[]);					\
   rtype_t name##__ma(HAllocator *mm__, void *args[])
 
+// Note: this drops the attributes on the floor for the __v versions
+#define HAMMER_FN_DECL_VARARGS_ATTR(attr, rtype_t, name, ...)		\
+  rtype_t name(__VA_ARGS__, ...) attr;					\
+  rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...) attr;		\
+  rtype_t name##__a(void *args[]);					\
+  rtype_t name##__ma(HAllocator *mm__, void *args[])
+#endif // HAMMER_INTERNAL__NO_STDARG_H
 // }}}
 
 
@@ -571,7 +587,7 @@ HAMMER_FN_DECL(void, h_parse_result_free, HParseResult *result);
  * Format token into a compact unambiguous form. Useful for parser test cases.
  * Caller is responsible for freeing the result.
  */
-HAMMER_FN_DECL(char*, h_write_result_unamb, const HParsedToken* tok);
+char* h_write_result_unamb(const HParsedToken* tok);
 /**
  * Format token to the given output stream. Indent starting at
  * [indent] spaces, with [delta] spaces between levels.
@@ -595,7 +611,7 @@ HBitWriter *h_bit_writer_new(HAllocator* mm__);
 /**
  * TODO: Document me
  */
-void h_bit_writer_put(HBitWriter* w, unsigned long long data, size_t nbits);
+void h_bit_writer_put(HBitWriter* w, uint64_t data, size_t nbits);
 
 /**
  * TODO: Document me

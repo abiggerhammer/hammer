@@ -1,8 +1,32 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
 #include "hammer.h"
 #include "internal.h"
+
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
+void h_benchmark_clock_gettime(struct timespec *ts) {
+#ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
+  /* 
+   * This returns real time, not CPU time. See http://stackoverflow.com/a/6725161
+   * Possible solution: http://stackoverflow.com/a/11659289
+   */
+  clock_serv_t cclock;
+  mach_timespec_t mts;
+  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+  clock_get_time(cclock, &mts);
+  mach_port_deallocate(mach_task_self(), cclock);
+  ts->tv_sec = mts.tv_sec;
+  ts->tv_nsec = mts.tv_nsec;
+#else
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, ts);
+#endif
+}
 
 /*
   Usage:
@@ -85,15 +109,15 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
       // TODO: replace this with a posix timer-based benchmark. (cf. timerfd_create, timer_create, setitimer)
       int count = 1, cur;
       struct timespec ts_start, ts_end;
-      long long time_diff;
+      int64_t time_diff;
       do {
 	count *= 2; // Yes, this means that the first run will run the function twice. This is fine, as we want multiple runs anyway.
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts_start);
+  h_benchmark_clock_gettime(&ts_start);
 	for (cur = 0; cur < count; cur++) {
 	  h_parse_result_free(h_parse(parser, tc->input, tc->length));
 	}
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts_end);
-	
+  h_benchmark_clock_gettime(&ts_end);
+
 	// time_diff is in ns
 	time_diff = (ts_end.tv_sec - ts_start.tv_sec) * 1000000000 + (ts_end.tv_nsec - ts_start.tv_nsec);
       } while (time_diff < 100000000);
@@ -106,11 +130,11 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
 
 void h_benchmark_report(FILE* stream, HBenchmarkResults* result) {
   for (size_t i=0; i<result->len; ++i) {
-    fprintf(stream, "Backend %ld ... \n", i);
+    fprintf(stream, "Backend %zd ... \n", i);
     for (size_t j=0; j<result->results[i].n_testcases; ++j) {
       if(result->results[i].cases == NULL)
         continue;
-      fprintf(stream, "Case %ld: %ld ns/parse\n", j,  result->results[i].cases[j].parse_time);
+      fprintf(stream, "Case %zd: %zd ns/parse\n", j,  result->results[i].cases[j].parse_time);
     }
   }
 }

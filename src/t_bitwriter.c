@@ -1,10 +1,11 @@
 #include <glib.h>
+#include <stdint.h>
 #include "hammer.h"
 #include "internal.h"
 #include "test_suite.h"
 
 typedef struct {
-  unsigned long long data;
+  uint64_t data;
   size_t nbits;
 } bitwriter_test_elem; // should end with {0,0}
 
@@ -29,7 +30,7 @@ void run_bitwriter_test(bitwriter_test_elem data[], char flags) {
   };
 
   for (i = 0; data[i].nbits; i++) {
-    g_check_cmpulonglong ((unsigned long long)h_read_bits(&input, data[i].nbits, FALSE), ==,  data[i].data);
+    g_check_cmp_uint64((uint64_t)h_read_bits(&input, data[i].nbits, FALSE), ==,  data[i].data);
   }
 }
 

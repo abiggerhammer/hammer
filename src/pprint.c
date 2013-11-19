@@ -21,6 +21,7 @@
 #include "hammer.h"
 #include "internal.h"
 #include <stdlib.h>
+#include <inttypes.h>
 
 typedef struct pp_state {
   int delta;
@@ -49,13 +50,13 @@ void h_pprint(FILE* stream, const HParsedToken* tok, int indent, int delta) {
     break;
   case TT_SINT:
     if (tok->sint < 0)
-      fprintf(stream, "%*ss -%#lx\n", indent, "", -tok->sint);
+      fprintf(stream, "%*ss -%#" PRIx64 "\n", indent, "", -tok->sint);
     else
-      fprintf(stream, "%*ss %#lx\n", indent, "", tok->sint);
+      fprintf(stream, "%*ss %#" PRIx64 "\n", indent, "", tok->sint);
       
     break;
   case TT_UINT:
-    fprintf(stream, "%*su %#lx\n", indent, "", tok->uint);
+    fprintf(stream, "%*su %#" PRIx64 "\n", indent, "", tok->uint);
     break;
   case TT_SEQUENCE: {
     fprintf(stream, "%*s[\n", indent, "");
@@ -80,14 +81,13 @@ void h_pprint(FILE* stream, const HParsedToken* tok, int indent, int delta) {
 
 struct result_buf {
   char* output;
-  HAllocator *mm__;
   size_t len;
   size_t capacity;
 };
 
 static inline void ensure_capacity(struct result_buf *buf, int amt) {
   while (buf->len + amt >= buf->capacity)
-    buf->output = buf->mm__->realloc(buf->mm__, buf->output, buf->capacity *= 2);
+    buf->output = realloc(buf->output, buf->capacity *= 2);
 }
 
 static inline void append_buf(struct result_buf *buf, const char* input, int len) {
@@ -128,14 +128,14 @@ static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
     break;
   case TT_SINT:
     if (tok->sint < 0)
-      len = asprintf(&tmpbuf, "s-%#lx", -tok->sint);
+      len = asprintf(&tmpbuf, "s-%#" PRIx64, -tok->sint);
     else
-      len = asprintf(&tmpbuf, "s%#lx", tok->sint);
+      len = asprintf(&tmpbuf, "s%#" PRIx64, tok->sint);
     append_buf(buf, tmpbuf, len);
     free(tmpbuf);
     break;
   case TT_UINT:
-    len = asprintf(&tmpbuf, "u%#lx", tok->uint);
+    len = asprintf(&tmpbuf, "u%#" PRIx64, tok->uint);
     append_buf(buf, tmpbuf, len);
     free(tmpbuf);
     break;
@@ -160,13 +160,9 @@ static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
   
 
 char* h_write_result_unamb(const HParsedToken* tok) {
-  return h_write_result_unamb__m(&system_allocator, tok);
-}
-char* h_write_result_unamb__m(HAllocator* mm__, const HParsedToken* tok) {
   struct result_buf buf = {
-    .output = mm__->alloc(mm__, 16),
+    .output = malloc(16),
     .len = 0,
-    .mm__ = mm__,
     .capacity = 16
   };
   unamb_sub(tok, &buf);

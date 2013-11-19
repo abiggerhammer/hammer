@@ -2,6 +2,7 @@ language: c
 compiler:
   - gcc
   - clang
-script: scons
+script: 
+  - scons
 notifications:
   irc: "irc.upstandinghackers.com#hammer"

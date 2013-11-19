@@ -17,7 +17,9 @@
 
 #ifndef HAMMER_TEST_SUITE__H
 #define HAMMER_TEST_SUITE__H
+#include <stdint.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 // Equivalent to g_assert_*, but not using g_assert...
 #define g_check_inttype(fmt, typ, n1, op, n2) do {				\
@@ -96,12 +98,33 @@
     }									\
   } while(0)
 
-#define g_check_parse_ok(parser, backend, input, inp_len, result) do {	\
+#define g_check_parse_ok(parser, backend, input, inp_len) do {		\
     int skip = h_compile((HParser *)(parser), (HParserBackend) backend, NULL); \
-  if(skip) {	\
-      g_test_message("Backend not applicable, skipping test");	\
-      break;	\
-    }	\
+    if(skip) {								\
+      g_test_message("Backend not applicable, skipping test");		\
+      break;								\
+    }									\
+    HParseResult *res = h_parse(parser, (const uint8_t*)input, inp_len); \
+    if (!res) {								\
+      g_test_message("Parse failed on line %d", __LINE__);		\
+      g_test_fail();							\
+    } else {								\
+      HArenaStats stats;						\
+      h_allocator_stats(res->arena, &stats);				\
+      g_test_message("Parse used %zd bytes, wasted %zd bytes. "		\
+                     "Inefficiency: %5f%%",				\
+		     stats.used, stats.wasted,				\
+		     stats.wasted * 100. / (stats.used+stats.wasted));	\
+      h_delete_arena(res->arena);					\
+    }									\
+  } while(0)
+
+#define g_check_parse_match(parser, backend, input, inp_len, result) do { \
+    int skip = h_compile((HParser *)(parser), (HParserBackend) backend, NULL); \
+    if(skip) {								\
+      g_test_message("Backend not applicable, skipping test");		\
+      break;								\
+    }									\
     HParseResult *res = h_parse(parser, (const uint8_t*)input, inp_len); \
     if (!res) {								\
       g_test_message("Parse failed on line %d", __LINE__);		\
@@ -109,7 +132,7 @@
     } else {								\
       char* cres = h_write_result_unamb(res->ast);			\
       g_check_string(cres, ==, result);					\
-      system_allocator.free(&system_allocator, cres);			\
+      free(cres);							\
       HArenaStats stats;						\
       h_allocator_stats(res->arena, &stats);				\
       g_test_message("Parse used %zd bytes, wasted %zd bytes. "		\
@@ -138,7 +161,7 @@
     size_t expected = n;						\
     size_t actual = (table)->used;					\
     if(actual != expected) {						\
-      g_test_message("Check failed: table size should have been %lu, but was %lu", \
+      g_test_message("Check failed: table size should have been %zu, but was %zu", \
 		     expected, actual);					\
       g_test_fail();							\
     }									\
@@ -161,6 +184,7 @@
   } while(0)
 
 
+// This stuff needs to be made internal-only; it has no use in user-level test suites
 #define g_check_terminal(grammar, parser) \
   g_check_hashtable_absent(grammar->nts, h_desugar(&system_allocator, NULL, parser))
 
@@ -188,12 +212,10 @@
 
 
 
-#define g_check_cmpint(n1, op, n2) g_check_inttype("%d", int, n1, op, n2)
-#define g_check_cmplong(n1, op, n2) g_check_inttype("%ld", long, n1, op, n2)
-#define g_check_cmplonglong(n1, op, n2) g_check_inttype("%lld", long long, n1, op, n2)
-#define g_check_cmpuint(n1, op, n2) g_check_inttype("%u", unsigned int, n1, op, n2)
-#define g_check_cmpulong(n1, op, n2) g_check_inttype("%lu", unsigned long, n1, op, n2)
-#define g_check_cmpulonglong(n1, op, n2) g_check_inttype("%llu", unsigned long long, n1, op, n2)
+#define g_check_cmp_int32(n1, op, n2) g_check_inttype("%d", int32_t, n1, op, n2)
+#define g_check_cmp_int64(n1, op, n2) g_check_inttype("%" PRId64, int64_t, n1, op, n2)
+#define g_check_cmp_uint32(n1, op, n2) g_check_inttype("%u", uint32_t, n1, op, n2)
+#define g_check_cmp_uint64(n1, op, n2) g_check_inttype("%" PRIu64, uint64_t, n1, op, n2)
 #define g_check_cmpfloat(n1, op, n2) g_check_inttype("%g", float, n1, op, n2)
 #define g_check_cmpdouble(n1, op, n2) g_check_inttype("%g", double, n1, op, n2)
 

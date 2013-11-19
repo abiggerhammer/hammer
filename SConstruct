@@ -1,8 +1,39 @@
 # -*- python -*-
 import os
-env = Environment()
+import os.path
+import sys
 
-env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -lrt")
+
+vars = Variables(None, ARGUMENTS)
+vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
+vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
+
+env = Environment(ENV = {'PATH' : os.environ['PATH']}, variables = vars)
+
+def calcInstallPath(*elements):
+    path = os.path.abspath(os.path.join(*map(env.subst, elements)))
+    if 'DESTDIR' in env:
+        path = os.path.join(env['DESTDIR'], os.path.relpath(path, start="/"))
+    return path
+
+rel_prefix = not os.path.isabs(env['prefix'])
+env['prefix'] = os.path.abspath(env['prefix'])
+if 'DESTDIR' in env:
+    env['DESTDIR'] = os.path.abspath(env['DESTDIR'])
+    if rel_prefix:
+        print >>sys.stderr, "--!!-- You used a relative prefix with a DESTDIR. This is probably not what you"
+        print >>sys.stderr, "--!!-- you want; files will be installed in"
+        print >>sys.stderr, "--!!--    %s" % (calcInstallPath("$prefix"),)
+
+
+env['libpath'] = calcInstallPath("$prefix", "lib")
+env['incpath'] = calcInstallPath("$prefix", "include", "hammer")
+# TODO: Add pkgconfig
+
+env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes")
+
+if not env['PLATFORM'] == 'darwin':
+    env.MergeFlags("-lrt")
 
 AddOption("--variant",
           dest="variant",
@@ -11,6 +42,12 @@ AddOption("--variant",
           default="opt",
           action="store",
           help="Build variant (debug or opt)")
+
+AddOption("--coverage",
+          dest="coverage",
+          default=False,
+          action="store_true",
+          help="Build with coverage instrumentation")
 
 env['BUILDDIR'] = 'build/$VARIANT'
 
@@ -25,12 +62,25 @@ if GetOption("variant") == 'debug':
 else:
     env = opt
 
-if os.getenv("CC") == "clang":
+if GetOption("coverage"):
+    env.Append(CFLAGS=["-fprofile-arcs", "-ftest-coverage"],
+               CXXFLAGS=["-fprofile-arcs", "-ftest-coverage"],
+               LDFLAGS=["-fprofile-arcs", "-ftest-coverage"],
+               LIBS=['gcov'])
+
+if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",
                 CXX="clang++")
+
+#rootpath = env['ROOTPATH'] = os.path.abspath('.')
+#env.Append(CPPPATH=os.path.join('#', "hammer"))
+
 Export('env')
 
 env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
 env.SConscript(["examples/SConscript"], variant_dir='build/$VARIANT/examples')
 
 env.Command('test', 'build/$VARIANT/src/test_suite', 'env LD_LIBRARY_PATH=build/$VARIANT/src $SOURCE')
+
+env.Alias("install", "$libpath")
+env.Alias("install", "$incpath")
