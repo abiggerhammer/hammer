@@ -13,4 +13,7 @@ pythonenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
 
 swig = ['hammer.i']
 
-libhammer_python = pythonenv.SharedLibrary('hammer', swig)
+libhammer_python = pythonenv.SharedLibrary('hammer', swig, SHLIBPREFIX='_')
+
+pytestenv = pythonenv.Clone()
+pytestenv.Command(None, 'hammer_tests.py', "nosetests $SOURCE")
