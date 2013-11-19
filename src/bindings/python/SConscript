@@ -16,4 +16,6 @@ swig = ['hammer.i']
 libhammer_python = pythonenv.SharedLibrary('hammer', swig, SHLIBPREFIX='_')
 
 pytestenv = pythonenv.Clone()
-pytestenv.Command(None, 'hammer_tests.py', "nosetests $SOURCE")
+pytestenv.Command(None, 'hammer_tests.py', "nosetests -v $SOURCE")
+
+Clean('.', ['hammer.pyc', 'hammer_tests.py', 'hammer_tests.pyc']) 
