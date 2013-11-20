@@ -21,3 +21,4 @@ Session.vim
 cscope.out
 build/
 .sconsign.dblite
+*.pyc
