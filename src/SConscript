@@ -64,6 +64,7 @@ libhammer_static = env.StaticLibrary('hammer', parsers + backends + misc_hammer_
 
 env.Install("$libpath", [libhammer_static, libhammer_shared])
 env.Install("$incpath", dist_headers)
+env.Install("$pkgconfigpath", "../../../libhammer.pc")
 
 testenv = env.Clone()
 testenv.ParseConfig('pkg-config --cflags --libs glib-2.0')

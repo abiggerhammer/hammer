@@ -8,7 +8,7 @@ vars = Variables(None, ARGUMENTS)
 vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
 
-env = Environment(ENV = {'PATH' : os.environ['PATH']}, variables = vars)
+env = Environment(ENV = {'PATH' : os.environ['PATH']}, variables = vars, tools=['default', 'scanreplace'], toolpath=['tools'])
 
 def calcInstallPath(*elements):
     path = os.path.abspath(os.path.join(*map(env.subst, elements)))
@@ -28,7 +28,8 @@ if 'DESTDIR' in env:
 
 env['libpath'] = calcInstallPath("$prefix", "lib")
 env['incpath'] = calcInstallPath("$prefix", "include", "hammer")
-# TODO: Add pkgconfig
+env['pkgconfigpath'] = calcInstallPath("$prefix", "lib", "pkgconfig")
+env.ScanReplace('libhammer.pc.in')
 
 env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes")
 
@@ -89,3 +90,4 @@ env.Command('test', 'build/$VARIANT/src/test_suite', 'env LD_LIBRARY_PATH=build/
 
 env.Alias("install", "$libpath")
 env.Alias("install", "$incpath")
+env.Alias("install", "$pkgconfigpath")
