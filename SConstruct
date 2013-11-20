@@ -68,9 +68,14 @@ if GetOption("coverage"):
                LDFLAGS=["-fprofile-arcs", "-ftest-coverage"],
                LIBS=['gcov'])
 
+env["CC"] = os.getenv("CC") or env["CC"]
+env["CXX"] = os.getenv("CXX") or env["CXX"]
+
 if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",
                 CXX="clang++")
+
+env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 
 #rootpath = env['ROOTPATH'] = os.path.abspath('.')
 #env.Append(CPPPATH=os.path.join('#', "hammer"))
