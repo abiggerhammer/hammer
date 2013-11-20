@@ -136,11 +136,12 @@
 
 #if defined(SWIGPHP)
 %ignore HCountedArray_;
-%typemap(in) uint8_t* {
-
+%typemap(in) (uint8_t* input, size_t len) {
+  $1 = (uint8_t*)$input->value.str.val;
+  $2 = $input->value.str.len;
  }
-%typemap(out) uint8_t* {
-
+%typemap(out) (uint8_t* input, size_t len) {
+  RETVAL_STRINGL((char*)$1, $2, 1);
  }
 %typemap(in) void*[] {
 
