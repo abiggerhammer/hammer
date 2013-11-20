@@ -6,15 +6,15 @@ pythonenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
 
 pythonenv.Append(CPPPATH = ['../../', '/usr/include/python2.7'])
 pythonenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error'])
-#pythonenv.Append(LIBS = ['hammer'])
-#pythonenv.Append(LIBPATH = ['../../'])
+pythonenv.Append(LIBS = ['hammer'])
+pythonenv.Append(LIBPATH = ['../../'])
 pythonenv.Append(SWIGFLAGS = ['-DHAMMER_INTERNAL__NO_STDARG_H', '-Isrc/', '-python'])
 
 pythonenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
 
 swig = ['hammer.i']
 
-libhammer_python = pythonenv.SharedLibrary('hammer', libhammer_shared + swig, SHLIBPREFIX='_')
+libhammer_python = pythonenv.SharedLibrary('hammer', swig, SHLIBPREFIX='_')
 
 pytestenv = pythonenv.Clone()
 pytestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
