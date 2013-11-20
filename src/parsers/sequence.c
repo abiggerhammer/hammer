@@ -159,6 +159,8 @@ HParser* h_sequence__ma(HAllocator* mm__, void *args[]) {
   
   s->len = len;
   HParser *ret = h_new(HParser, 1);
-  ret->vtable = &sequence_vt; ret->env = (void*)s;
+  ret->vtable = &sequence_vt; 
+  ret->env = (void*)s; 
+  ret->backend = PB_MIN;
   return ret;
 }

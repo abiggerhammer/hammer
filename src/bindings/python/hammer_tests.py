@@ -477,7 +477,7 @@ class TestNot2(unittest.TestCase):
 # #    def test_failure(self):
 # #        pass
 
-class TestARightrec(unittest.TestCase):
+class TestRightrec(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.parser = h.h_indirect()
@@ -486,13 +486,13 @@ class TestARightrec(unittest.TestCase):
     def test_success(self):
         tree = h.h_parse(self.parser, "a", 1).ast.token_data.seq
         self.assertEqual(tree[0].token_data.uint, ord("a"))
-        tree = h_parse(self.parser, "aa", 2).ast.token_data.seq
+        tree = h.h_parse(self.parser, "aa", 2).ast.token_data.seq
         self.assertEqual(tree[0].token_data.uint, ord("a"))
         self.assertEqual(tree[1].token_data.seq[0].token_data.uint, ord("a"))
-        tree = h_parse(self.parser, "aaa", 3).ast.token_data.seq
+        tree = h.h_parse(self.parser, "aaa", 3).ast.token_data.seq
         self.assertEqual(tree[0].token_data.uint, ord("a"))
         self.assertEqual(tree[1].token_data.seq[0].token_data.uint, ord("a"))
-        self.assertEqual(tree[1].token_data.seq[1].token_data.seq[0].uint, ord("a"))
+        self.assertEqual(tree[1].token_data.seq[1].token_data.seq[0].token_data.uint, ord("a"))
     def test_failure(self):
         pass
 
