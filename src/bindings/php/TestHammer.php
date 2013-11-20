@@ -13,7 +13,8 @@ class TestHammer extends PHPUnit_Framework_TestCase
     public function testSuccess() 
     {
         $result = hammer::h_parse($this->parser, "95\xa2", 3);
-        $this->assertEquals($result->ast->token_data->bytes, "95\xa2");
+        var_dump($result);
+        $this->assertEquals($result->__get("ast")->__get("token_data")->__get("bytes"), "95\xa2");
     }     
     public function testFailure()
     {
