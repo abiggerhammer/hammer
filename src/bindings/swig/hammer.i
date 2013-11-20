@@ -9,10 +9,10 @@
   $1 = (uint8_t*)(*$input)->value.str.val;
   $2 = (*$input)->value.str.len;
  }
-%typemap(out) (uint8_t* input, size_t len) {
+%typemap(out) (uint8_t* input, size_t length) {
   RETVAL_STRINGL((char*)$1, $2, 1);
  }
-//%apply (uint8_t* input, size_t len) { (uint8_t* str, size_t len) }
+%apply (const uint8_t* str, const size_t len) { (const uint8_t* input, size_t length) }
 %typemap(in) void*[] {
 
  }
