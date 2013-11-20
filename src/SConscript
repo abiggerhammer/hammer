@@ -49,6 +49,7 @@ misc_hammer_parts = [
     'glue.c',
     'hammer.c',
     'pprint.c',
+    'registry.c',
     'system_allocator.c']
 
 tests = ['t_benchmark.c',

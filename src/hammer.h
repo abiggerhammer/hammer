@@ -633,4 +633,15 @@ void h_benchmark_report(FILE* stream, HBenchmarkResults* results);
 void h_benchmark_dump_optimized_code(FILE* stream, HBenchmarkResults* results);
 // }}}
 
+// {{{ Token type registry
+/// Allocate a new, unused (as far as this function knows) token type.
+int h_allocate_token_type(const char* name);
+
+/// Get the token type associated with name. Returns -1 if name is unkown
+int h_get_token_type_number(const char* name);
+
+/// Get the name associated with token_type. Returns NULL if the token type is unkown
+const char* h_get_token_type_name(int token_type);
+// }}}
+
 #endif // #ifndef HAMMER_HAMMER__H
