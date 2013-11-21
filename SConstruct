@@ -88,7 +88,6 @@ env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 Export('env')
 
 lib = env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
-Default(lib)
 
 env.Alias("examples", env.SConscript(["examples/SConscript"], variant_dir='build/$VARIANT/examples'))
 
