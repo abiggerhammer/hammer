@@ -12,6 +12,8 @@ before_install:
   - sudo pear upgrade-all
   - sudo pear install --alldeps phpunit/PHPUnit
   - sudo pear install --force --alldeps phpunit/PHPUnit
+before_script:
+  - phpenv config-add hammer.ini
 script: 
   - scons
 notifications:
