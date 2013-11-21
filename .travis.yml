@@ -21,6 +21,6 @@ before_script:
 script: 
   - scons
 after_script:
-  - phpunit 
+  - phpunit src/bindings/php/Tests
 notifications:
   irc: "irc.upstandinghackers.com#hammer"
