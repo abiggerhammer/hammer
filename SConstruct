@@ -37,6 +37,7 @@ env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attr
 
 if not env['PLATFORM'] == 'darwin':
     env.MergeFlags("-lrt")
+    env.Append(SHLINKFLAGS = ['-install_name ' + '$TARGET'])
 
 AddOption("--variant",
           dest="variant",
@@ -77,8 +78,6 @@ env["CXX"] = os.getenv("CXX") or env["CXX"]
 if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",
                 CXX="clang++")
-
-env.Append(SHLINKFLAGS = ['-install_name ' + '$TARGET'])
 
 env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 
