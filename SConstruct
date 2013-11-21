@@ -87,10 +87,12 @@ env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 
 Export('env')
 
-env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
-env.SConscript(["examples/SConscript"], variant_dir='build/$VARIANT/examples')
+lib = env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
+Default(lib)
 
-env.Command('test', 'build/$VARIANT/src/test_suite', 'env LD_LIBRARY_PATH=build/$VARIANT/src $SOURCE')
+env.Alias("examples", env.SConscript(["examples/SConscript"], variant_dir='build/$VARIANT/examples'))
+
+env.Alias("test", env.Command('test', 'build/$VARIANT/src/test_suite', 'env LD_LIBRARY_PATH=build/$VARIANT/src $SOURCE'))
 
 env.Alias("install", "$libpath")
 env.Alias("install", "$incpath")
