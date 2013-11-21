@@ -3,33 +3,33 @@ compiler:
   - gcc
   - clang
 env:
-  - WITHPHP=false
+  - BINDINGS=none
 matrix:
   include:
     - compiler: gcc
       language: php
       php: 5.5
-      env: WITHPHP=true
+      env: BINDINGS=php
     - compiler: clang
       language: php
       php: 5.5
-      env: WITHPHP=true
+      env: BINDINGS=php
     - compiler: gcc
       language: php
       php: 5.4
-      env: WITHPHP=true
+      env: BINDINGS=php
     - compiler: clang
       language: php
       php: 5.4
-      env: WITHPHP=true
+      env: BINDINGS=php
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq swig php5-dev
 before_script:
-  - if [ "$WITHPHP" == "true" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
+  - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
 script: 
   - scons
 after_script:
-  - if [ "$WITHPHP" == "true" ]; then phpunit -v src/bindings/php/Tests; fi
+  - if [ "$BINDINGS" == "php" ]; then phpunit -v src/bindings/php/Tests; fi
 notifications:
   irc: "irc.upstandinghackers.com#hammer"
