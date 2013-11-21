@@ -5,6 +5,11 @@ compiler:
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq swig php5-dev php-pear
+  - sudo pear channel-discover pear.phpunit.de
+  - sudo pear channel-discover pear.symfony-project.com
+  - sudo pear channel-discover components.ez.no
+  - sudo pear update-channels
+  - sudo pear upgrade-all
   - sudo pear install --alldeps phpunit/PHPUnit
 script: 
   - scons
