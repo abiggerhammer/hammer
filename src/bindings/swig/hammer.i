@@ -140,9 +140,9 @@
   $1 = (uint8_t*)(*$input)->value.str.val;
   $2 = (*$input)->value.str.len;
  }
-%typemap(out) (uint8_t* input, size_t length) {
-  RETVAL_STRINGL((char*)$1, $2, 1);
- }
+//%typemap(out) (const uint8_t* str, const size_t len) {
+//  RETVAL_STRINGL((char*)$1, $2, 1);
+// }
 %apply (const uint8_t* str, const size_t len) { (const uint8_t* input, size_t length) }
 %typemap(in) void*[] {
 
@@ -151,7 +151,7 @@
 
  }
 %typemap(out) HBytes* {
-
+  RETVAL_STRINGL((char*)$1->token, $1->len, 1);
  }
 %typemap(out) struct HCountedArray_* {
 

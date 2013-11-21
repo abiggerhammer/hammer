@@ -8,17 +8,23 @@ class TestHammer extends PHPUnit_Framework_TestCase
 
     protected function setUp() 
     {
-        $this->parser = hammer::h_token("95\xa2", 3);
+        $this->parser = h_token("95\xa2");
     }
     public function testSuccess() 
     {
-        $result = hammer::h_parse($this->parser, "95\xa2", 3);
-        var_dump($result);
-        $this->assertEquals($result->__get("ast")->__get("token_data")->__get("bytes"), "95\xa2");
+        $result = h_parse($this->parser, "95\xa2");
+        //var_dump($result);
+        $ast = hparseresult_ast_get($result);
+        //var_dump($ast);
+        $token_data = hparsedtoken_token_data_get($ast);
+        //var_dump($token_data);
+        $bytes = htokendata_bytes_get($token_data);
+        //var_dump($bytes);
+        $this->assertEquals($bytes, "95\xa2");
     }     
     public function testFailure()
     {
-        $result = hammer::h_parse($this->parser, "95", 2);
+        $result = h_parse($this->parser, "95");
         $this->assertEquals($result, NULL);
     }
 }
