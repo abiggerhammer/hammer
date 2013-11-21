@@ -11,6 +11,7 @@ before_install:
   - sudo pear update-channels
   - sudo pear upgrade-all
   - sudo pear install --alldeps phpunit/PHPUnit
+  - sudo pear install --force --alldeps phpunit/PHPUnit
 script: 
   - scons
 notifications:
