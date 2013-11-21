@@ -16,9 +16,9 @@ swig = ['hammer.i']
 
 libhammer_php = phpenv.SharedLibrary('hammer', swig)
 
-phptestenv = phpenv.Clone()
-phptestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
-tests = phptestenv.Dir('Tests/') 
-phptestenv.Command(tests, [libhammer_php], "phpunit -v --include-path "+os.getcwd()+" $TARGET")
+#phptestenv = phpenv.Clone()
+#phptestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
+#tests = phptestenv.Dir('Tests/') 
+#phptestenv.Command(tests, [libhammer_php], "phpunit -v --include-path "+os.getcwd()+" $TARGET")
 
 Clean('.', ['hammer.php'])
