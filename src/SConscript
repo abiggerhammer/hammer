@@ -71,6 +71,5 @@ testenv.Program('test_suite', tests + ['test_suite.c'])
 
 Export("libhammer_static libhammer_shared")
 
-if 'BINDINGS' in env:
-    for b in env['BINDINGS']:
-        env.SConscript(["bindings/%s/SConscript" % b])
+for b in env['bindings']:
+    env.SConscript(["bindings/%s/SConscript" % b])
