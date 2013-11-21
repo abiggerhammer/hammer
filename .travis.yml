@@ -1,26 +1,35 @@
 language: c
+compiler:
+  - gcc
+  - clang
+env:
+  - WITHPHP=false
 matrix:
   include:
     - compiler: gcc
       language: php
       php: 5.5
+      env: WITHPHP=true
     - compiler: clang
       language: php
       php: 5.5
+      env: WITHPHP=true
     - compiler: gcc
       language: php
       php: 5.4
+      env: WITHPHP=true
     - compiler: clang
       language: php
       php: 5.4
+      env: WITHPHP=true
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq swig php5-dev
 before_script:
-  - phpenv config-add src/bindings/php/hammer.ini
+  - if [ "$WITHPHP" == "true" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
 script: 
   - scons
 after_script:
-  - phpunit -v src/bindings/php/Tests
+  - if [ "$WITHPHP" == "true" ]; then phpunit -v src/bindings/php/Tests; fi
 notifications:
   irc: "irc.upstandinghackers.com#hammer"
