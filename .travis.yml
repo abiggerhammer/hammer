@@ -29,7 +29,7 @@ before_script:
   - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
 script: 
   - scons bindings=$BINDINGS
-after_script:
-  - if [ "$BINDINGS" == "php" ]; then phpunit -v src/bindings/php/Tests; fi
+#after_script:
+#  - if [ "$BINDINGS" == "php" ]; then phpunit -v src/bindings/php/Tests; fi
 notifications:
   irc: "irc.upstandinghackers.com#hammer"
