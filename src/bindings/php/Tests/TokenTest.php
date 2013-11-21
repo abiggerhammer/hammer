@@ -1,8 +1,8 @@
 <?php
 
-require("hammer.php");
+include 'hammer.php';
 
-class TestHammer extends PHPUnit_Framework_TestCase 
+class TokenTest extends PHPUnit_Framework_TestCase 
 {
     protected $parser;
 
