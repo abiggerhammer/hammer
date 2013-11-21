@@ -7,6 +7,7 @@ import sys
 vars = Variables(None, ARGUMENTS)
 vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
+vars.Add(ListVariable('BINDINGS', 'Language bindings to build', 0, ['php']))
 
 env = Environment(ENV = {'PATH' : os.environ['PATH']}, variables = vars, tools=['default', 'scanreplace'], toolpath=['tools'])
 
