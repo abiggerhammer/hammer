@@ -78,6 +78,8 @@ if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",
                 CXX="clang++")
 
+env.Append(SHLINKFLAGS = ['-install_name ' + '$TARGET'])
+
 env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 
 #rootpath = env['ROOTPATH'] = os.path.abspath('.')
