@@ -6,14 +6,16 @@ matrix:
   include:
     - compiler: gcc
       language: php
-      php:
-        - 5.5
-        - 5.4
+      php: 5.5
     - compiler: clang
       language: php
-      php:
-        - 5.5
-        - 5.4
+      php: 5.5
+    - compiler: gcc
+      language: php
+      php: 5.4
+    - compiler: clang
+      language: php
+      php: 5.4
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq swig
