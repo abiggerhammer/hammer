@@ -24,7 +24,7 @@ matrix:
       env: BINDINGS=php
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq swig php5-dev
+  - if [ "$BINDINGS" == "php" ]; then sudo apt-get install -qq swig php5-dev; fi
 before_script:
   - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
 script: 
