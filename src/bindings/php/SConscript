@@ -14,9 +14,9 @@ phpenv.Command(['hammer.php', 'hammer_wrap.c', 'php_hammer.h'], 'hammer.i', 'swi
 
 libhammer_php = phpenv.SharedLibrary('hammer', ['hammer_wrap.c'])
 
-phptestenv = phpenv.Clone()
-phptestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
-tests = phptestenv.Dir('Tests/') 
-phptestenv.Command(tests, [libhammer_php], "phpunit -v --include-path "+os.getcwd()+" $TARGET")
+#phptestenv = phpenv.Clone()
+#phptestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhamm#er_shared[0]))
+#tests = phptestenv.Dir('Tests/') 
+#phptestenv.Command(tests, [libhammer_php], "phpunit -v --include-path "+os.getcwd()+" $TARGET")
 
 
