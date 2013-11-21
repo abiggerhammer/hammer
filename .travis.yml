@@ -17,7 +17,7 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq swig
 before_script:
-  - phpenv config-add hammer.ini
+  - phpenv config-add src/bindings/php/hammer.ini
 script: 
   - scons
 after_script:
