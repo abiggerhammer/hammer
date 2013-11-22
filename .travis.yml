@@ -31,6 +31,6 @@ script:
   - scons bindings=$BINDINGS
 after_script:
   - scons test
-  - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; LD_LIBRARY_PATH=build/opt/src phpunit --include-path build/opt/src/bindings/php -v src/bindings/php/Tests; fi
+  - if [ "$BINDINGS" == "php" ]; then cp build/opt/src/bindings/php/libhammer.so `php-config --extension-dir`/hammer.so; phpenv config-add src/bindings/php/hammer.ini; LD_LIBRARY_PATH=build/opt/src phpunit --include-path build/opt/src/bindings/php -v src/bindings/php/Tests; fi
 notifications:
   irc: "irc.upstandinghackers.com#hammer"
