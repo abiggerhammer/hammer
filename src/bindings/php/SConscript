@@ -1,6 +1,6 @@
 # -*- python -*-
 import os, os.path
-Import('env libhammer_shared testruns')
+Import('env libhammer_shared')
 
 phpenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
 
@@ -16,7 +16,8 @@ Default(swig_src, bindings_src, libhammer_php)
 
 phptestenv = phpenv.Clone()
 phptestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
-phptests = phptestenv.Dir('Tests/') 
-testruns.append(phptestenv.Alias("testphp", phptestenv.Command(phptests, [libhammer_php], "phpunit -v --include-path "+os.getcwd()+" $TARGET")))
-    
+phptests = ['Tests']
+testphp = phptestenv.Alias("testphp", phptestenv.Command(phptests, [libhammer_php], "phpunit -v --include-path "+os.getcwd()+" $TARGET"))
+env['testruns'].append(testphp)
+print "Testing: " + str([str(x[0]) for x in env['testruns']])
 
