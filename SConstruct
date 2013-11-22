@@ -28,6 +28,8 @@ if 'DESTDIR' in env:
 
 env['libpath'] = calcInstallPath("$prefix", "lib")
 env['incpath'] = calcInstallPath("$prefix", "include", "hammer")
+env['parsersincpath'] = calcInstallPath("$prefix", "include", "hammer", "parsers")
+env['backendsincpath'] = calcInstallPath("$prefix", "include", "hammer", "backends")
 env['pkgconfigpath'] = calcInstallPath("$prefix", "lib", "pkgconfig")
 env.ScanReplace('libhammer.pc.in')
 
@@ -35,6 +37,7 @@ env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attr
 
 if not env['PLATFORM'] == 'darwin':
     env.MergeFlags("-lrt")
+    env.Append(SHLINKFLAGS = ['-install_name ' + '$TARGET'])
 
 AddOption("--variant",
           dest="variant",
@@ -90,4 +93,6 @@ env.Command('test', 'build/$VARIANT/src/test_suite', 'env LD_LIBRARY_PATH=build/
 
 env.Alias("install", "$libpath")
 env.Alias("install", "$incpath")
+env.Alias("install", "$parsersincpath")
+env.Alias("install", "$backendsincpath")
 env.Alias("install", "$pkgconfigpath")
