@@ -1,5 +1,6 @@
 %module hammer
 %nodefaultctor;
+//%nodefaultdtor;
 
 %include "stdint.i"
  //%include "typemaps.i"
@@ -7,31 +8,6 @@
 
 #if defined(SWIGPYTHON)
 %ignore HCountedArray_;
-%typemap(in) uint8_t* {
-  Py_INCREF($input);
-  $1 = (uint8_t*)PyString_AsString($input);
- }
-%typemap(out) uint8_t* {
-  $result = PyString_FromString((char*)$1);
- }
-
-%typemap(newfree) HParseResult* {
-  h_parse_result_free($1);
- }
-
-%newobject h_parse
-%delobject h_parse_result_free
-
- /*
-%typemap(in) (uint8_t* str, size_t len) {
-  if (PyString_Check($input) ||
-      PyUnicode_Check($input)) {
-    PyString_AsStringAndSize($input, (char**)&$1, &$2);
-  } else {
-    PyErr_SetString(PyExc_TypeError, "Argument must be a str or unicode");
-  }    
- }
-*/
 %apply (char *STRING, size_t LENGTH) {(uint8_t* str, size_t len)}
 %apply (uint8_t* str, size_t len) {(const uint8_t* input, size_t length)}
 %apply (uint8_t* str, size_t len) {(const uint8_t* str, const size_t len)}
@@ -79,6 +55,43 @@
     PyList_SetItem($result, i, o);
   }
  }
+%typemap(out) struct HParseResult_* {
+  if ($1 == NULL) {
+    // TODO: raise parse failure
+    Py_INCREF(Py_None);
+    $result = Py_None;
+  } else {
+    $result = hpt_to_python($1->ast);
+  }
+ }
+
+%inline %{
+  static int h_tt_python;
+  %}
+%init %{
+  h_tt_python = h_allocate_token_type("com.upstandinghackers.hammer.python");
+  %}
+
+/*
+%typemap(in) (HPredicate* pred, void* user_data) {
+  Py_INCREF($input);
+  $2 = $input;
+  $1 = call_predicate;
+ }
+*/
+%typemap(in) (const HAction a, void* user_data) {
+  Py_INCREF($input);
+  $2 = $input;
+  $1 = call_action;
+ }
+
+%inline {
+  struct HParsedToken_;
+  struct HParseResult_;
+  static PyObject* hpt_to_python(const struct HParsedToken_ *token);
+  
+  static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data);
+ }
 #else
   #warning no uint8_t* typemaps defined
 #endif
@@ -92,3 +105,74 @@
 %include "allocator.h"
 %include "hammer.h"
 
+
+%extend HArena_ {
+  ~HArena_() {
+    h_delete_arena($self);
+  }
+ };
+%extend HParseResult_ {
+  ~HParseResult_() {
+    h_parse_result_free($self);
+  }
+};
+
+%newobject h_parse;
+%delobject h_parse_result_free;
+%newobject h_new_arena;
+%delobject h_delete_arena;
+
+#ifdef SWIGPYTHON
+%inline {
+  static PyObject* hpt_to_python(const HParsedToken *token) {
+    // Caller holds a reference to returned object
+    PyObject *ret;
+    if (token == NULL) {
+      Py_RETURN_NONE;
+    }
+    switch (token->token_type) {
+    case TT_NONE:
+      Py_RETURN_NONE;
+      break;
+    case TT_BYTES:
+      return PyString_FromStringAndSize((char*)token->token_data.bytes.token, token->token_data.bytes.len);
+    case TT_SINT:
+      // TODO: return PyINT if appropriate
+      return PyLong_FromLong(token->token_data.sint);
+    case TT_UINT:
+      // TODO: return PyINT if appropriate
+      return PyLong_FromUnsignedLong(token->token_data.uint);
+    case TT_SEQUENCE:
+      ret = PyTuple_New(token->token_data.seq->used);
+      for (int i = 0; i < token->token_data.seq->used; i++) {
+	PyTuple_SET_ITEM(ret, i, hpt_to_python(token->token_data.seq->elements[i]));
+      }
+      return ret;
+    default:
+      if (token->token_type == h_tt_python) {
+	ret = (PyObject*)token->token_data.user;
+	Py_INCREF(ret);
+	return ret;
+      } else {
+	return SWIG_NewPointerObj((void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0);
+	// TODO: support registry
+      }
+      
+    }
+  }
+  static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data) {
+    PyObject *callable = user_data;
+    PyObject *ret = PyObject_CallFunctionObjArgs(callable,
+						 hpt_to_python(p->ast),
+						 NULL);
+    if (ret == NULL) {
+      PyErr_Print();
+      assert(ret != NULL);
+    }	
+    // TODO: add reference to ret to parse-local data
+    HParsedToken *tok = h_make(p->arena, h_tt_python, ret);
+    return tok;
+   }
+
+ }
+#endif
