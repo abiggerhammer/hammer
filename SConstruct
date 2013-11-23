@@ -35,9 +35,10 @@ env.ScanReplace('libhammer.pc.in')
 
 env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes")
 
-if not env['PLATFORM'] == 'darwin':
+if env['PLATFORM'] == 'darwin':
+    env.Append(SHLINKFLAGS = ['-install_name', '$TARGET'])
+else:
     env.MergeFlags("-lrt")
-    env.Append(SHLINKFLAGS = ['-install_name ' + '$TARGET'])
 
 AddOption("--variant",
           dest="variant",
