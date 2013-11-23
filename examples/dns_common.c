@@ -18,7 +18,7 @@ bool validate_label(HParseResult *p) {
 
 #define act_label h_act_flatten
 
-HParsedToken* act_domain(const HParseResult *p) {
+HParsedToken* act_domain(const HParseResult *p, void* user_data) {
   HParsedToken *ret = NULL;
   char *arr = NULL;
 

@@ -86,7 +86,7 @@ void set_rdata(struct dns_rr *rr, HCountedArray *rdata) {
   }
 }
 
-HParsedToken* act_header(const HParseResult *p) {
+HParsedToken* act_header(const HParseResult *p, void* user_data) {
   HParsedToken **fields = h_seq_elements(p->ast);
   dns_header_t header_ = {
     .id     = H_CAST_UINT(fields[0]),
@@ -109,7 +109,7 @@ HParsedToken* act_header(const HParseResult *p) {
   return H_MAKE(dns_header_t, header);
 }
 
-HParsedToken* act_label(const HParseResult *p) {
+HParsedToken* act_label(const HParseResult *p, void* user_data) {
   dns_label_t *r = H_ALLOC(dns_label_t);
 
   r->len = h_seq_len(p->ast);
@@ -121,7 +121,7 @@ HParsedToken* act_label(const HParseResult *p) {
   return H_MAKE(dns_label_t, r);
 }
 
-HParsedToken* act_rr(const HParseResult *p) {
+HParsedToken* act_rr(const HParseResult *p, void* user_data) {
   dns_rr_t *rr = H_ALLOC(dns_rr_t);
 
   rr->name     = *H_FIELD(dns_domain_t, 0);
@@ -136,7 +136,7 @@ HParsedToken* act_rr(const HParseResult *p) {
   return H_MAKE(dns_rr_t, rr);
 }
 
-HParsedToken* act_question(const HParseResult *p) {
+HParsedToken* act_question(const HParseResult *p, void* user_data) {
   dns_question_t *q = H_ALLOC(dns_question_t);
   HParsedToken **fields = h_seq_elements(p->ast);
 
@@ -153,7 +153,7 @@ HParsedToken* act_question(const HParseResult *p) {
   return H_MAKE(dns_question_t, q);
 }
 
-HParsedToken* act_message(const HParseResult *p) {
+HParsedToken* act_message(const HParseResult *p, void* user_data) {
   h_pprint(stdout, p->ast, 0, 2);
   dns_message_t *msg = H_ALLOC(dns_message_t);
 

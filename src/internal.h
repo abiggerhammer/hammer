@@ -365,6 +365,7 @@ struct HCFChoice_ {
                     // to execute before action and pred are applied.
   HAction action;
   HPredicate pred;
+  void* user_data;
 };
 
 struct HCFSequence_ {

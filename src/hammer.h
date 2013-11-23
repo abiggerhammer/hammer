@@ -113,7 +113,7 @@ typedef struct HBitWriter_ HBitWriter;
  * say, structs) and stuff values for them into the void* in the 
  * tagged union in HParsedToken. 
  */
-typedef HParsedToken* (*HAction)(const HParseResult *p);
+typedef HParsedToken* (*HAction)(const HParseResult *p, void* user_data);
 
 /**
  * Type of a boolean attribute-checking function, used in the 
@@ -349,7 +349,7 @@ HAMMER_FN_DECL(HParser*, h_middle, const HParser* p, const HParser* x, const HPa
  *
  * Result token type: any
  */
-HAMMER_FN_DECL(HParser*, h_action, const HParser* p, const HAction a);
+HAMMER_FN_DECL(HParser*, h_action, const HParser* p, const HAction a, void* user_data);
 
 /**
  * Parse a single character in the given charset. 
@@ -621,11 +621,11 @@ void h_bit_writer_free(HBitWriter* w);
 
 // General-purpose actions for use with h_action
 // XXX to be consolidated with glue.h when merged upstream
-HParsedToken *h_act_first(const HParseResult *p);
-HParsedToken *h_act_second(const HParseResult *p);
-HParsedToken *h_act_last(const HParseResult *p);
-HParsedToken *h_act_flatten(const HParseResult *p);
-HParsedToken *h_act_ignore(const HParseResult *p);
+HParsedToken *h_act_first(const HParseResult *p, void* userdata);
+HParsedToken *h_act_second(const HParseResult *p, void* userdata);
+HParsedToken *h_act_last(const HParseResult *p, void* userdata);
+HParsedToken *h_act_flatten(const HParseResult *p, void* userdata);
+HParsedToken *h_act_ignore(const HParseResult *p, void* userdata);
 
 // {{{ Benchmark functions
 HAMMER_FN_DECL(HBenchmarkResults *, h_benchmark, HParser* parser, HParserTestcase* testcases);

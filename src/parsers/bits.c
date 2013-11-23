@@ -17,7 +17,9 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
   return make_result(state->arena, result);
 }
 
-static HParsedToken *reshape_bits(const HParseResult *p, bool signedp) {
+static HParsedToken *reshape_bits(const HParseResult *p, void* signedp_p) {
+  // signedp == NULL iff unsigned
+  bool signedp = (signedp_p != NULL);
   // XXX works only for whole bytes
   // XXX assumes big-endian
   assert(p->ast);
@@ -45,12 +47,6 @@ static HParsedToken *reshape_bits(const HParseResult *p, bool signedp) {
 
   return ret;
 }
-static HParsedToken *reshape_bits_unsigned(const HParseResult *p) {
-  return reshape_bits(p, false);
-}
-static HParsedToken *reshape_bits_signed(const HParseResult *p) {
-  return reshape_bits(p, true);
-}
 
 static void desugar_bits(HAllocator *mm__, HCFStack *stk__, void *env) {
   struct bits_env *bits = (struct bits_env*)env;
@@ -67,9 +63,9 @@ static void desugar_bits(HAllocator *mm__, HCFStack *stk__, void *env) {
 	HCFS_ADD_CHARSET(match_all);
       }
     } HCFS_END_SEQ();
-    HCFS_THIS_CHOICE->reshape = bits->signedp
-      ? reshape_bits_signed
-      : reshape_bits_unsigned;
+    HCFS_THIS_CHOICE->reshape = reshape_bits;
+    HCFS_THIS_CHOICE->user_data = bits->signedp ? HCFS_THIS_CHOICE : NULL; // HCFS_THIS_CHOICE is an arbitrary non-null pointer
+    
   } HCFS_END_CHOICE();
 }
 

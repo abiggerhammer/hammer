@@ -56,13 +56,19 @@
 
 
 #define H_RULE(rule, def)  HParser *rule = def
-#define H_ARULE(rule, def) HParser *rule = h_action(def, act_ ## rule)
+#define H_ARULE(rule, def) HParser *rule = h_action(def, act_ ## rule, NULL)
 #define H_VRULE(rule, def) HParser *rule = \
-  h_attr_bool(def, validate_ ## rule)
+    h_attr_bool(def, validate_ ## rule)
 #define H_VARULE(rule, def) HParser *rule = \
-  h_attr_bool(h_action(def, act_ ## rule), validate_ ## rule)
+    h_attr_bool(h_action(def, act_ ## rule, NULL), validate_ ## rule)
 #define H_AVRULE(rule, def) HParser *rule = \
-  h_action(h_attr_bool(def, validate_ ## rule), act_ ## rule)
+    h_action(h_attr_bool(def, validate_ ## rule), act_ ## rule, NULL)
+#define H_ADRULE(rule, def, data) HParser *rule =	\
+    h_action(def, act_ ## rule, data)
+#define H_VADRULE(rule, def, data) HParser *rule =		\
+    h_attr_bool(h_action(def, act_ ## rule, data), validate_ ## rule)
+#define H_AVDRULE(rule, def, data) HParser *rule =		\
+    h_action(h_attr_bool(def, validate_ ## rule), act_ ## rule, data)
 
 
 //
@@ -88,18 +94,18 @@
 // action such as h_act_index.
 //
 
-HParsedToken *h_act_index(int i, const HParseResult *p);
-HParsedToken *h_act_first(const HParseResult *p);
-HParsedToken *h_act_second(const HParseResult *p);
-HParsedToken *h_act_last(const HParseResult *p);
-HParsedToken *h_act_flatten(const HParseResult *p);
-HParsedToken *h_act_ignore(const HParseResult *p);
+HParsedToken *h_act_index(int i, const HParseResult *p, void* user_data);
+HParsedToken *h_act_first(const HParseResult *p, void* user_data);
+HParsedToken *h_act_second(const HParseResult *p, void* user_data);
+HParsedToken *h_act_last(const HParseResult *p, void* user_data);
+HParsedToken *h_act_flatten(const HParseResult *p, void* user_data);
+HParsedToken *h_act_ignore(const HParseResult *p, void* user_data);
 
 // Define 'myaction' as a specialization of 'paction' by supplying the leading
 // parameters.
 #define H_ACT_APPLY(myaction, paction, ...) \
-  HParsedToken *myaction(const HParseResult *p) { \
-    return paction(__VA_ARGS__, p); \
+  HParsedToken *myaction(const HParseResult *p, void* user_data) {	\
+    return paction(__VA_ARGS__, p, user_data);				\
   }
 
 

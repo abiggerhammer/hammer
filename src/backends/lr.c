@@ -307,13 +307,13 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
 
     // perform token reshape if indicated
     if(symbol->reshape)
-      value = (HParsedToken *)symbol->reshape(make_result(arena, value));
+      value = (HParsedToken *)symbol->reshape(make_result(arena, value), symbol->user_data);
 
     // call validation and semantic action, if present
     if(symbol->pred && !symbol->pred(make_result(tarena, value)))
       return false;     // validation failed -> no parse; terminate
     if(symbol->action)
-      value = (HParsedToken *)symbol->action(make_result(arena, value));
+      value = (HParsedToken *)symbol->action(make_result(arena, value), symbol->user_data);
 
     // this is LR, building a right-most derivation bottom-up, so no reduce can
     // follow a reduce. we can also assume no conflict follows for GLR if we
