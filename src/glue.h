@@ -53,7 +53,10 @@
 // H_AVRULE is like H_VARULE but the action is attached outside the validation,
 // i.e. the validation receives the uninterpreted AST as input.
 //
-
+// H_ADRULE, H_VDRULE, H_AVDRULE, and H_VADRULE are the same as the
+// equivalent non-D variants, except that they also allow you to uset
+// the user_data pointer.  In cases where both an attr_bool and an
+// action are used, the same userdata pointer is given to both.
 
 #define H_RULE(rule, def)  HParser *rule = def
 #define H_ARULE(rule, def) HParser *rule = h_action(def, act_ ## rule, NULL)
