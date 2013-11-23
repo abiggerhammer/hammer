@@ -53,7 +53,12 @@ AddOption("--coverage",
           action="store_true",
           help="Build with coverage instrumentation")
 
-env['BUILDDIR'] = 'build/$VARIANT'
+AddOption("--in-place",
+          dest="in_place",
+          default=False,
+          action="store_true",
+          help="Build in-place, rather than in the build/<variant> tree")
+
 
 dbg = env.Clone(VARIANT='debug')
 dbg.Append(CCFLAGS=['-g'])
@@ -86,10 +91,16 @@ env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 
 Export('env')
 
-env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
-env.SConscript(["examples/SConscript"], variant_dir='build/$VARIANT/examples')
+if not GetOption("in_place"):
+    env['BUILD_BASE'] = 'build/$VARIANT'
+    env.SConscript(["src/SConscript"], variant_dir='$BUILD_BASE/src')
+    env.SConscript(["examples/SConscript"], variant_dir='$BUILD_BASE/examples')
+else:
+    env['BUILD_BASE'] = '.'
+    env.SConscript(["src/SConscript"])
+    env.SConscript(["examples/SConscript"])
 
-env.Command('test', 'build/$VARIANT/src/test_suite', 'env LD_LIBRARY_PATH=build/$VARIANT/src $SOURCE')
+env.Command('test', '$BUILD_BASE/src/test_suite', 'env LD_LIBRARY_PATH=$BUILD_BASE/src $SOURCE')
 
 env.Alias("install", "$libpath")
 env.Alias("install", "$incpath")
