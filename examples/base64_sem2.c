@@ -49,7 +49,7 @@ uint8_t bsfdig_value(const HParsedToken *p)
 // helper: append a byte value to a sequence
 #define seq_append_byte(res, b) h_seq_snoc(res, H_MAKE_UINT(b))
 
-HParsedToken *act_base64(const HParseResult *p)
+HParsedToken *act_base64(const HParseResult *p, void* user_data)
 {
     assert(p->ast->token_type == TT_SEQUENCE);
     assert(p->ast->seq->used == 2);
