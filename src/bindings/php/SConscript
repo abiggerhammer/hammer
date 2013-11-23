@@ -1,6 +1,6 @@
 # -*- python -*-
 import os, os.path
-Import('env libhammer_shared')
+Import('env libhammer_shared testruns')
 
 phpenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
 
@@ -17,8 +17,15 @@ Default(swig_src, bindings_src, libhammer_php)
 
 phptestenv = phpenv.Clone()
 phptestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
-phptests = ['Tests']
-testphp = phptestenv.Alias("testphp", phptestenv.Command(phptests, [libhammer_php], "phpenv exec phpunit -v --include-path "+os.getcwd()+" $TARGET"))
-env['testruns'].append(testphp)
-print "Testing: " + str([str(x[0]) for x in env['testruns']])
+phptests = ('Tests')
+phpextprefix = os.popen("php-config --extension-dir").read().rstrip()
+phplib = phptestenv.Command(os.path.join(phpextprefix, "hammer.so"), libhammer_php, Copy("$TARGET", "$SOURCE"))
+phpprefix = os.popen("php-config --prefix").read().rstrip()
+phpincl = phptestenv.Command(os.path.join(phpprefix, "hammer.ini"), "hammer.ini", Copy("$TARGET", "$SOURCE"))
+phptestexec = phptestenv.Command(phptests, [phplib, phpincl], "phpenv exec phpunit -v --include-path " + os.path.dirname(libhammer_php[0].path) +" src/bindings/php/Tests")
+print "phptestexec path: " + phptestexec[0].path
+phptest = Alias("testphp", [phptestexec], phptestexec)
+AlwaysBuild(phptest)
+testruns.append(phptest)
+print "Testing: " + str([str(x[0]) for x in testruns])
 

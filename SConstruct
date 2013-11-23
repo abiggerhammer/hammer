@@ -93,9 +93,9 @@ env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 
 #rootpath = env['ROOTPATH'] = os.path.abspath('.')
 #env.Append(CPPPATH=os.path.join('#', "hammer"))
-env['testruns'] = []
 
 testruns = []
+
 targets = ["$libpath",
            "$incpath",
            "$parsersincpath",
