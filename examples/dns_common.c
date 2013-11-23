@@ -10,7 +10,7 @@ H_ACT_APPLY(act_index0, h_act_index, 0)
 /**
  * A label can't be more than 63 characters.
  */
-bool validate_label(HParseResult *p) {
+bool validate_label(HParseResult *p, void* user_data) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
   return (64 > p->ast->seq->used);

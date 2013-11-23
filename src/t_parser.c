@@ -365,7 +365,7 @@ static void test_epsilon_p(gconstpointer backend) {
   g_check_parse_match(epsilon_p_3, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
 }
 
-bool validate_test_ab(HParseResult *p) {
+bool validate_test_ab(HParseResult *p, void* user_data) {
   if (TT_SEQUENCE != p->ast->token_type) 
     return false;
   if (TT_UINT != p->ast->seq->elements[0]->token_type)
@@ -377,7 +377,8 @@ bool validate_test_ab(HParseResult *p) {
 
 static void test_attr_bool(gconstpointer backend) {
   const HParser *ab_ = h_attr_bool(h_many1(h_choice(h_ch('a'), h_ch('b'), NULL)),
-				   validate_test_ab);
+				   validate_test_ab,
+				   NULL);
 
   g_check_parse_match(ab_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "(u0x61 u0x61)");
   g_check_parse_match(ab_, (HParserBackend)GPOINTER_TO_INT(backend), "bb", 2, "(u0x62 u0x62)");

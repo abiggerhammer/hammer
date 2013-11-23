@@ -310,7 +310,7 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
       value = (HParsedToken *)symbol->reshape(make_result(arena, value), symbol->user_data);
 
     // call validation and semantic action, if present
-    if(symbol->pred && !symbol->pred(make_result(tarena, value)))
+    if(symbol->pred && !symbol->pred(make_result(tarena, value), symbol->user_data))
       return false;     // validation failed -> no parse; terminate
     if(symbol->action)
       value = (HParsedToken *)symbol->action(make_result(arena, value), symbol->user_data);

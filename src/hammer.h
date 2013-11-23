@@ -120,7 +120,7 @@ typedef HParsedToken* (*HAction)(const HParseResult *p, void* user_data);
  * attr_bool() parser. It can be any (user-defined) function that takes
  * a HParseResult* and returns true or false. 
  */
-typedef bool (*HPredicate)(HParseResult *p);
+typedef bool (*HPredicate)(HParseResult *p, void* user_data);
 
 typedef struct HCFChoice_ HCFChoice;
 typedef struct HRVMProg_ HRVMProg;
@@ -515,7 +515,7 @@ HAMMER_FN_DECL(HParser*, h_length_value, const HParser* length, const HParser* v
  * 
  * Result token type: p's result type if pred succeeded, NULL otherwise.
  */
-HAMMER_FN_DECL(HParser*, h_attr_bool, const HParser* p, HPredicate pred);
+HAMMER_FN_DECL(HParser*, h_attr_bool, const HParser* p, HPredicate pred, void* user_data);
 
 /**
  * The 'and' parser asserts that a conditional syntax is satisfied, 

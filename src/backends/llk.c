@@ -375,7 +375,7 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       tok = (HParsedToken *)x->reshape(make_result(arena, tok), x->user_data);
 
     // call validation and semantic action, if present
-    if(x->pred && !x->pred(make_result(tarena, tok)))
+    if(x->pred && !x->pred(make_result(tarena, tok), x->user_data))
       goto no_parse;    // validation failed -> no parse
     if(x->action)
       tok = (HParsedToken *)x->action(make_result(arena, tok), x->user_data);

@@ -58,17 +58,19 @@
 #define H_RULE(rule, def)  HParser *rule = def
 #define H_ARULE(rule, def) HParser *rule = h_action(def, act_ ## rule, NULL)
 #define H_VRULE(rule, def) HParser *rule = \
-    h_attr_bool(def, validate_ ## rule)
+    h_attr_bool(def, validate_ ## rule, NULL)
 #define H_VARULE(rule, def) HParser *rule = \
-    h_attr_bool(h_action(def, act_ ## rule, NULL), validate_ ## rule)
+    h_attr_bool(h_action(def, act_ ## rule, NULL), validate_ ## rule, NULL)
 #define H_AVRULE(rule, def) HParser *rule = \
-    h_action(h_attr_bool(def, validate_ ## rule), act_ ## rule, NULL)
+    h_action(h_attr_bool(def, validate_ ## rule, NULL), act_ ## rule, NULL)
 #define H_ADRULE(rule, def, data) HParser *rule =	\
     h_action(def, act_ ## rule, data)
+#define H_VDRULE(rule, def, data) HParser *rule =	\
+    h_attr_bool(def, validate_ ## rule, data)
 #define H_VADRULE(rule, def, data) HParser *rule =		\
-    h_attr_bool(h_action(def, act_ ## rule, data), validate_ ## rule)
+    h_attr_bool(h_action(def, act_ ## rule, data), validate_ ## rule, data)
 #define H_AVDRULE(rule, def, data) HParser *rule =		\
-    h_action(h_attr_bool(def, validate_ ## rule), act_ ## rule, data)
+    h_action(h_attr_bool(def, validate_ ## rule, data), act_ ## rule, data)
 
 
 //

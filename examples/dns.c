@@ -15,7 +15,7 @@
 // Validations
 ///
 
-bool validate_hdzero(HParseResult *p) {
+bool validate_hdzero(HParseResult *p, void* user_data) {
   if (TT_UINT != p->ast->token_type)
     return false;
   return (0 == p->ast->uint);
@@ -25,7 +25,7 @@ bool validate_hdzero(HParseResult *p) {
  * Every DNS message should have QDCOUNT entries in the question
  * section, and ANCOUNT+NSCOUNT+ARCOUNT resource records.
  */
-bool validate_message(HParseResult *p) {
+bool validate_message(HParseResult *p, void* user_data) {
   if (TT_SEQUENCE != p->ast->token_type)
     return false;
 
