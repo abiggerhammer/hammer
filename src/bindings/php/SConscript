@@ -4,7 +4,8 @@ Import('env libhammer_shared')
 
 phpenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
 
-phpenv.Append(CPPPATH = ['../../', '/usr/include/php5', '/usr/include/php5/main', '/usr/include/php5/Zend', '/usr/include/php5/TSRM'])
+php_include = os.popen("php-config --include-dir").read().rstrip()
+phpenv.Append(CPPPATH = ['../../', php_include, os.path.join(php_include, 'main'), os.path.join(php_include, 'Zend'), os.path.join(php_include, 'TSRM')])
 phpenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error'])
 phpenv.Append(LIBS = ['hammer'])
 phpenv.Append(LIBPATH = ['../../']) 
