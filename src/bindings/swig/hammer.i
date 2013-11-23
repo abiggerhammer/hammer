@@ -14,13 +14,35 @@
 %typemap(out) uint8_t* {
   $result = PyString_FromString((char*)$1);
  }
+
+%typemap(newfree) HParseResult* {
+  h_parse_result_free($1);
+ }
+
+%newobject h_parse
+%delobject h_parse_result_free
+
+ /*
+%typemap(in) (uint8_t* str, size_t len) {
+  if (PyString_Check($input) ||
+      PyUnicode_Check($input)) {
+    PyString_AsStringAndSize($input, (char**)&$1, &$2);
+  } else {
+    PyErr_SetString(PyExc_TypeError, "Argument must be a str or unicode");
+  }    
+ }
+*/
+%apply (char *STRING, size_t LENGTH) {(uint8_t* str, size_t len)}
+%apply (uint8_t* str, size_t len) {(const uint8_t* input, size_t length)}
+%apply (uint8_t* str, size_t len) {(const uint8_t* str, const size_t len)}
+%apply (uint8_t* str, size_t len) {(const uint8_t* charset, size_t length)}
 %typemap(in) void*[] {
   if (PyList_Check($input)) {
     Py_INCREF($input);
     int size = PyList_Size($input);
     int i = 0;
     int res = 0;
-    $1 = (void**)malloc(size*sizeof(HParser*));
+    $1 = (void**)malloc((size+1)*sizeof(HParser*));
     for (i=0; i<size; i++) {
       PyObject *o = PyList_GetItem($input, i);
       res = SWIG_ConvertPtr(o, &($1[i]), SWIGTYPE_p_HParser_, 0 | 0);
@@ -28,6 +50,7 @@
 	SWIG_exception_fail(SWIG_ArgError(res), "that wasn't an HParser" );
       }
     }
+    $1[size] = NULL;
   } else {
     PyErr_SetString(PyExc_TypeError, "__a functions take lists of parsers as their argument");
     return NULL;
