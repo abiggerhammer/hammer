@@ -17,7 +17,7 @@ class TestChParser(unittest.TestCase):
         cls.parser_chr = h.h_ch("\xa2")
     def test_success(self):
         self.assertEqual(h.h_parse(self.parser_int, "\xa2"), 0xa2)
-        self.assertEqual(h.h_parse(self.parser_chr, "\xa2"), ord("\xa2")) # TODO: interface change
+        self.assertEqual(h.h_parse(self.parser_chr, "\xa2"), "\xa2")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser_int, "\xa3"), None)
         self.assertEqual(h.h_parse(self.parser_chr, "\xa3"), None)
@@ -27,7 +27,7 @@ class TestChRange(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_ch_range("a", "c")
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "b"), ord("b"))
+        self.assertEqual(h.h_parse(self.parser, "b"), "b")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "d"), None)
 
@@ -121,10 +121,10 @@ class TestWhitespace(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_whitespace(h.h_ch("a"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a"), ord("a"))
-        self.assertEqual(h.h_parse(self.parser, " a"), ord("a"))
-        self.assertEqual(h.h_parse(self.parser, "  a"), ord("a"))
-        self.assertEqual(h.h_parse(self.parser, "\ta"), ord("a"))
+        self.assertEqual(h.h_parse(self.parser, "a"), "a")
+        self.assertEqual(h.h_parse(self.parser, " a"), "a")
+        self.assertEqual(h.h_parse(self.parser, "  a"), "a")
+        self.assertEqual(h.h_parse(self.parser, "\ta"), "a")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "_a"), None)
 
@@ -143,7 +143,7 @@ class TestLeft(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_left(h.h_ch("a"), h.h_ch(" "))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a "), ord("a"))
+        self.assertEqual(h.h_parse(self.parser, "a "), "a")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a"), None)
         self.assertEqual(h.h_parse(self.parser, " "), None)
@@ -154,7 +154,7 @@ class TestRight(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_right(h.h_ch(" "), h.h_ch("a"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, " a"), ord("a"))
+        self.assertEqual(h.h_parse(self.parser, " a"), "a")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a"), None)
         self.assertEqual(h.h_parse(self.parser, " "), None)
@@ -165,7 +165,7 @@ class TestMiddle(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_middle(h.h_ch(" "), h.h_ch("a"), h.h_ch(" "))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, " a "), ord("a"))
+        self.assertEqual(h.h_parse(self.parser, " a "), "a")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a"), None)
         self.assertEqual(h.h_parse(self.parser, " "), None)
@@ -175,13 +175,12 @@ class TestMiddle(unittest.TestCase):
         self.assertEqual(h.h_parse(self.parser, "ba "), None)
         self.assertEqual(h.h_parse(self.parser, " ab"), None)
 
-#@unittest.skip("Action not implemented yet")
 class TestAction(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.parser = h.h_action(h.h_sequence__a([h.h_choice__a([h.h_ch("a"), h.h_ch("A")]),
                                                  h.h_choice__a([h.h_ch("b"), h.h_ch("B")])]),
-                                lambda x: [chr(y).upper() for y in x])
+                                lambda x: [y.upper() for y in x])
     def test_success(self):
         self.assertEqual(h.h_parse(self.parser, "ab"), ["A", "B"])
         self.assertEqual(h.h_parse(self.parser, "AB"), ["A", "B"])
@@ -193,7 +192,7 @@ class TestIn(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_in("abc")
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "b"), ord("b")) 
+        self.assertEqual(h.h_parse(self.parser, "b"), "b") 
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "d"), None)
 
@@ -202,7 +201,7 @@ class TestNotIn(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_not_in("abc")
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "d"), ord("d"))
+        self.assertEqual(h.h_parse(self.parser, "d"), "d")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a"), None)
 
@@ -211,7 +210,7 @@ class TestEndP(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_ch("a"), h.h_end_p()])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a"), tuple(ord(y) for y in ["a"]))
+        self.assertEqual(h.h_parse(self.parser, "a"), ("a",))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "aa"), None)
 
@@ -229,7 +228,7 @@ class TestSequence(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_ch("a"), h.h_ch("b")])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "ab"), tuple(map(ord, "ab")))
+        self.assertEqual(h.h_parse(self.parser, "ab"), ('a','b'))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a"), None)
         self.assertEqual(h.h_parse(self.parser, "b"), None)
@@ -239,9 +238,9 @@ class TestSequenceWhitespace(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_ch("a"), h.h_whitespace(h.h_ch("b"))])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "ab"), tuple(map(ord,"ab")))
-        self.assertEqual(h.h_parse(self.parser, "a b"), tuple(map(ord,"ab")))
-        self.assertEqual(h.h_parse(self.parser, "a  b"), tuple(map(ord,"ab")))
+        self.assertEqual(h.h_parse(self.parser, "ab"), ('a','b'))
+        self.assertEqual(h.h_parse(self.parser, "a b"), ('a','b'))
+        self.assertEqual(h.h_parse(self.parser, "a  b"), ('a','b'))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a  c"), None)
 
@@ -250,8 +249,8 @@ class TestChoice(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_choice__a([h.h_ch("a"), h.h_ch("b")])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a"), ord("a"))
-        self.assertEqual(h.h_parse(self.parser, "b"), ord("b"))
+        self.assertEqual(h.h_parse(self.parser, "a"), "a")
+        self.assertEqual(h.h_parse(self.parser, "b"), "b")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "c"), None)
 
@@ -260,8 +259,8 @@ class TestButNot(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_butnot(h.h_ch("a"), h.h_token("ab"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a"), ord("a"))
-        self.assertEqual(h.h_parse(self.parser, "aa"), ord("a"))
+        self.assertEqual(h.h_parse(self.parser, "a"), "a")
+        self.assertEqual(h.h_parse(self.parser, "aa"), "a")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "ab"), None)
 
@@ -270,7 +269,7 @@ class TestButNotRange(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_butnot(h.h_ch_range("0", "9"), h.h_ch("6"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "4"), ord("4"))
+        self.assertEqual(h.h_parse(self.parser, "4"), "4")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "6"), None)
 
@@ -288,8 +287,8 @@ class TestXor(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_xor(h.h_ch_range("0", "6"), h.h_ch_range("5", "9"))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "0"), ord("0"))
-        self.assertEqual(h.h_parse(self.parser, "9"), ord("9"))
+        self.assertEqual(h.h_parse(self.parser, "0"), "0")
+        self.assertEqual(h.h_parse(self.parser, "9"), "9")
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "5"), None)
         self.assertEqual(h.h_parse(self.parser, "a"), None)
@@ -300,9 +299,9 @@ class TestMany(unittest.TestCase):
         cls.parser = h.h_many(h.h_choice__a([h.h_ch("a"), h.h_ch("b")]))
     def test_success(self):
         self.assertEqual(h.h_parse(self.parser, ""), ())
-        self.assertEqual(h.h_parse(self.parser, "a"), tuple(map(ord, "a")))
-        self.assertEqual(h.h_parse(self.parser, "b"), tuple(map(ord, "b")))
-        self.assertEqual(h.h_parse(self.parser, "aabbaba"), tuple(map(ord, "aabbaba")))
+        self.assertEqual(h.h_parse(self.parser, "a"), ('a',))
+        self.assertEqual(h.h_parse(self.parser, "b"), ('b',))
+        self.assertEqual(h.h_parse(self.parser, "aabbaba"), ('a','a','b','b','a','b','a'))
     def test_failure(self):
         pass
 
@@ -311,9 +310,9 @@ class TestMany1(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_many1(h.h_choice__a([h.h_ch("a"), h.h_ch("b")]))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a"), tuple(ord(y) for y in ["a"]))
-        self.assertEqual(h.h_parse(self.parser, "b"), tuple(ord(y) for y in ["b"]))
-        self.assertEqual(h.h_parse(self.parser, "aabbaba"), tuple(ord(y) for y in ["a", "a", "b", "b", "a", "b", "a"]))
+        self.assertEqual(h.h_parse(self.parser, "a"), ("a",))
+        self.assertEqual(h.h_parse(self.parser, "b"), ("b",))
+        self.assertEqual(h.h_parse(self.parser, "aabbaba"), ("a", "a", "b", "b", "a", "b", "a"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, ""), None)
         self.assertEqual(h.h_parse(self.parser, "daabbabadef"), None)
@@ -323,7 +322,7 @@ class TestRepeatN(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_repeat_n(h.h_choice__a([h.h_ch("a"), h.h_ch("b")]), 2)
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "abdef"), (ord('a'), ord('b')))
+        self.assertEqual(h.h_parse(self.parser, "abdef"), ('a', 'b'))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "adef"), None)
         self.assertEqual(h.h_parse(self.parser, "dabdef"), None)
@@ -333,9 +332,9 @@ class TestOptional(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_ch("a"), h.h_optional(h.h_choice__a([h.h_ch("b"), h.h_ch("c")])), h.h_ch("d")])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "abd"), (ord('a'),ord('b'),ord('d')))
-        self.assertEqual(h.h_parse(self.parser, "acd"), (ord('a'),ord('c'),ord('d')))
-        self.assertEqual(h.h_parse(self.parser, "ad"), (ord('a'),None,ord('d')))
+        self.assertEqual(h.h_parse(self.parser, "abd"), ('a','b','d'))
+        self.assertEqual(h.h_parse(self.parser, "acd"), ('a','c','d'))
+        self.assertEqual(h.h_parse(self.parser, "ad"), ('a',h.Placeholder(), 'd'))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "aed"), None)
         self.assertEqual(h.h_parse(self.parser, "ab"), None)
@@ -346,7 +345,7 @@ class TestIgnore(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_ch("a"), h.h_ignore(h.h_ch("b")), h.h_ch("c")])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "abc"), tuple(map(ord, "ac")))
+        self.assertEqual(h.h_parse(self.parser, "abc"), ("a","c"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "ac"), None)
 
@@ -355,10 +354,10 @@ class TestSepBy(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sepBy(h.h_choice__a([h.h_ch("1"), h.h_ch("2"), h.h_ch("3")]), h.h_ch(","))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "1,2,3"), tuple(map(ord, "123")))
-        self.assertEqual(h.h_parse(self.parser, "1,3,2"), tuple(map(ord, "132")))
-        self.assertEqual(h.h_parse(self.parser, "1,3"), tuple(map(ord, "13")))
-        self.assertEqual(h.h_parse(self.parser, "3"), (ord('3'),))
+        self.assertEqual(h.h_parse(self.parser, "1,2,3"), ('1','2','3'))
+        self.assertEqual(h.h_parse(self.parser, "1,3,2"), ('1','3','2'))
+        self.assertEqual(h.h_parse(self.parser, "1,3"), ('1','3'))
+        self.assertEqual(h.h_parse(self.parser, "3"), ('3',))
         self.assertEqual(h.h_parse(self.parser, ""), ())
     def test_failure(self):
         pass
@@ -368,10 +367,10 @@ class TestSepBy1(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sepBy1(h.h_choice__a([h.h_ch("1"), h.h_ch("2"), h.h_ch("3")]), h.h_ch(","))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "1,2,3"), tuple(map(ord, "123")))
-        self.assertEqual(h.h_parse(self.parser, "1,3,2"), tuple(map(ord, "132")))
-        self.assertEqual(h.h_parse(self.parser, "1,3"), tuple(map(ord, "13")))
-        self.assertEqual(h.h_parse(self.parser, "3"), (ord('3'),))
+        self.assertEqual(h.h_parse(self.parser, "1,2,3"), ('1','2','3'))
+        self.assertEqual(h.h_parse(self.parser, "1,3,2"), ('1','3','2'))
+        self.assertEqual(h.h_parse(self.parser, "1,3"), ('1','3'))
+        self.assertEqual(h.h_parse(self.parser, "3"), ('3',))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, ""), None)
 
@@ -381,7 +380,7 @@ class TestEpsilonP1(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_ch("a"), h.h_epsilon_p(), h.h_ch("b")])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "ab"), tuple(ord(y) for y in ["a", "b"]))
+        self.assertEqual(h.h_parse(self.parser, "ab"), ("a", "b"))
     def test_failure(self):
         pass
 
@@ -390,7 +389,7 @@ class TestEpsilonP2(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_epsilon_p(), h.h_ch("a")])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a"), tuple(ord(y) for y in ["a"]))
+        self.assertEqual(h.h_parse(self.parser, "a"), ("a",))
     def test_failure(self):
         pass
 
@@ -399,7 +398,7 @@ class TestEpsilonP3(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_ch("a"), h.h_epsilon_p()])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a"), tuple(ord(y) for y in ["a"]))
+        self.assertEqual(h.h_parse(self.parser, "a"), ("a",))
     def test_failure(self):
         pass
 
@@ -418,7 +417,7 @@ class TestAnd1(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_and(h.h_ch("0")), h.h_ch("0")])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "0"), (0x30,))
+        self.assertEqual(h.h_parse(self.parser, "0"), ("0",))
     def test_failure(self):
         pass
 
@@ -436,7 +435,7 @@ class TestAnd3(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_ch("1"), h.h_and(h.h_ch("2"))])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "12"), (0x31,))
+        self.assertEqual(h.h_parse(self.parser, "12"), ('1',))
     def test_failure(self):
         pass
 
@@ -445,7 +444,7 @@ class TestNot1(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_ch("a"), h.h_choice__a([h.h_ch("+"), h.h_token("++")]), h.h_ch("b")])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a+b"), tuple(ord(y) for y in ["a", "+", "b"]))
+        self.assertEqual(h.h_parse(self.parser, "a+b"), ("a", "+", "b"))
     def test_failure(self):
         self.assertEqual(h.h_parse(self.parser, "a++b"), None)
 
@@ -454,8 +453,8 @@ class TestNot2(unittest.TestCase):
     def setUpClass(cls):
         cls.parser = h.h_sequence__a([h.h_ch("a"), h.h_choice__a([h.h_sequence__a([h.h_ch("+"), h.h_not(h.h_ch("+"))]), h.h_token("++")]), h.h_ch("b")])
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a+b"), (ord('a'), (ord('+'),), ord('b')))
-        self.assertEqual(h.h_parse(self.parser, "a++b"), (ord('a'), "++", ord('b')))
+        self.assertEqual(h.h_parse(self.parser, "a+b"), ('a', ('+',), 'b'))
+        self.assertEqual(h.h_parse(self.parser, "a++b"), ('a', "++", 'b'))
     def test_failure(self):
         pass
 
@@ -480,9 +479,9 @@ class TestRightrec(unittest.TestCase):
         a = h.h_ch("a")
         h.h_bind_indirect(cls.parser, h.h_choice__a([h.h_sequence__a([a, cls.parser]), h.h_epsilon_p()]))
     def test_success(self):
-        self.assertEqual(h.h_parse(self.parser, "a"), (ord('a'),))
-        self.assertEqual(h.h_parse(self.parser, "aa"), (ord('a'), (ord('a'),)))
-        self.assertEqual(h.h_parse(self.parser, "aaa"), (ord('a'), (ord('a'), (ord('a'),))))
+        self.assertEqual(h.h_parse(self.parser, "a"), ('a',))
+        self.assertEqual(h.h_parse(self.parser, "aa"), ('a', ('a',)))
+        self.assertEqual(h.h_parse(self.parser, "aaa"), ('a', ('a', ('a',))))
     def test_failure(self):
         pass
 

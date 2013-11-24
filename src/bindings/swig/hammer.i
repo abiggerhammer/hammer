@@ -1,10 +1,8 @@
 %module hammer
+
 %nodefaultctor;
-//%nodefaultdtor;
 
 %include "stdint.i"
- //%include "typemaps.i"
- //%apply char [ANY] { uint8_t [ANY] };
 
 #if defined(SWIGPYTHON)
 %ignore HCountedArray_;
@@ -12,6 +10,67 @@
 %apply (uint8_t* str, size_t len) {(const uint8_t* input, size_t length)}
 %apply (uint8_t* str, size_t len) {(const uint8_t* str, const size_t len)}
 %apply (uint8_t* str, size_t len) {(const uint8_t* charset, size_t length)}
+
+
+%rename(_h_ch) h_ch;
+%pythoncode %{
+  def h_ch(ch):
+    if isinstance(ch, str) or isinstance(ch, unicode):
+      return h_token(ch)
+    else:
+     return  _h_ch(ch)
+%}
+
+%rename(_h_ch_range) h_ch_range;
+%pythoncode %{
+  def h_ch_range(c1, c2):
+    dostr = isinstance(c1, str)
+    dostr2 = isinstance(c2, str)
+    if isinstance(c1, unicode) or isinstance(c2, unicode):
+      raise TypeError("ch_range only works on bytes")
+    if dostr != dostr2:
+      raise TypeError("Both arguments to ch_range must be the same type")
+    if dostr:
+      return h_action(_h_ch_range(c1, c2), chr)
+    else:
+      return _h_ch_range(c1, c2)
+%}
+
+%rename(_h_in) h_in;
+%rename(_h_not_in) h_not_in;
+%pythoncode %{
+  def h_in(charset):
+    return h_action(_h_in(charset), chr)
+  def h_not_in(charset):
+    return h_action(_h_not_in(charset), chr)
+  %}
+
+%inline {
+  static PyObject *_helper_Placeholder = NULL, *_helper_ParseError = NULL;
+
+  static void _register_helpers(PyObject* parse_error, PyObject *placeholder) {
+    _helper_ParseError = parse_error;
+    _helper_Placeholder = placeholder;
+  }
+ }
+
+%pythoncode %{
+  class Placeholder(object):
+      """The python equivalent of TT_NONE"""
+      def __str__(self):
+          return "Placeholder"
+      def __repr__(self):
+          return "Placeholder"
+      def __eq__(self, other):
+          return type(self) == type(other)
+  class ParseError(Exception):
+      """The parse failed; the message may have more information"""
+      pass
+
+  _hammer._register_helpers(ParseError,
+			    Placeholder)
+  %}
+
 %typemap(in) void*[] {
   if (PyList_Check($input)) {
     Py_INCREF($input);
@@ -64,13 +123,17 @@
     $result = hpt_to_python($1->ast);
   }
  }
-
+%typemap(newfree) struct HParseResult_* {
+  h_parse_result_free($input);
+ }
 %inline %{
   static int h_tt_python;
   %}
 %init %{
   h_tt_python = h_allocate_token_type("com.upstandinghackers.hammer.python");
   %}
+
+
 
 /*
 %typemap(in) (HPredicate* pred, void* user_data) {
@@ -132,7 +195,7 @@
     }
     switch (token->token_type) {
     case TT_NONE:
-      Py_RETURN_NONE;
+      return PyObject_CallFunctionObjArgs(_helper_Placeholder, NULL);
       break;
     case TT_BYTES:
       return PyString_FromStringAndSize((char*)token->token_data.bytes.token, token->token_data.bytes.len);
@@ -173,6 +236,8 @@
     HParsedToken *tok = h_make(p->arena, h_tt_python, ret);
     return tok;
    }
-
+  
  }
+
+
 #endif
