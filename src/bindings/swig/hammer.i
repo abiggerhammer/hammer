@@ -164,7 +164,27 @@
 %apply (const uint8_t* str, const size_t len) { (const uint8_t* input, size_t length) }
 
 %typemap(in) void*[] {
-
+  if (IS_ARRAY == Z_TYPE_PP($input)) {
+    zval **data;
+    HashTable *arr = Z_ARRVAL_PP($input);
+    HashPosition pointer;
+    int size = zend_hash_num_elements(arr);
+    int i = 0;
+    int res = 0;
+    $1 = (void**)malloc((size+1)*sizeof(HParser*));
+    for (zend_hash_internal_pointer_reset_ex(arr, &pointer);
+         zend_hash_get_current_data_ex(arr, (void**)&data, &pointer);
+         zend_hash_move_forward_ex(arr, &pointer), i++) {
+      res = SWIG_ConvertPtr(*data, &($1[i]), SWIGTYPE_p_HParser_, 0 | 0);
+      if (!SWIG_IsOk(res)) {
+	// TODO do we not *have* SWIG_TypeError?
+	SWIG_exception_fail(res, "that wasn't an HParser");
+      }
+    }
+  } else {
+    // FIXME raise some error
+    $1 = NULL;
+  }
  }
 
 %typemap(in) uint8_t {
@@ -181,9 +201,11 @@
   RETVAL_STRINGL((char*)$1->token, $1->len, 1);
  }
 
+/* TODO do we need this anymore? 
 %typemap(out) struct HCountedArray_* {
 
  }
+*/
 %typemap(out) struct HParseResult_* {
   if ($1 == NULL) {
     // TODO: raise parse failure
