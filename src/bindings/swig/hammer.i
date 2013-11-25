@@ -136,6 +136,23 @@
 
 #if defined(SWIGPHP)
 %ignore HCountedArray_;
+
+%inline %{
+  static int h_tt_php;
+  %}
+
+%init %{
+  h_tt_php = h_allocate_token_type("com.upstandinghackers.hammer.php");
+  %}
+
+%inline {
+  struct HParsedToken_;
+  struct HParseResult_;
+  static zval* hpt_to_php(const struct HParsedToken_ *token);
+  
+  //static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data);
+ }
+
 %typemap(in) (const uint8_t* str, const size_t len) {
   $1 = (uint8_t*)(*$input)->value.str.val;
   $2 = (*$input)->value.str.len;
@@ -166,24 +183,41 @@
     // TODO: raise parse failure
     RETVAL_NULL();
   } else {
-    $result = hpt_to_php($1->ast);
-    printf("Being returned: %s\n", Z_STRVAL_P($result));
+    if ($1->ast == NULL) {
+      RETVAL_NULL();
+    } else {
+      switch($1->ast->token_type) {
+      case TT_NONE:
+	RETVAL_NULL();
+	break;
+      case TT_BYTES:
+	RETVAL_STRINGL((char*)$1->ast->token_data.bytes.token, $1->ast->token_data.bytes.len, 1);
+	break;
+      case TT_SINT:
+	RETVAL_LONG($1->ast->token_data.sint);
+	break;
+      case TT_UINT:
+	RETVAL_LONG($1->ast->token_data.uint);
+	break;
+      case TT_SEQUENCE:
+	array_init($result);
+	for (int i=0; i < $1->ast->token_data.seq->used; i++) {
+	  add_next_index_zval($result, hpt_to_php($1->ast->token_data.seq->elements[i]));
+	}
+	break;
+      default:
+	/* if (token->token_type == h_tt_php) { */
+	/* 	ZEND_REGISTER_RESOURCE(return_value, token->token_data.user, le_swig__p_void); // it's a void*, what else could I do with it? */
+	/* 	return return_value; */
+	/* } else { */
+	/* 	// I guess that's a python thing */
+	/* 	//return (zval*)SWIG_NewPointerObj((void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0); */
+	/* 	// TODO: support registry */
+	/* } */
+	break;
+      }
+    }
   }
- }
-%inline %{
-  static int h_tt_php;
-  %}
-
-%init %{
-  h_tt_php = h_allocate_token_type("com.upstandinghackers.hammer.php");
-  %}
-
-%inline {
-  struct HParsedToken_;
-  struct HParseResult_;
-  static zval* hpt_to_php(const struct HParsedToken_ *token);
-  
-  //static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data);
  }
 
 #else
@@ -420,6 +454,7 @@ def int64(): return _h_int64()
       return ret;
     case TT_BYTES:
       ZVAL_STRINGL(ret, (char*)token->token_data.bytes.token, token->token_data.bytes.len, 1);
+      printf("Being returned from hpt_to_php: %s\n", Z_STRVAL_P(ret));
       return ret;
     case TT_SINT:
       ZVAL_LONG(ret, token->token_data.sint);
@@ -430,21 +465,20 @@ def int64(): return _h_int64()
     case TT_SEQUENCE:
       array_init(ret);
       for (int i=0; i < token->token_data.seq->used; i++) {
-	add_next_index_zval(ret, hpt_to_php(token->token_data.seq->elements[i]));
+       add_next_index_zval(ret, hpt_to_php(token->token_data.seq->elements[i]));
       }
       return ret;
     default:
       /* if (token->token_type == h_tt_php) { */
-      /* 	ZEND_REGISTER_RESOURCE(return_value, token->token_data.user, le_swig__p_void); // it's a void*, what else could I do with it? */
-      /* 	return return_value; */
+      /*       ZEND_REGISTER_RESOURCE(return_value, token->token_data.user, le_swig__p_void); // it's a void*, wh
+      /*       return return_value; */
       /* } else { */
-      /* 	// I guess that's a python thing */
-      /* 	//return (zval*)SWIG_NewPointerObj((void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0); */
-      /* 	// TODO: support registry */
+      /*       // I guess that's a python thing */
+      /*       //return (zval*)SWIG_NewPointerObj((void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0); */
+      /*       // TODO: support registry */
       /* } */
       break;
     }
   }
  }
 #endif
-
