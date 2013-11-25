@@ -168,7 +168,13 @@
  }
 
 %typemap(in) uint8_t {
-
+  if (IS_LONG == Z_TYPE_PP($input)) {
+    $1 = Z_LVAL_PP($input);
+  } else if (IS_STRING != Z_TYPE_PP($input)) {
+    // FIXME raise some error
+  } else {
+    $1 = *(uint8_t*)Z_STRVAL_PP($input);
+  }
  }
 
 %typemap(out) HBytes* {
