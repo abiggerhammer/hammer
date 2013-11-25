@@ -135,26 +135,28 @@
 
 
 
-/*
-%typemap(in) (HPredicate* pred, void* user_data) {
+
+%typemap(in) (HPredicate pred, void* user_data) {
   Py_INCREF($input);
   $2 = $input;
   $1 = call_predicate;
  }
-*/
+
 %typemap(in) (const HAction a, void* user_data) {
   Py_INCREF($input);
   $2 = $input;
   $1 = call_action;
  }
 
-%inline {
+%inline %{
+
   struct HParsedToken_;
   struct HParseResult_;
   static PyObject* hpt_to_python(const struct HParsedToken_ *token);
   
   static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data);
- }
+  static int call_predicate(const struct HParseResult_ *p, void* user_data);
+ %}
 #else
   #warning no uint8_t* typemaps defined
 #endif
@@ -164,6 +166,7 @@
 #include "allocator.h"
 #include "hammer.h"
 #include "internal.h"
+#include "glue.h"
 %}
 %include "allocator.h"
 %include "hammer.h"
@@ -233,11 +236,30 @@
       assert(ret != NULL);
     }	
     // TODO: add reference to ret to parse-local data
+    // For now, just hold onto reference
     HParsedToken *tok = h_make(p->arena, h_tt_python, ret);
     return tok;
    }
   
+  static int call_predicate(const struct HParseResult_ *p, void* user_data) {
+    PyObject *callable = user_data;
+    PyObject *ret = PyObject_CallFunctionObjArgs(callable,
+						 hpt_to_python(p->ast),
+						 NULL);
+    int rret = 0;
+    if (ret == NULL) {
+      // TODO: throw exception
+      PyErr_Print();
+      assert(ret != NULL);
+    }	
+    // TODO: add reference to ret to parse-local data
+    rret = PyObject_IsTrue(ret);
+    Py_DECREF(ret);
+    return rret;
+  }
+  
  }
+
 
 
 #endif

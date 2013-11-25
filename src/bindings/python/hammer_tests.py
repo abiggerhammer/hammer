@@ -402,15 +402,15 @@ class TestEpsilonP3(unittest.TestCase):
     def test_failure(self):
         pass
 
-# class TestAttrBool(unittest.TestCase):
-#     @classmethod
-#     def setUpClass(cls):
-#         cls.parser = h.h_attr_bool(h.h_many1(h.h_choice__a([h.h_ch("a"), h.h_ch("b")])), lambda x: x[0] == x[1])
-#     def test_success(self):
-#         self.assertEqual(h.h_parse(self.parser, "aa"), ["a", "a"])
-#         self.assertEqual(h.h_parse(self.parser, "bb"), ["b", "b"])
-#     def test_failure(self):
-#         self.assertEqual(h.h_parse(self.parser, "ab"), None)
+class TestAttrBool(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.parser = h.h_attr_bool(h.h_many1(h.h_choice__a([h.h_ch("a"), h.h_ch("b")])), lambda x: x[0] == x[1])
+    def test_success(self):
+        self.assertEqual(h.h_parse(self.parser, "aa"), ("a", "a"))
+        self.assertEqual(h.h_parse(self.parser, "bb"), ("b", "b"))
+    def test_failure(self):
+        self.assertEqual(h.h_parse(self.parser, "ab"), None)
 
 class TestAnd1(unittest.TestCase):
     @classmethod
