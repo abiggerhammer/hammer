@@ -150,7 +150,7 @@
   struct HParseResult_;
   static zval* hpt_to_php(const struct HParsedToken_ *token);
   
-  //static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data);
+  static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data);
  }
 
 %typemap(in) (const uint8_t* str, const size_t len) {
@@ -247,7 +247,15 @@
     }
   }
  }
+/*
+%typemap(in) (HPredicate* pred, void* user_data) {
 
+ }
+*/
+%typemap(in) (const HAction a, void* user_data) {
+  $2 = $input;
+  $1 = call_action;
+ }
 #else
   #warning no Hammer typemaps defined
 #endif
@@ -507,6 +515,20 @@ def int64(): return _h_int64()
       /* } */
       break;
     }
+  }
+
+  static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data) {
+    zval *callable = user_data;
+    zval *ret;
+    ALLOC_INIT_ZVAL(ret);
+    FIXME_SOME_ZEND_APPLY_FUNCTION(ret, (apply_func_t)callable TSRMLS_CC);
+    if (ret == NULL) {
+      // FIXME throw some error
+      return NULL;
+    }
+    // TODO: add reference to ret to parse-local data
+    HParsedToken *tok = h_make(p->arena, h_tt_php, ret);
+    return tok;
   }
  }
 #endif
