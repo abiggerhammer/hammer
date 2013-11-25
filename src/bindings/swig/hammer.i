@@ -140,22 +140,52 @@
   $1 = (uint8_t*)(*$input)->value.str.val;
   $2 = (*$input)->value.str.len;
  }
+
 //%typemap(out) (const uint8_t* str, const size_t len) {
 //  RETVAL_STRINGL((char*)$1, $2, 1);
 // }
 %apply (const uint8_t* str, const size_t len) { (const uint8_t* input, size_t length) }
+
 %typemap(in) void*[] {
 
  }
+
 %typemap(in) uint8_t {
 
  }
+
 %typemap(out) HBytes* {
   RETVAL_STRINGL((char*)$1->token, $1->len, 1);
  }
+
 %typemap(out) struct HCountedArray_* {
 
  }
+%typemap(out) struct HParseResult_* {
+  if ($1 == NULL) {
+    // TODO: raise parse failure
+    RETVAL_NULL();
+  } else {
+    $result = hpt_to_php($1->ast);
+    printf("Being returned: %s\n", Z_STRVAL_P($result));
+  }
+ }
+%inline %{
+  static int h_tt_php;
+  %}
+
+%init %{
+  h_tt_php = h_allocate_token_type("com.upstandinghackers.hammer.php");
+  %}
+
+%inline {
+  struct HParsedToken_;
+  struct HParseResult_;
+  static zval* hpt_to_php(const struct HParsedToken_ *token);
+  
+  //static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data);
+ }
+
 #else
   #warning no Hammer typemaps defined
 #endif
@@ -375,4 +405,46 @@ def int64(): return _h_int64()
 #endif
 //%apply const char* { const uint8_t* }
 
+#if defined(SWIGPHP)
+%inline {
+  static zval* hpt_to_php(const HParsedToken *token) {
+    zval *ret;
+    ALLOC_INIT_ZVAL(ret);
+    if (token == NULL) {
+      ZVAL_NULL(ret);
+      return ret;
+    }
+    switch (token->token_type) {
+    case TT_NONE:
+      ZVAL_NULL(ret);
+      return ret;
+    case TT_BYTES:
+      ZVAL_STRINGL(ret, (char*)token->token_data.bytes.token, token->token_data.bytes.len, 1);
+      return ret;
+    case TT_SINT:
+      ZVAL_LONG(ret, token->token_data.sint);
+      return ret;
+    case TT_UINT:
+      ZVAL_LONG(ret, token->token_data.uint);
+      return ret;
+    case TT_SEQUENCE:
+      array_init(ret);
+      for (int i=0; i < token->token_data.seq->used; i++) {
+	add_next_index_zval(ret, hpt_to_php(token->token_data.seq->elements[i]));
+      }
+      return ret;
+    default:
+      /* if (token->token_type == h_tt_php) { */
+      /* 	ZEND_REGISTER_RESOURCE(return_value, token->token_data.user, le_swig__p_void); // it's a void*, what else could I do with it? */
+      /* 	return return_value; */
+      /* } else { */
+      /* 	// I guess that's a python thing */
+      /* 	//return (zval*)SWIG_NewPointerObj((void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0); */
+      /* 	// TODO: support registry */
+      /* } */
+      break;
+    }
+  }
+ }
+#endif
 
