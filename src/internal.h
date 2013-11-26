@@ -15,6 +15,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+/*
+ * NOTE: This is an internal header and installed for use by extensions. The
+ * API is not guaranteed stable.
+*/
+
 #ifndef HAMMER_INTERNAL__H
 #define HAMMER_INTERNAL__H
 #include <stdint.h>
@@ -360,6 +365,7 @@ struct HCFChoice_ {
                     // to execute before action and pred are applied.
   HAction action;
   HPredicate pred;
+  void* user_data;
 };
 
 struct HCFSequence_ {

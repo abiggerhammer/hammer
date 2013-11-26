@@ -6,7 +6,17 @@ bindings = ['python']
 dist_headers = [
     "hammer.h",
     "allocator.h",
-    "glue.h"
+    "glue.h",
+    "internal.h"
+]
+
+parsers_headers = [
+    "parsers/parser_internal.h"
+]
+
+backends_headers = [
+    "backends/regex.h",
+    "backends/contextfree.h"
 ]
 
 parsers = ['parsers/%s.c'%s for s in
@@ -49,6 +59,7 @@ misc_hammer_parts = [
     'glue.c',
     'hammer.c',
     'pprint.c',
+    'registry.c',
     'system_allocator.c']
 
 tests = ['t_benchmark.c',
@@ -63,6 +74,9 @@ libhammer_static = env.StaticLibrary('hammer', parsers + backends + misc_hammer_
 
 env.Install("$libpath", [libhammer_static, libhammer_shared])
 env.Install("$incpath", dist_headers)
+env.Install("$parsersincpath", parsers_headers)
+env.Install("$backendsincpath", backends_headers)
+env.Install("$pkgconfigpath", "../../../libhammer.pc")
 
 testenv = env.Clone()
 testenv.ParseConfig('pkg-config --cflags --libs glib-2.0')

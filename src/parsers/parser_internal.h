@@ -1,3 +1,8 @@
+/*
+ * NOTE: This is an internal header and installed for use by extensions. The
+ * API is not guaranteed stable.
+*/
+
 #ifndef HAMMER_PARSE_INTERNAL__H
 #define HAMMER_PARSE_INTERNAL__H
 #include "../hammer.h"

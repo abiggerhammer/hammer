@@ -8,4 +8,9 @@ before_install:
 script: 
   - scons
 notifications:
-  irc: "irc.upstandinghackers.com#hammer"
+  irc: 
+    channels: 
+      - "irc.upstandinghackers.com#hammer"
+    use_notice: true
+    skip_join: true
+        

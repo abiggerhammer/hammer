@@ -4,13 +4,14 @@
 typedef struct {
   const HParser *p;
   HPredicate pred;
+  void* user_data;
 } HAttrBool;
 
 static HParseResult* parse_attr_bool(void *env, HParseState *state) {
   HAttrBool *a = (HAttrBool*)env;
   HParseResult *res = h_do_parse(a->p, state);
   if (res && res->ast) {
-    if (a->pred(res))
+    if (a->pred(res, a->user_data))
       return res;
     else
       return NULL;
@@ -42,12 +43,13 @@ static void desugar_ab(HAllocator *mm__, HCFStack *stk__, void *env) {
     } HCFS_END_SEQ();
     HCFS_THIS_CHOICE->pred = a->pred;
     HCFS_THIS_CHOICE->reshape = h_act_first;
+    HCFS_THIS_CHOICE->user_data = a->user_data;
   } HCFS_END_CHOICE();
 }
 
 static bool h_svm_action_attr_bool(HArena *arena, HSVMContext *ctx, void* arg) {
   HParseResult res;
-  HPredicate pred = arg;
+  HAttrBool *ab = arg;
   assert(ctx->stack_count >= 1);
   if (ctx->stack[ctx->stack_count-1]->token_type != TT_MARK) {
     assert(ctx->stack_count >= 2 && ctx->stack[ctx->stack_count-2]->token_type == TT_MARK);
@@ -59,7 +61,7 @@ static bool h_svm_action_attr_bool(HArena *arena, HSVMContext *ctx, void* arg) {
     res.ast = NULL;
   }
   res.arena = arena;
-  return pred(&res);
+  return ab->pred(&res, ab->user_data);
 }
 
 static bool ab_ctrvm(HRVMProg *prog, void *env) {
@@ -67,7 +69,7 @@ static bool ab_ctrvm(HRVMProg *prog, void *env) {
   h_rvm_insert_insn(prog, RVM_PUSH, 0);
   if (!h_compile_regex(prog, ab->p))
     return false;
-  h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_attr_bool, ab->pred));
+  h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_attr_bool, ab));
   return true;
 }
 
@@ -80,12 +82,13 @@ static const HParserVtable attr_bool_vt = {
 };
 
 
-HParser* h_attr_bool(const HParser* p, HPredicate pred) {
-  return h_attr_bool__m(&system_allocator, p, pred);
+HParser* h_attr_bool(const HParser* p, HPredicate pred, void* user_data) {
+  return h_attr_bool__m(&system_allocator, p, pred, user_data);
 }
-HParser* h_attr_bool__m(HAllocator* mm__, const HParser* p, HPredicate pred) { 
+HParser* h_attr_bool__m(HAllocator* mm__, const HParser* p, HPredicate pred, void* user_data) { 
   HAttrBool *env = h_new(HAttrBool, 1);
   env->p = p;
   env->pred = pred;
+  env->user_data = user_data;
   return h_new_parser(mm__, &attr_bool_vt, env);
 }

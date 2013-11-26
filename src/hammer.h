@@ -137,14 +137,14 @@ typedef struct HBitWriter_ HBitWriter;
  * say, structs) and stuff values for them into the void* in the 
  * tagged union in HParsedToken. 
  */
-typedef HParsedToken* (*HAction)(const HParseResult *p);
+typedef HParsedToken* (*HAction)(const HParseResult *p, void* user_data);
 
 /**
  * Type of a boolean attribute-checking function, used in the 
  * attr_bool() parser. It can be any (user-defined) function that takes
  * a HParseResult* and returns true or false. 
  */
-typedef bool (*HPredicate)(HParseResult *p);
+typedef bool (*HPredicate)(HParseResult *p, void* user_data);
 
 typedef struct HCFChoice_ HCFChoice;
 typedef struct HRVMProg_ HRVMProg;
@@ -385,7 +385,7 @@ HAMMER_FN_DECL(HParser*, h_middle, const HParser* p, const HParser* x, const HPa
  *
  * Result token type: any
  */
-HAMMER_FN_DECL(HParser*, h_action, const HParser* p, const HAction a);
+HAMMER_FN_DECL(HParser*, h_action, const HParser* p, const HAction a, void* user_data);
 
 /**
  * Parse a single character in the given charset. 
@@ -551,7 +551,7 @@ HAMMER_FN_DECL(HParser*, h_length_value, const HParser* length, const HParser* v
  * 
  * Result token type: p's result type if pred succeeded, NULL otherwise.
  */
-HAMMER_FN_DECL(HParser*, h_attr_bool, const HParser* p, HPredicate pred);
+HAMMER_FN_DECL(HParser*, h_attr_bool, const HParser* p, HPredicate pred, void* user_data);
 
 /**
  * The 'and' parser asserts that a conditional syntax is satisfied, 
@@ -657,16 +657,27 @@ void h_bit_writer_free(HBitWriter* w);
 
 // General-purpose actions for use with h_action
 // XXX to be consolidated with glue.h when merged upstream
-HParsedToken *h_act_first(const HParseResult *p);
-HParsedToken *h_act_second(const HParseResult *p);
-HParsedToken *h_act_last(const HParseResult *p);
-HParsedToken *h_act_flatten(const HParseResult *p);
-HParsedToken *h_act_ignore(const HParseResult *p);
+HParsedToken *h_act_first(const HParseResult *p, void* userdata);
+HParsedToken *h_act_second(const HParseResult *p, void* userdata);
+HParsedToken *h_act_last(const HParseResult *p, void* userdata);
+HParsedToken *h_act_flatten(const HParseResult *p, void* userdata);
+HParsedToken *h_act_ignore(const HParseResult *p, void* userdata);
 
 // {{{ Benchmark functions
 HAMMER_FN_DECL(HBenchmarkResults *, h_benchmark, HParser* parser, HParserTestcase* testcases);
 void h_benchmark_report(FILE* stream, HBenchmarkResults* results);
 //void h_benchmark_dump_optimized_code(FILE* stream, HBenchmarkResults* results);
+// }}}
+
+// {{{ Token type registry
+/// Allocate a new, unused (as far as this function knows) token type.
+int h_allocate_token_type(const char* name);
+
+/// Get the token type associated with name. Returns -1 if name is unkown
+int h_get_token_type_number(const char* name);
+
+/// Get the name associated with token_type. Returns NULL if the token type is unkown
+const char* h_get_token_type_name(int token_type);
 // }}}
 
 #ifdef __cplusplus
