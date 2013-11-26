@@ -507,4 +507,3 @@ class TestRightrec(unittest.TestCase):
 # #        self.assertEqual(self.parser.parse("d+d+d"), ["d", "+", "d", "+", "d"])
 # #    def test_failure(self):
 # #        self.assertEqual(self.parser.parse("d+"), None)
-
