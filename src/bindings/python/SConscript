@@ -20,9 +20,10 @@ Default(libhammer_python)
 
 pytestenv = pythonenv.Clone()
 pytestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
-pytestexec = pytestenv.Command(None, ['hammer_tests.py'] + libhammer_python, "nosetests -vv $SOURCE")
+pytests = ['hammer_tests.py']
+pytestexec = pytestenv.Command(['hammer.pyc', 'hammer_tests.pyc'], pytests + libhammer_python, "nosetests -vv $SOURCE")
 pytest = Alias("testpython", [pytestexec], pytestexec)
 AlwaysBuild(pytest)
 testruns.append(pytest)
 
-Clean('.', ['hammer.pyc', 'hammer_tests.py', 'hammer_tests.pyc']) 
+
