@@ -8,19 +8,27 @@ matrix:
   include:
     - compiler: gcc
       language: python
-      python: 2.7
+      python: 3.3
       env: BINDINGS=python
     - compiler: clang
       language: python
-      python: 2.7
+      python: 3.3
       env: BINDINGS=python
     - compiler: gcc
       language: python
-      python: 2.6
+      python: 3.2
       env: BINDINGS=python
     - compiler: clang
       language: python
-      python: 2.6
+      python: 3.2
+      env: BINDINGS=python
+    - compiler: gcc
+      language: python
+      python: 2.7
+      env: BINDINGS=python
+    - compiler: clang
+      language: python
+      python: 2.7
       env: BINDINGS=python
 before_install:
   - sudo apt-get update -qq
