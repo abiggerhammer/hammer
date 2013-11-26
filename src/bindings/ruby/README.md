@@ -7,8 +7,6 @@ Ruby bindings for [hammer](https://github.com/UpstandingHackers/hammer), a parsi
 
 * I called the gem `hammer-parser`, since there already is a [gem named `hammer`](https://rubygems.org/gems/hammer).
 
-* C extension not really needed at the moment, if we don't mind hardcoding the token types in the ruby code.
-
 
 ## Development
 
@@ -16,9 +14,7 @@ Ruby bindings for [hammer](https://github.com/UpstandingHackers/hammer), a parsi
 
 2. Run `bundle install` to install dependencies.
 
-3. Run `rake compile` to compile the C extension.
-
-4. Run `irb -I ./lib -r hammer` to open `irb` with hammer loaded.
+3. Run `irb -I ./lib -r hammer` to open `irb` with hammer loaded.
 
 
 ## Installation

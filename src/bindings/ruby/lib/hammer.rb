@@ -1,4 +1,3 @@
-require 'hammer/hammer_ext'
 require 'hammer/internal'
 require 'hammer/parser'
 require 'hammer/parser_builder'
