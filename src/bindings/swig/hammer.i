@@ -518,16 +518,23 @@ def int64(): return _h_int64()
   }
 
   static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data) {
-    zval *callable = user_data;
-    zval *ret;
-    ALLOC_INIT_ZVAL(ret);
-    FIXME_SOME_ZEND_APPLY_FUNCTION(ret, (apply_func_t)callable TSRMLS_CC);
-    if (ret == NULL) {
+    zval *args[1];
+    zval ret;
+    // in PHP land, the HAction is passed by its name as a string
+    if (IS_STRING != Z_TYPE_P((zval*)user_data)) {
+      // FIXME throw some error
+      return NULL;
+    }
+    zval *callable;
+    callable = user_data;
+    args[0] = hpt_to_php(p->ast);
+    int ok = call_user_function(EG(function_table), NULL, callable, &ret, 1, args TSRMLS_CC);
+    if (ok != SUCCESS) {
       // FIXME throw some error
       return NULL;
     }
     // TODO: add reference to ret to parse-local data
-    HParsedToken *tok = h_make(p->arena, h_tt_php, ret);
+    HParsedToken *tok = h_make(p->arena, h_tt_php, &ret);
     return tok;
   }
  }
