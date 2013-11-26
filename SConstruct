@@ -7,8 +7,12 @@ import sys
 vars = Variables(None, ARGUMENTS)
 vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
+vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['python']))
 
 env = Environment(ENV = {'PATH' : os.environ['PATH']}, variables = vars, tools=['default', 'scanreplace'], toolpath=['tools'])
+
+if not 'bindings' in env:
+    env['bindings'] = []
 
 def calcInstallPath(*elements):
     path = os.path.abspath(os.path.join(*map(env.subst, elements)))
@@ -90,18 +94,23 @@ env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 #rootpath = env['ROOTPATH'] = os.path.abspath('.')
 #env.Append(CPPPATH=os.path.join('#', "hammer"))
 
+testruns = []
+
 Export('env')
+Export('testruns')
 
 if not GetOption("in_place"):
     env['BUILD_BASE'] = 'build/$VARIANT'
-    env.SConscript(["src/SConscript"], variant_dir='$BUILD_BASE/src')
-    env.SConscript(["examples/SConscript"], variant_dir='$BUILD_BASE/examples')
+    lib = env.SConscript(["src/SConscript"], variant_dir='$BUILD_BASE/src')
+    env.Alias("examples", env.SConscript(["examples/SConscript"], variant_dir='$BUILD_BASE/examples'))
 else:
     env['BUILD_BASE'] = '.'
-    env.SConscript(["src/SConscript"])
-    env.SConscript(["examples/SConscript"])
+    lib = env.SConscript(["src/SConscript"])
+    env.Alias(env.SConscript(["examples/SConscript"]))
 
-env.Command('test', '$BUILD_BASE/src/test_suite', 'env LD_LIBRARY_PATH=$BUILD_BASE/src $SOURCE')
+#env.Command('test', '$BUILD_BASE/src/test_suite', 'env LD_LIBRARY_PATH=$BUILD_BASE/src $SOURCE')
+
+env.Alias("test", testruns)
 
 env.Alias("install", "$libpath")
 env.Alias("install", "$incpath")

@@ -1,11 +1,12 @@
 # -*- python -*-
-import os.path
-Import('env libhammer_shared')
+import os, os.path
+Import('env libhammer_shared testruns')
 
 pythonenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
 
-pythonenv.Append(CPPPATH = ['../../', '/usr/include/python2.7'])
+pythonenv.Append(CPPPATH = ['../../'])
 pythonenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error'])
+pythonenv.ParseConfig("pkg-config --cflags python")
 pythonenv.Append(LIBS = ['hammer'])
 pythonenv.Append(LIBPATH = ['../../'])
 pythonenv.Append(SWIGFLAGS = ['-DHAMMER_INTERNAL__NO_STDARG_H', '-Isrc/', '-python'])
@@ -15,9 +16,13 @@ pythonenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
 swig = ['hammer.i']
 
 libhammer_python = pythonenv.SharedLibrary('hammer', swig, SHLIBPREFIX='_')
+Default(libhammer_python)
 
 pytestenv = pythonenv.Clone()
 pytestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
-pytestenv.Command(None, ['hammer_tests.py'] + libhammer_python, "nosetests -vv $SOURCE")
+pytestexec = pytestenv.Command(None, ['hammer_tests.py'] + libhammer_python, "nosetests -vv $SOURCE")
+pytest = Alias("testpython", [pytestexec], pytestexec)
+AlwaysBuild(pytest)
+testruns.append(pytest)
 
 Clean('.', ['hammer.pyc', 'hammer_tests.py', 'hammer_tests.pyc']) 

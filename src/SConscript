@@ -1,7 +1,6 @@
 # -*- python -*-
-Import('env')
-
-bindings = ['python']
+import os.path
+Import('env testruns')
 
 dist_headers = [
     "hammer.h",
@@ -62,15 +61,16 @@ misc_hammer_parts = [
     'registry.c',
     'system_allocator.c']
 
-tests = ['t_benchmark.c',
-         't_bitreader.c',
-         't_bitwriter.c',
-         't_parser.c',
-         't_grammar.c',
-         't_misc.c']
+ctests = ['t_benchmark.c',
+          't_bitreader.c',
+          't_bitwriter.c',
+          't_parser.c',
+          't_grammar.c',
+          't_misc.c']
 
 libhammer_shared = env.SharedLibrary('hammer', parsers + backends + misc_hammer_parts)
 libhammer_static = env.StaticLibrary('hammer', parsers + backends + misc_hammer_parts)
+Default(libhammer_shared, libhammer_static)
 
 env.Install("$libpath", [libhammer_static, libhammer_shared])
 env.Install("$incpath", dist_headers)
@@ -81,9 +81,12 @@ env.Install("$pkgconfigpath", "../../../libhammer.pc")
 testenv = env.Clone()
 testenv.ParseConfig('pkg-config --cflags --libs glib-2.0')
 testenv.Append(LIBS=['hammer'], LIBPATH=['.'])
-testenv.Program('test_suite', tests + ['test_suite.c'])
+ctestexec = testenv.Program('test_suite', ctests + ['test_suite.c'])
+ctest = Alias('testc', [ctestexec], "".join(["env LD_LIBRARY_PATH=", os.path.dirname(ctestexec[0].path), " ", ctestexec[0].path]))
+AlwaysBuild(ctest)
+testruns.append(ctest)
 
 Export("libhammer_static libhammer_shared")
 
-for b in bindings:
+for b in env['bindings']:
     env.SConscript(["bindings/%s/SConscript" % b])
