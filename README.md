@@ -36,6 +36,8 @@ Installing
 * pkg-config (for `make test`)
 * glib-2.0 (>= 2.29) (for `make test`)
 * glib-2.0-dev (for `make test`)
+* swig (for Python bindings)
+* python2.7-dev (for Python bindings)
 
 To build, type `scons`. To run the built-in test suite, type `scons test`. For a debug build, add `--variant=debug`
 
@@ -59,6 +61,10 @@ Examples
 The `examples/` directory contains some simple examples, currently including:
 * base64
 * DNS
+
+Known Issues
+============
+The Python bindings only work with Python 2.7. SCons doesn't work with Python 3, and PyCapsule isn't available in 2.6 and below, so 2.7 is all you get. Sorry about that.
 
 Community
 =========
