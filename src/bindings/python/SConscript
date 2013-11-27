@@ -4,18 +4,20 @@ Import('env libhammer_shared testruns')
 
 pythonenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
 
-pythonenv.Append(CPPPATH = ['../../'])
-pythonenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error'])
-pythonenv.ParseConfig("pkg-config --cflags python")
-pythonenv.Append(LIBS = ['hammer'])
-pythonenv.Append(LIBPATH = ['../../'])
-pythonenv.Append(SWIGFLAGS = ['-DHAMMER_INTERNAL__NO_STDARG_H', '-Isrc/', '-python'])
+#pythonenv.Append(CPPPATH = ['../../'])
+#pythonenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error'])
+#pythonenv.ParseConfig("pkg-config --cflags python")
+#pythonenv.Append(LIBS = ['hammer'])
+#pythonenv.Append(LIBPATH = ['../../'])
+#pythonenv.Append(SWIGFLAGS = ['-DHAMMER_INTERNAL__NO_STDARG_H', '-Isrc/', '-python'])
 
-pythonenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
 
-swig = ['hammer.i']
 
-libhammer_python = pythonenv.SharedLibrary('hammer', swig, SHLIBPREFIX='_')
+swig = pythonenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
+setup = ['setup.py']
+pydir = os.path.join(env['BUILD_BASE'], 'src/bindings/python')
+#libhammer_python = pythonenv.SharedLibrary('hammer', swig, SHLIBPREFIX='_')
+libhammer_python = pythonenv.Command(None, [swig, setup], 'python ' + os.path.join(pydir, 'setup.py') + ' build_ext --swig-opts="-outdir ' + pydir + ' -DHAMMER_INTERNAL__NO_STDARG_H -Isrc"')
 Default(libhammer_python)
 
 pytestenv = pythonenv.Clone()
