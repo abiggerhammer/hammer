@@ -3,8 +3,11 @@
 """
 setup.py for Hammer bindings
 """
-import os.path, sys
+import os, os.path, sys
 from distutils.core import setup, Extension
+
+invoked = os.getcwd()
+os.chdir(os.path.dirname(sys.argv[0]))
 
 setup(name="hammer",
       version="0.9.0",
@@ -12,9 +15,10 @@ setup(name="hammer",
       author_email="hammer@upstandinghackers.com",
       url="https://github.com/UpstandingHackers/hammer",
       description="""The Hammer parser combinator library""",
-      ext_modules=[Extension('_hammer', [os.path.join(os.path.dirname(sys.argv[0]),
-                                                      'hammer.i')],
-                             # swig_opts is set by SConscript
+      ext_modules=[Extension('_hammer', ['hammer.i'],
+                             swig_opts=['-DHAMMER_INTERNAL__NO_STDARG_H',
+                                        #('-outdir', os.getcwd()),
+                                        '-I../../'],
                              define_macros=[('SWIG', None)],
                              depends=['allocator.h', 
                                       'glue.h', 
@@ -22,9 +26,11 @@ setup(name="hammer",
                                       'internal.h',],
                              extra_compile_args=['-fPIC',
                                                  '-std=gnu99',],
-                             include_dirs=['src'],
-                             library_dirs=['src'],
+                             include_dirs=['../../'],
+                             library_dirs=['../../'],
                              libraries=['hammer'],)],
       
       py_modules=['hammer'],
 )
+
+os.chdir(invoked)
