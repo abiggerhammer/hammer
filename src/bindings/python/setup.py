@@ -7,7 +7,8 @@ import os, os.path, sys
 from distutils.core import setup, Extension
 
 invoked = os.getcwd()
-os.chdir(os.path.dirname(sys.argv[0]))
+if (os.path.dirname(sys.argv[0]) != ''):
+    os.chdir(os.path.dirname(sys.argv[0]))
 
 setup(name="hammer",
       version="0.9.0",
@@ -17,7 +18,6 @@ setup(name="hammer",
       description="""The Hammer parser combinator library""",
       ext_modules=[Extension('_hammer', ['hammer.i'],
                              swig_opts=['-DHAMMER_INTERNAL__NO_STDARG_H',
-                                        #('-outdir', os.getcwd()),
                                         '-I../../'],
                              define_macros=[('SWIG', None)],
                              depends=['allocator.h', 
