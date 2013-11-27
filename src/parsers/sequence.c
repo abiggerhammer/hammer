@@ -43,7 +43,7 @@ static bool sequence_isValidCF(void *env) {
   return true;
 }
 
-static HParsedToken *reshape_sequence(const HParseResult *p) {
+static HParsedToken *reshape_sequence(const HParseResult *p, void* user_data) {
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);
 
@@ -72,6 +72,7 @@ static void desugar_sequence(HAllocator *mm__, HCFStack *stk__, void *env) {
 	HCFS_DESUGAR(s->p_array[i]);
     } HCFS_END_SEQ();
     HCFS_THIS_CHOICE->reshape = reshape_sequence;
+    HCFS_THIS_CHOICE->user_data = NULL;
   } HCFS_END_CHOICE();
 }
 
@@ -159,8 +160,8 @@ HParser* h_sequence__ma(HAllocator* mm__, void *args[]) {
 
   s->len = len;
   HParser *ret = h_new(HParser, 1);
-  ret->vtable = &sequence_vt;
-  ret->env = (void*)s;
+  ret->vtable = &sequence_vt; 
+  ret->env = (void*)s; 
   ret->backend = PB_MIN;
   return ret;
 }

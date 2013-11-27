@@ -23,7 +23,7 @@
 // They must be named act_<rulename>.
 ///
 
-HParsedToken *act_bsfdig(const HParseResult *p)
+HParsedToken *act_bsfdig(const HParseResult *p, void* user_data)
 {
     HParsedToken *res = H_MAKE_UINT(0);
 
@@ -54,7 +54,7 @@ H_ACT_APPLY(act_index0, h_act_index, 0);
 #define act_document     act_index0
 
 // General-form action to turn a block of base64 digits into bytes.
-HParsedToken *act_base64_n(int n, const HParseResult *p)
+HParsedToken *act_base64_n(int n, const HParseResult *p, void* user_data)
 {
     HParsedToken *res = H_MAKE_SEQN(n);
 
@@ -83,7 +83,7 @@ H_ACT_APPLY(act_base64_3, act_base64_n, 3);
 H_ACT_APPLY(act_base64_2, act_base64_n, 2);
 H_ACT_APPLY(act_base64_1, act_base64_n, 1);
 
-HParsedToken *act_base64(const HParseResult *p)
+HParsedToken *act_base64(const HParseResult *p, void* user_data)
 {
     assert(p->ast->token_type == TT_SEQUENCE);
     assert(p->ast->seq->used == 2);

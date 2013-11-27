@@ -22,7 +22,7 @@ static bool opt_isValidCF(void *env) {
   return p->vtable->isValidCF(p->env);
 }
 
-static HParsedToken* reshape_optional(const HParseResult *p) {
+static HParsedToken* reshape_optional(const HParseResult *p, void* user_data) {
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);
 
@@ -52,6 +52,7 @@ static void desugar_optional(HAllocator *mm__, HCFStack *stk__, void *env) {
     HCFS_BEGIN_SEQ() {
     } HCFS_END_SEQ();
     HCFS_THIS_CHOICE->reshape = reshape_optional;
+    HCFS_THIS_CHOICE->user_data = NULL;
   } HCFS_END_CHOICE();
 }
 

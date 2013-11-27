@@ -20,7 +20,7 @@ static HParseResult* parse_token(void *env, HParseState *state) {
 }
 
 
-static HParsedToken *reshape_token(const HParseResult *p) {
+static HParsedToken *reshape_token(const HParseResult *p, void* user_data) {
   // fetch sequence of uints from p
   assert(p->ast);
   assert(p->ast->token_type == TT_SEQUENCE);
@@ -52,6 +52,7 @@ static void desugar_token(HAllocator *mm__, HCFStack *stk__, void *env) {
 	HCFS_ADD_CHAR(tok->str[i]);
     } HCFS_END_SEQ();
     HCFS_THIS_CHOICE->reshape = reshape_token;
+    HCFS_THIS_CHOICE->user_data = NULL;
   } HCFS_END_CHOICE();
 }
 
@@ -79,6 +80,8 @@ HParser* h_token(const uint8_t *str, const size_t len) {
 }
 HParser* h_token__m(HAllocator* mm__, const uint8_t *str, const size_t len) { 
   HToken *t = h_new(HToken, 1);
-  t->str = (uint8_t*)str, t->len = len;
+  uint8_t *str_cpy = h_new(uint8_t, len);
+  memcpy(str_cpy, str, len);
+  t->str = str_cpy, t->len = len;
   return h_new_parser(mm__, &token_vt, t);
 }

@@ -4,6 +4,7 @@
 typedef struct {
   const HParser *p;
   HAction action;
+  void* user_data;
 } HParseAction;
 
 static HParseResult* parse_action(void *env, HParseState *state) {
@@ -12,8 +13,8 @@ static HParseResult* parse_action(void *env, HParseState *state) {
     HParseResult *tmp = h_do_parse(a->p, state);
     //HParsedToken *tok = a->action(h_do_parse(a->p, state));
     if(tmp) {
-        const HParsedToken *tok = a->action(tmp);
-        return make_result(state->arena, (HParsedToken*)tok);
+      const HParsedToken *tok = a->action(tmp, a->user_data);
+      return make_result(state->arena, (HParsedToken*)tok);
     } else
       return NULL;
   } else // either the parser's missing or the action's missing
@@ -27,6 +28,7 @@ static void desugar_action(HAllocator *mm__, HCFStack *stk__, void *env) {
     HCFS_BEGIN_SEQ() {
       HCFS_DESUGAR(a->p);
     } HCFS_END_SEQ();
+    HCFS_THIS_CHOICE->user_data = a->user_data;
     HCFS_THIS_CHOICE->action = a->action;
     HCFS_THIS_CHOICE->reshape = h_act_first;
   } HCFS_END_CHOICE();
@@ -44,7 +46,7 @@ static bool action_isValidCF(void *env) {
 
 static bool h_svm_action_action(HArena *arena, HSVMContext *ctx, void* arg) {
   HParseResult res;
-  HAction action = arg;
+  HParseAction *a = arg;
   assert(ctx->stack_count >= 1);
   if (ctx->stack[ctx->stack_count-1]->token_type != TT_MARK) {
     assert(ctx->stack_count >= 2 && ctx->stack[ctx->stack_count-2]->token_type == TT_MARK);
@@ -56,7 +58,7 @@ static bool h_svm_action_action(HArena *arena, HSVMContext *ctx, void* arg) {
   }
   res.arena = arena;
 
-  HParsedToken *tok = action(&res);
+  HParsedToken *tok = a->action(&res, a->user_data);
   if (tok != NULL)
     ctx->stack[ctx->stack_count-1] = tok;
   else
@@ -69,7 +71,7 @@ static bool action_ctrvm(HRVMProg *prog, void* env) {
   h_rvm_insert_insn(prog, RVM_PUSH, 0);
   if (!h_compile_regex(prog, a->p))
     return false;
-  h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_action, a->action));
+  h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_action, a));
   return true;
 }
 
@@ -81,13 +83,14 @@ static const HParserVtable action_vt = {
   .compile_to_rvm = action_ctrvm,
 };
 
-HParser* h_action(const HParser* p, const HAction a) {
-  return h_action__m(&system_allocator, p, a);
+HParser* h_action(const HParser* p, const HAction a, void* user_data) {
+  return h_action__m(&system_allocator, p, a, user_data);
 }
 
-HParser* h_action__m(HAllocator* mm__, const HParser* p, const HAction a) {
+HParser* h_action__m(HAllocator* mm__, const HParser* p, const HAction a, void* user_data) {
   HParseAction *env = h_new(HParseAction, 1);
   env->p = p;
   env->action = a;
+  env->user_data = user_data;
   return h_new_parser(mm__, &action_vt, env);
 }

@@ -7,8 +7,12 @@ import sys
 vars = Variables(None, ARGUMENTS)
 vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
+vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['python']))
 
-env = Environment(ENV = {'PATH' : os.environ['PATH']}, variables = vars)
+env = Environment(ENV = {'PATH' : os.environ['PATH']}, variables = vars, tools=['default', 'scanreplace'], toolpath=['tools'])
+
+if not 'bindings' in env:
+    env['bindings'] = []
 
 def calcInstallPath(*elements):
     path = os.path.abspath(os.path.join(*map(env.subst, elements)))
@@ -28,11 +32,16 @@ if 'DESTDIR' in env:
 
 env['libpath'] = calcInstallPath("$prefix", "lib")
 env['incpath'] = calcInstallPath("$prefix", "include", "hammer")
-# TODO: Add pkgconfig
+env['parsersincpath'] = calcInstallPath("$prefix", "include", "hammer", "parsers")
+env['backendsincpath'] = calcInstallPath("$prefix", "include", "hammer", "backends")
+env['pkgconfigpath'] = calcInstallPath("$prefix", "lib", "pkgconfig")
+env.ScanReplace('libhammer.pc.in')
 
 env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes")
 
-if not env['PLATFORM'] == 'darwin':
+if env['PLATFORM'] == 'darwin':
+    env.Append(SHLINKFLAGS = ['-install_name', '$TARGET'])
+else:
     env.MergeFlags("-lrt")
 
 AddOption("--variant",
@@ -49,7 +58,12 @@ AddOption("--coverage",
           action="store_true",
           help="Build with coverage instrumentation")
 
-env['BUILDDIR'] = 'build/$VARIANT'
+AddOption("--in-place",
+          dest="in_place",
+          default=False,
+          action="store_true",
+          help="Build in-place, rather than in the build/<variant> tree")
+
 
 dbg = env.Clone(VARIANT='debug')
 dbg.Append(CCFLAGS=['-g'])
@@ -68,19 +82,38 @@ if GetOption("coverage"):
                LDFLAGS=["-fprofile-arcs", "-ftest-coverage"],
                LIBS=['gcov'])
 
+env["CC"] = os.getenv("CC") or env["CC"]
+env["CXX"] = os.getenv("CXX") or env["CXX"]
+
 if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",
                 CXX="clang++")
 
+env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
+
 #rootpath = env['ROOTPATH'] = os.path.abspath('.')
 #env.Append(CPPPATH=os.path.join('#', "hammer"))
 
+testruns = []
+
 Export('env')
+Export('testruns')
 
-env.SConscript(["src/SConscript"], variant_dir='build/$VARIANT/src')
-env.SConscript(["examples/SConscript"], variant_dir='build/$VARIANT/examples')
+if not GetOption("in_place"):
+    env['BUILD_BASE'] = 'build/$VARIANT'
+    lib = env.SConscript(["src/SConscript"], variant_dir='$BUILD_BASE/src')
+    env.Alias("examples", env.SConscript(["examples/SConscript"], variant_dir='$BUILD_BASE/examples'))
+else:
+    env['BUILD_BASE'] = '.'
+    lib = env.SConscript(["src/SConscript"])
+    env.Alias(env.SConscript(["examples/SConscript"]))
 
-env.Command('test', 'build/$VARIANT/src/test_suite', 'env LD_LIBRARY_PATH=build/$VARIANT/src $SOURCE')
+#env.Command('test', '$BUILD_BASE/src/test_suite', 'env LD_LIBRARY_PATH=$BUILD_BASE/src $SOURCE')
+
+env.Alias("test", testruns)
 
 env.Alias("install", "$libpath")
 env.Alias("install", "$incpath")
+env.Alias("install", "$parsersincpath")
+env.Alias("install", "$backendsincpath")
+env.Alias("install", "$pkgconfigpath")
