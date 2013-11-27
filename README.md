@@ -18,8 +18,8 @@ Features
   * Regular expressions 
 * Language bindings: 
   * C++ (not yet implemented)
-  * Java
-  * Python (not yet implemented)
+  * Java (not currently building; give us a few days)
+  * Python
   * Ruby (not yet implemented)
   * Perl (not yet implemented)
   * Go (not yet implemented)
@@ -39,7 +39,9 @@ Installing
 
 To build, type `scons`. To run the built-in test suite, type `scons test`. For a debug build, add `--variant=debug`
 
-If jni.h and jni_md.h aren't already somewhere on your include path, prepend
+To build bindings, pass a "bindings" argument to scons, e.g. `scons bindings=python`. `scons bindings=python test` will build Python bindings and run tests for both C and Python. `--variant=debug` is valid here too.
+
+For Java, if jni.h and jni_md.h aren't already somewhere on your include path, prepend
 `C_INCLUDE_PATH=/path/to/jdk/include` to that.
 
 To make Hammer available system-wide, use `scons install`. This places include files in `/usr/local/include/hammer` 
@@ -48,7 +50,9 @@ and library files in `/usr/local/lib` by default; to install elsewhere, add a `p
 
 Usage
 =====
-Just `#include <hammer/hammer.h>` and link with `-lhammer`.
+Just `#include <hammer/hammer.h>` (also `#include <hammer/glue.h>` if you plan to use any of the convenience macros) and link with `-lhammer`.
+
+If you've installed Hammer system-wide, you can use `pkg-config` in the usual way.
 
 Examples
 ========
