@@ -48,7 +48,7 @@ For Java, if jni.h and jni_md.h aren't already somewhere on your include path, p
 
 To make Hammer available system-wide, use `scons install`. This places include files in `/usr/local/include/hammer` 
 and library files in `/usr/local/lib` by default; to install elsewhere, add a `prefix=<destination>` argument, e.g. 
-`scons install prefix=$HOME`.
+`scons install prefix=$HOME`. A suitable `bindings=` argument will install bindings in whatever place your system thinks is appropriate.
 
 Usage
 =====
