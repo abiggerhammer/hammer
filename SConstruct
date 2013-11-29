@@ -95,9 +95,15 @@ env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 #env.Append(CPPPATH=os.path.join('#', "hammer"))
 
 testruns = []
+targets = ["$libpath",
+           "$incpath",
+           "$parsersincpath",
+           "$backendsincpath",
+           "$pkgconfigpath"]
 
 Export('env')
 Export('testruns')
+Export('targets')
 
 if not GetOption("in_place"):
     env['BUILD_BASE'] = 'build/$VARIANT'
@@ -108,12 +114,6 @@ else:
     lib = env.SConscript(["src/SConscript"])
     env.Alias(env.SConscript(["examples/SConscript"]))
 
-#env.Command('test', '$BUILD_BASE/src/test_suite', 'env LD_LIBRARY_PATH=$BUILD_BASE/src $SOURCE')
-
 env.Alias("test", testruns)
 
-env.Alias("install", "$libpath")
-env.Alias("install", "$incpath")
-env.Alias("install", "$parsersincpath")
-env.Alias("install", "$backendsincpath")
-env.Alias("install", "$pkgconfigpath")
+env.Alias("install", targets)

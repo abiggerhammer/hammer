@@ -1,0 +1,1 @@
+The distutils script in this directory is meant to be invoked from scons. It will work if you build it here (`python setup.py build_ext`, optionally `--inplace` as scons invokes it), but we haven't done much testing of it outside the build system and don't really intend to. YHBW.
