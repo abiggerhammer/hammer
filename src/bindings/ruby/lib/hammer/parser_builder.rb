@@ -9,9 +9,12 @@ module Hammer
     def self.build(&block)
       ParserBuilder.new.sequence(&block).build
     end
-  end
 
-  # TODO: Is this even useful for "real" usage?
+    def self.build_choice(&block)
+      ParserBuilder.new.choice(&block).build
+    end
+  end # class Parser
+
   class ParserBuilder
     attr_reader :parsers
 
