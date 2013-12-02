@@ -20,7 +20,7 @@ class EndPTest extends PHPUnit_Framework_TestCase
     {
         $result = h_parse($this->parser, "aa");
         var_dump($result);
-        $this->assertEquals(array(), $result);
+        $this->assertEquals(NULL, $result);
     }
 }
 ?>
