@@ -549,22 +549,18 @@ function ch($ch)
         return h_ch($ch);
 }
 
+function choice()
+{
+    $arg_list = func_get_args();
+    $arg_list[] = NULL;
+    return h_choice__a($arg_list);    
+}
+
 function sequence()
 {
-    echo 'in sequence\n';
-    $numargs = func_num_args();
     $arg_list = func_get_args();
-    var_dump($arg_list);
-    for ($i = 0; $i < $numargs; $i++) 
-    {
-        var_dump($arg_list[$i] instanceof _p_HParser_);
-        if (! $arg_list[$i] instanceof _p_HParser_)
-        {
-            echo 'PHP says that is not an HParser!';
-            return NULL;
-        }
-    }
-    //return hammer::h_sequence__a($arg_list);
+    $arg_list[] = NULL;
+    return h_sequence__a($arg_list);
 }
 "
 #endif
