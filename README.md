@@ -22,7 +22,7 @@ Features
   * Python
   * Ruby (not yet implemented)
   * Perl (not yet implemented)
-  * Go (not yet implemented)
+  * [Go](https://github.com/prevoty/hammer)
   * PHP (not yet implemented)
   * .NET (not yet implemented)
 
