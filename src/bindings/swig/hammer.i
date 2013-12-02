@@ -171,18 +171,22 @@
     int size = zend_hash_num_elements(arr);
     int i = 0;
     int res = 0;
-    $1 = (void**)malloc((size+1)*sizeof(HParser*));
-    for (zend_hash_internal_pointer_reset_ex(arr, &pointer);
-         zend_hash_get_current_data_ex(arr, (void**)&data, &pointer);
-         zend_hash_move_forward_ex(arr, &pointer), i++) {
-      res = SWIG_ConvertPtr(*data, &($1[i]), SWIGTYPE_p_HParser_, 0 | 0);
-      if (!SWIG_IsOk(res)) {
-	// TODO do we not *have* SWIG_TypeError?
-	SWIG_exception_fail(res, "that wasn't an HParser");
+    $1 = (void**)malloc((size)*sizeof(HParser*));
+    for (i=0; i<size; i++) {
+      HParser *p;
+      if (zend_hash_index_find(arr, i, (void**)&p) == FAILURE) {
+	// FIXME raise some error
+	$1 = NULL;
+      } else {
+	res = SWIG_ConvertPtr(*data, &($1[i]), SWIGTYPE_p_HParser_, 0 | 0);
+	if (!SWIG_IsOK(res)) {
+	  // TODO do we not *have* SWIG_TypeError?
+	  SWIG_exception_fail(res, "that wasn't an HParser");
+	}
       }
-    }
+    } 
   } else {
-    // FIXME raise some error
+    // FIXME some error
     $1 = NULL;
   }
  }
