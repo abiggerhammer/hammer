@@ -40,47 +40,34 @@ module Hammer
       return parser
     end
 
-    def self.sequence(*parsers)
-      args = parsers.flat_map { |p| [:pointer, p.h_parser] }
-      h_parser = Hammer::Internal.h_sequence(*args, :pointer, nil)
-      sub_parsers = parsers # store them so they don't get garbage-collected (probably not needed, though)
-      # TODO: Use (managed?) FFI struct instead of void pointers
-
-      parser = Hammer::Parser.new
-      parser.instance_variable_set :@h_parser, h_parser
-      parser.instance_variable_set :@sub_parsers, sub_parsers
-      return parser
-    end
-
-    def self.choice(*parsers)
-      args = parsers.flat_map { |p| [:pointer, p.h_parser] }
-      h_parser = Hammer::Internal.h_choice(*args, :pointer, nil)
-      sub_parsers = parsers # store them so they don't get garbage-collected (probably not needed, though)
-      # TODO: Use (managed?) FFI struct instead of void pointers
-
-      parser = Hammer::Parser.new
-      parser.instance_variable_set :@h_parser, h_parser
-      parser.instance_variable_set :@sub_parsers, sub_parsers
-      return parser
-    end
-
     # Defines a parser constructor with the given name.
     # Options:
     #   hammer_function: name of the hammer function to call (default: 'h_'+name)
+    #   varargs: Whether the function is taking a variable number of arguments (default: false)
     def self.define_parser(name, options = {})
       hammer_function = options[:hammer_function] || ('h_' + name.to_s)
+      varargs = options[:varargs] || false
 
       # Define a new class method
       define_singleton_method name do |*parsers|
-        #args = parsers.map { |p| p.instance_variable_get :@h_parser }
-        h_parser = Hammer::Internal.send hammer_function, *parsers.map(&:h_parser)
+        if varargs
+          args = parsers.flat_map { |p| [:pointer, p.h_parser] }
+          args += [:pointer, nil]
+        else
+          args = parsers.map(&:h_parser)
+        end
+        h_parser = Hammer::Internal.send hammer_function, *args
 
         parser = Hammer::Parser.new
         parser.instance_variable_set :@h_parser, h_parser
+        parser.instance_variable_set :@sub_parsers, parsers # store sub parsers to prevent them from being garbage-collected
         return parser
       end
     end
     private_class_method :define_parser
+
+    define_parser :sequence, varargs: true
+    define_parser :choice, varargs: true
 
     define_parser :int64
     define_parser :int32
