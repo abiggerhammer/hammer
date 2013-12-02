@@ -20,10 +20,6 @@ module Hammer
 
     def initialize
       @parsers = []
-      # TODO: Store an aggregator, e.g.:
-      # @aggregator = Hammer::Parser::Sequence
-      # Sequence is the default, set to Hammer::Parser::Choice for choice() calls
-      # In the build method, use @aggregator.new(*@parsers) to build the final parser.
     end
 
     def build
@@ -34,23 +30,6 @@ module Hammer
       end
     end
 
-
-    # TODO: Need to check if that's really needed
-    def call(parser)
-      @parsers << parser
-      return self
-    end
-
-
-    def token(str)
-      @parsers << Hammer::Parser.token(str)
-      return self
-    end
-
-    def ch(char)
-      @parsers << Hammer::Parser.ch(char)
-      return self
-    end
 
     # can call it either as ParserBuiler.new.sequence(parser1, parser2, parser3)
     # or as Parser.build { sequence { call parser1; call parser2; call parser3 } }
@@ -67,6 +46,42 @@ module Hammer
       @parsers << Hammer::Parser.choice(*parsers)
       return self
     end
-  end
 
-end
+    def call(parser)
+      @parsers << parser
+      return self
+    end
+
+    # Defines a parser constructor with the given name.
+    def self.define_parser(name, options = {})
+      define_method name do |*args|
+        @parsers << Hammer::Parser.send(name, *args)
+        return self
+      end
+    end
+    private_class_method :define_parser
+
+    define_parser :token
+    define_parser :ch
+    define_parser :int64
+    define_parser :int32
+    define_parser :int16
+    define_parser :int8
+    define_parser :uint64
+    define_parser :uint32
+    define_parser :uint16
+    define_parser :uint8
+    define_parser :whitespace
+    define_parser :left
+    define_parser :right
+    define_parser :middle
+    define_parser :end
+    define_parser :nothing
+    define_parser :butnot
+    define_parser :difference
+    define_parser :xor
+    define_parser :many
+    define_parser :many1
+  end # class ParserBuilder
+
+end # module Hammer
