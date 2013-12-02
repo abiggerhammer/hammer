@@ -538,4 +538,33 @@ def int64(): return _h_int64()
     return tok;
   }
  }
+
+%pragma(php) code="
+
+function ch($ch)
+{
+    if (is_string($ch)) 
+        return h_token($ch);
+    else
+        return h_ch($ch);
+}
+
+function sequence()
+{
+    echo 'in sequence\n';
+    $numargs = func_num_args();
+    $arg_list = func_get_args();
+    var_dump($arg_list);
+    for ($i = 0; $i < $numargs; $i++) 
+    {
+        var_dump($arg_list[$i] instanceof _p_HParser_);
+        if (! $arg_list[$i] instanceof _p_HParser_)
+        {
+            echo 'PHP says that is not an HParser!';
+            return NULL;
+        }
+    }
+    //return hammer::h_sequence__a($arg_list);
+}
+"
 #endif

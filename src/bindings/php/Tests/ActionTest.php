@@ -11,7 +11,7 @@ class ActionTest extends PHPUnit_Framework_TestCase
     }
     protected function setUp()
     {
-        $this->parser = h_action(h_sequence(h_choice(h_ch("a"), h_ch("A")), h_choice(h_ch("b"), h_ch("B"))), "actTest");
+        $this->parser = h_action(h_sequence(h_choice(ch("a"), ch("A")), h_choice(ch("b"), ch("B"))), "actTest");
     }
     public function testSuccess()
     {

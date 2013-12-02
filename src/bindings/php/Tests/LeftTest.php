@@ -7,13 +7,13 @@ class LeftTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = h_left(h_ch("a"), h_ch(" "));
+        $this->parser = h_left(ch("a"), ch(" "));
     }
     public function testSuccess()
     {
         $result = h_parse($this->parser, "a ");
         // TODO fix these tests when h_ch is fixed
-        $this->assertEquals(97, $result);
+        $this->assertEquals("a", $result);
     }
     public function testFailure()
     {

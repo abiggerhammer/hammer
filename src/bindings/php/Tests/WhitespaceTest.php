@@ -8,7 +8,7 @@ class WhitespaceTest extends PHPUnit_Framework_TestCase
     
     protected function setUp()
     {
-        $this->parser1 = h_whitespace(h_ch("a"));
+        $this->parser1 = h_whitespace(ch("a"));
         $this->parser2 = h_whitespace(h_end_p());
     }
     public function testSuccess1()
@@ -18,10 +18,10 @@ class WhitespaceTest extends PHPUnit_Framework_TestCase
         $result3 = h_parse($this->parser1, "  a");
         $result4 = h_parse($this->parser1, "\ta");
         // TODO fix these tests when h_ch is fixed
-        $this->assertEquals(97, $result1);
-        $this->assertEquals(97, $result2);
-        $this->assertEquals(97, $result3);
-        $this->assertEquals(97, $result4);
+        $this->assertEquals("a", $result1);
+        $this->assertEquals("a", $result2);
+        $this->assertEquals("a", $result3);
+        $this->assertEquals("a", $result4);
     }
     public function testFailure1()
     {
