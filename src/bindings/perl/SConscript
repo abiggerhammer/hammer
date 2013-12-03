@@ -1,0 +1,19 @@
+# -*- python -*-
+Import("env libhammer_shared")
+
+perlenv = env.Clone()
+
+perlenv.Append(CCFLAGS=["-fpic", '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error', '-DHAMMER_INTERNAL__NO_STDARG_H'],
+               CPPPATH=["../.."],
+               LIBS=['hammer'],
+               LIBPATH=["../.."],
+               SWIGFLAGS=["-DHAMMER_INTERNAL__NO_STDARG_H", "-Isrc/", "-perl"])
+
+perlenv.ParseConfig("perl -MConfig -e 'print(qq[-I$$Config{archlib}/CORE\n]);'")
+perlenv.ParseConfig("perl -MConfig -e 'print($$Config{ccflags} . \"\n\");'")
+
+swig = ['hammer.i']
+
+libhammer_perl = perlenv.SharedLibrary('hammer', swig, SHLIBPREFIX='')
+
+print "Reading perl sconscript"
