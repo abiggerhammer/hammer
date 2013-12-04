@@ -202,7 +202,36 @@
 
    return ret;
  }
- 
+
+ static int call_predicate(HParseResult *p, void* user_data) {
+   SV *func = (SV*)user_data;
+
+   dSP;
+   ENTER;
+   SAVETMPS;
+   PUSHMARK(SP);
+   if (p->ast != NULL) {
+     mXPUSHs(hpt_to_perl(p->ast));
+   } else {
+     mXPUSHs(newSV(0));
+   }
+   PUTBACK;
+   
+   int nret = call_sv(func, G_SCALAR);
+
+   SPAGAIN;
+   if (nret != 1)
+     croak("Expected 1 return value, got %d", nret);
+
+   SV* svret = POPs;
+   int ret = SvTRUE(svret);
+   PUTBACK;
+   FREETMPS;
+   LEAVE;
+
+   return ret;
+ }
+
 %}
 %inline {
   HParser* ch(uint8_t chr) {
@@ -219,6 +248,9 @@
   }
   HParser* action(HParser *parser, SV* sub) {
     return h_action(parser, call_action, SvREFCNT_inc(sub));
+  }
+  HParser* attr_bool(HParser *parser, SV* sub) {
+    return h_attr_bool(parser, call_predicate, SvREFCNT_inc(sub));
   }
  }
 

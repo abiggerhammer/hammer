@@ -334,11 +334,12 @@ subtest "epsilon" => sub {
 };
 
 
-TODO: {
-  local $TODO = "not implemented";
-  subtest "attr_bool" => sub {
-    fail;
-  }
+subtest "attr_bool" => sub {
+  my $parser = hammer::attr_bool(hammer::many1(hammer::in('ab')),
+				 sub { my ($a, $b) = @{+shift}; $a eq $b });
+  check_parse_eq($parser, "aa", ['a','a']);
+  check_parse_eq($parser, "bb", ['b','b']);
+  check_parse_failed($parser, "ab");
 };
 
 subtest "and" => sub {
