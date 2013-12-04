@@ -38,7 +38,7 @@
   AV* av = (AV*) SvRV($input);
   size_t amax = av_top_index(av) + 1; // I want the length, not the top index...
   // TODO: is this array copied?
-  $1 = malloc(amax * sizeof(*$1));
+  $1 = malloc((amax+1) * sizeof(*$1));
   $1[amax] = NULL;
   for (int i = 0; i < amax; i++) {
     int res = SWIG_ConvertPtr(*av_fetch(av, i, 0), &($1[i]), SWIGTYPE_p_HParser_, 0|0);
@@ -72,12 +72,33 @@
 
 %rename("token") h_token;
 %rename("%(regex:/^h_(.*)/\\1/)s", regextarget=1) "^h_u?int(64|32|16|8)";
-%rename("end_p") h_end_p;
-%rename("left") h_left;
-%rename("middle") h_middle;
-%rename("right") h_right;
-%rename("int_range") h_int_range;
-%rename("whitespace") h_whitespace;
+
+%define %combinator %rename("%(regex:/^h_(.*)$/\\1/)s") %enddef
+  
+%combinator h_end_p;
+%combinator h_left;
+%combinator h_middle;
+%combinator h_right;
+%combinator h_int_range;
+%combinator h_whitespace;
+%combinator h_nothing_p;
+
+%combinator h_butnot;
+%combinator h_difference;
+%combinator h_xor;
+%combinator h_many;
+%combinator h_many1;
+%combinator h_sepBy;
+%combinator h_sepBy1;
+%combinator h_repeat_n;
+%combinator h_ignore;
+%combinator h_optional;
+%combinator h_epsilon_p;
+%combinator h_and;
+%combinator h_not;
+%combinator h_indirect;
+%combinator h_bind_indirect;
+
 %include "../swig/hammer.i";
   
 
@@ -86,7 +107,7 @@
     // All values that this function returns have a refcount of exactly 1.
     SV *ret;
     if (token == NULL) {
-      return newSV(0); // TODO: croak.
+      return newSV(0); // Same as TT_NONE
     }
     switch (token->token_type) {
     case TT_NONE:
@@ -229,5 +250,6 @@
   sub not_in {
     return h__not_in(join('',@_));
   }
+
 
   %}

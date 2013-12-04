@@ -1,8 +1,16 @@
 # -*- cperl -*-
 use warnings;
 use strict;
-use Test::More tests => 21;
+use Data::Dumper;
+use Test::More tests => 41;
 use hammer;
+
+# differences from C version:
+
+# - in takes any number of arguments, which are concatenated. This
+#   makes ch_range irrelevant.
+#
+# - foo
 
 
 sub check_parse_eq {
@@ -15,6 +23,7 @@ sub check_parse_eq {
     diag($@);
     ok($@ eq "");
   } else {
+    #diag(Dumper($actual));
     is_deeply($actual, $expected);
   }
 }
@@ -189,3 +198,192 @@ subtest "end_p" => sub {
   check_parse_eq($parser, 'a', ['a']);
   check_parse_failed($parser, 'aa');
 };
+
+subtest "nothing_p" => sub {
+  my $parser = hammer::nothing_p();
+  check_parse_failed($parser, "");
+  check_parse_failed($parser, "foo");
+};
+
+subtest "sequence" => sub {
+  my $parser = hammer::sequence(hammer::ch('a'), hammer::ch('b'));
+  check_parse_eq($parser, "ab", ['a','b']);
+  check_parse_failed($parser, 'a');
+  check_parse_failed($parser, 'b');
+};
+
+subtest "sequence-whitespace" => sub {
+  my $parser = hammer::sequence(hammer::ch('a'),
+				hammer::whitespace(hammer::ch('b')));
+  check_parse_eq($parser, "ab", ['a', 'b']);
+  check_parse_eq($parser, "a b", ['a', 'b']);
+  check_parse_eq($parser, "a  b", ['a', 'b']);
+  check_parse_failed($parser, "a  c");
+};
+
+subtest "choice" => sub { # test 25
+  my $parser = hammer::choice(hammer::ch('a'),
+			      hammer::ch('b'));
+  check_parse_eq($parser, 'a', 'a');
+  check_parse_eq($parser, 'b', 'b');
+  check_parse_failed($parser, 'c');
+};
+
+subtest "butnot" => sub {
+  my $parser = hammer::butnot(hammer::ch('a'), hammer::token('ab'));
+  check_parse_eq($parser, 'a', 'a');
+  check_parse_eq($parser, 'aa', 'a');
+  check_parse_failed($parser, 'ab');
+};
+
+subtest "butnot-range" => sub {
+  my $parser = hammer::butnot(hammer::ch_range('0', '9'), hammer::ch('6'));
+  check_parse_eq($parser, '4', '4');
+  check_parse_failed($parser, '6');
+};
+
+subtest "difference" => sub {
+  my $parser = hammer::difference(hammer::token('ab'),
+				  hammer::ch('a'));
+  check_parse_eq($parser, 'ab', 'ab');
+  check_parse_failed($parser, 'a');
+};
+
+subtest "xor" => sub {
+  my $parser = hammer::xor(hammer::in('0'..'6'),
+			   hammer::in('5'..'9'));
+  check_parse_eq($parser, '0', '0');
+  check_parse_eq($parser, '9', '9');
+  check_parse_failed($parser, '5');
+  check_parse_failed($parser, 'a');
+};
+
+subtest "many" => sub { # test 30
+  my $parser = hammer::many(hammer::in('ab'));
+  check_parse_eq($parser, '', []);
+  check_parse_eq($parser, 'a', ['a']);
+  check_parse_eq($parser, 'b', ['b']);
+  check_parse_eq($parser, 'aabbaba', [qw/a a b b a b a/]);
+};
+
+subtest "many1" => sub {
+  my $parser = hammer::many1(hammer::in('ab'));
+  check_parse_eq($parser, 'a', ['a']);
+  check_parse_eq($parser, 'b', ['b']);
+  check_parse_eq($parser, 'aabbaba', [qw/a a b b a b a/]);
+  check_parse_failed($parser, '');
+  check_parse_failed($parser, 'daabbabadef');
+};
+subtest "repeat_n" => sub {
+  my $parser = hammer::repeat_n(hammer::in('ab'), 2);
+  check_parse_eq($parser, 'abdef', ['a','b']);
+  check_parse_failed($parser, 'adef');
+};
+
+subtest "optional" => sub {
+  my $parser = hammer::sequence(hammer::ch('a'),
+				hammer::optional(hammer::in('bc')),
+				hammer::ch('d'));
+  check_parse_eq($parser, 'abd', [qw/a b d/]);
+  check_parse_eq($parser, 'abd', [qw/a b d/]);
+  check_parse_eq($parser, 'ad', ['a',undef,'d']);
+  check_parse_failed($parser, 'aed');
+  check_parse_failed($parser, 'ab');
+  check_parse_failed($parser, 'ac');
+};
+
+subtest "ignore" => sub {
+  my $parser = hammer::sequence(hammer::ch('a'),
+				hammer::ignore(hammer::ch('b')),
+				hammer::ch('c'));
+  check_parse_eq($parser, "abc", ['a','c']);
+  check_parse_failed($parser, 'ac');
+};
+
+subtest "sepBy" => sub { # Test 35
+  my $parser = hammer::sepBy(hammer::in('1'..'3'),
+			     hammer::ch(','));
+  check_parse_eq($parser, '1,2,3', ['1','2','3']);
+  check_parse_eq($parser, '1,3,2', ['1','3','2']);
+  check_parse_eq($parser, '1,3', ['1','3']);
+  check_parse_eq($parser, '3', ['3']);
+  check_parse_eq($parser, '', []);
+};
+
+subtest "sepBy1" => sub {
+  my $parser = hammer::sepBy1(hammer::in("123"),
+			      hammer::ch(','));
+  check_parse_eq($parser, '1,2,3', ['1','2','3']);
+  check_parse_eq($parser, '1,3,2', ['1','3','2']);
+  check_parse_eq($parser, '1,3', ['1','3']);
+  check_parse_eq($parser, '3', ['3']);
+  check_parse_failed($parser, '');
+};
+
+subtest "epsilon" => sub {
+  check_parse_eq(hammer::sequence(hammer::ch('a'),
+				  hammer::epsilon_p(),
+				  hammer::ch('b')),
+		 'ab', ['a','b']);
+  check_parse_eq(hammer::sequence(hammer::epsilon_p(),
+				  hammer::ch('a')),
+		 'a', ['a']);
+  check_parse_eq(hammer::sequence(hammer::ch('a'),
+				  hammer::epsilon_p()),
+		 'a', ['a']);
+};
+
+
+TODO: {
+  local $TODO = "not implemented";
+  subtest "attr_bool" => sub {
+    fail;
+  }
+};
+
+subtest "and" => sub {
+  check_parse_eq(hammer::sequence(hammer::and(hammer::ch('0')),
+				  hammer::ch('0')),
+		 '0', ['0']);
+  check_parse_failed(hammer::sequence(hammer::and(hammer::ch('0')),
+				      hammer::ch('1')),
+		     '0');
+  my $parser = hammer::sequence(hammer::ch('1'),
+				hammer::and(hammer::ch('2')));
+  check_parse_eq($parser, '12', ['1']);
+  check_parse_failed($parser, '1');
+  check_parse_failed($parser, '13');
+};
+
+subtest "not" => sub { # test 40
+  # This is not how you'd *actually* write the parser for this
+  # language; in case of Packrat, it's better to swap the order of the
+  # arguments, and for other backends, the problem doesn't appear at
+  # all.
+  my $parser = hammer::sequence(hammer::ch('a'),
+				hammer::choice(hammer::ch('+'),
+					       hammer::token('++')),
+				hammer::ch('b'));
+  check_parse_eq($parser, 'a+b', ['a','+','b']);
+  check_parse_failed($parser, 'a++b'); # ordered choice
+
+  $parser = hammer::sequence(hammer::ch('a'),
+			     hammer::choice(hammer::sequence(hammer::ch('+'),
+							     hammer::not(hammer::ch('+'))),
+					    hammer::token('++')),
+			     hammer::ch('b'));
+  check_parse_eq($parser, 'a+b', ['a',['+'],'b']);
+  check_parse_eq($parser, 'a++b', ['a', '++', 'b']);
+};
+
+subtest "rightrec" => sub {
+  my $parser = hammer::indirect();
+  hammer::bind_indirect($parser,
+			hammer::choice(hammer::sequence(hammer::ch('a'),
+							$parser),
+				       hammer::epsilon_p));
+  check_parse_eq($parser, 'a', ['a']);
+  check_parse_eq($parser, 'aa', ['a', ['a']]);
+  check_parse_eq($parser, 'aaa', ['a', ['a', ['a']]]);
+};
+  
