@@ -28,6 +28,26 @@
   }
  }
 
+%typemap(in) void*[] {
+  if (!SvROK($input))
+    SWIG_exception_fail(SWIG_TypeError, "Expected array ref");
+
+  if (SvTYPE(SvRV($input)) != SVt_PVAV)
+    SWIG_exception_fail(SWIG_TypeError, "Expected array ref");
+
+  AV* av = (AV*) SvRV($input);
+  size_t amax = av_top_index(av) + 1; // I want the length, not the top index...
+  // TODO: is this array copied?
+  $1 = malloc(amax * sizeof(*$1));
+  $1[amax] = NULL;
+  for (int i = 0; i < amax; i++) {
+    int res = SWIG_ConvertPtr(*av_fetch(av, i, 0), &($1[i]), SWIGTYPE_p_HParser_, 0|0);
+    if (!SWIG_IsOK(res)) {
+      SWIG_exception_fail(SWIG_ArgError(res), "Expected a list of parsers and only parsers");
+    }
+  }
+ }
+
 %typemap(in) uint8_t {
   if (SvIOKp($input)) {
     $1 = SvIV($input);
@@ -52,7 +72,12 @@
 
 %rename("token") h_token;
 %rename("%(regex:/^h_(.*)/\\1/)s", regextarget=1) "^h_u?int(64|32|16|8)";
+%rename("end_p") h_end_p;
+%rename("left") h_left;
+%rename("middle") h_middle;
+%rename("right") h_right;
 %rename("int_range") h_int_range;
+%rename("whitespace") h_whitespace;
 %include "../swig/hammer.i";
   
 
@@ -76,7 +101,7 @@
       // TODO: return PyINT if appropriate
       return newSVuv(token->token_data.uint);
     case TT_SEQUENCE: {
-      AV* aret;
+      AV* aret = newAV();
       av_extend(aret, token->token_data.seq->used);
       for (int i = 0; i < token->token_data.seq->used; i++) {
 	av_store(aret, i, hpt_to_perl(token->token_data.seq->elements[i]));
@@ -85,9 +110,7 @@
     }
     default:
       if (token->token_type == h_tt_perl) {
-	return  (SV*)token->token_data.user;
-	
-	return SvREFCNT_inc(ret);
+	return  SvREFCNT_inc((SV*)token->token_data.user);
       } else {
 	return SWIG_NewPointerObj((void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0);
 	// TODO: support registry
@@ -124,6 +147,41 @@
     return res;
   }
 
+ static HParsedToken* call_action(const HParseResult *p, void* user_data  ) {
+   SV *func = (SV*)user_data;
+
+   dSP;
+   ENTER;
+   SAVETMPS;
+   PUSHMARK(SP);
+   if (p->ast != NULL) {
+     mXPUSHs(hpt_to_perl(p->ast));
+   } else {
+     mXPUSHs(newSV(0));
+   }
+   PUTBACK;
+   
+   int nret = call_sv(func, G_SCALAR);
+
+   SPAGAIN;
+   if (nret != 1)
+     croak("Expected 1 return value, got %d", nret);
+   
+   HParsedToken *ret = h_arena_malloc(p->arena, sizeof(*ret));
+   memset(ret, 0, sizeof(*ret));
+   ret->token_type = h_tt_perl;
+   ret->token_data.user = SvREFCNT_inc(POPs);
+   if (p->ast != NULL) {
+     ret->index = p->ast->index;
+     ret->bit_offset = p->ast->bit_offset;
+   }
+   PUTBACK;
+   FREETMPS;
+   LEAVE;
+
+   return ret;
+ }
+ 
 %}
 %inline {
   HParser* ch(uint8_t chr) {
@@ -132,11 +190,14 @@
   HParser* ch_range(uint8_t c0, uint8_t c1) {
     return h_action(h_ch_range(c0,c1), h__to_char, NULL);
   }
-  HParser* in(const uint8_t *charset, size_t length) {
+  HParser* h__in(const uint8_t *charset, size_t length) {
     return h_action(h_in(charset, length), h__to_char, NULL);
   }
-  HParser* not_in(const uint8_t *charset, size_t length) {
+  HParser* h__not_in(const uint8_t *charset, size_t length) {
     return h_action(h_not_in(charset, length), h__to_char, NULL);
+  }
+  HParser* action(HParser *parser, SV* sub) {
+    return h_action(parser, call_action, SvREFCNT_inc(sub));
   }
  }
 
@@ -154,3 +215,19 @@
         return h_compile($self, backend, NULL) == 0;
     }
 }
+
+%perlcode %{
+  sub sequence {
+    return hammerc::h_sequence__a([@_]);
+  }
+  sub choice {
+    return hammerc::h_choice__a([@_]);
+  }
+  sub in {
+    return h__in(join('',@_));
+  }
+  sub not_in {
+    return h__not_in(join('',@_));
+  }
+
+  %}
