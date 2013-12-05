@@ -35,7 +35,8 @@ int main(int argc, char** argv) {
   register_parser_tests();
   register_grammar_tests();
   register_misc_tests();
-  register_benchmark_tests();
+  if (g_test_slow() || g_test_perf())
+    register_benchmark_tests();
 
   g_test_run();
 }

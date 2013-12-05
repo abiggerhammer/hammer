@@ -1,19 +1,34 @@
 # -*- python -*-
-Import("env libhammer_shared")
+import os.path
+Import("env libhammer_shared testruns targets")
 
 perlenv = env.Clone()
 
-perlenv.Append(CCFLAGS=["-fpic", '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error', '-DHAMMER_INTERNAL__NO_STDARG_H'],
+perlenv.Append(CCFLAGS=["-fpic", '-DSWIG', '-Wno-all',
+                        '-Wno-extra', '-Wno-error',
+                        '-DHAMMER_INTERNAL__NO_STDARG_H'],
                CPPPATH=["../.."],
                LIBS=['hammer'],
                LIBPATH=["../.."],
-               SWIGFLAGS=["-DHAMMER_INTERNAL__NO_STDARG_H", "-Isrc/", "-perl"])
+               SWIGFLAGS=["-DHAMMER_INTERNAL__NO_STDARG_H",
+                          "-Isrc/", "-perl"])
 
-perlenv.ParseConfig("perl -MConfig -e 'print(qq[-I$$Config{archlib}/CORE\n]);'")
-perlenv.ParseConfig("perl -MConfig -e 'print($$Config{ccflags} . \"\n\");'")
+perlenv.ParseConfig("perl -MConfig -e'print(qq[-I$$Config{archlib}/CORE\n]);'")
+perlenv.ParseConfig("perl -MConfig -e'print($$Config{ccflags} . \"\n\");'")
 
 swig = ['hammer.i']
 
 libhammer_perl = perlenv.SharedLibrary('hammer', swig, SHLIBPREFIX='')
+
+Default(libhammer_perl)
+
+perltestenv = perlenv.Clone()
+perltestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
+perltests = ['t/hammer.t']
+perltestexec = perltestenv.Command(None, perltests + libhammer_perl + libhammer_shared, "pwd && prove -I%(perldir)s %(perldir)s/t" % dict(perldir=os.path.dirname(str(libhammer_perl[0].path))))
+perltest = Alias("testperl", [perltestexec], perltestexec)
+AlwaysBuild(perltestexec)
+testruns.append(perltest)
+
 
 print "Reading perl sconscript"

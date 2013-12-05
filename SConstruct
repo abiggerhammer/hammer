@@ -114,6 +114,8 @@ else:
     lib = env.SConscript(["src/SConscript"])
     env.Alias(env.SConscript(["examples/SConscript"]))
 
-env.Alias("test", testruns)
+print testruns
+for testrun in testruns:
+    env.Alias("test", testrun)
 
 env.Alias("install", targets)
