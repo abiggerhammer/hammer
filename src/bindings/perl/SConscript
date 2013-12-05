@@ -18,23 +18,21 @@ if 'PERL_MM_OPT' in os.environ:
 if 'PERL5LIB' in os.environ:
     perlenv['ENV']['PERL5LIB'] = os.environ['PERL5LIB']
 
-perlenv.ParseConfig("perl -MConfig -e'print(qq[-I$$Config{archlib}/CORE\n]);'")
-perlenv.ParseConfig("perl -MConfig -e'print($$Config{ccflags} . \"\n\");'")
-
 swig = ['hammer.i']
 
-libhammer_perl = perlenv.SharedLibrary('hammer', swig, SHLIBPREFIX='')
-perlenv.Command(['Makefile'], ['Makefile.PL'] + libhammer_perl, "perl $SOURCE")
+hammer_wrap = perlenv.Command(['hammer_wrap.c', 'hammer.pm'], swig, "swig $SWIGFLAGS $SOURCE")
+makefile = perlenv.Command(['Makefile'], ['Makefile.PL'], "perl $SOURCE")
+
+targetdir = os.path.dirname(str(hammer_wrap[0].path))
+
+libhammer_perl = perlenv.Command(['hammer.so'], makefile + hammer_wrap, "make -C " + targetdir)
 
 Default(libhammer_perl)
 
 perltestenv = perlenv.Clone()
 perltestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
 perltests = ['t/hammer.t']
-perltestexec = perltestenv.Command(None, perltests + libhammer_perl + libhammer_shared, "pwd && prove -I%(perldir)s %(perldir)s/t" % dict(perldir=os.path.dirname(str(libhammer_perl[0].path))))
+perltestexec = perltestenv.Command(None, perltests + libhammer_perl + libhammer_shared, "make test -C " + targetdir)
 perltest = Alias("testperl", [perltestexec], perltestexec)
 AlwaysBuild(perltestexec)
 testruns.append(perltest)
-
-
-print "Reading perl sconscript"
