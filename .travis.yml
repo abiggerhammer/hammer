@@ -13,7 +13,7 @@ matrix:
     - compiler: clang
       language: python
       python: 2.7
-      env: BINDINGS=python
+      env: BINDINGS=python CC=clang
     - compiler: gcc
       language: perl
       perl: 5.14
@@ -21,7 +21,7 @@ matrix:
     - compiler: clang
       language: perl
       perl: 5.14
-      env: BINDINGS=perl
+      env: BINDINGS=perl CC=clang
 before_install:
   - sudo apt-get update -qq
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq swig python-dev; fi
