@@ -7,7 +7,7 @@ import sys
 vars = Variables(None, ARGUMENTS)
 vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
-vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['python']))
+vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['python', 'perl']))
 
 env = Environment(ENV = {'PATH' : os.environ['PATH']}, variables = vars, tools=['default', 'scanreplace'], toolpath=['tools'])
 
@@ -114,6 +114,7 @@ else:
     lib = env.SConscript(["src/SConscript"])
     env.Alias(env.SConscript(["examples/SConscript"]))
 
-env.Alias("test", testruns)
+for testrun in testruns:
+    env.Alias("test", testrun)
 
 env.Alias("install", targets)

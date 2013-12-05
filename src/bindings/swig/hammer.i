@@ -135,7 +135,10 @@
 %{
 #include "allocator.h"
 #include "hammer.h"
+#ifndef SWIGPERL
+// Perl's embed.h conflicts with err.h, which internal.h includes. Ugh.
 #include "internal.h"
+#endif
 #include "glue.h"
 %}
 %include "allocator.h"
