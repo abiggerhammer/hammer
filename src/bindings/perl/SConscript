@@ -12,6 +12,11 @@ perlenv.Append(CCFLAGS=["-fpic", '-DSWIG', '-Wno-all',
                LIBPATH=["../.."],
                SWIGFLAGS=["-DHAMMER_INTERNAL__NO_STDARG_H",
                           "-Isrc/", "-perl"])
+import os
+if 'PERL_MM_OPT' in os.environ:
+    perlenv['ENV']['PERL_MM_OPT'] = os.environ['PERL_MM_OPT']
+if 'PERL5LIB' in os.environ:
+    perlenv['ENV']['PERL5LIB'] = os.environ['PERL5LIB']
 
 perlenv.ParseConfig("perl -MConfig -e'print(qq[-I$$Config{archlib}/CORE\n]);'")
 perlenv.ParseConfig("perl -MConfig -e'print($$Config{ccflags} . \"\n\");'")
@@ -19,6 +24,7 @@ perlenv.ParseConfig("perl -MConfig -e'print($$Config{ccflags} . \"\n\");'")
 swig = ['hammer.i']
 
 libhammer_perl = perlenv.SharedLibrary('hammer', swig, SHLIBPREFIX='')
+perlenv.Command(['Makefile'], ['Makefile.PL'] + libhammer_perl, "perl $SOURCE")
 
 Default(libhammer_perl)
 
