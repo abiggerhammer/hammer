@@ -36,3 +36,7 @@ perltestexec = perltestenv.Command(None, perltests + libhammer_perl + libhammer_
 perltest = Alias("testperl", [perltestexec], perltestexec)
 AlwaysBuild(perltestexec)
 testruns.append(perltest)
+
+perlinstallexec = perlenv.Command(None, libhammer_perl, "make install -C " + targetdir)
+perlinstall = Alias("installperl", [perlinstallexec], perlinstallexec)
+targets.append(perlinstall)
