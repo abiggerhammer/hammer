@@ -25,6 +25,7 @@ matrix:
 before_install:
   - sudo apt-get update -qq
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq swig python-dev; fi
+  - if [ "$BINDINGS" == "perl" ]; then sudo apt-get install -qq swig; fi
 install: true
 script: 
   - scons bindings=$BINDINGS test
