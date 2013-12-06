@@ -21,7 +21,7 @@ Features
   * Java (not currently building; give us a few days)
   * Python
   * Ruby (not yet implemented)
-  * Perl (not yet implemented)
+  * Perl
   * [Go](https://github.com/prevoty/hammer)
   * PHP (not yet implemented)
   * .NET (not yet implemented)
@@ -30,18 +30,18 @@ Installing
 ==========
 ### Prerequisites
 * SCons
-* a JDK
 
 ### Optional Dependencies
-* pkg-config (for `make test`)
-* glib-2.0 (>= 2.29) (for `make test`)
-* glib-2.0-dev (for `make test`)
-* swig (for Python bindings)
+* pkg-config (for `scons test`)
+* glib-2.0 (>= 2.29) (for `scons test`)
+* glib-2.0-dev (for `scons test`)
+* swig (for Python/Perl bindings; Perl requires >= 2.0.8)
 * python2.7-dev (for Python bindings)
+* a JDK (for Java bindings)
 
 To build, type `scons`. To run the built-in test suite, type `scons test`. For a debug build, add `--variant=debug`
 
-To build bindings, pass a "bindings" argument to scons, e.g. `scons bindings=python`. `scons bindings=python test` will build Python bindings and run tests for both C and Python. `--variant=debug` is valid here too.
+To build bindings, pass a "bindings" argument to scons, e.g. `scons bindings=python`. `scons bindings=python test` will build Python bindings and run tests for both C and Python. `--variant=debug` is valid here too. You can build more than one set of bindings at a time; just separate them with commas, e.g. `scons bindings=python,perl`.
 
 For Java, if jni.h and jni_md.h aren't already somewhere on your include path, prepend
 `C_INCLUDE_PATH=/path/to/jdk/include` to that.
@@ -65,6 +65,8 @@ The `examples/` directory contains some simple examples, currently including:
 Known Issues
 ============
 The Python bindings only work with Python 2.7. SCons doesn't work with Python 3, and PyCapsule isn't available in 2.6 and below, so 2.7 is all you get. Sorry about that.
+
+The requirement for SWIG >= 2.0.8 for Perl bindings is due to a [known bug](http://sourceforge.net/p/swig/patches/324/) in SWIG. [ppa:dns/irc](https://launchpad.net/~dns/+archive/irc) has backports of SWIG 2.0.8 for Ubuntu versions 10.04-12.10; you can also [build SWIG from source](http://www.swig.org/download.html).
 
 Community
 =========
