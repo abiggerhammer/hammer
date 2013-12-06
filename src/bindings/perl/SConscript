@@ -11,6 +11,7 @@ perlenv.Append(CCFLAGS=["-fpic", '-DSWIG', '-Wno-all',
                LIBPATH=["../.."],
                SWIGFLAGS=["-DHAMMER_INTERNAL__NO_STDARG_H",
                           "-Isrc/", "-perl"])
+perlenv['ENV']['CC'] = perlenv['CC']
 import os
 if 'PERL_MM_OPT' in os.environ:
     perlenv['ENV']['PERL_MM_OPT'] = os.environ['PERL_MM_OPT']
@@ -20,7 +21,7 @@ if 'PERL5LIB' in os.environ:
 swig = ['hammer.i']
 
 hammer_wrap = perlenv.Command(['hammer_wrap.c', 'hammer.pm'], swig, "swig $SWIGFLAGS $SOURCE")
-makefile = perlenv.Command(['Makefile'], ['Makefile.PL'], "perl $SOURCE")
+makefile = perlenv.Command(['Makefile'], ['Makefile.PL'], "perl $SOURCE CC=" + perlenv['ENV']['CC'])
 
 targetdir = os.path.dirname(str(hammer_wrap[0].path))
 
