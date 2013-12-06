@@ -8,35 +8,35 @@ matrix:
   include:
     - compiler: gcc
       language: python
-      python: 2.7
+      python: "2.7"
       env: BINDINGS=python
     - compiler: clang
       language: python
-      python: 2.7
+      python: "2.7"
       env: BINDINGS=python CC=clang
     - compiler: gcc
       language: perl
-      perl: 5.18
+      perl: "5.18"
       env: BINDINGS=perl
     - compiler: clang
       language: perl
-      perl: 5.18
+      perl: "5.18"
       env: BINDINGS=perl CC=clang
     - compiler: gcc
       language: perl
-      perl: 5.14
+      perl: "5.14"
       env: BINDINGS=perl
     - compiler: clang
       language: perl
-      perl: 5.14
+      perl: "5.14"
       env: BINDINGS=perl CC=clang
     - compiler: gcc
       language: perl
-      perl: 5.10
+      perl: "5.10"
       env: BINDINGS=perl
     - compiler: clang
       language: perl
-      perl: 5.10
+      perl: "5.10"
       env: BINDINGS=perl CC=clang
 before_install:
   - sudo apt-get update -qq
