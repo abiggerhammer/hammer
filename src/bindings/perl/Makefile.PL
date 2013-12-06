@@ -7,9 +7,9 @@ chdir(dirname($0));
 
 WriteMakefile(
     NAME => "hammer",
-    LIBS => ["-lhammer"],
+    LIBS => ["-L../../ -lhammer"],
     OBJECT => 'hammer_wrap.o',
     INC => '-I../..',
-    CCFLAGS => "$Config{ccflags} -DSWIG -DHAMMER_INTERNAL__NO_STDARG_H -std=gnu99",
+    CCFLAGS => "$Config{ccflags} -DSWIG -DHAS_BOOL -std=gnu99",
     );
 

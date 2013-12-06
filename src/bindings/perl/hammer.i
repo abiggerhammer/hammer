@@ -1,6 +1,7 @@
 %module hammer;
 %begin %{
 #include <unistd.h>
+#include <stdbool.h>
 #include <stdint.h>
 %}
 
@@ -36,7 +37,7 @@
     SWIG_exception_fail(SWIG_TypeError, "Expected array ref");
 
   AV* av = (AV*) SvRV($input);
-  size_t amax = av_top_index(av) + 1; // I want the length, not the top index...
+  size_t amax = av_len(av) + 1; // I want the length, not the top index...
   // TODO: is this array copied?
   $1 = malloc((amax+1) * sizeof(*$1));
   $1[amax] = NULL;
