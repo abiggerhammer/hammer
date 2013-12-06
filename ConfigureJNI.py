@@ -38,7 +38,7 @@ def ConfigureJNI(env):
             # assuming the compiler found is in some directory like
             # /usr/jdkX.X/bin/javac, java's home directory is /usr/jdkX.X
             java_base = os.path.join(jcdir, "..")
-            print "found."
+            print "found at " + java_base
 
     if sys.platform == 'cygwin':
         # Cygwin and Sun Java have different ideas of how path names

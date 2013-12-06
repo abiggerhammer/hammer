@@ -17,6 +17,12 @@ env = Environment(ENV = {'PATH' : os.environ['PATH']},
 if not 'bindings' in env:
     env['bindings'] = []
 
+if 'java' in env['bindings']:
+    from ConfigureJNI import ConfigureJNI
+    if not ConfigureJNI(env):
+        print "Java Native Interface is required for Java bindings. Exiting."
+        Exit(0)
+
 def calcInstallPath(*elements):
     path = os.path.abspath(os.path.join(*map(env.subst, elements)))
     if 'DESTDIR' in env:
