@@ -35,7 +35,9 @@ extern "C" {
 
 #ifndef __cplusplus
 #ifndef HAMMER_INTERNAL__NO_STDARG_H
+#ifndef SWIGPERL
 typedef int bool;
+#endif // SWIGPERL
 #endif // HAMMER_INTERNAL__NO_STDARG_H
 #endif
 
@@ -242,7 +244,7 @@ typedef struct HBenchmarkResults_ {
   rtype_t name##__m(HAllocator* mm__, params, ...);       	\
   rtype_t name##__a(void *args[]);				\
   rtype_t name##__ma(HAllocator *mm__, void *args[])
-#endif // HAMMER_INTERNAL__NO_STDARG_H
+#endif // SWIG
 // }}}
 
 
