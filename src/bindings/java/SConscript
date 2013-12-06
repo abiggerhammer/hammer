@@ -1,0 +1,29 @@
+# -*- python -*-
+import os, sys
+from ConfigureJNI import ConfigureJNI
+Import('env libhammer_shared testruns targets')
+
+javaenv = env.Clone()
+
+if not ConfigureJNI(javaenv):
+   print "Java Native Interface is required. Exiting."
+   Exit(0)
+
+def PrependDir(dir, filelist):
+    return [os.path.join(dir,x) for x in filelist]
+
+csources = [
+    "com_upstandinghackers_hammer_Hammer.c",
+    "com_upstandinghackers_hammer_ParsedToken.c",
+    "com_upstandinghackers_hammer_Parser.c",
+    "com_upstandinghackers_hammer_ParseResult.c"   
+]
+
+jni_classes = javaenv.Java('classes', 'jsrc')
+jni_headers = javaenv.JavaH('csrc', jni_classes)
+
+native_dir = 'lib-' + sys.platform
+native_src = PrependDir(native_dir, csources)
+javaenv.BuildDir(native_dir, 'csrc', duplicate=0)
+libhammer_java = javaenv.SharedLibrary(native_dir + "/Hammer", native_src)
+Default(libhammer_java)

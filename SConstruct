@@ -7,7 +7,7 @@ import sys
 vars = Variables(None, ARGUMENTS)
 vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
-vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['dotnet', 'perl', 'php', 'python']))
+vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['dotnet', 'java', 'perl', 'php', 'python']))
 
 env = Environment(ENV = {'PATH' : os.environ['PATH']},
                   variables = vars,
