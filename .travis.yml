@@ -22,9 +22,25 @@ matrix:
       language: perl
       perl: 5.18
       env: BINDINGS=perl CC=clang
+    - compiler: gcc
+      language: perl
+      perl: 5.14
+      env: BINDINGS=perl
+    - compiler: clang
+      language: perl
+      perl: 5.14
+      env: BINDINGS=perl CC=clang
+    - compiler: gcc
+      language: perl
+      perl: 5.10
+      env: BINDINGS=perl
+    - compiler: clang
+      language: perl
+      perl: 5.10
+      env: BINDINGS=perl CC=clang
 before_install:
-  - sudo apt-get update
-  - if [ "$BINDINGS" != "none" ]; then sudo add-apt-repository ppa:dns/irc -y; sudo apt-get update; sudo apt-get install swig=2.0.8-1irc1~12.04; swig -version; fi
+  - sudo apt-get update -qq
+  - if [ "$BINDINGS" != "none" ]; then sudo add-apt-repository ppa:dns/irc -y; sudo apt-get update -qq; sudo apt-get install -qq swig=2.0.8-1irc1~12.04; swig -version; fi
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
 
 install: true
