@@ -16,11 +16,11 @@ matrix:
       env: BINDINGS=python CC=clang
     - compiler: gcc
       language: perl
-      perl: 5.14
+      perl: 5.18
       env: BINDINGS=perl
     - compiler: clang
       language: perl
-      perl: 5.14
+      perl: 5.18
       env: BINDINGS=perl CC=clang
 before_install:
   - sudo apt-get update -qq

@@ -1,7 +1,6 @@
 %module hammer;
 %begin %{
 #include <unistd.h>
-#include <stdbool.h>
 #include <stdint.h>
 %}
 
