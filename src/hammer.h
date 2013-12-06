@@ -34,12 +34,6 @@
 extern "C" {
 #endif
 
-#ifndef __cplusplus
-  //#ifndef HAMMER_INTERNAL__NO_STDARG_H
-  //typedef int bool;
-  //#endif // HAMMER_INTERNAL__NO_STDARG_H
-#endif
-
 typedef struct HParseState_ HParseState;
 
 typedef enum HParserBackend_ {
