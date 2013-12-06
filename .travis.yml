@@ -23,7 +23,7 @@ matrix:
       perl: 5.18
       env: BINDINGS=perl CC=clang
 before_install:
-  - sudo add-apt-repository ppa:asolovets/backports
+  - sudo add-apt-repository ppa:asolovets/backports -y
   - sudo apt-get update -qq
   - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; swig -version; fi
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
