@@ -20,4 +20,5 @@ jni_headers = javaenv.JavaH(target = 'csrc', source = classes)
 
 native_src = PrependDir('csrc', csources)
 libhammer_java = javaenv.SharedLibrary('libjhammer', [native_src, libhammer_shared])
-Default(libhammer_java)
+hammer_jar = javaenv.Jar('hammer.jar', 'classes')
+Default(libhammer_java, hammer_jar)
