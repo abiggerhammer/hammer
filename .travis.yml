@@ -24,7 +24,7 @@ matrix:
       env: BINDINGS=perl CC=clang
 before_install:
   - sudo apt-get update
-  - if [ "$BINDINGS" != "none" ]; then sudo apt-get install swig; sudo add-apt-repository ppa:asolovets/backports -y; sudo apt-get update; sudo apt-get install swig2.0; swig -version; fi
+  - if [ "$BINDINGS" != "none" ]; then sudo add-apt-repository ppa:dns/irc -y; sudo apt-get update; sudo apt-get install swig=2.0.8-1irc1~12.04; swig -version; fi
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
 
 install: true
