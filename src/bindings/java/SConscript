@@ -8,15 +8,6 @@ javaenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
 def PrependDir(dir, filelist):
     return [os.path.join(dir,x) for x in filelist]
 
-jsources = [
-    "Parser.java",
-    "ParsedToken.java",
-    "ParseResult.java",
-    "Hammer.java",
-    "Action.java",
-    "Predicate.java"
-]
-
 csources = [
     "com_upstandinghackers_hammer_Hammer.c",
     "com_upstandinghackers_hammer_ParsedToken.c",
@@ -24,12 +15,9 @@ csources = [
     "com_upstandinghackers_hammer_ParseResult.c"   
 ]
 
-classes = env.Java(target = 'classes', source = 'jsrc/com/upstandinghackers/hammer')
-jni_headers = javaenv.JavaH(target = 'native', source = classes)
-Default(jni_headers)
+classes = javaenv.Java(target = 'classes', source = '#src/bindings/java/jsrc')
+jni_headers = javaenv.JavaH(target = 'csrc', source = classes)
 
-#native_dir = 'lib-' + sys.platform
-#native_src = PrependDir(native_dir, csources)
-#javaenv.BuildDir(native_dir, 'csrc', duplicate=0)
-#libhammer_java = javaenv.SharedLibrary(native_dir + "/Hammer", native_src)
-#Default(libhammer_java)
+native_src = PrependDir('csrc', csources)
+libhammer_java = javaenv.SharedLibrary('libjhammer', [native_src, libhammer_shared])
+Default(libhammer_java)
