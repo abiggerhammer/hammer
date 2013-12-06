@@ -10,6 +10,6 @@ WriteMakefile(
     LIBS => ["-lhammer"],
     OBJECT => 'hammer_wrap.o',
     INC => '-I../..',
-    CCFLAGS => "$Config{ccflags} -DSWIG -DHAMMER_INTERNAL__NO_STDARG_H -std=gnu99",
+    CCFLAGS => "$Config{ccflags} -DSWIG -std=gnu99",
     );
 
