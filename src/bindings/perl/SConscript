@@ -5,8 +5,7 @@ Import("env libhammer_shared testruns targets")
 perlenv = env.Clone()
 
 perlenv.Append(CCFLAGS=["-fpic", '-DSWIG', '-Wno-all',
-                        '-Wno-extra', '-Wno-error',
-                        '-DHAMMER_INTERNAL__NO_STDARG_H'],
+                        '-Wno-extra', '-Wno-error'],
                CPPPATH=["../.."],
                LIBS=['hammer'],
                LIBPATH=["../.."],
