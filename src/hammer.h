@@ -20,6 +20,7 @@
 #ifndef HAMMER_INTERNAL__NO_STDARG_H
 #include <stdarg.h>
 #endif // HAMMER_INTERNAL__NO_STDARG_H
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include "allocator.h"
@@ -34,7 +35,6 @@ extern "C" {
 #endif
 
 #ifndef __cplusplus
-#include <stdbool.h>
   //#ifndef HAMMER_INTERNAL__NO_STDARG_H
   //typedef int bool;
   //#endif // HAMMER_INTERNAL__NO_STDARG_H
