@@ -23,9 +23,8 @@ matrix:
       perl: 5.18
       env: BINDINGS=perl CC=clang
 before_install:
-  - sudo add-apt-repository ppa:asolovets/backports -y
-  - sudo apt-get update -qq
-  - if [ "$BINDINGS" != "none" ]; then sudo apt-get install swig2.0; swig -version; fi
+  - sudo apt-get update
+  - if [ "$BINDINGS" != "none" ]; then sudo apt-get install swig; sudo add-apt-repository ppa:asolovets/backports -y; sudo apt-get update; sudo apt-get install swig2.0; swig -version; fi
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
 
 install: true
