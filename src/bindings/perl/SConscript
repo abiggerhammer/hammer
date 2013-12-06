@@ -32,7 +32,7 @@ Default(libhammer_perl)
 perltestenv = perlenv.Clone()
 perltestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
 perltests = ['t/hammer.t']
-perltestexec = perltestenv.Command(None, perltests + libhammer_perl + libhammer_shared, "make test -C " + targetdir)
+perltestexec = perltestenv.Command(None, perltests + libhammer_perl + libhammer_shared, "LD_LIBRARY_PATH=" + os.path.dirname(str(libhammer_shared[0])) + " make test -C " + targetdir)
 perltest = Alias("testperl", [perltestexec], perltestexec)
 AlwaysBuild(perltestexec)
 testruns.append(perltest)
