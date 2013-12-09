@@ -16,10 +16,10 @@ class ManyTest extends PHPUnit_Framework_TestCase
         $result2 = h_parse($this->parser, "a");
         $result3 = h_parse($this->parser, "b");
         $result4 = h_parse($this->parser, "aabbaba");
-        $this->assertEquals(array(), $result);
-        $this->assertEquals(array("a"), $result);
-        $this->assertEquals(array("b"), $result);
-        $this->assertEquals(array("a", "a", "b", "b", "a", "b", "a"), $result);
+        $this->assertEquals(array(), $result1);
+        $this->assertEquals(array("a"), $result2);
+        $this->assertEquals(array("b"), $result3);
+        $this->assertEquals(array("a", "a", "b", "b", "a", "b", "a"), $result4);
     }
 }
 ?>

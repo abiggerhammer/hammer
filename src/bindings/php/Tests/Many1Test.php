@@ -17,7 +17,7 @@ class Many1Test extends PHPUnit_Framework_TestCase
         $result3 = h_parse($this->parser, "aabbaba");
         $this->assertEquals(array("a"), $result1);
         $this->assertEquals(array("b"), $result2);
-        $this->assertEquals(array("c"), $result3);
+        $this->assertEquals(array("a", "a", "b", "b", "a", "b", "a"), $result3);
     }
 
     public function testFailure()

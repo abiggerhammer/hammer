@@ -162,10 +162,9 @@
 //  RETVAL_STRINGL((char*)$1, $2, 1);
 // }
 %apply (const uint8_t* str, const size_t len) { (const uint8_t* input, size_t length) }
-
+%apply (const uint8_t* str, const size_t len) { (const uint8_t* charset, size_t length) }
 %typemap(in) void*[] {
   if (IS_ARRAY == Z_TYPE_PP($input)) {
-    zval **data;
     HashTable *arr = Z_ARRVAL_PP($input);
     HashPosition pointer;
     int size = zend_hash_num_elements(arr);
@@ -173,8 +172,8 @@
     int res = 0;
     $1 = (void**)malloc((size)*sizeof(HParser*));
     for (i=0; i<size; i++) {
-      HParser *p;
-      if (zend_hash_index_find(arr, i, (void**)&p) == FAILURE) {
+      zval **data;
+      if (zend_hash_index_find(arr, i, (void**)&data) == FAILURE) {
 	// FIXME raise some error
 	$1 = NULL;
       } else {
@@ -494,7 +493,6 @@ def int64(): return _h_int64()
       return ret;
     case TT_BYTES:
       ZVAL_STRINGL(ret, (char*)token->token_data.bytes.token, token->token_data.bytes.len, 1);
-      printf("Being returned from hpt_to_php: %s\n", Z_STRVAL_P(ret));
       return ret;
     case TT_SINT:
       ZVAL_LONG(ret, token->token_data.sint);
@@ -566,5 +564,6 @@ function sequence()
     $arg_list[] = NULL;
     return h_sequence__a($arg_list);
 }
+
 "
 #endif
