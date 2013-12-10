@@ -17,7 +17,6 @@ class WhitespaceTest extends PHPUnit_Framework_TestCase
         $result2 = h_parse($this->parser1, " a");
         $result3 = h_parse($this->parser1, "  a");
         $result4 = h_parse($this->parser1, "\ta");
-        // TODO fix these tests when h_ch is fixed
         $this->assertEquals("a", $result1);
         $this->assertEquals("a", $result2);
         $this->assertEquals("a", $result3);

@@ -12,8 +12,7 @@ class InTest extends PHPUnit_Framework_TestCase
     public function testSuccess()
     {
         $result = h_parse($this->parser, "b");
-        // TODO: fixme when h_ch is fixed
-        $this->assertEquals(98, $result);
+        $this->assertEquals("b", $result);
     }
     public function testFailure()
     {

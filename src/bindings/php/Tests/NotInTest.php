@@ -12,8 +12,7 @@ class NotInTest extends PHPUnit_Framework_TestCase
     public function testSuccess()
     {
         $result = h_parse($this->parser, "d");
-        // TODO: fixme when h_ch is fixed
-        $this->assertEquals(100, $result);
+        $this->assertEquals("d", $result);
     }
     public function testFailure()
     {

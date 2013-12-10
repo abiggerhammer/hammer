@@ -12,7 +12,6 @@ class RightTest extends PHPUnit_Framework_TestCase
     public function testSuccess()
     {
         $result = h_parse($this->parser, " a");
-        // TODO fix these tests when h_ch is fixed
         $this->assertEquals("a", $result);
     }
     public function testFailure()
