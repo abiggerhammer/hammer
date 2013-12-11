@@ -27,13 +27,9 @@ module Hammer
       return parser
     end
 
-    def self.ch(char)
-      # TODO: Really? Should probably accept Fixnum in appropriate range
-      # Also, char.ord gives unexpected results if you pass e.g. Japanese characters: '今'.ord == 20170; Hammer::Parser::Ch.new('今').parse(202.chr) == true
-      # Not really unexpected though, since 20170 & 255 == 202.
-      # But probably it's better to use Ch for Fixnum in 0..255 only, and only Token for strings.
-      raise ArgumentError, 'expecting a one-character String' unless char.is_a?(String) && char.length == 1
-      h_parser = Hammer::Internal.h_ch(char.ord)
+    def self.ch(num)
+      raise ArgumentError, 'expecting a Fixnum in 0..255', unless num.is_a?(Fixnum) and num.between?(0, 255)
+      h_parser = Hammer::Internal.h_ch(num)
 
       parser = Hammer::Parser.new
       parser.instance_variable_set :@h_parser, h_parser
