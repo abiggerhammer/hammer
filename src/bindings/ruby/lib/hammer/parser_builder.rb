@@ -75,8 +75,8 @@ module Hammer
     define_parser :left
     define_parser :right
     define_parser :middle
-    define_parser :end
-    define_parser :nothing
+    define_parser :end_p
+    define_parser :nothing_p
     define_parser :butnot
     define_parser :difference
     define_parser :xor
@@ -90,7 +90,25 @@ module Hammer
     define_parser :length_value
     define_parser :and
     define_parser :not
-    define_parser :indirect
+
+    # At least indirect must return the parser instead of the builder, so it can be stored in a variable.
+    # Other possible solution:
+    #   Make indirect take a name parameter, and use the name to bind it later.
+    #   Example:
+    #     p = Hammer::Parser.build { indirect(:the_name) }
+    #     p.bind(:the_name, inner_parser)
+    #   (store names and parsers in hash in the builder,
+    #    when building merge hashes from sub builders and store everything in the resulting sequence or choice.
+    #    make Parser#bind take and optional symbol. if it is given, the name is looked up in the table.)
+    # TODO:
+    #   Think about this more.
+    #   Do we need to be able to build parsers by chaining function calls? DSL should be sufficient.
+    #   If yes, the parser methods in this class should not return "self", but the Hammer::Parser object they create.
+    def indirect
+      parser = Hammer::Parser.indirect
+      @parsers << parser
+      return parser
+    end
 
   end # class ParserBuilder
 

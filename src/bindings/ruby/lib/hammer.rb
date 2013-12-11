@@ -12,7 +12,7 @@ require 'hammer/parser_builder'
 
 parser = Hammer::Parser.build do
   token 'blah'
-  ch 'a'
+  ch 'a'.ord
   choice {
     sequence {
       token 'abc'
@@ -57,3 +57,17 @@ parser = h.token(s)
 p parser.parse 'BLAH' # => false
 s.upcase!
 p parser.parse 'BLAH' # => false
+
+
+x = nil
+parser = Hammer::Parser.build {
+  token 'abc'
+  x = indirect
+  end_p
+}
+x.bind(h.token('abd'))
+
+p parser.parse 'abcabdabd'
+p parser.parse 'abcabd'
+p parser.parse 'abdabd'
+p parser.parse 'abd'

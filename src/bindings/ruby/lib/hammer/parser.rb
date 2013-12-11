@@ -3,9 +3,22 @@ module Hammer
 
     # Don't create new instances with Hammer::Parser.new,
     # use the constructor methods instead (i.e. Hammer::Parser.int64 etc.)
-    def initialize
+    #
+    # name: Name of the parser. Should be a symbol.
+    # h_parser: The pointer to the parser as returned by hammer.
+    # dont_gc: Pass additional data that's used by the parser and needs to be saved from the garbage collector.
+    def initialize(name, h_parser, dont_gc)
+      @name = name
+      @h_parser = h_parser
+      @dont_gc = dont_gc
     end
 
+    attr_reader :name
+    attr_reader :h_parser
+
+    # Parse the given data. Returns true if successful, false otherwise.
+    #
+    # data: A string containing the data to parse.
     def parse(data)
       raise RuntimeError, '@h_parser is nil' if @h_parser.nil?
       raise ArgumentError, 'expecting a String' unless data.is_a? String # TODO: Not needed, FFI checks that.
@@ -16,24 +29,24 @@ module Hammer
       !result.null?
     end
 
+    # Binds an indirect parser.
+    def bind(other_parser)
+      raise RuntimeError, 'can only bind indirect parsers' unless self.name == :indirect
+      Hammer::Internal.h_bind_indirect(self.h_parser, other_parser.h_parser)
+    end
+
     def self.token(string)
       h_string = string.dup
       h_parser = Hammer::Internal.h_token(h_string, h_string.length)
 
-      parser = Hammer::Parser.new
-      parser.instance_variable_set :@h_parser, h_parser
-      # prevent string from getting garbage-collected
-      parser.instance_variable_set :@h_string, h_string
-      return parser
+      return Hammer::Parser.new(:token, h_parser, h_string)
     end
 
     def self.ch(num)
-      raise ArgumentError, 'expecting a Fixnum in 0..255', unless num.is_a?(Fixnum) and num.between?(0, 255)
+      raise ArgumentError, 'expecting a Fixnum in 0..255' unless num.is_a?(Fixnum) and num.between?(0, 255)
       h_parser = Hammer::Internal.h_ch(num)
 
-      parser = Hammer::Parser.new
-      parser.instance_variable_set :@h_parser, h_parser
-      return parser
+      return Hammer::Parser.new(:ch, h_parser, nil)
     end
 
     # Defines a parser constructor with the given name.
@@ -41,7 +54,7 @@ module Hammer
     #   hammer_function: name of the hammer function to call (default: 'h_'+name)
     #   varargs: Whether the function is taking a variable number of arguments (default: false)
     def self.define_parser(name, options = {})
-      hammer_function = options[:hammer_function] || ('h_' + name.to_s)
+      hammer_function = options[:hammer_function] || ('h_' + name.to_s).to_sym
       varargs = options[:varargs] || false
 
       # Define a new class method
@@ -54,10 +67,7 @@ module Hammer
         end
         h_parser = Hammer::Internal.send hammer_function, *args
 
-        parser = Hammer::Parser.new
-        parser.instance_variable_set :@h_parser, h_parser
-        parser.instance_variable_set :@sub_parsers, parsers # store sub parsers to prevent them from being garbage-collected
-        return parser
+        return Hammer::Parser.new(name, h_parser, parsers)
       end
     end
     private_class_method :define_parser
@@ -77,8 +87,8 @@ module Hammer
     define_parser :left
     define_parser :right
     define_parser :middle
-    define_parser :end
-    define_parser :nothing
+    define_parser :end_p
+    define_parser :nothing_p
     define_parser :butnot
     define_parser :difference
     define_parser :xor
@@ -92,10 +102,7 @@ module Hammer
     define_parser :length_value
     define_parser :and
     define_parser :not
-
-    # TODO: If indirect, add a bind method that calls h_bind_indirect
     define_parser :indirect
 
-    attr_reader :h_parser
   end
 end
