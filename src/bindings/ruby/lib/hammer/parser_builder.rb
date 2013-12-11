@@ -82,6 +82,16 @@ module Hammer
     define_parser :xor
     define_parser :many
     define_parser :many1
+    define_parser :optional
+    define_parser :ignore
+    define_parser :sepBy
+    define_parser :sepBy1
+    define_parser :epsilon_p
+    define_parser :length_value
+    define_parser :and
+    define_parser :not
+    define_parser :indirect
+
   end # class ParserBuilder
 
 end # module Hammer

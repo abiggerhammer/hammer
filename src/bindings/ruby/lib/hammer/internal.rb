@@ -27,9 +27,8 @@ module Hammer
     attach_function :h_left,   [:pointer, :pointer], :pointer
     attach_function :h_right,  [:pointer, :pointer], :pointer
     attach_function :h_middle, [:pointer, :pointer, :pointer], :pointer
-    # h_action
-    # h_in
-    # h_not_in
+    #attach_function :h_in, [:string, :size_t], :pointer
+    #attach_function :h_not_in, [:string, :size_t], :pointer
     attach_function :h_end_p, [], :pointer
     attach_function :h_nothing_p, [], :pointer
     attach_function :h_sequence, [:varargs], :pointer
@@ -39,18 +38,27 @@ module Hammer
     attach_function :h_xor, [:pointer, :pointer], :pointer
     attach_function :h_many, [:pointer], :pointer
     attach_function :h_many1, [:pointer], :pointer
-    # h_repeat_n
-    # h_optional
-    # h_ignore
-    # h_sepBy
-    # h_sepBy1
-    # h_epsilon_p
-    # h_length_value
-    # h_attr_bool
-    # h_and
-    # h_not
-    # h_indirect
-    # h_bind_indirect
+    #attach_function :h_repeat_n, [:pointer, :size_t], :pointer
+    attach_function :h_optional, [:pointer], :pointer
+    attach_function :h_ignore, [:pointer], :pointer
+    attach_function :h_sepBy, [:pointer, :pointer], :pointer
+    attach_function :h_sepBy1, [:pointer, :pointer], :pointer
+    attach_function :h_epsilon_p, [], :pointer
+    attach_function :h_length_value, [:pointer, :pointer], :pointer
+    attach_function :h_and, [:pointer], :pointer
+    attach_function :h_not, [:pointer], :pointer
+
+    attach_function :h_indirect, [], :pointer
+    attach_function :h_bind_indirect, [:pointer, :pointer], :void
+
+    #attach_function :h_action, [:pointer, ...], :pointer
+    #attach_function :h_attr_bool, [:pointer, ...], :pointer
+
+    #class HParseResult < FFI::Struct
+    #  layout  :ast, :pointer,
+    #          :bit_length, :longlong,
+    #          :arena, :pointer
+    #end
 
     # free the parse result
     attach_function :h_parse_result_free, [:pointer], :void
