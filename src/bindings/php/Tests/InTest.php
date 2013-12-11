@@ -7,7 +7,7 @@ class InTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = h_in("abc");
+        $this->parser = in("abc");
     }
     public function testSuccess()
     {

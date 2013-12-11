@@ -7,7 +7,7 @@ class NotInTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = h_not_in("abc");
+        $this->parser = not_in("abc");
     }
     public function testSuccess()
     {

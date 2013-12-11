@@ -204,11 +204,19 @@
   RETVAL_STRINGL((char*)$1->token, $1->len, 1);
  }
 
-/* TODO do we need this anymore? 
-%typemap(out) struct HCountedArray_* {
-
+%typemap(in) HAction* {
+  if (IS_CALLABLE == Z_TYPE_PP($input)) {
+    if (!zend_make_callable($1, *$input TSRMLS_CC)) {
+      // FIXME some error
+      $1 = NULL;
+    }
+    // don't need an else here, $1 gets populated
+  } else {
+    // FIXME some error
+    $1 = NULL;
+  }
  }
-*/
+
 %typemap(out) struct HParseResult_* {
   if ($1 == NULL) {
     // TODO: raise parse failure
@@ -255,10 +263,6 @@
 
  }
 */
-%typemap(in) (const HAction a, void* user_data) {
-  $2 = $input;
-  $1 = call_action;
- }
 #else
   #warning no Hammer typemaps defined
 #endif
@@ -565,5 +569,19 @@ function sequence()
     return h_sequence__a($arg_list);
 }
 
+function action($p, $act)
+{
+    return h_action($p, $act);
+}
+
+function in($charset)
+{
+    return action(h_in($charset), 'chr');
+}
+
+function not_in($charset)
+{
+    return action(h_not_in($charset), 'chr');
+}
 "
 #endif
