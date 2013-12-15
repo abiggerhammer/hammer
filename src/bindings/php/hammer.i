@@ -40,7 +40,7 @@
 	// FIXME raise some error
 	arg1 = NULL;
       } else {
-	res = SWIG_ConvertPtr(*data, &(arg1[i]), SWIGTYPE_p_HParser_, 0 | 0);
+	res = SWIG_ConvertPtr(*data, &($1[i]), SWIGTYPE_p_HParser_, 0 | 0);
 	if (!SWIG_IsOK(res)) {
 	  // TODO do we not *have* SWIG_TypeError?
 	  SWIG_exception_fail(res, "that wasn't an HParser");
@@ -170,6 +170,7 @@
     zval ret;
     // in PHP land, the HAction is passed by its name as a string
     if (IS_STRING != Z_TYPE_P((zval*)user_data)) {
+      printf("user_data wasn't a string");
       // FIXME throw some error
       return NULL;
     }
@@ -178,6 +179,7 @@
     args[0] = hpt_to_php(p->ast);
     int ok = call_user_function(EG(function_table), NULL, callable, &ret, 1, args TSRMLS_CC);
     if (ok != SUCCESS) {
+      printf("call_user_function failed");
       // FIXME throw some error
       return NULL;
     }
