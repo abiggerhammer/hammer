@@ -6,6 +6,10 @@ module Hammer
 
     ffi_lib 'libhammer.dylib'
 
+    # Maybe we can implement Hammer::Parser with FFI::DataConverter.
+    # That way, most hammer functions won't need to be wrapped.
+    # (Probably need to wrap token, sequence and choice only).
+    # See http://www.elabs.se/blog/61-advanced-topics-in-ruby-ffi
     typedef :pointer, :h_parser
 
     HTokenType = enum(:none, 1,
@@ -22,11 +26,16 @@ module Hammer
       layout  :capacity, :size_t,
               :used, :size_t,
               :arena, :pointer,
-              :elements, :pointer # TODO
+              :elements, :pointer # HParsedToken**
+
+      def elements
+        elem_array = FFI::Pointer.new(:pointer, self[:elements])
+        return (0...self[:used]).map { |i| HParsedToken.new(elem_array[i].read_pointer) }
+      end
     end
 
     class HBytes < FFI::Struct
-      layout  :token, :uint8,
+      layout  :token, :pointer, # uint8_t*
               :len, :size_t
     end
 
@@ -53,16 +62,15 @@ module Hammer
               :arena, :pointer
 
       def self.release(ptr)
-        p "freeing #{ptr}"
         Hammer::Internal.h_parse_result_free(ptr) unless ptr.null?
       end
     end
 
     # run a parser
-    attach_function :h_parse, [:h_parser, :string, :size_t], HParseResult.auto_ptr
+    attach_function :h_parse, [:h_parser, :string, :size_t], HParseResult.auto_ptr # TODO: Use :buffer_in instead of :string?
 
     # build a parser
-    attach_function :h_token, [:string, :size_t], :h_parser
+    attach_function :h_token, [:string, :size_t], :h_parser # TODO: Use :buffer_in instead of :string?
     attach_function :h_ch, [:uint8], :h_parser
     attach_function :h_ch_range, [:uint8, :uint8], :h_parser
     attach_function :h_int_range, [:int64, :int64], :h_parser
@@ -79,8 +87,8 @@ module Hammer
     attach_function :h_left,   [:h_parser, :h_parser], :h_parser
     attach_function :h_right,  [:h_parser, :h_parser], :h_parser
     attach_function :h_middle, [:h_parser, :h_parser, :h_parser], :h_parser
-    #attach_function :h_in, [:string, :size_t], :h_parser
-    #attach_function :h_not_in, [:string, :size_t], :h_parser
+    #attach_function :h_in, [:string, :size_t], :h_parser # TODO: Use :buffer_in instead of :string?
+    #attach_function :h_not_in, [:string, :size_t], :h_parser # TODO: Use :buffer_in instead of :string?
     attach_function :h_end_p, [], :h_parser
     attach_function :h_nothing_p, [], :h_parser
     attach_function :h_sequence, [:varargs], :h_parser
