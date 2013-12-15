@@ -16,17 +16,15 @@ module Hammer
     attr_reader :name
     attr_reader :h_parser
 
-    # Parse the given data. Returns true if successful, false otherwise.
+    # Parse the given data. Returns the parse result if successful, nil otherwise.
     #
     # data: A string containing the data to parse.
     def parse(data)
       raise RuntimeError, '@h_parser is nil' if @h_parser.nil?
       raise ArgumentError, 'expecting a String' unless data.is_a? String # TODO: Not needed, FFI checks that.
+
       result = Hammer::Internal.h_parse(@h_parser, data, data.length)
-      # TODO: Do something with the data
-      #       (wrap in garbage-collected object, call h_parse_result_free when destroyed by GC)
-      Hammer::Internal.h_parse_result_free(result)
-      !result.null?
+      return result unless result.null?
     end
 
     # Binds an indirect parser.
@@ -36,6 +34,9 @@ module Hammer
     end
 
     def self.token(string)
+      # TODO:
+      # This might fail in JRuby.
+      # See "String Memory Allocation" at https://github.com/ffi/ffi/wiki/Core-Concepts
       h_string = string.dup
       h_parser = Hammer::Internal.h_token(h_string, h_string.length)
 

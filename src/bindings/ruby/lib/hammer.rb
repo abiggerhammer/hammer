@@ -71,3 +71,5 @@ p parser.parse 'abcabdabd'
 p parser.parse 'abcabd'
 p parser.parse 'abdabd'
 p parser.parse 'abd'
+
+$r = parser.parse 'abcabd'

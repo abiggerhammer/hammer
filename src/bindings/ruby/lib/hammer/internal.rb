@@ -7,10 +7,59 @@ module Hammer
     ffi_lib 'libhammer.dylib'
 
     typedef :pointer, :h_parser
-    typedef :pointer, :h_parse_result
+
+    HTokenType = enum(:none, 1,
+                      :bytes, 2,
+                      :sint, 4,
+                      :uint, 8,
+                      :sequence, 16,
+                      :reserved_1,
+                      :err, 32,
+                      :user, 64,
+                      :max)
+
+    class HCountedArray < FFI::Struct
+      layout  :capacity, :size_t,
+              :used, :size_t,
+              :arena, :pointer,
+              :elements, :pointer # TODO
+    end
+
+    class HBytes < FFI::Struct
+      layout  :token, :uint8,
+              :len, :size_t
+    end
+
+    class HParsedTokenDataUnion < FFI::Union
+      layout  :bytes, HBytes.by_value,
+              :sint, :int64,
+              :uint, :uint64,
+              :dbl, :double,
+              :flt, :float,
+              :seq, HCountedArray.by_ref,
+              :user, :pointer
+    end
+
+    class HParsedToken < FFI::Struct
+      layout  :token_type, HTokenType,
+              :data, HParsedTokenDataUnion.by_value,
+              :index, :size_t,
+              :bit_offset, :char
+    end
+
+    class HParseResult < FFI::Struct
+      layout  :ast, HParsedToken.by_ref,
+              :bit_length, :long_long,
+              :arena, :pointer
+
+      def self.release(ptr)
+        p "freeing #{ptr}"
+        Hammer::Internal.h_parse_result_free(ptr) unless ptr.null?
+      end
+    end
 
     # run a parser
-    attach_function :h_parse, [:h_parser, :string, :size_t], :h_parse_result
+    attach_function :h_parse, [:h_parser, :string, :size_t], HParseResult.auto_ptr
 
     # build a parser
     attach_function :h_token, [:string, :size_t], :h_parser
@@ -57,14 +106,8 @@ module Hammer
     #attach_function :h_action, [:h_parser, ...], :h_parser
     #attach_function :h_attr_bool, [:h_parser, ...], :h_parser
 
-    #class HParseResult < FFI::Struct
-    #  layout  :ast, :pointer,
-    #          :bit_length, :longlong,
-    #          :arena, :pointer
-    #end
-
     # free the parse result
-    attach_function :h_parse_result_free, [:h_parse_result], :void
+    attach_function :h_parse_result_free, [HParseResult.by_ref], :void
 
     # TODO: Does the HParser* need to be freed?
   end
