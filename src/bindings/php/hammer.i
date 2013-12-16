@@ -1,4 +1,5 @@
 %module hammer;
+%include "exception.i";
 
 %ignore HCountedArray_;
 
@@ -13,7 +14,7 @@
 %inline {
   struct HParsedToken_;
   struct HParseResult_;
-  static zval* hpt_to_php(const struct HParsedToken_ *token);
+  void hpt_to_php(zval *return_value, const struct HParsedToken_ *token);
   
   static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data);
  }
@@ -37,18 +38,17 @@
     for (i=0; i<size; i++) {
       zval **data;
       if (zend_hash_index_find(arr, i, (void**)&data) == FAILURE) {
-	// FIXME raise some error
-	arg1 = NULL;
+	SWIG_exception(SWIG_IndexError, "index in parser array out of bounds");
+	$1 = NULL;
       } else {
 	res = SWIG_ConvertPtr(*data, &($1[i]), SWIGTYPE_p_HParser_, 0 | 0);
 	if (!SWIG_IsOK(res)) {
-	  // TODO do we not *have* SWIG_TypeError?
-	  SWIG_exception_fail(res, "that wasn't an HParser");
+	  SWIG_exception(SWIG_TypeError, "that wasn't an HParser");
 	}
       }
     } 
   } else {
-    // FIXME raise some error
+    SWIG_exception(SWIG_TypeError, "that wasn't an array of HParsers");
     $1 = NULL;
   }
  }
@@ -74,43 +74,11 @@
 */
 %typemap(out) struct HParseResult_* {
   if ($1 == NULL) {
-    // TODO: raise parse failure
+    /* If we want parse errors to be exceptions, this is the place to do it */
+    //SWIG_exception(SWIG_TypeError, "typemap: should have been an HParseResult*, was NULL");
     RETVAL_NULL();
   } else {
-    if ($1->ast == NULL) {
-      RETVAL_NULL();
-    } else {
-      switch($1->ast->token_type) {
-      case TT_NONE:
-	RETVAL_NULL();
-	break;
-      case TT_BYTES:
-	RETVAL_STRINGL((char*)$1->ast->token_data.bytes.token, $1->ast->token_data.bytes.len, 1);
-	break;
-      case TT_SINT:
-	RETVAL_LONG($1->ast->token_data.sint);
-	break;
-      case TT_UINT:
-	RETVAL_LONG($1->ast->token_data.uint);
-	break;
-      case TT_SEQUENCE:
-	array_init($result);
-	for (int i=0; i < $1->ast->token_data.seq->used; i++) {
-	  add_next_index_zval($result, hpt_to_php($1->ast->token_data.seq->elements[i]));
-	}
-	break;
-      default:
-	/* if (token->token_type == h_tt_php) { */
-	/* 	ZEND_REGISTER_RESOURCE(return_value, token->token_data.user, le_swig__p_void); // it's a void*, what else could I do with it? */
-	/* 	return return_value; */
-	/* } else { */
-	/* 	// I guess that's a python thing */
-	/* 	//return (zval*)SWIG_NewPointerObj((void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0); */
-	/* 	// TODO: support registry */
-	/* } */
-	break;
-      }
-    }
+    hpt_to_php($result, $1->ast);
   }
  }
 /*
@@ -126,41 +94,44 @@
 %include "../swig/hammer.i";
 
 %inline {
-  static zval* hpt_to_php(const HParsedToken *token) {
-    zval *ret;
-    ALLOC_INIT_ZVAL(ret);
-    if (token == NULL) {
-      ZVAL_NULL(ret);
-      return ret;
+  void hpt_to_php(zval *return_value, const HParsedToken *token) {
+    if (!token) {
+      RETVAL_NULL();
+      return;
     }
     switch (token->token_type) {
     case TT_NONE:
-      ZVAL_NULL(ret);
-      return ret;
+      RETVAL_NULL();
+      break;
     case TT_BYTES:
-      ZVAL_STRINGL(ret, (char*)token->token_data.bytes.token, token->token_data.bytes.len, 1);
-      return ret;
+      RETVAL_STRINGL((char*)token->token_data.bytes.token, token->token_data.bytes.len, 1);
+      break;
     case TT_SINT:
-      ZVAL_LONG(ret, token->token_data.sint);
-      return ret;
+      RETVAL_LONG(token->token_data.sint);
+      break;
     case TT_UINT:
-      ZVAL_LONG(ret, token->token_data.uint);
-      return ret;
+      RETVAL_LONG(token->token_data.uint);
+      break;
     case TT_SEQUENCE:
-      array_init(ret);
+      array_init(return_value);
       for (int i=0; i < token->token_data.seq->used; i++) {
-       add_next_index_zval(ret, hpt_to_php(token->token_data.seq->elements[i]));
+	zval *tmp;
+	ALLOC_INIT_ZVAL(tmp);
+	hpt_to_php(tmp, token->token_data.seq->elements[i]);
+	add_next_index_zval(return_value, tmp);
       }
-      return ret;
+      break;
     default:
-      /* if (token->token_type == h_tt_php) { */
-      /*       ZEND_REGISTER_RESOURCE(return_value, token->token_data.user, le_swig__p_void); // it's a void*, wh
-      /*       return return_value; */
-      /* } else { */
-      /*       // I guess that's a python thing */
-      /*       //return (zval*)SWIG_NewPointerObj((void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0); */
-      /*       // TODO: support registry */
-      /* } */
+      if (token->token_type == h_tt_php) { 
+	RETVAL_RESOURCE(token->token_data.user);
+      } else {
+	int res = 0;
+	res = SWIG_ConvertPtr(return_value, (void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0);
+	if (!SWIG_IsOK(res)) {
+	  SWIG_exception(SWIG_TypeError, "hpt_to_php: that wasn't an HParsedToken");
+	}
+	// TODO: support registry
+      }
       break;
     }
   }
@@ -170,13 +141,13 @@
     zval ret;
     // in PHP land, the HAction is passed by its name as a string
     if (IS_STRING != Z_TYPE_P((zval*)user_data)) {
-      printf("user_data wasn't a string");
+      printf("user_data wasn't a string\n");
       // FIXME throw some error
       return NULL;
     }
     zval *callable;
     callable = user_data;
-    args[0] = hpt_to_php(p->ast);
+    hpt_to_php(args[0], p->ast);
     int ok = call_user_function(EG(function_table), NULL, callable, &ret, 1, args TSRMLS_CC);
     if (ok != SUCCESS) {
       printf("call_user_function failed");
