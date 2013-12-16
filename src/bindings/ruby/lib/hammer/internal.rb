@@ -169,7 +169,9 @@ module Hammer
 
     callback :HAction, [HParseResult.by_ref], HParsedToken.by_ref
     attach_function :h_action, [:h_parser, :HAction], :h_parser
-    #attach_function :h_attr_bool, [:h_parser, ...], :h_parser
+
+    callback :HPredicate, [HParseResult.by_ref], :bool
+    attach_function :h_attr_bool, [:h_parser, :HPredicate], :h_parser
 
     # free the parse result
     attach_function :h_parse_result_free, [HParseResult.by_ref], :void

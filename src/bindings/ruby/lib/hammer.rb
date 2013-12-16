@@ -46,3 +46,8 @@ $r = parser.parse 'abcdefgh'
 p $r[:ast][:data][:seq].elements.map {|e| e[:data][:uint]}
 # or:
 p $r.ast.data.map(&:data)
+
+
+h = Hammer::Parser
+parser = h.many(h.attr_bool(h.uint8) { |r| r.ast.data <= 100 })
+p parser.parse('abcdefgh').ast.data.map(&:data)

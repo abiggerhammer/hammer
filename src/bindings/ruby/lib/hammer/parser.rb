@@ -54,6 +54,15 @@ module Hammer
       return Hammer::Parser.new(:action, h_parser, [parser, action])
     end
 
+    # Can pass the predicate either as a Proc in second parameter, or as block.
+    def self.attr_bool(parser, predicate=nil, &block)
+      predicate = block if predicate.nil?
+      raise ArgumentError, 'no predicate' if predicate.nil?
+
+      h_parser = Hammer::Internal.h_attr_bool(parser.h_parser, predicate)
+      return Hammer::Parser.new(:attr_bool, h_parser, [parser, predicate])
+    end
+
     def self.token(string)
       # Need to copy string to a memory buffer (not just string.dup)
       # * Original string might be modified, this must not affect existing tokens
