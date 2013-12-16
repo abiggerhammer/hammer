@@ -80,4 +80,14 @@ class ParserTest < Minitest::Test
 
     refute_nil parser.parse('今日a')
   end
+
+  def test_token_encoding(encoding='UTF-8')
+    string = '今日'.encode(encoding)
+    parser = Hammer::Parser.token(string)
+    assert_equal string, parser.parse(string)[:ast][:data][:bytes].token
+  end
+
+  def test_token_encoding_2
+    test_token_encoding('EUC-JP')
+  end
 end

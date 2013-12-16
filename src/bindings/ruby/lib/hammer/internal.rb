@@ -39,8 +39,11 @@ module Hammer
               :len, :size_t
 
       def token
-        # TODO: Encoding? Should probably be the same encoding as the string the token was created with.
-        return self[:token].read_string(self[:len]) #.force_encoding('UTF-8')
+        # TODO: Encoding?
+        # Should be the same encoding as the string the token was created with.
+        # But how do we get to this knowledge at this point?
+        # Cheap solution: Just ask the user (additional parameter with default value of UTF-8).
+        return self[:token].read_string(self[:len]).force_encoding('UTF-8')
       end
     end
 
