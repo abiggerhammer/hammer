@@ -74,9 +74,10 @@ class ParserTest < Minitest::Test
   def test_multibyte_token
     parser = Hammer::Parser.build {
       token '今日'
+      token 'a'
       end_p
     }
 
-    refute_nil parser.parse('今日')
+    refute_nil parser.parse('今日a')
   end
 end

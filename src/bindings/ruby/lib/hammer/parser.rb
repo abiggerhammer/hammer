@@ -23,7 +23,7 @@ module Hammer
       raise RuntimeError, '@h_parser is nil' if @h_parser.nil?
       raise ArgumentError, 'expecting a String' unless data.is_a? String # TODO: Not needed, FFI checks that.
 
-      result = Hammer::Internal.h_parse(@h_parser, data, data.length)
+      result = Hammer::Internal.h_parse(@h_parser, data, data.bytesize)
       return result unless result.null?
     end
 
@@ -37,9 +37,8 @@ module Hammer
       # Need to copy string to a memory buffer (not just string.dup)
       # * Original string might be modified, this must not affect existing tokens
       # * We need a constant memory address (Ruby string might be moved around by the Ruby VM)
-      # * Use string.length instead of h_string.size to handle multibyte characters correctly.
       buffer = FFI::MemoryPointer.from_string(string)
-      h_parser = Hammer::Internal.h_token(buffer, string.length)
+      h_parser = Hammer::Internal.h_token(buffer, buffer.size-1) # buffer.size includes the null byte at the end
 
       return Hammer::Parser.new(:token, h_parser, buffer)
     end
