@@ -5,10 +5,13 @@
 
 %inline %{
   static int h_tt_php;
+  static int le_h_tt_php_descriptor;
   %}
 
 %init %{
+#define PHP_H_TT_PHP_DESCRIPTOR_RES_NAME "Hammer Token"
   h_tt_php = h_allocate_token_type("com.upstandinghackers.hammer.php");
+  le_h_tt_php_descriptor = zend_register_list_destructors_ex(NULL, NULL, PHP_H_TT_PHP_DESCRIPTOR_RES_NAME, module_number);	     
   %}
 
 %inline {
@@ -109,7 +112,8 @@
       break;
     default:
       if (token->token_type == h_tt_php) { 
-	RETVAL_RESOURCE(token->token_data.user);
+	//RETVAL_RESOURCE(token->token_data.user);
+	ZEND_REGISTER_RESOURCE(return_value, token->token_data.user, le_h_tt_php_descriptor);
       } else {
 	int res = 0;
 	res = SWIG_ConvertPtr(return_value, (void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0);
