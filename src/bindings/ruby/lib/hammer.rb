@@ -40,5 +40,9 @@ parser =
 #    }
 #  }
 #}
+
 $r = parser.parse 'abcdefgh'
+
 p $r[:ast][:data][:seq].elements.map {|e| e[:data][:uint]}
+# or:
+p $r.ast.data.map(&:data)

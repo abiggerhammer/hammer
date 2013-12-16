@@ -28,6 +28,10 @@ module Hammer
               :arena, :pointer,
               :elements, :pointer # HParsedToken**
 
+      def used
+        self[:used]
+      end
+
       def elements
         elem_array = FFI::Pointer.new(:pointer, self[:elements])
         return (0...self[:used]).map { |i| HParsedToken.new(elem_array[i].read_pointer) }
@@ -43,7 +47,12 @@ module Hammer
         # Should be the same encoding as the string the token was created with.
         # But how do we get to this knowledge at this point?
         # Cheap solution: Just ask the user (additional parameter with default value of UTF-8).
-        return self[:token].read_string(self[:len]).force_encoding('UTF-8')
+        self[:token].read_string(self[:len]).force_encoding('UTF-8')
+      end
+
+      # TODO: Probably should rename this to match ruby conventions: length, count, size
+      def len
+        self[:len]
       end
     end
 
@@ -62,12 +71,51 @@ module Hammer
               :data, HParsedTokenDataUnion.by_value,
               :index, :size_t,
               :bit_offset, :char
+
+      def token_type
+        self[:token_type]
+      end
+
+      # TODO: Is this name ok?
+      def data
+        return self[:data][:bytes].token if token_type == :bytes
+        return self[:data][:sint] if token_type == :sint
+        return self[:data][:uint] if token_type == :uint
+        return self[:data][:seq].elements if token_type == :sequence
+        return self[:data][:user] if token_type == :user
+      end
+
+      def bytes
+        raise ArgumentError, 'wrong token type' unless token_type == :bytes
+        self[:data][:bytes]
+      end
+
+      def seq
+        raise ArgumentError, 'wrong token type' unless token_type == :sequence
+        self[:data][:seq]
+      end
+
+      def index
+        self[:index]
+      end
+
+      def bit_offset
+        self[:bit_offset]
+      end
     end
 
     class HParseResult < FFI::Struct
       layout  :ast, HParsedToken.by_ref,
               :bit_length, :long_long,
               :arena, :pointer
+
+      def ast
+        self[:ast]
+      end
+
+      def bit_length
+        self[:bit_length]
+      end
 
       def self.release(ptr)
         Hammer::Internal.h_parse_result_free(ptr) unless ptr.null?
