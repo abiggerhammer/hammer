@@ -8,7 +8,7 @@ class ChRangeTest extends PHPUnit_Framework_TestCase
 
     protected function setUp() 
     {
-        $this->parser = h_ch_range("a", "c");
+        $this->parser = ch_range("a", "c");
     }
     public function testSuccess() 
     {

@@ -175,6 +175,11 @@ function sequence()
     return h_sequence__a($arg_list);
 }
 
+function ch_range($low, $high)
+{
+    return action(h_ch_range($low, $high), \"chr\");
+}
+
 function in($charset)
 {
     return action(h_in($charset), \"chr\");
