@@ -7,10 +7,12 @@ module Hammer
     # name: Name of the parser. Should be a symbol.
     # h_parser: The pointer to the parser as returned by hammer.
     # dont_gc: Pass additional data that's used by the parser and needs to be saved from the garbage collector (at least as long this object lives).
-    def initialize(name, h_parser, dont_gc)
+    def initialize(name, h_parser, dont_gc=[])
       @name = name
       @h_parser = h_parser
-      @dont_gc = dont_gc
+      # Always store as array, so we can easily add stuff later on
+      dont_gc = [dont_gc] unless dont_gc.is_a? Array
+      @dont_gc = dont_gc.dup
     end
 
     attr_reader :name
@@ -24,13 +26,23 @@ module Hammer
       raise ArgumentError, 'expecting a String' unless data.is_a? String # TODO: Not needed, FFI checks that.
 
       result = Hammer::Internal.h_parse(@h_parser, data, data.bytesize)
-      return result unless result.null?
+      if result.null?
+        return nil
+      else
+        # NOTE:
+        # The parse result *must* hold a reference to the parser that created it!
+        # Otherwise, the parser might get garbage-collected while the result is still valid.
+        # Any pointers to token strings will then be invalid.
+        result.instance_variable_set :@parser, self
+        return result
+      end
     end
 
     # Binds an indirect parser.
     def bind(other_parser)
       raise RuntimeError, 'can only bind indirect parsers' unless self.name == :indirect
       Hammer::Internal.h_bind_indirect(self.h_parser, other_parser.h_parser)
+      @dont_gc << other_parser
     end
 
     def self.token(string)

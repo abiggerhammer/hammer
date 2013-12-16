@@ -16,4 +16,7 @@ parser = Hammer::Parser.build {
 }
 x.bind(Hammer::Parser.token('abd'))
 
+#$p = parser
 $r = parser.parse 'abcabd'
+
+p $r[:ast][:data][:seq].elements.map {|e| e[:data][:bytes].token }

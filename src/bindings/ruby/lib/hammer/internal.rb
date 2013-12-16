@@ -37,6 +37,11 @@ module Hammer
     class HBytes < FFI::Struct
       layout  :token, :pointer, # uint8_t*
               :len, :size_t
+
+      def token
+        # TODO: Encoding? Should probably be the same encoding as the string the token was created with.
+        return self[:token].read_string(self[:len]) #.force_encoding('UTF-8')
+      end
     end
 
     class HParsedTokenDataUnion < FFI::Union
