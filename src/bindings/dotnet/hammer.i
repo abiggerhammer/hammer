@@ -9,9 +9,9 @@
  // h_not_in
 
  //%typemap(cstype)  uint8_t* "byte[]"
-%typemap(imtype) uint8_t* "IntPtr"
  //%typemap(csin, pre="unsafe { fixed(byte* temp$csinput = &$csinput[0]) {", terminator="}}") uint8_t* "(IntPtr)temp$csinput"
  //%typemap(csvarin) uint8_t
+%typemap(imtype) uint8_t* "IntPtr"
 %typemap(cstype) uint8_t* "IntPtr"
 %typemap(csin) uint8_t* "$csinput"
 %typemap(csvarout) uint8_t* %{
@@ -19,6 +19,10 @@
       return $imcall;
     }
   %}
+
+%typemap(imtype) void*[] "IntPtr"
+%typemap(cstype) void*[] "IntPtr"
+%typemap(csin) void*[] "$csinput"
 
 %ignore h_bit_writer_get_buffer;
 %apply (char *STRING, size_t LENGTH) {(uint8_t* str, size_t len)};

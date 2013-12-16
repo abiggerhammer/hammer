@@ -105,7 +105,7 @@ pp_test_elem(exec, parser(P)) -->
     ";\n".
 pp_test_elem(decl, subparser(Name,_)) -->
     !, indent(3),
-    "Hammer.Parser ", pp_parser(ref(Name)),
+    "IndirectParser ", pp_parser(ref(Name)),
     " = Hammer.Indirect();\n".
 pp_test_elem(init, subparser(Name, Parser)) -->
     !, indent(3),
@@ -160,7 +160,7 @@ pp_parse_result(none) --> !,
 pp_parse_result(uint(V)) --> !,
     "(System.UInt64)", pp_parser(num(V)).
 pp_parse_result(sint(V)) --> !,
-    "(System.Int64)", pp_parser(num(V)).
+    "(System.Int64)(", pp_parser(num(V)), ")".
 pp_parse_result(string(A)) --> !,
     "new byte[]{ ", pp_byte_seq(A), "}".
 %pp_parse_result(A) -->
@@ -180,8 +180,8 @@ pp_test_case(testcase(Name, Elems)) -->
     !,
     indent(2), "[Test]\n",
     { format_test_name(Name, TName) },
-    indent(2), "public void ", TName, " {\n",
-    indent(3), "Hammer.Parser parser;\n",
+    indent(2), "public void ", TName, "() {\n",
+    indent(3), "Parser parser;\n",
     pp_test_elems(decl, Elems),
     pp_test_elems(init, Elems),
     pp_test_elems(exec, Elems),
@@ -196,6 +196,7 @@ pp_test_cases([A|As]) -->
 pp_test_suite(Suite) -->
     "namespace Hammer.Test {\n",
     indent(1), "using NUnit.Framework;\n",
+    %indent(1), "using Hammer;\n",
     indent(1), "[TestFixture]\n",
     indent(1), "public partial class HammerTest {\n",
     pp_test_cases(Suite),

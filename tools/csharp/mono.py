@@ -45,7 +45,7 @@ def generate(env):
     env['BUILDERS']['CLIProgram'] = McsBuilder
     env['BUILDERS']['CLILibrary'] = McsLibBuilder
     
-    env['CSC']        = 'gmcs'
+    env['CSC']        = 'mcs'
     env['_CSCLIBS']    = "${_stripixes('-r:', CILLIBS, '', '-r', '', __env__)}"
     env['_CSCLIBPATH'] = "${_stripixes('-lib:', CILLIBPATH, '', '-r', '', __env__)}"
     env['CSCFLAGS']   = SCons.Util.CLVar('')
