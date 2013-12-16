@@ -20,3 +20,25 @@ x.bind(Hammer::Parser.token('abd'))
 $r = parser.parse 'abcabd'
 
 p $r[:ast][:data][:seq].elements.map {|e| e[:data][:bytes].token }
+
+
+h = Hammer::Parser
+parser =
+  h.many(
+    h.action(h.uint8) { |r|
+      p "TT=#{r[:ast][:token_type]}, value=#{r[:ast][:data][:uint]}"
+      r[:ast][:data][:uint] *= 2
+      r[:ast] if r[:ast][:data][:uint] % 3 == 0
+    })
+
+#parser = Hammer::Parser.build {
+#  many {
+#    uint8
+#    action { |r|
+#      p r
+#      r[:ast]
+#    }
+#  }
+#}
+$r = parser.parse 'abcdefgh'
+p $r[:ast][:data][:seq].elements.map {|e| e[:data][:uint]}

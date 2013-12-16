@@ -119,7 +119,8 @@ module Hammer
     attach_function :h_indirect, [], :h_parser
     attach_function :h_bind_indirect, [:h_parser, :h_parser], :void
 
-    #attach_function :h_action, [:h_parser, ...], :h_parser
+    callback :HAction, [HParseResult.by_ref], HParsedToken.by_ref
+    attach_function :h_action, [:h_parser, :HAction], :h_parser
     #attach_function :h_attr_bool, [:h_parser, ...], :h_parser
 
     # free the parse result

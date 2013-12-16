@@ -45,6 +45,15 @@ module Hammer
       @dont_gc << other_parser
     end
 
+    # Can pass the action either as a Proc in second parameter, or as block.
+    def self.action(parser, action=nil, &block)
+      action = block if action.nil?
+      raise ArgumentError, 'no action' if action.nil?
+
+      h_parser = Hammer::Internal.h_action(parser.h_parser, action)
+      return Hammer::Parser.new(:action, h_parser, [parser, action])
+    end
+
     def self.token(string)
       # Need to copy string to a memory buffer (not just string.dup)
       # * Original string might be modified, this must not affect existing tokens

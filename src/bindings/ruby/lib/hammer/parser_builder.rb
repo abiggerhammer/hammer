@@ -52,9 +52,18 @@ module Hammer
       return self
     end
 
+    # modifies previous parser
+    def action(&block)
+      parser = @parsers.last
+      raise RuntimeError, 'need a parser before action' if parser.nil?
+      @parsers << Hammer::Parser.action(parser, &block)
+      return self
+    end
+
     # Defines a parser constructor with the given name.
     def self.define_parser(name, options = {})
       define_method name do |*args|
+        # TODO: This is wrong!! Needs to accept a block for nested parsers!
         @parsers << Hammer::Parser.send(name, *args)
         return self
       end
