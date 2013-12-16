@@ -67,11 +67,6 @@
   RETVAL_STRINGL((char*)$1->token, $1->len, 1);
  }
 
-/* TODO do we need this anymore? 
-%typemap(out) struct HCountedArray_* {
-
- }
-*/
 %typemap(out) struct HParseResult_* {
   if ($1 == NULL) {
     /* If we want parse errors to be exceptions, this is the place to do it */
@@ -80,15 +75,6 @@
   } else {
     hpt_to_php($result, $1->ast);
   }
- }
-/*
-%typemap(in) (HPredicate* pred, void* user_data) {
-
- }
-*/
-%typemap(in) (const HAction a, void* user_data) {
-  $2 = $input;
-  $1 = call_action;
  }
 
 %include "../swig/hammer.i";
@@ -136,27 +122,25 @@
     }
   }
 
-  static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data) {
+  static HParsedToken* call_action(const HParseResult *p, void *user_data) {
     zval *args[1];
-    zval ret;
-    // in PHP land, the HAction is passed by its name as a string
-    if (IS_STRING != Z_TYPE_P((zval*)user_data)) {
-      printf("user_data wasn't a string\n");
-      // FIXME throw some error
-      return NULL;
-    }
-    zval *callable;
-    callable = user_data;
+    zval ret, func;
+    ZVAL_STRING(&func, (const char*)user_data, 0);
     hpt_to_php(args[0], p->ast);
-    int ok = call_user_function(EG(function_table), NULL, callable, &ret, 1, args TSRMLS_CC);
+    int ok = call_user_function(EG(function_table), NULL, &func, &ret, 1, args TSRMLS_CC);
     if (ok != SUCCESS) {
-      printf("call_user_function failed");
+      printf("call_user_function failed\n");
       // FIXME throw some error
       return NULL;
     }
+    printf("Value being returned is %s\n", Z_STRVAL(ret));
     // TODO: add reference to ret to parse-local data
     HParsedToken *tok = h_make(p->arena, h_tt_php, &ret);
     return tok;
+  }
+
+  HParser* action(HParser *parser, const char *name) {
+    return h_action(parser, call_action, (void*)name);
   }
  }
 
@@ -184,19 +168,14 @@ function sequence()
     return h_sequence__a($arg_list);
 }
 
-function action($p, $act)
-{
-    return h_action($p, $act);
-}
-
 function in($charset)
 {
-    return action(h_in($charset), 'chr');
+    return action(h_in($charset), \"chr\");
 }
 
 function not_in($charset)
 {
-    return action(h_not_in($charset), 'chr');
+    return action(h_not_in($charset), \"chr\");
 }
 "
 
