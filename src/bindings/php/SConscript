@@ -23,7 +23,7 @@ phplib = phptestenv.Command(os.path.join(phpextprefix, "hammer.so"), libhammer_p
 AlwaysBuild(phplib)
 phpprefix = os.popen("php-config --prefix").read().rstrip()
 phpincl = phptestenv.Command(os.path.join(os.path.join(phpprefix, "etc/conf.d"), "hammer.ini"), "hammer.ini", Copy("$TARGET", "$SOURCE"))
-phptestexec = phptestenv.Command(phptests, [phplib, phpincl], "phpenv exec phpunit -v --debug --include-path " + os.path.dirname(libhammer_php[0].path) +" src/bindings/php/Tests")
+phptestexec = phptestenv.Command(phptests, [phplib, phpincl], "phpenv exec phpunit --include-path " + os.path.dirname(libhammer_php[0].path) +" src/bindings/php/Tests")
 phptest = Alias("testphp", [phptestexec], phptestexec)
 AlwaysBuild(phptest)
 testruns.append(phptest)

@@ -4,15 +4,11 @@
 %ignore HCountedArray_;
 
 %inline %{
-#define PHP_H_TT_PHP_DESCRIPTOR_RES_NAME "Hammer Token"
   static int h_tt_php;
-  static int le_h_tt_php_descriptor;
   %}
 
 %init %{
   h_tt_php = h_allocate_token_type("com.upstandinghackers.hammer.php");
-  // TODO: implement h_arena_free, register a token dtor here
-  le_h_tt_php_descriptor = zend_register_list_destructors_ex(NULL, NULL, PHP_H_TT_PHP_DESCRIPTOR_RES_NAME, module_number);	     
   %}
 
 %inline {
@@ -146,8 +142,28 @@
     return tok;
   }
 
+  static int call_predicate(HParseResult *p, void *user_data) {
+    zval *args[1];
+    zval func;
+    zval *ret;
+    ALLOC_INIT_ZVAL(ret);
+    ZVAL_STRING(&func, (const char*)user_data, 0);
+    hpt_to_php(p->ast, args[0]);
+    int ok = call_user_function(EG(function_table), NULL, &func, ret, 1, args TSRMLS_CC);
+    if (ok != SUCCESS) {
+      printf("call_user_function failed\n");
+      // FIXME throw some error
+      return 0;
+    }
+    return Z_LVAL_P(ret);
+  }
+
   HParser* action(HParser *parser, const char *name) {
     return h_action(parser, call_action, (void*)name);
+  }
+
+  HParser* predicate(HParser *parser, const char *name) {
+    return h_attr_bool(parser, call_predicate, (void*)name);
   }
  }
 
