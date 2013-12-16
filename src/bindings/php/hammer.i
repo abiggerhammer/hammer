@@ -4,12 +4,12 @@
 %ignore HCountedArray_;
 
 %inline %{
+#define PHP_H_TT_PHP_DESCRIPTOR_RES_NAME "Hammer Token"
   static int h_tt_php;
   static int le_h_tt_php_descriptor;
   %}
 
 %init %{
-#define PHP_H_TT_PHP_DESCRIPTOR_RES_NAME "Hammer Token"
   h_tt_php = h_allocate_token_type("com.upstandinghackers.hammer.php");
   // TODO: implement h_arena_free, register a token dtor here
   le_h_tt_php_descriptor = zend_register_list_destructors_ex(NULL, NULL, PHP_H_TT_PHP_DESCRIPTOR_RES_NAME, module_number);	     
@@ -113,8 +113,9 @@
       break;
     default:
       if (token->token_type == h_tt_php) { 
-	//RETVAL_RESOURCE(token->token_data.user);
-	ZEND_REGISTER_RESOURCE(return_value, token->token_data.user, le_h_tt_php_descriptor);
+	zval *tmp;
+	tmp = (zval*)token->token_data.user;
+	RETVAL_ZVAL(tmp, 0, 0);
       } else {
 	int res = 0;
 	res = SWIG_ConvertPtr(return_value, (void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0);
@@ -129,18 +130,19 @@
 
   static HParsedToken* call_action(const HParseResult *p, void *user_data) {
     zval *args[1];
-    zval ret, func;
+    zval func;
+    zval *ret;
+    ALLOC_INIT_ZVAL(ret);
     ZVAL_STRING(&func, (const char*)user_data, 0);
     hpt_to_php(p->ast, args[0]);
-    int ok = call_user_function(EG(function_table), NULL, &func, &ret, 1, args TSRMLS_CC);
+    int ok = call_user_function(EG(function_table), NULL, &func, ret, 1, args TSRMLS_CC);
     if (ok != SUCCESS) {
       printf("call_user_function failed\n");
       // FIXME throw some error
       return NULL;
     }
-    printf("Value being returned is %s\n", Z_STRVAL(ret));
-    // TODO: add reference to ret to parse-local data
-    HParsedToken *tok = h_make(p->arena, h_tt_php, &ret);
+    // Whatever the zval is, stuff it into a token
+    HParsedToken *tok = h_make(p->arena, h_tt_php, ret);
     return tok;
   }
 
