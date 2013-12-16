@@ -7,79 +7,13 @@ require 'hammer/parser_builder'
 # people can use "require 'hammer-parser'" in their code.
 
 
-
-# TODO: Put tests in test/ directory.
-
-parser = Hammer::Parser.build do
-  token 'blah'
-  ch 'a'.ord
-  choice {
-    sequence {
-      token 'abc'
-    }
-    token 'def'
-  }
-end
-
-p parser
-
-if parser
-  p parser.parse 'blahaabcd'
-  p parser.parse 'blahadefd'
-  p parser.parse 'blahablad'
-  p parser.parse 'blaha'
-  p parser.parse 'blah'
-end
-
-parser = Hammer::Parser.build {
-  token 'Hello '
-  choice {
-    token 'Mom'
-    token 'Dad'
-  }
-  token '!'
-}
-p parser.parse 'Hello Mom!'
-
-parser = Hammer::ParserBuilder.new
-  .token('Hello ')
-  .choice(Hammer::Parser.token('Mom'), Hammer::Parser.token('Dad'))
-  .token('!')
-  .build
-p parser.parse 'Hello Mom!'
-
-h = Hammer::Parser
-parser = h.sequence(h.token('Hello '), h.choice(h.token('Mom'), h.token('Dad')), h.token('!'))
-p parser.parse 'Hello Mom!'
-
-s = 'blah'
-parser = h.token(s)
-p parser.parse 'BLAH' # => false
-s.upcase!
-p parser.parse 'BLAH' # => false
-
-
+# Leave this in for now to be able to play around with HParseResult in irb.
 x = nil
 parser = Hammer::Parser.build {
   token 'abc'
   x = indirect
   end_p
 }
-x.bind(h.token('abd'))
+x.bind(Hammer::Parser.token('abd'))
 
-p parser.parse 'abcabdabd'
-p parser.parse 'abcabd'
-p parser.parse 'abdabd'
-p parser.parse 'abd'
-
-#$r = parser.parse 'abcabd'
-
-
-# Test multibyte characters
-parser = Hammer::Parser.build {
-  token '今日'
-  end_p
-}
-
-p ($r = parser.parse('今日')) # should succeed
-
+$r = parser.parse 'abcabd'

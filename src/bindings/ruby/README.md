@@ -16,6 +16,8 @@ Ruby bindings for [hammer](https://github.com/UpstandingHackers/hammer), a parsi
 
 3. Run `irb -I ./lib -r hammer` to open `irb` with hammer loaded.
 
+4. To run tests, just run `rake`.
+
 
 ## Installation
 
