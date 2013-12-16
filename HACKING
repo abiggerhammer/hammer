@@ -52,3 +52,11 @@ documented), assume that
 
 In other words, don't let the (memory manager) streams cross.
 
+Language-independent test suite
+===============================
+
+There is a language-independent representation of the Hammer test
+suite in `lib/test-suite`.  This is intended to be used with the
+tsparser.pl prolog library, along with a language-specific frontend.
+
+No language-specific frontends have been written yet.

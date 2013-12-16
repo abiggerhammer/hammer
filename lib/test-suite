@@ -1,0 +1,312 @@
+# This file is to be processed with testgen.pl to produce test suites
+# for bindings.  The only escape code that is valid is \x
+
+# The only type that may change between bindings is "char", which gets
+# converted into the most convenient representation of a character in
+# a given language.  In C, this is a TT_UINT; in P*, it's a
+# single-character string.  In this file, a character is wrapped with
+# single quotes.
+
+# Strings may be given in C syntax, with no escapes other than \xHH or
+# in hex syntax, like <31.32.33> for "123".
+
+# indirect/bind_indirect can be used via subparsers.  A subparser is
+# introduced with a "subparser $<name> = <definition()>;" command.
+# First, all subparsers are declared with h_indirect().  Then, they
+# are all bound.  Inside a definition, all subparsers can be
+# referenced by $<name>.
+
+token {
+  parser token("95\xa2");
+  test "95\xa2" --> "95\xa2";
+  test "95\xa2" --> fail;
+}
+
+ch {
+  parser ch(0xA2);
+  test "\xa2" --> '\xa2';
+  test "\xa3" --> fail;
+}
+
+ch_range {
+  parser ch_range(0x61,0x63);
+  test "b" --> 'b';
+  test "d" --> fail;
+}
+
+int64 {
+  parser int64();
+  test <ff.ff.ff.fe.00.00.00.00> --> s-0x200000000;
+  test <ff.ff.ff.fe.00.00.00> --> fail;
+}
+
+int32 {
+  parser int32();
+  test <ff.fe.00.00> --> s-0x20000;
+  test <ff.fe.00> --> fail;
+  test <00.02.00.00> --> s0x20000;
+  test <00.02.00> --> fail;
+}
+
+int16 {
+  parser int16();
+  test <fe.00> --> s-0x200;
+  test <fe> --> fail;
+  test <02.00> --> s0x200;
+  test <02> --> fail;
+}
+
+int8 {
+  parser int8();
+  test <88> --> s-0x78;
+  test <> --> fail;
+}
+
+uint64 {
+  parser uint64();
+  test <00.00.00.02.00.00.00.00> --> u0x200000000;
+  test <00.00.00.02.00.00.00> --> fail;
+}
+
+uint32 {
+  parser uint32();
+  test <00.02.00.00> --> u0x20000;
+  test <00.02.00> --> fail;
+}
+
+uint16 {
+  parser uint16();
+  test <02.00> --> u0x200;
+  test <02> --> fail;
+}
+
+uint8 {
+  parser uint8();
+  test <78> --> u0x78;
+  test <> --> fail;
+}
+
+int_range {
+  parser int_range(uint8(), 0x3, 0x10);
+  test <05> --> u0x05;
+  test <0b> --> fail;
+}
+
+whitespace {
+  parser whitespace(ch(0x61));
+  test "a" --> 'a';
+  test " a" --> 'a';
+  test "  a" --> 'a';
+  test "\x09a" --> 'a';
+  test "_a" --> fail;
+
+  parser whitespace(end_p());
+  test "" --> none;
+  test "  " --> none;
+  test "  x" --> fail;
+}
+
+left {
+  parser left(ch(0x61), ch(0x20));
+  test "a " --> 'a';
+  test "a" --> fail;
+  test " " --> fail;
+  test "ba" --> fail;
+}
+
+middle {
+  parser middle(ch(' '), ch('a'), ch(' '));
+  test " a " --> 'a';
+  test "a" --> fail;
+  test " a" --> fail;
+  test "a " --> fail;
+  test " b " --> fail;
+  test "ba " --> fail;
+  test " ab" --> fail;
+}
+
+# TODO: action
+
+in {
+  parser in("abc");
+  test "b" --> 'b';
+  test "d" --> fail;
+}
+
+not_in {
+  parser not_in("abc");
+  test "d" --> 'd';
+  test "a" --> fail;
+}
+
+end_p {
+  parser sequence(ch('a'), end_p());
+  test "a" --> ['a'];
+  test "aa" --> fail;
+}
+
+nothing_p {
+  parser nothing_p();
+  test "a" --> fail;
+}
+
+sequence {
+  parser sequence(ch('a'), ch('b'));
+  test "ab" --> ['a', 'b'];
+  test "a" --> fail;
+  test "b" --> fail;
+
+  parser sequence(ch('a'), whitespace(ch('b')));
+  test "ab" --> ['a','b'];
+  test "a b" --> ['a','b'];
+  test "a  b" --> ['a','b'];
+}
+
+choice {
+  parser choice(ch('a'), ch('b'));
+  test "a" --> 'a';
+  test "b" --> 'b';
+  test "ab" --> 'a';
+  test "c" --> fail;
+}
+
+butnot {
+  parser butnot(ch('a'), token("ab"));
+  test "a" --> 'a';
+  test "ab" --> fail;
+  test "aa" --> 'a';
+
+  parser butnot(ch_range('0','9'), ch('6'));
+  test "5" --> '5';
+  test "6" --> fail;
+}
+
+difference {
+  # Not sure this actually tests anything
+  parser difference(token("ab"), ch('a'));
+  test "ab" --> "ab";
+  test "a" --> fail;
+}
+
+xor {
+  parser xor(ch_range('0','6'), ch_range('5','9'));
+  test "0" --> '0';
+  test "9" --> '9';
+  test "5" --> fail;
+  test "a" --> fail;
+}
+
+many {
+  # TODO: Some of the parsers in the original were commented out.
+  parser many(choice(ch('a'), ch('b')));
+  test "" --> [];
+  test "a" --> ['a'];
+  test "b" --> ['b'];
+  test "aabbaba" --> ['a','a','b','b','a','b','a'];
+}
+
+many1 {
+  # TODO: Some of the checks in the original were commented out.
+  parser many1(choice(ch('a'),ch('b')));
+  test "" --> fail;
+  test "a" --> ['a'];
+  test "b" --> ['b'];
+  test "aabbaba" --> ['a','a','b','b','a','b','a'];
+  test "daabbabadef" --> fail;
+}
+
+repeat-n {
+  parser repeat_n(choice(ch('a'),ch('b')),0x2);
+  test "adef" --> fail;
+  test "abdef" --> ['a','b'];
+  test "dabdef" --> fail;
+}
+
+optional {
+  parser sequence(ch('a'), optional(choice(ch('b'),ch('c'))), ch('d'));
+  test "abd" --> ['a','b','d'];
+  test "acd" --> ['a','c','d'];
+  test "ad" --> ['a',none,'d'];
+  test "aed" --> fail;
+  test "ab" --> fail;
+  test "ac" --> fail;
+}
+
+ignore {
+  parser sequence(ch('a'), ignore(ch('b')), ch('c'));
+  test "abc" --> ['a','c'];
+  test "ac" --> fail;
+}
+
+sepBy {
+  parser sepBy(choice(ch('1'), ch('2'), ch('3')), ch(','));
+  test "1,2,3" --> ['1','2','3'];
+  test "1,3,2" --> ['1','3','2'];
+  test "1,3" --> ['1','3'];
+  test "3" --> ['3'];
+  test "" --> [];
+}
+
+sepBy1 {
+  parser sepBy1(choice(ch('1'), ch('2'), ch('3')), ch(','));
+  test "1,2,3" --> ['1','2','3'];
+  test "1,3,2" --> ['1','3','2'];
+  test "1,3" --> ['1','3'];
+  test "3" --> ['3'];
+  test "" --> fail;
+}
+
+# TODO: attr_bool;
+and {
+  parser sequence(and(ch('0')), ch('0'));
+  test "0" --> ['0'];
+  test "1" --> fail;
+  parser sequence(and(ch('0')), ch('1'));
+  test "0" --> fail;
+  test "1" --> fail;
+  parser sequence(ch('1'), and(ch('2')));
+  test "12" --> ['1'];
+  test "13" --> fail;
+}
+
+not {
+  parser sequence(ch('a'), choice(token('+'), token("++")), ch('b'));
+  test "a+b" --> ['a',"+",'b'];
+  test "a++b" --> fail;
+
+  parser sequence(ch('a'), choice(sequence(token('+'), not(ch('+'))),
+                                  token("++")),
+                  ch('b'));
+  test "a+b" --> ['a', ["+"], 'b'];
+  test "a++b" --> ['a', "++", 'b'];
+}
+
+leftrec {
+  subparser $lr = choice(sequence($lr, ch('a')), epsilon_p());
+  parser $lr;
+  test "a" --> ['a'];
+  test "aa" --> [['a'],'a'];
+  test "aaa" --> [[['a'],'a'],'a'];
+}
+
+rightrec {
+  subparser $rr = choice(sequence(ch('a'), $rr), epsilon_p());
+  parser $rr;
+  test "a" --> ['a'];
+  test "aa" --> ['a',['a']];
+  test "aaa" --> ['a',['a',['a']]];
+}
+
+ambiguous {
+  subparser $d = ch('d');
+  subparser $p = ch('+');
+  subparser $e = choice(sequence($e, $p, $e), $d);
+  # TODO: implement action/h_act_flatten
+  parser $e;
+  
+  test "d" --> 'd';
+  test "d+d" --> ['d','+','d'];
+  test "d+d+d" --> [['d','+','d'],'+','d'];
+}
+
+
