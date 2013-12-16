@@ -70,7 +70,7 @@ module Hammer
     attach_function :h_parse, [:h_parser, :string, :size_t], HParseResult.auto_ptr # TODO: Use :buffer_in instead of :string?
 
     # build a parser
-    attach_function :h_token, [:string, :size_t], :h_parser # TODO: Use :buffer_in instead of :string?
+    attach_function :h_token, [:buffer_in, :size_t], :h_parser
     attach_function :h_ch, [:uint8], :h_parser
     attach_function :h_ch_range, [:uint8, :uint8], :h_parser
     attach_function :h_int_range, [:int64, :int64], :h_parser
@@ -87,8 +87,8 @@ module Hammer
     attach_function :h_left,   [:h_parser, :h_parser], :h_parser
     attach_function :h_right,  [:h_parser, :h_parser], :h_parser
     attach_function :h_middle, [:h_parser, :h_parser, :h_parser], :h_parser
-    #attach_function :h_in, [:string, :size_t], :h_parser # TODO: Use :buffer_in instead of :string?
-    #attach_function :h_not_in, [:string, :size_t], :h_parser # TODO: Use :buffer_in instead of :string?
+    #attach_function :h_in, [:buffer_in, :size_t], :h_parser
+    #attach_function :h_not_in, [:buffer_in, :size_t], :h_parser
     attach_function :h_end_p, [], :h_parser
     attach_function :h_nothing_p, [], :h_parser
     attach_function :h_sequence, [:varargs], :h_parser

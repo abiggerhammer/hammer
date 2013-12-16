@@ -72,4 +72,14 @@ p parser.parse 'abcabd'
 p parser.parse 'abdabd'
 p parser.parse 'abd'
 
-$r = parser.parse 'abcabd'
+#$r = parser.parse 'abcabd'
+
+
+# Test multibyte characters
+parser = Hammer::Parser.build {
+  token '今日'
+  end_p
+}
+
+p ($r = parser.parse('今日')) # should succeed
+

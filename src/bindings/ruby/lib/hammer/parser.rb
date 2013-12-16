@@ -6,7 +6,7 @@ module Hammer
     #
     # name: Name of the parser. Should be a symbol.
     # h_parser: The pointer to the parser as returned by hammer.
-    # dont_gc: Pass additional data that's used by the parser and needs to be saved from the garbage collector.
+    # dont_gc: Pass additional data that's used by the parser and needs to be saved from the garbage collector (at least as long this object lives).
     def initialize(name, h_parser, dont_gc)
       @name = name
       @h_parser = h_parser
@@ -34,13 +34,14 @@ module Hammer
     end
 
     def self.token(string)
-      # TODO:
-      # This might fail in JRuby.
-      # See "String Memory Allocation" at https://github.com/ffi/ffi/wiki/Core-Concepts
-      h_string = string.dup
-      h_parser = Hammer::Internal.h_token(h_string, h_string.length)
+      # Need to copy string to a memory buffer (not just string.dup)
+      # * Original string might be modified, this must not affect existing tokens
+      # * We need a constant memory address (Ruby string might be moved around by the Ruby VM)
+      # * Use string.length instead of h_string.size to handle multibyte characters correctly.
+      buffer = FFI::MemoryPointer.from_string(string)
+      h_parser = Hammer::Internal.h_token(buffer, string.length)
 
-      return Hammer::Parser.new(:token, h_parser, h_string)
+      return Hammer::Parser.new(:token, h_parser, buffer)
     end
 
     def self.ch(num)
