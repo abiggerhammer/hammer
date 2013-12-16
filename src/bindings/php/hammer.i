@@ -11,13 +11,14 @@
 %init %{
 #define PHP_H_TT_PHP_DESCRIPTOR_RES_NAME "Hammer Token"
   h_tt_php = h_allocate_token_type("com.upstandinghackers.hammer.php");
+  // TODO: implement h_arena_free, register a token dtor here
   le_h_tt_php_descriptor = zend_register_list_destructors_ex(NULL, NULL, PHP_H_TT_PHP_DESCRIPTOR_RES_NAME, module_number);	     
   %}
 
 %inline {
   struct HParsedToken_;
   struct HParseResult_;
-  void hpt_to_php(zval *return_value, const struct HParsedToken_ *token);
+  void hpt_to_php(const struct HParsedToken_ *token, zval *return_value);
   
   static struct HParsedToken_* call_action(const struct HParseResult_ *p, void* user_data);
  }
@@ -76,14 +77,14 @@
     //SWIG_exception(SWIG_TypeError, "typemap: should have been an HParseResult*, was NULL");
     RETVAL_NULL();
   } else {
-    hpt_to_php($result, $1->ast);
+    hpt_to_php($1->ast, $result);
   }
  }
 
 %include "../swig/hammer.i";
 
 %inline {
-  void hpt_to_php(zval *return_value, const HParsedToken *token) {
+  void hpt_to_php(const HParsedToken *token, zval *return_value) {
     if (!token) {
       RETVAL_NULL();
       return;
@@ -106,7 +107,7 @@
       for (int i=0; i < token->token_data.seq->used; i++) {
 	zval *tmp;
 	ALLOC_INIT_ZVAL(tmp);
-	hpt_to_php(tmp, token->token_data.seq->elements[i]);
+	hpt_to_php(token->token_data.seq->elements[i], tmp);
 	add_next_index_zval(return_value, tmp);
       }
       break;
@@ -130,7 +131,7 @@
     zval *args[1];
     zval ret, func;
     ZVAL_STRING(&func, (const char*)user_data, 0);
-    hpt_to_php(args[0], p->ast);
+    hpt_to_php(p->ast, args[0]);
     int ok = call_user_function(EG(function_table), NULL, &func, &ret, 1, args TSRMLS_CC);
     if (ok != SUCCESS) {
       printf("call_user_function failed\n");
