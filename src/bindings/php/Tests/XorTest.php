@@ -7,7 +7,7 @@ class XorTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = h_xor(h_ch_range("0", "6"), h_ch_range("5", "9"));
+        $this->parser = h_xor(ch_range("0", "6"), ch_range("5", "9"));
     }
 
     public function testSuccess()
