@@ -7,12 +7,12 @@ class NothingPTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = h_nothing_p();
+        $this->parser = hammer_nothing();
     }
 
     public function testFailure()
     {
-        $result = h_parse($this->parser, "a");
+        $result = hammer_parse($this->parser, "a");
         $this->assertEquals(NULL, $result);
     }
 }

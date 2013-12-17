@@ -7,17 +7,17 @@ class EndPTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = sequence(ch("a"), h_end_p());
+        $this->parser = hammer_sequence(hammer_ch("a"), hammer_end());
     }
 
     public function testSuccess()
     {
-        $result = h_parse($this->parser, "a");
+        $result = hammer_parse($this->parser, "a");
         $this->assertEquals(array("a"), $result);
     }
     public function testFailure()
     {
-        $result = h_parse($this->parser, "aa");
+        $result = hammer_parse($this->parser, "aa");
         $this->assertEquals(NULL, $result);
     }
 }

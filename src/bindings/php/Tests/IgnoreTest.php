@@ -7,18 +7,18 @@ class IgnoreTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = sequence(ch("a"), h_ignore(ch("b")), ch("c"));
+        $this->parser = hammer_sequence(hammer_ch("a"), hammer_ignore(hammer_ch("b")), hammer_ch("c"));
     }
 
     public function testSuccess()
     {
-        $result = h_parse($this->parser, "abc");
+        $result = hammer_parse($this->parser, "abc");
         $this->assertEquals(array("a", "c"), $result);
     }
 
     public function testFailure()
     {
-        $result = h_parse($this->parser, "ac");
+        $result = hammer_parse($this->parser, "ac");
         $this->assertEquals(NULL, $result);
     }
 }

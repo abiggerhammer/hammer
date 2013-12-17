@@ -7,15 +7,15 @@ class RightrecTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = h_indirect();
-        h_bind_indirect($this->parser, choice(sequence(ch("a"), $this->parser), h_epsilon_p()));
+        $this->parser = hammer_indirect();
+        hammer_bind_indirect($this->parser, hammer_choice(hammer_sequence(hammer_ch("a"), $this->parser), hammer_epsilon()));
     }
 
     public function testSuccess()
     {
-        $result1 = h_parse($this->parser, "a");
-        $result2 = h_parse($this->parser, "aa");
-        $result3 = h_parse($this->parser, "aaa");
+        $result1 = hammer_parse($this->parser, "a");
+        $result2 = hammer_parse($this->parser, "aa");
+        $result3 = hammer_parse($this->parser, "aaa");
         $this->assertEquals(array("a"), $result1);
         $this->assertEquals(array("a", array("a")), $result2);
         $this->assertEquals(array("a", array("a", array("a"))), $result3);

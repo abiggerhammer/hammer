@@ -8,27 +8,27 @@ class ButNotTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser1 = h_butnot(ch("a"), h_token("ab"));
-        $this->parser2 = h_butnot(h_ch_range('0', '9'), ch('6'));
+        $this->parser1 = hammer_butnot(hammer_ch("a"), hammer_token("ab"));
+        $this->parser2 = hammer_butnot(hammer_ch_range('0', '9'), hammer_ch('6'));
     }
 
     public function testSuccess1()
     {
-        $result1 = h_parse($this->parser1, "a");
-        $result2 = h_parse($this->parser1, "aa");
+        $result1 = hammer_parse($this->parser1, "a");
+        $result2 = hammer_parse($this->parser1, "aa");
         $this->assertEquals("a", $result1);
         $this->assertEquals("a", $result1);
     }
 
     public function testFailure1()
     {
-        $result = h_parse($this->parser1, "ab");
+        $result = hammer_parse($this->parser1, "ab");
         $this->assertEquals(NULL, $result);
     }
 
     public function testFailure2()
     {
-        $result = h_parse($this->parser2, "6");
+        $result = hammer_parse($this->parser2, "6");
         $this->assertEquals(NULL, $result);
     }
 }

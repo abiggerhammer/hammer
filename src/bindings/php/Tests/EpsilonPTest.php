@@ -9,26 +9,26 @@ class EpsilonPTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser1 = sequence(ch("a"), h_epsilon_p(), ch("b"));
-        $this->parser2 = sequence(h_epsilon_p(), ch("a"));
-        $this->parser3 = sequence(ch("a"), h_epsilon_p());
+        $this->parser1 = hammer_sequence(hammer_ch("a"), hammer_epsilon(), hammer_ch("b"));
+        $this->parser2 = hammer_sequence(hammer_epsilon(), hammer_ch("a"));
+        $this->parser3 = hammer_sequence(hammer_ch("a"), hammer_epsilon());
     }
 
     public function testSuccess1()
     {
-        $result = h_parse($this->parser1, "ab");
+        $result = hammer_parse($this->parser1, "ab");
         $this->assertEquals(array("a", "b"), $result);
     }
 
     public function testSuccess2()
     {
-        $result = h_parse($this->parser2, "a");
+        $result = hammer_parse($this->parser2, "a");
         $this->assertEquals(array("a"), $result);
     }
 
     public function testSuccess3()
     {
-        $result = h_parse($this->parser3, "ab");
+        $result = hammer_parse($this->parser3, "ab");
         $this->assertEquals(array("a"), $result);
     }
 }

@@ -8,26 +8,26 @@ class NotTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser1 = sequence(ch("a"), choice(ch("+"), h_token("++")), ch("b"));
-        $this->parser2 = sequence(ch("a"), choice(sequence(ch("+"), h_not(ch("+"))), h_token("++")), ch("b"));
+        $this->parser1 = hammer_sequence(hammer_ch("a"), hammer_choice(hammer_ch("+"), hammer_token("++")), hammer_ch("b"));
+        $this->parser2 = hammer_sequence(hammer_ch("a"), hammer_choice(hammer_sequence(hammer_ch("+"), hammer_not(hammer_ch("+"))), hammer_token("++")), hammer_ch("b"));
     }
 
     public function testSuccess1()
     {
-        $result = h_parse($this->parser1, "a+b");
+        $result = hammer_parse($this->parser1, "a+b");
         $this->assertEquals(array("a", "+", "b"), $result);
     }
 
     public function testFailure1()
     {
-        $result = h_parse($this->parser1, "a++b");
+        $result = hammer_parse($this->parser1, "a++b");
         $this->assertEquals(NULL, $result);
     }
 
     public function testSuccess2()
     {
-        $result1 = h_parse($this->parser2, "a+b");
-        $result2 = h_parse($this->parser2, "a++b");
+        $result1 = hammer_parse($this->parser2, "a+b");
+        $result2 = hammer_parse($this->parser2, "a++b");
         $this->assertEquals(array("a", array("+"), "b"), $result1);
         $this->assertEquals(array("a", "++", "b"), $result2);
     }

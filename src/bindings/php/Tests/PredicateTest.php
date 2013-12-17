@@ -12,18 +12,18 @@ class PredicateTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = predicate(h_many1(choice(ch('a'), ch('b'))), "predTest");
+        $this->parser = hammer_predicate(hammer_many1(hammer_choice(hammer_ch('a'), hammer_ch('b'))), "predTest");
     }
     public function testSuccess()
     {
-        $result1 = h_parse($this->parser, "aa");
-        $result2 = h_parse($this->parser, "bb");
+        $result1 = hammer_parse($this->parser, "aa");
+        $result2 = hammer_parse($this->parser, "bb");
         $this->assertEquals(["a", "a"], $result1);
         $this->assertEquals(["b", "b"], $result2);
     }
     public function testFailure()
     {
-        $result = h_parse($this->parser, "ab");
+        $result = hammer_parse($this->parser, "ab");
         $this->assertEquals(NULL, $result);
     }
 }

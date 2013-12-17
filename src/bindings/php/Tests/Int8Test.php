@@ -8,16 +8,16 @@ class Int8Test extends PHPUnit_Framework_TestCase
 
     protected function setUp() 
     {
-        $this->parser = h_int8();
+        $this->parser = hammer_int8();
     }
     public function testSuccess() 
     {
-        $result = h_parse($this->parser, "\x88");
+        $result = hammer_parse($this->parser, "\x88");
         $this->assertEquals(-0x78, $result);
     }     
     public function testFailure()
     {
-        $result = h_parse($this->parser, "");
+        $result = hammer_parse($this->parser, "");
         $this->assertEquals(NULL, $result);
     }
 }

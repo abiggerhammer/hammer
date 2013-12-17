@@ -7,18 +7,18 @@ class DifferenceTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = h_difference(h_token("ab"), ch("a"));
+        $this->parser = hammer_difference(hammer_token("ab"), hammer_ch("a"));
     }
 
     public function testSuccess()
     {
-        $result = h_parse($this->parser, "ab");
+        $result = hammer_parse($this->parser, "ab");
         $this->assertEquals("ab", $result);
     }
 
     public function testFailure()
     {
-        $result = h_parse($this->parser, "a");
+        $result = hammer_parse($this->parser, "a");
         $this->assertEquals(NULL, $result);
     }
 }

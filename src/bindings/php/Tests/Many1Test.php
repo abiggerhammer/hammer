@@ -7,14 +7,14 @@ class Many1Test extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = h_many1(choice(ch("a"), ch("b")));
+        $this->parser = hammer_many1(hammer_choice(hammer_ch("a"), hammer_ch("b")));
     }
 
     public function testSuccess()
     {
-        $result1 = h_parse($this->parser, "a");
-        $result2 = h_parse($this->parser, "b");
-        $result3 = h_parse($this->parser, "aabbaba");
+        $result1 = hammer_parse($this->parser, "a");
+        $result2 = hammer_parse($this->parser, "b");
+        $result3 = hammer_parse($this->parser, "aabbaba");
         $this->assertEquals(array("a"), $result1);
         $this->assertEquals(array("b"), $result2);
         $this->assertEquals(array("a", "a", "b", "b", "a", "b", "a"), $result3);
@@ -22,8 +22,8 @@ class Many1Test extends PHPUnit_Framework_TestCase
 
     public function testFailure()
     {
-        $result1 = h_parse($this->parser, "");
-        $result2 = h_parse($this->parser, "daabbabadef");
+        $result1 = hammer_parse($this->parser, "");
+        $result2 = hammer_parse($this->parser, "daabbabadef");
         $this->assertEquals(NULL, $result1);
         $this->assertEquals(NULL, $result2);
     }

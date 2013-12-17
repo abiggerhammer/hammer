@@ -8,29 +8,29 @@ class SequenceTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser1 = sequence(ch("a"), ch("b"));
-        $this->parser2 = sequence(ch("a"), h_whitespace(ch("b")));
+        $this->parser1 = hammer_sequence(hammer_ch("a"), hammer_ch("b"));
+        $this->parser2 = hammer_sequence(hammer_ch("a"), hammer_whitespace(hammer_ch("b")));
     }
 
     public function testSuccess1()
     {
-        $result = h_parse($this->parser1, "ab");
+        $result = hammer_parse($this->parser1, "ab");
         $this->assertEquals(array("a", "b"), $result);
     }
     
     public function testFailure1()
     {
-        $result1 = h_parse($this->parser1, "a");
-        $result2 = h_parse($this->parser2, "b");
+        $result1 = hammer_parse($this->parser1, "a");
+        $result2 = hammer_parse($this->parser2, "b");
         $this->assertEquals(NULL, $result1);
         $this->assertEquals(NULL, $result2);
     }
 
     public function testSuccess2()
     {
-        $result1 = h_parse($this->parser2, "ab");
-        $result2 = h_parse($this->parser2, "a b");
-        $result3 = h_parse($this->parser2, "a  b");
+        $result1 = hammer_parse($this->parser2, "ab");
+        $result2 = hammer_parse($this->parser2, "a b");
+        $result3 = hammer_parse($this->parser2, "a  b");
         $this->assertEquals(array("a", "b"), $result1);
         $this->assertEquals(array("a", "b"), $result2);
         $this->assertEquals(array("a", "b"), $result3);

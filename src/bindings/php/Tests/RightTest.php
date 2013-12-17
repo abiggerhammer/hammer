@@ -7,18 +7,18 @@ class RightTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = h_right(ch(" "), ch("a"));
+        $this->parser = hammer_right(hammer_ch(" "), hammer_ch("a"));
     }
     public function testSuccess()
     {
-        $result = h_parse($this->parser, " a");
+        $result = hammer_parse($this->parser, " a");
         $this->assertEquals("a", $result);
     }
     public function testFailure()
     {
-        $result1 = h_parse($this->parser, "a");
-        $result2 = h_parse($this->parser, " ");
-        $result3 = h_parse($this->parser, "ba");
+        $result1 = hammer_parse($this->parser, "a");
+        $result2 = hammer_parse($this->parser, " ");
+        $result3 = hammer_parse($this->parser, "ba");
         $this->assertEquals(NULL, $result1);
         $this->assertEquals(NULL, $result2);
         $this->assertEquals(NULL, $result3);

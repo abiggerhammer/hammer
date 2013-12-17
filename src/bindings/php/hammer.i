@@ -77,6 +77,42 @@
   }
  }
 
+%rename("hammer_token") h_token;
+%rename("hammer_int_range") h_int_range;
+%rename("hammer_bits") h_bits;
+%rename("hammer_int64") h_int64;
+%rename("hammer_int32") h_int32;
+%rename("hammer_int16") h_int16;
+%rename("hammer_int8") h_int8;
+%rename("hammer_uint64") h_uint64;
+%rename("hammer_uint32") h_uint32;
+%rename("hammer_uint16") h_uint16;
+%rename("hammer_uint8") h_uint8;
+%rename("hammer_whitespace") h_whitespace;
+%rename("hammer_left") h_left;
+%rename("hammer_right") h_right;
+%rename("hammer_middle") h_middle;
+%rename("hammer_end") h_end_p;
+%rename("hammer_nothing") h_nothing_p;
+%rename("hammer_butnot") h_butnot;
+%rename("hammer_difference") h_difference;
+%rename("hammer_xor") h_xor;
+%rename("hammer_many") h_many;
+%rename("hammer_many1") h_many1;
+%rename("hammer_repeat_n") h_repeat_n;
+%rename("hammer_optional") h_optional;
+%rename("hammer_ignore") h_ignore;
+%rename("hammer_sep_by") h_sepBy;
+%rename("hammer_sep_by1") h_sepBy1;
+%rename("hammer_epsilon") h_epsilon_p;
+%rename("hammer_length_value") h_length_value;
+%rename("hammer_and") h_and;
+%rename("hammer_not") h_not;
+%rename("hammer_indirect") h_indirect;
+%rename("hammer_bind_indirect") h_bind_indirect;
+%rename("hammer_compile") h_compile;
+%rename("hammer_parse") h_parse;
+
 %include "../swig/hammer.i";
 
 %inline {
@@ -158,52 +194,52 @@
     return Z_LVAL_P(ret);
   }
 
-  HParser* action(HParser *parser, const char *name) {
+  HParser* hammer_action(HParser *parser, const char *name) {
     return h_action(parser, call_action, (void*)name);
   }
 
-  HParser* predicate(HParser *parser, const char *name) {
+  HParser* hammer_predicate(HParser *parser, const char *name) {
     return h_attr_bool(parser, call_predicate, (void*)name);
   }
  }
 
 %pragma(php) code="
 
-function ch($ch)
+function hammer_ch($ch)
 {
     if (is_string($ch)) 
-        return h_token($ch);
+        return hammer_token($ch);
     else
         return h_ch($ch);
 }
 
-function choice()
+function hammer_choice()
 {
     $arg_list = func_get_args();
     $arg_list[] = NULL;
     return h_choice__a($arg_list);    
 }
 
-function sequence()
+function hammer_sequence()
 {
     $arg_list = func_get_args();
     $arg_list[] = NULL;
     return h_sequence__a($arg_list);
 }
 
-function ch_range($low, $high)
+function hammer_ch_range($low, $high)
 {
-    return action(h_ch_range($low, $high), \"chr\");
+    return hammer_action(h_ch_range($low, $high), \"chr\");
 }
 
-function in($charset)
+function hammer_in($charset)
 {
-    return action(h_in($charset), \"chr\");
+    return hammer_action(h_in($charset), \"chr\");
 }
 
-function not_in($charset)
+function hammer_not_in($charset)
 {
-    return action(h_not_in($charset), \"chr\");
+    return hammer_action(h_not_in($charset), \"chr\");
 }
 "
 

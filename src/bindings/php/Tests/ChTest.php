@@ -8,16 +8,16 @@ class ChTest extends PHPUnit_Framework_TestCase
 
     protected function setUp() 
     {
-        $this->parser = ch("\xa2");
+        $this->parser = hammer_ch("\xa2");
     }
     public function testSuccess() 
     {
-        $result = h_parse($this->parser, "\xa2");
+        $result = hammer_parse($this->parser, "\xa2");
         $this->assertEquals("\xa2", $result);
     }     
     public function testFailure()
     {
-        $result = h_parse($this->parser, "95");
+        $result = hammer_parse($this->parser, "95");
         $this->assertEquals(NULL, $result);
     }
 }

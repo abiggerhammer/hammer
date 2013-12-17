@@ -7,20 +7,20 @@ class ChoiceTest extends PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->parser = choice(ch("a"), ch("b"));
+        $this->parser = hammer_choice(hammer_ch("a"), hammer_ch("b"));
     }
 
     public function testSuccess()
     {
-        $result1 = h_parse($this->parser, "a");
-        $result2 = h_parse($this->parser, "b");
+        $result1 = hammer_parse($this->parser, "a");
+        $result2 = hammer_parse($this->parser, "b");
         $this->assertEquals("a", $result1);
         $this->assertEquals("b", $result2);
     }
 
     public function testFailure()
     {
-        $result = h_parse($this->parser, "c");
+        $result = hammer_parse($this->parser, "c");
         $this->assertEquals(NULL, $result);
     }
 }
