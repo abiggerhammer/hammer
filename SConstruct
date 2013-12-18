@@ -69,7 +69,7 @@ dbg = env.Clone(VARIANT='debug')
 dbg.Append(CCFLAGS=['-g'])
 
 opt = env.Clone(VARIANT='opt')
-opt.Append(CCFLAGS="-O3")
+opt.Append(CCFLAGS=["-O3"])
 
 if GetOption("variant") == 'debug':
     env = dbg

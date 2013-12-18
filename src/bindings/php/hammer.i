@@ -1,5 +1,8 @@
 %module hammer;
 %include "exception.i";
+%{
+#include "allocator.h"
+  %}
 
 %ignore HCountedArray_;
 
@@ -8,6 +11,7 @@
   %}
 
 %init %{
+  TSRMLS_FETCH(); 
   h_tt_php = h_allocate_token_type("com.upstandinghackers.hammer.php");
   %}
 
@@ -161,9 +165,11 @@
   }
 
   static HParsedToken* call_action(const HParseResult *p, void *user_data) {
-    zval *args[1];
+    zval **args;
     zval func;
     zval *ret;
+    args = (zval**)h_arena_malloc(p->arena, sizeof(*args) * 1); // one-element array of pointers
+    MAKE_STD_ZVAL(args[0]);
     ALLOC_INIT_ZVAL(ret);
     ZVAL_STRING(&func, (const char*)user_data, 0);
     hpt_to_php(p->ast, args[0]);
@@ -179,9 +185,11 @@
   }
 
   static int call_predicate(HParseResult *p, void *user_data) {
-    zval *args[1];
+    zval **args;
     zval func;
     zval *ret;
+    args = (zval**)h_arena_malloc(p->arena, sizeof(*args) * 1); // one-element array of pointers
+    MAKE_STD_ZVAL(args[0]);
     ALLOC_INIT_ZVAL(ret);
     ZVAL_STRING(&func, (const char*)user_data, 0);
     hpt_to_php(p->ast, args[0]);
