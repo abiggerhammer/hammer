@@ -121,6 +121,7 @@
 
 %inline {
   void hpt_to_php(const HParsedToken *token, zval *return_value) {
+    TSRMLS_FETCH();
     if (!token) {
       RETVAL_NULL();
       return;
