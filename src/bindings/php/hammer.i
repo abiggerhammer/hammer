@@ -168,6 +168,7 @@
     zval **args;
     zval func;
     zval *ret;
+    TSRMLS_FETCH();
     args = (zval**)h_arena_malloc(p->arena, sizeof(*args) * 1); // one-element array of pointers
     MAKE_STD_ZVAL(args[0]);
     ALLOC_INIT_ZVAL(ret);
@@ -188,6 +189,7 @@
     zval **args;
     zval func;
     zval *ret;
+    TSRMLS_FETCH();
     args = (zval**)h_arena_malloc(p->arena, sizeof(*args) * 1); // one-element array of pointers
     MAKE_STD_ZVAL(args[0]);
     ALLOC_INIT_ZVAL(ret);
