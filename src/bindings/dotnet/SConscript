@@ -39,11 +39,14 @@ dotnettestenv = dotnetenv.Clone()
 
 #dotnettestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
 #dotnettests = ['t/hammer.t']
-dotnettestenv.Append(CILLIBS=['/usr/lib/cli/nunit.core-2.6/nunit.core.dll','/usr/lib/cli/nunit.util-2.6/nunit.util.dll','/usr/lib/cli/nunit.framework-2.6/nunit.framework.dll','/usr/lib/cli/nunit.core.interfaces-2.6/nunit.core.interfaces.dll', "src/bindings/dotnet/hammer.dll"])
+dotnettestenv.Append(CILLIBS=['/usr/lib/cli/nunit.core-2.6/nunit.core.dll','/usr/lib/cli/nunit.util-2.6/nunit.util.dll','/usr/lib/cli/nunit.framework-2.6/nunit.framework.dll','/usr/lib/cli/nunit.core.interfaces-2.6/nunit.core.interfaces.dll', thisdir + "/hammer.dll"])
 dotnettestlib = dotnettestenv.CLILibrary('hammer_test.dll', Glob('test/*.cs'))
 Depends(dotnettestlib, hammer_dll)
 
+dotnettestenv['ENV']["LD_LIBRARY_PATH"] = ":".join([thisdir, os.path.dirname(str(libhammer_shared[0]))])
 dotnettestexec = dotnettestenv.Command(None, dotnettestlib, "nunit-console $SOURCE")
+Depends(dotnettestlib, hammer_dll)
+Depends(dotnettestlib, libhammer_dotnet)
 dotnettest = Alias("testdotnet", [dotnettestexec], dotnettestexec)
 AlwaysBuild(dotnettestexec)
 testruns.append(dotnettestlib)

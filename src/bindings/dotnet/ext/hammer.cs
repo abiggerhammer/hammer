@@ -1,5 +1,6 @@
 using Hammer.Internal;
 using System;
+using System.Runtime.InteropServices;
 namespace Hammer
 {
 
@@ -21,8 +22,13 @@ namespace Hammer
     
     public Object Parse(byte[] str)
     {
+      byte[] strp;
+      if (str.Length == 0)
+        strp = new byte[1];
+      else
+        strp = str;
       unsafe {
-        fixed(byte* b = &str[0]) {
+        fixed(byte* b = &strp[0]) {
           HParseResult res = hammer.h_parse(wrapped, (IntPtr)b, (uint)str.Length);
           if (res != null) {
             return Unmarshal(res.ast);
@@ -36,7 +42,31 @@ namespace Hammer
     internal Object Unmarshal(HParsedToken tok)
     {
       // TODO
-      return new Object();
+      switch(tok.token_type) {
+      case HTokenType.TT_NONE:
+        return null;
+      case HTokenType.TT_BYTES:
+        {
+          byte[] ret = new byte[tok.token_data.bytes.len];
+          Marshal.Copy(tok.token_data.bytes.token,
+                       ret,
+                       0, ret.Length);
+          return ret;
+        }
+      case HTokenType.TT_SINT:
+        return (System.Int64)tok.token_data.sint;
+      case HTokenType.TT_UINT:
+        return (System.UInt64)tok.token_data._uint;
+      case HTokenType.TT_SEQUENCE:
+        {
+          Object[] ret = new Object[tok.token_data.seq.used];
+          for (uint i = 0; i < ret.Length; i++)
+            ret[i] = Unmarshal(tok.token_data.seq.at(i));
+          return ret;
+        }
+      default:
+        throw new Exception("Should not reach here");
+      }
     }
     
   }
@@ -56,6 +86,19 @@ namespace Hammer
     
   public class Hammer
   {
+
+    internal static byte[] ToBytes(string s)
+    {
+      // Probably not what you want unless you're parsing binary data.
+      // This is just a one-to-one encoding of the string's codepoints
+      byte[] ret = new byte[s.Length];
+      for (int i = 0; i < s.Length; i++)
+        {
+          ret[i] = (byte)s[i];
+        }
+      return ret;
+    }
+    
     internal static IntPtr[] BuildParserArray(Parser[] parsers)
     {
       IntPtr[] rlist = new IntPtr[parsers.Length+1];
@@ -155,19 +198,19 @@ namespace Hammer
     public static Parser Token(string token)
     {
       // Encodes in UTF-8
-      return Token(System.Text.Encoding.UTF8.GetBytes(token));
+      return Token(ToBytes(token));
     }
 
     public static Parser In(string charset)
     {
       // Encodes in UTF-8
-      return In(System.Text.Encoding.UTF8.GetBytes(charset));
+      return In(ToBytes(charset));
     }
 
     public static Parser Not_in(string charset)
     {
       // Encodes in UTF-8
-      return Not_in(System.Text.Encoding.UTF8.GetBytes(charset));
+      return Not_in(ToBytes(charset));
     }
 
     // No-arg parsers
@@ -188,54 +231,54 @@ namespace Hammer
     // 1-arg parsers
     public static Parser Ignore(Parser p)
     {
-      return new Parser(hammer.h_ignore(p.wrapped));
+      return new Parser(hammer.h_ignore(p.wrapped)).Pin(p);
     }
 
     public static Parser Not(Parser p)
     {
-      return new Parser(hammer.h_not(p.wrapped));
+      return new Parser(hammer.h_not(p.wrapped)).Pin(p);
     }
 
     public static Parser Whitespace(Parser p)
     {
-      return new Parser(hammer.h_whitespace(p.wrapped));
+      return new Parser(hammer.h_whitespace(p.wrapped)).Pin(p);
     }
 
     public static Parser Optional(Parser p)
     {
-      return new Parser(hammer.h_optional(p.wrapped));
+      return new Parser(hammer.h_optional(p.wrapped)).Pin(p);
     }
 
     public static Parser And(Parser p)
     {
-      return new Parser(hammer.h_and(p.wrapped));
+      return new Parser(hammer.h_and(p.wrapped)).Pin(p);
     }
     
     public static Parser Many(Parser p)
     {
-      return new Parser(hammer.h_many(p.wrapped));
+      return new Parser(hammer.h_many(p.wrapped)).Pin(p);
     }
 
     public static Parser Many1(Parser p)
     {
-      return new Parser(hammer.h_many1(p.wrapped));
+      return new Parser(hammer.h_many1(p.wrapped)).Pin(p);
     }
 
     public static Parser SepBy(Parser p, Parser sep)
     {
-      return new Parser(hammer.h_sepBy(p.wrapped, sep.wrapped));
+      return new Parser(hammer.h_sepBy(p.wrapped, sep.wrapped)).Pin(p);
     }
 
     public static Parser SepBy1(Parser p, Parser sep)
     {
-      return new Parser(hammer.h_sepBy1(p.wrapped, sep.wrapped));
+      return new Parser(hammer.h_sepBy1(p.wrapped, sep.wrapped)).Pin(p);
     }
 
     // 2-arg parsers
     
     public static Parser Left(Parser p1, Parser p2)
     {
-      return new Parser(hammer.h_left(p1.wrapped, p2.wrapped));
+      return new Parser(hammer.h_left(p1.wrapped, p2.wrapped)).Pin(p1).Pin(p2);
     }
     public static Parser Right(Parser p1, Parser p2)
     {

@@ -25,12 +25,20 @@
 %typemap(csin) void*[] "$csinput"
 
 %ignore h_bit_writer_get_buffer;
-%apply (char *STRING, size_t LENGTH) {(uint8_t* str, size_t len)};
-%apply (uint8_t* str, size_t len) {(const uint8_t* input, size_t length)}
-%apply (uint8_t* str, size_t len) {(const uint8_t* str, const size_t len)}
-%apply (uint8_t* str, size_t len) {(const uint8_t* charset, size_t length)}
+//%apply (char *STRING, size_t LENGTH) {(uint8_t* str, size_t len)};
+//%apply (uint8_t* str, size_t len) {(const uint8_t* input, size_t length)}
+//%apply (uint8_t* str, size_t len) {(const uint8_t* str, const size_t len)}
+//%apply (uint8_t* str, size_t len) {(const uint8_t* charset, size_t length)}
 
 %typemap(csclassmodifiers) SWIGTYPE "internal class";
 %csmethodmodifiers "internal";
+
+%extend HCountedArray_ {
+  HParsedToken* at(unsigned int posn) {
+    if (posn >= $self->used)
+      return NULL;
+    return $self->elements[posn];
+  }
+ }
 
 %include "../swig/hammer.i";
