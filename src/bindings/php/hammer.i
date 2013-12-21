@@ -43,17 +43,17 @@
       zval **data;
       if (zend_hash_index_find(arr, i, (void**)&data) == FAILURE) {
 	$1 = NULL;
-	zend_throw_exception(zend_exception_get_default(), "index in parser array out of bounds", 0 TSRMLS_CC);
+	zend_throw_exception(zend_exception_get_default(TSRMLS_C), "index in parser array out of bounds", 0 TSRMLS_CC);
       } else {
 	res = SWIG_ConvertPtr(*data, &($1[i]), SWIGTYPE_p_HParser_, 0 | 0);
 	if (!SWIG_IsOK(res)) {
-	  zend_throw_exception(zend_exception_get_default(), "that wasn't an HParser", 0 TSRMLS_CC);
+	  zend_throw_exception(zend_exception_get_default(TSRMLS_C), "that wasn't an HParser", 0 TSRMLS_CC);
 	}
       }
     } 
   } else {
     $1 = NULL;
-    zend_throw_exception(zend_exception_get_default(), "that wasn't an array of HParsers", 0 TSRMLS_CC);
+    zend_throw_exception(zend_exception_get_default(TSRMLS_C), "that wasn't an array of HParsers", 0 TSRMLS_CC);
   }
  }
 
@@ -157,7 +157,7 @@
 	int res = 0;
 	res = SWIG_ConvertPtr(return_value, (void*)token, SWIGTYPE_p_HParsedToken_, 0 | 0);
 	if (!SWIG_IsOK(res)) {
-	  zend_throw_exception(zend_exception_get_default(), "hpt_to_php: that wasn't an HParsedToken", 0 TSRMLS_CC);
+	  zend_throw_exception(zend_exception_get_default(TSRMLS_C), "hpt_to_php: that wasn't an HParsedToken", 0 TSRMLS_CC);
 	}
 	// TODO: support registry
       }
