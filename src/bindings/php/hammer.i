@@ -11,7 +11,9 @@
   %}
 
 %init %{
-  TSRMLS_FETCH(); 
+#ifdef ZTS
+  void ***tsrm_ls;
+#endif
   h_tt_php = h_allocate_token_type("com.upstandinghackers.hammer.php");
   %}
 
