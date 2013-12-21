@@ -1,4 +1,7 @@
 %module hammer;
+#ifdef ZTS
+  void ***tsrm_ls;
+#endif
 %include "exception.i";
 %{
 #include "allocator.h"
@@ -11,9 +14,6 @@
   %}
 
 %init %{
-#ifdef ZTS
-  void ***tsrm_ls;
-#endif
   h_tt_php = h_allocate_token_type("com.upstandinghackers.hammer.php");
   %}
 
