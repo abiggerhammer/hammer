@@ -79,7 +79,7 @@
     //SWIG_exception(SWIG_TypeError, "typemap: should have been an HParseResult*, was NULL");
     RETVAL_NULL();
   } else {
-    hpt_to_php($1->ast, $result TSRMLS_CC);
+    hpt_to_php($1->ast, $result);
   }
  }
 
