@@ -146,7 +146,7 @@
       for (int i=0; i < token->token_data.seq->used; i++) {
 	zval *tmp;
 	ALLOC_INIT_ZVAL(tmp);
-	hpt_to_php(token->token_data.seq->elements[i], tmp TSRMLS_CC);
+	hpt_to_php(token->token_data.seq->elements[i], tmp);
 	add_next_index_zval(return_value, tmp);
       }
       break;
@@ -176,11 +176,10 @@
     MAKE_STD_ZVAL(args[0]);
     ALLOC_INIT_ZVAL(ret);
     ZVAL_STRING(&func, (const char*)user_data, 0);
-    hpt_to_php(p->ast, args[0] TSRMLS_CC);
+    hpt_to_php(p->ast, args[0]);
     int ok = call_user_function(EG(function_table), NULL, &func, ret, 1, args TSRMLS_CC);
     if (ok != SUCCESS) {
-      printf("call_user_function failed\n");
-      // FIXME throw some error
+      zend_throw_exception(zend_exception_get_default(TSRMLS_C), "call_action failed", 0 TSRMLS_CC);
       return NULL;
     }
     // Whatever the zval is, stuff it into a token
@@ -197,11 +196,10 @@
     MAKE_STD_ZVAL(args[0]);
     ALLOC_INIT_ZVAL(ret);
     ZVAL_STRING(&func, (const char*)user_data, 0);
-    hpt_to_php(p->ast, args[0] TSRMLS_CC);
+    hpt_to_php(p->ast, args[0]);
     int ok = call_user_function(EG(function_table), NULL, &func, ret, 1, args TSRMLS_CC);
     if (ok != SUCCESS) {
-      printf("call_user_function failed\n");
-      // FIXME throw some error
+      zend_throw_exception(zend_exception_get_default(TSRMLS_C), "call_predicate failed", 0 TSRMLS_CC);
       return 0;
     }
     return Z_LVAL_P(ret);
