@@ -1,6 +1,6 @@
 %module hammer;
 #ifdef ZTS
-  void ***tsrm_ls;
+//  void ***tsrm_ls;
 #endif
 %include "exception.i";
 %{
@@ -79,7 +79,7 @@
     //SWIG_exception(SWIG_TypeError, "typemap: should have been an HParseResult*, was NULL");
     RETVAL_NULL();
   } else {
-    hpt_to_php($1->ast, $result);
+    hpt_to_php($1->ast, $result TSRMLS_CC);
   }
  }
 
@@ -146,7 +146,7 @@
       for (int i=0; i < token->token_data.seq->used; i++) {
 	zval *tmp;
 	ALLOC_INIT_ZVAL(tmp);
-	hpt_to_php(token->token_data.seq->elements[i], tmp);
+	hpt_to_php(token->token_data.seq->elements[i], tmp TSRMLS_CC);
 	add_next_index_zval(return_value, tmp);
       }
       break;
@@ -176,7 +176,7 @@
     MAKE_STD_ZVAL(args[0]);
     ALLOC_INIT_ZVAL(ret);
     ZVAL_STRING(&func, (const char*)user_data, 0);
-    hpt_to_php(p->ast, args[0]);
+    hpt_to_php(p->ast, args[0] TSRMLS_CC);
     int ok = call_user_function(EG(function_table), NULL, &func, ret, 1, args TSRMLS_CC);
     if (ok != SUCCESS) {
       printf("call_user_function failed\n");
@@ -197,7 +197,7 @@
     MAKE_STD_ZVAL(args[0]);
     ALLOC_INIT_ZVAL(ret);
     ZVAL_STRING(&func, (const char*)user_data, 0);
-    hpt_to_php(p->ast, args[0]);
+    hpt_to_php(p->ast, args[0] TSRMLS_CC);
     int ok = call_user_function(EG(function_table), NULL, &func, ret, 1, args TSRMLS_CC);
     if (ok != SUCCESS) {
       printf("call_user_function failed\n");
