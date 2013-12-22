@@ -206,11 +206,13 @@
   }
 
   HParser* hammer_action(HParser *parser, const char *name) {
-    return h_action(parser, call_action, (void*)name);
+    const char *fname = strdup(name);
+    return h_action(parser, call_action, (void*)fname);
   }
 
   HParser* hammer_predicate(HParser *parser, const char *name) {
-    return h_attr_bool(parser, call_predicate, (void*)name);
+    const char *fname = strdup(name);
+    return h_attr_bool(parser, call_predicate, (void*)fname);
   }
  }
 
