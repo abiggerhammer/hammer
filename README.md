@@ -23,7 +23,7 @@ Features
   * Ruby (not yet implemented)
   * Perl
   * [Go](https://github.com/prevoty/hammer)
-  * PHP (not yet implemented)
+  * PHP
   * .NET (not yet implemented)
 
 Installing
@@ -35,9 +35,10 @@ Installing
 * pkg-config (for `scons test`)
 * glib-2.0 (>= 2.29) (for `scons test`)
 * glib-2.0-dev (for `scons test`)
-* swig (for Python/Perl bindings; Perl requires >= 2.0.8)
+* swig (for Python/Perl/PHP bindings; Perl requires >= 2.0.8)
 * python2.7-dev (for Python bindings)
 * a JDK (for Java bindings)
+* a working [phpenv](https://github.com/CHH/phpenv) configuration (for PHP bindings)
 
 To build, type `scons`. To run the built-in test suite, type `scons test`. For a debug build, add `--variant=debug`
 
