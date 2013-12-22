@@ -7,7 +7,7 @@ import sys
 vars = Variables(None, ARGUMENTS)
 vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
-vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['python', 'perl']))
+vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['python', 'perl', 'php']))
 
 env = Environment(ENV = {'PATH' : os.environ['PATH']}, variables = vars, tools=['default', 'scanreplace'], toolpath=['tools'])
 
@@ -69,7 +69,7 @@ dbg = env.Clone(VARIANT='debug')
 dbg.Append(CCFLAGS=['-g'])
 
 opt = env.Clone(VARIANT='opt')
-opt.Append(CCFLAGS="-O3")
+opt.Append(CCFLAGS=["-O3"])
 
 if GetOption("variant") == 'debug':
     env = dbg
@@ -95,6 +95,7 @@ env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 #env.Append(CPPPATH=os.path.join('#', "hammer"))
 
 testruns = []
+
 targets = ["$libpath",
            "$incpath",
            "$parsersincpath",

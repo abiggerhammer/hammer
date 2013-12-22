@@ -1,0 +1,31 @@
+# -*- python -*-
+import os, os.path
+Import('env libhammer_shared testruns')
+
+phpenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
+
+php_include = os.popen("php-config --include-dir").read().rstrip()
+phpenv.Append(CPPPATH = ['../../', php_include, os.path.join(php_include, 'main'), os.path.join(php_include, 'Zend'), os.path.join(php_include, 'TSRM')])
+phpenv.Append(CCFLAGS = ['-fpic', '-DSWIG', '-Wno-all', '-Wno-extra', '-Wno-error'])
+phpenv.Append(LIBS = ['hammer'])
+phpenv.Append(LIBPATH = ['../../']) 
+
+swig = ['hammer.i']
+bindings_src = phpenv.Command(['hammer.php', 'hammer_wrap.c', 'php_hammer.h'], swig, 'swig -php -DHAMMER_INTERNAL__NO_STDARG_H -Isrc/ $SOURCE')
+libhammer_php = phpenv.SharedLibrary('hammer', ['hammer_wrap.c'])
+Default(swig, bindings_src, libhammer_php)
+
+phptestenv = phpenv.Clone()
+phptestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
+phptests = ('Tests')
+phpextprefix = os.popen("php-config --extension-dir").read().rstrip()
+phplib = phptestenv.Command(os.path.join(phpextprefix, "hammer.so"), libhammer_php, Copy("$TARGET", "$SOURCE"))
+AlwaysBuild(phplib)
+phpprefix = os.popen("php-config --prefix").read().rstrip()
+phpincl = phptestenv.Command(os.path.join(os.path.join(phpprefix, "etc/conf.d"), "hammer.ini"), "hammer.ini", Copy("$TARGET", "$SOURCE"))
+phptestexec = phptestenv.Command(phptests, [phplib, phpincl], "phpenv exec phpunit --include-path " + os.path.dirname(libhammer_php[0].path) +" src/bindings/php/Tests")
+phptest = Alias("testphp", [phptestexec], phptestexec)
+AlwaysBuild(phptest)
+testruns.append(phptest)
+
+
