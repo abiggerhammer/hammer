@@ -62,7 +62,7 @@ before_install:
 
 install: true
 before_script:
-  - if [ "$BINDINGS" == "php" ]; then phpenv exec php-config; phpenv config-add src/bindings/php/hammer.ini; fi
+  - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
 script: 
   - scons bindings=$BINDINGS test
 notifications:

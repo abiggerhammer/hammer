@@ -1,7 +1,4 @@
 %module hammer;
-#ifdef ZTS
-//  void ***tsrm_ls;
-#endif
 %include "exception.i";
 %{
 #include "allocator.h"
