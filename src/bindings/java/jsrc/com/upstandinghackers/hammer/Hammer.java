@@ -43,10 +43,10 @@ public class Hammer
     public static native Parser int32();
     public static native Parser int16();
     public static native Parser int8();
-    public static native Parser uInt64();
-    public static native Parser uInt32();
-    public static native Parser uInt16();
-    public static native Parser uInt8();
+    public static native Parser uint64();
+    public static native Parser uint32();
+    public static native Parser uint16();
+    public static native Parser uint8();
     public static native Parser whitespace(Parser p);
     public static native Parser left(Parser p, Parser q);
     public static native Parser right(Parser p, Parser q);

@@ -1,0 +1,3 @@
+[submodule "src/bindings/haskell"]
+	path = src/bindings/haskell
+	url = git://gitorious.org/hhammer/hhammer.git

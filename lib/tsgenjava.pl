@@ -15,10 +15,20 @@
 
 % TODO: build a Box-like pretty-printer
 
+% ch_range should become chRange
+underscore_to_camel([0'_, X|Xs], [Xp|Xsp]) :- !,
+    code_type(Xp, to_upper(X)),
+    underscore_to_camel(Xs,Xsp).
+underscore_to_camel([X|Xs],[X|Xsp]) :- !,
+    underscore_to_camel(Xs,Xsp).
+underscore_to_camel([],[]) :- !.
+				     
 format_parser_name(Name, Result) :-
-    atom_codes(Name, [CInit|CName]),
-    code_type(RInit, to_upper(CInit)),
-    append("Hammer.", [RInit|CName], Result), !.
+    atom_codes(Name, CName),
+    ( member(0'_, CName) -> 
+	  underscore_to_camel(CName, Result0);
+          CName = Result0),
+    append("Hammer.", Result0, Result), !.
 
 format_test_name(Name, Result) :-
     atom_codes(Name, [CInit|CName]),
@@ -99,16 +109,16 @@ pp_parser(A) -->
 pp_test_elem(decl, parser(_)) --> !.
 pp_test_elem(init, parser(_)) --> !.
 pp_test_elem(exec, parser(P)) -->
-    !, indent(3),
+    !, indent(2),
     "parser = ",
     pp_parser(P),
     ";\n".
 pp_test_elem(decl, subparser(Name,_)) -->
-    !, indent(3),
+    !, indent(2),
     "IndirectParser ", pp_parser(ref(Name)),
     " = Hammer.Indirect();\n".
 pp_test_elem(init, subparser(Name, Parser)) -->
-    !, indent(3),
+    !, indent(2),
     pp_parser(ref(Name)), ".Bind(",
     pp_parser(Parser),
     ");\n".
@@ -118,15 +128,15 @@ pp_test_elem(init, test(_,_)) --> !.
 pp_test_elem(decl, testFail(_)) --> !.
 pp_test_elem(init, testFail(_)) --> !.
 pp_test_elem(exec, test(Str, Result)) -->
-    !, indent(3),
-    "  CheckParseOK(parser, ", pp_parser(string(Str)),
-    ", ",
+    !, indent(2),
+    "Assert.assertEquals(parser.parse(", pp_parser(string(Str)),
+    "), ",
     pp_parse_result(Result),
     ");\n".
 pp_test_elem(exec, testFail(Str)) -->
-    !, indent(3),
-    "  CheckParseFail(parser, ", pp_parser(string(Str)),
-    ");\n".
+    !, indent(2),
+    "Assert.assertNull(parser.parse(", pp_parser(string(Str)),
+    "));\n".
 
 % pp_test_elem(_, _) --> !.
 
@@ -151,7 +161,7 @@ pp_byte_seq_r([X|Xs]) --> !,
     pp_byte_seq_r(Xs).
 
 pp_parse_result(char(C)) --> !,
-    "(System.UInt64)",
+    "(byte)",
     pp_parser(char(C)).
 pp_parse_result(seq(Args)) --> !,
     "new object[]{ ", pp_result_seq(Args), "}".
@@ -178,14 +188,14 @@ pp_test_elems(Phase, [X|Xs]) -->
 
 pp_test_case(testcase(Name, Elems)) -->
     !,
-    indent(2), "[Test]\n",
+    indent(1), "@Test\n",
     { format_test_name(Name, TName) },
-    indent(2), "public void ", TName, "() {\n",
-    indent(3), "Parser parser;\n",
+    indent(1), "public void ", TName, "() {\n",
+    indent(2), "Parser parser;\n",
     pp_test_elems(decl, Elems),
     pp_test_elems(init, Elems),
     pp_test_elems(exec, Elems),
-    indent(2), "}\n".
+    indent(1), "}\n".
 
 
 pp_test_cases([]) --> !.
@@ -194,13 +204,10 @@ pp_test_cases([A|As]) -->
     pp_test_cases(As).
 
 pp_test_suite(Suite) -->
-    "namespace Hammer.Test {\n",
-    indent(1), "using NUnit.Framework;\n",
-    %indent(1), "using Hammer;\n",
-    indent(1), "[TestFixture]\n",
-    indent(1), "public partial class HammerTest {\n",
+    "package com.upstandinghackers.hammer; \n\n",
+    "import org.testng.annotations.*;\n\n",
+    "public class HammerTest {\n",
     pp_test_cases(Suite),
-    indent(1), "}\n",
     "}\n".
 
 gen_ts(Foo,Str) :-

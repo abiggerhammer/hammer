@@ -22,3 +22,6 @@ native_src = PrependDir('csrc', csources)
 libhammer_java = javaenv.SharedLibrary('libjhammer', native_src, LIBS=['hammer'], LIBPATH='../../')
 hammer_jar = javaenv.Jar('hammer.jar', 'classes')
 Default(libhammer_java, hammer_jar)
+
+javatestenv = javaenv.Clone()
+javatestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
