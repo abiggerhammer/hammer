@@ -49,7 +49,7 @@ pp_char_guts(0x27) -->
 pp_char_guts(A) -->
     { A >= 0x20, A < 0x7F } ->
     [A];
-    "\\x",
+    "\\u00",
     { H is A >> 4, L is A /\ 0xF,
       code_type(Hc, xdigit(H)),
       code_type(Lc, xdigit(L)) },
