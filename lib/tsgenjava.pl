@@ -19,6 +19,9 @@
 underscore_to_camel([0'_, X|Xs], [Xp|Xsp]) :- !,
     code_type(Xp, to_upper(X)),
     underscore_to_camel(Xs,Xsp).
+underscore_to_camel([0'-, X|Xs], [Xp|Xsp]) :- !,
+    code_type(Xp, to_upper(X)),
+    underscore_to_camel(Xs,Xsp).
 underscore_to_camel([X|Xs],[X|Xsp]) :- !,
     underscore_to_camel(Xs,Xsp).
 underscore_to_camel([],[]) :- !.
@@ -31,7 +34,8 @@ format_parser_name(Name, Result) :-
     append("Hammer.", Result0, Result), !.
 
 format_test_name(Name, Result) :-
-    atom_codes(Name, [CInit|CName]),
+    atom_codes(Name, NameCodes),
+    underscore_to_camel(NameCodes, [CInit|CName]),
     code_type(RInit, to_upper(CInit)),
     append("Test", [RInit|CName], Result), !.
 
