@@ -5,6 +5,7 @@
     <groupId>com.upstandinghackers</groupId>
     <artifactId>hammer-parent</artifactId>
     <version>0.9</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <groupId>com.upstandinghackers</groupId>
