@@ -1,0 +1,22 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.upstandinghackers</groupId>
+  <artifactId>hammer-parent</artifactId>
+  <version>0.9</version>
+  <name>Hammer JNI Bindings Parent</name>
+
+  <packaging>pom</packaging>
+  
+  <dependencies>
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>6.1.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <modules>
+    <module>build/opt/src/bindings/java</module>
+  </modules>
+</project>

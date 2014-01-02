@@ -1,8 +1,16 @@
 <project>
   <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.upstandinghackers</groupId>
+    <artifactId>hammer-parent</artifactId>
+    <version>0.9</version>
+  </parent>
+
   <groupId>com.upstandinghackers</groupId>
   <artifactId>hammer</artifactId>
   <version>0.9</version>
+  <name>Hammer JNI Bindings</name>
   
   <dependencies>
     <dependency>

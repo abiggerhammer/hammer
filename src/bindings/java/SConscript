@@ -5,23 +5,9 @@ Import('env libhammer_shared testruns targets')
 javaenv = env.Clone()
 javaenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
 
-def PrependDir(dir, filelist):
-    return [os.path.join(dir,x) for x in filelist]
-
-csources = [
-    "com_upstandinghackers_hammer_Hammer.c",
-    "com_upstandinghackers_hammer_ParsedToken.c",
-    "com_upstandinghackers_hammer_Parser.c",
-    "com_upstandinghackers_hammer_ParseResult.c"   
-]
-
-classes = javaenv.Java(target = 'classes', source = '#src/bindings/java/src/main/java')
-jni_headers = javaenv.JavaH(target = 'src/main/native', source = classes)
-
-native_src = PrependDir('src/main/native', csources)
-libhammer_java = javaenv.SharedLibrary('libjhammer', native_src, LIBS=['hammer'], LIBPATH='../../')
-hammer_jar = javaenv.Jar('hammer.jar', 'classes')
-Default(libhammer_java, hammer_jar)
+pom = ['pom.xml']
+hammer_jar = javaenv.Command(['target/hammer-0.9.jar'], [pom], "mvn -e compile")
+Default(hammer_jar)
 
 javatestenv = javaenv.Clone()
 javatestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
