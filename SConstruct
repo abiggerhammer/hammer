@@ -17,6 +17,7 @@ env = Environment(ENV = {'PATH' : os.environ['PATH']},
 if not 'bindings' in env:
     env['bindings'] = []
 
+# FIXME this bit doesn't work unless JAVA_HOME is set
 if 'java' in env['bindings']:
     from ConfigureJNI import ConfigureJNI
     if not ConfigureJNI(env):

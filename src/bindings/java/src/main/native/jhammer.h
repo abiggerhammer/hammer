@@ -1,7 +1,7 @@
 #ifndef JHAMMER_H
 #define JHAMMER_H
 #include <jni.h>
-#include "../../../internal.h"
+#include "../../../../../internal.h"
 #include <assert.h>
 
 // Unsafe (non-asserting) helpers

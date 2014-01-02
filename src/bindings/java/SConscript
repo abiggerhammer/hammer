@@ -15,10 +15,10 @@ csources = [
     "com_upstandinghackers_hammer_ParseResult.c"   
 ]
 
-classes = javaenv.Java(target = 'classes', source = '#src/bindings/java/jsrc')
-jni_headers = javaenv.JavaH(target = 'csrc', source = classes)
+classes = javaenv.Java(target = 'classes', source = '#src/bindings/java/src/main/java')
+jni_headers = javaenv.JavaH(target = 'src/main/native', source = classes)
 
-native_src = PrependDir('csrc', csources)
+native_src = PrependDir('src/main/native', csources)
 libhammer_java = javaenv.SharedLibrary('libjhammer', native_src, LIBS=['hammer'], LIBPATH='../../')
 hammer_jar = javaenv.Jar('hammer.jar', 'classes')
 Default(libhammer_java, hammer_jar)
