@@ -4,7 +4,7 @@
 % Note: this needs to be run from the lib/ directory.
 
 % So,
-% swipl -q  -t halt -g tsgenjava:prolog tsgenjava.pl >../src/bindings/java/test/hammer_tests.java 
+% swipl -q  -t halt -g tsgenjava:prolog tsgenjava.pl >../src/bindings/java/src/test/java/hammer_tests.java 
 
 
 :- module(tsgenjava,
@@ -94,7 +94,7 @@ pp_parser(num(Num)) --> !,
       "-0x", {RNum is -Num}; "0x", {RNum = Num} ),
     pp_hexnum_guts(RNum).
 pp_parser(char(C)) --> !,
-    "'", pp_char_guts(C), "'", !.
+    "\"", pp_char_guts(C), "\"", !.
 
 pp_parser(ref(Name)) -->
     {atom_codes(Name,CName)},
