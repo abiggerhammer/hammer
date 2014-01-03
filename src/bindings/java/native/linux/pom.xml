@@ -32,6 +32,7 @@
 	<extensions>true</extensions>
 	<configuration>
 	  <javahOS>linux</javahOS>
+	  <javahSearchJNIFromDependencies>true</javahSearchJNIFromDependencies>
 	  <compilerProvider>generic</compilerProvider>
 	  <compilerStartOptions>
 	    <compilerStartOption>-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -O3 -fPIC</compilerStartOption>
