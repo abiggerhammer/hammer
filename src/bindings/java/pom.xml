@@ -5,13 +5,19 @@
     <groupId>com.upstandinghackers</groupId>
     <artifactId>hammer-parent</artifactId>
     <version>0.9</version>
-    <relativePath>../../pom.xml</relativePath>
+    <relativePath>../../../pom.xml</relativePath>
   </parent>
 
   <groupId>com.upstandinghackers</groupId>
   <artifactId>hammer</artifactId>
   <version>0.9</version>
   <name>Hammer JNI Bindings</name>
+
+  <packaging>pom</packaging>
+  <modules>
+    <module>java</module>
+    <module>native</module>
+  </modules>
   
   <dependencies>
     <dependency>
@@ -24,65 +30,16 @@
   </dependencies>
 
   <build>
+    <pluginManagement>
+      <plugins>
+	<plugin>
+	  <groupId>org.codehaus.mojo</groupId>
+	  <artifactId>native-maven-plugin</artifactId>
+	</plugin>
+      </plugins>
+    </pluginManagement>
+
     <plugins>
-      <plugin>
-	<artifactId>maven-compiler-plugin</artifactId>
-	<configuration>
-	  <source>1.7</source>
-	  <target>1.7</target>
-	</configuration>
-	<executions>
-	  <execution>
-	    <phase>validate</phase>
-	    <goals>
-	      <goal>compile</goal>
-	    </goals>
-	  </execution>
-	</executions>
-      </plugin>
-
-      <plugin>
-	<artifactId>maven-jar-plugin</artifactId>
-	<executions>
-	  <execution>
-	    <phase>validate</phase>
-	    <goals>
-	      <goal>jar</goal>
-	    </goals>
-	  </execution>
-	</executions>
-      </plugin>
-
-      <plugin>
-	<groupId>org.codehaus.mojo</groupId>
-	<artifactId>native-maven-plugin</artifactId>
-	<configuration>
-	  <javahClassNames>
-	    <javahClassName>Hammer</javahClassName>
-	    <javahClassName>ParsedToken</javahClassName>
-	    <javahClassName>Parser</javahClassName>
-	    <javahClassName>ParseResult</javahClassName>
-	  </javahClassNames>
-	  <compilerProvider>generic</compilerProvider>
-	  <compilerStartOptions>
-	    <compilerStartOption>-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -O3 -fPIC</compilerStartOption>
-	  </compilerStartOptions>
-	  <sources>
-	    <source>
-	      <directory>src/main/native</directory>
-	      <fileNames>
-		<fileName>com_upstandinghackers_hammer_Hammer.c</fileName>
-		<fileName>com_upstandinghackers_hammer_ParsedToken.c</fileName>
-		<fileName>com_upstandinghackers_hammer_Parser.c</fileName>
-		<fileName>com_upstandinghackers_hammer_ParseResult.c</fileName>
-	      </fileNames>
-	    </source>
-	  </sources>
-	  <linkerStartOptions>
-	    <linkerStartOption>-shared -L../../ -lhammer</linkerStartOption>
-	  </linkerStartOptions>
-	</configuration>
-      </plugin>
       <plugin>
 	<artifactId>maven-surefire-plugin</artifactId>
 	<configuration>

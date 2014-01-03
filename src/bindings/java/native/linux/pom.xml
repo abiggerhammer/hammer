@@ -1,0 +1,77 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.upstandinghackers</groupId>
+    <artifactId>native</artifactId>
+    <version>0.9</version>
+  </parent>
+
+  <groupId>com.upstandinghackers</groupId>
+  <artifactId>hammer-native</artifactId>
+  <version>0.9</version>
+  <name>Hammer JNI Bindings - Linux Native</name>
+
+  <packaging>so</packaging>
+  
+  <dependencies>
+    <dependency>
+      <groupId>com.upstandinghackers</groupId>
+      <artifactId>hammer-java</artifactId>
+      <version>0.9</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+	<groupId>org.codehaus.mojo</groupId>
+	<artifactId>native-maven-plugin</artifactId>
+	<extensions>true</extensions>
+	<configuration>
+	  <javahOS>linux</javahOS>
+	  <compilerProvider>generic</compilerProvider>
+	  <compilerStartOptions>
+	    <compilerStartOption>-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -O3 -fPIC</compilerStartOption>
+	  </compilerStartOptions>
+	  <sources>
+	    <source>
+	      <directory>../src/main/native</directory>
+	      <fileNames>
+		<fileName>com_upstandinghackers_hammer_Hammer.c</fileName>
+		<fileName>com_upstandinghackers_hammer_ParsedToken.c</fileName>
+		<fileName>com_upstandinghackers_hammer_Parser.c</fileName>
+		<fileName>com_upstandinghackers_hammer_ParseResult.c</fileName>
+	      </fileNames>
+	    </source>
+	  </sources>
+	  <linkerStartOptions>
+	    <linkerStartOption>-shared -L../../../../ -lhammer</linkerStartOption>
+	  </linkerStartOptions>
+	</configuration>
+	<executions>
+	  <execution>
+	    <id>javah</id>
+	    <phase>generate-sources</phase>
+	    <configuration>
+	      <javahOS>hp-ux</javahOS>
+	      <javahProvider>default</javahProvider>
+	      <javahClassNames>
+		<javahClassName>Hammer</javahClassName>
+		<javahClassName>ParsedToken</javahClassName>
+		<javahClassName>Parser</javahClassName>
+		<javahClassName>ParseResult</javahClassName>
+	      </javahClassNames>
+	    </configuration>
+	    <goals>
+	      <goal>javah</goal>
+	    </goals>
+	  </execution>
+	</executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

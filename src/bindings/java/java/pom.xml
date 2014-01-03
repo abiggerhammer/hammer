@@ -1,0 +1,34 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.upstandinghackers</groupId>
+    <artifactId>hammer</artifactId>
+    <version>0.9</version>
+  </parent>
+
+  <groupId>com.upstandinghackers</groupId>
+  <artifactId>hammer-java</artifactId>
+  <version>0.9</version>
+  <name>Hammer JNI Bindings - Java</name>
+
+  <build>
+    <plugins>
+      <plugin>
+	<artifactId>maven-compiler-plugin</artifactId>
+	<configuration>
+	  <source>1.7</source>
+	  <target>1.7</target>
+	</configuration>
+	<executions>
+	  <execution>
+	    <phase>validate</phase>
+	    <goals>
+	      <goal>compile</goal>
+	    </goals>
+	  </execution>
+	</executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,31 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.upstandinghackers</groupId>
+    <artifactId>hammer</artifactId>
+    <version>0.9</version>
+  </parent>
+
+  <groupId>com.upstandinghackers</groupId>
+  <artifactId>native</artifactId>
+  <version>0.9</version>
+  <name>Hammer JNI Bindings - Native</name>
+
+  <packaging>pom</packaging>
+
+  <profiles>
+    <profile>
+      <id>linux</id>
+      <activation>
+	<property>
+	  <name>platform</name>
+	  <value>linux</value>
+	</property>
+      </activation>
+      <modules>
+	<module>linux</module>
+      </modules>
+    </profile>
+  </profiles>
+</project>
