@@ -156,11 +156,12 @@ pp_result_seq_r([X|Xs]) --> !,
 
 pp_byte_seq([]) --> !.
 pp_byte_seq([X|Xs]) --> !,
+    "(byte)",
     pp_parser(num(X)),
     pp_byte_seq_r(Xs).
 pp_byte_seq_r([]) --> !.
 pp_byte_seq_r([X|Xs]) --> !,
-    ", ",
+    ", (byte)",
     pp_parser(num(X)),
     pp_byte_seq_r(Xs).
 
