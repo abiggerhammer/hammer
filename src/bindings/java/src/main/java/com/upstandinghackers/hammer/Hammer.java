@@ -34,9 +34,27 @@ public class Hammer
     }
 
     public static native ParseResult parse(Parser parser, byte[] input, int length);
+    public static ParseResult parse(Parser parser, String input) {
+	return parse(parser, input.getBytes(), input.length());
+    }
     public static native Parser token(byte[] str, int length);
+    public static Parser token(String str) {
+	return token(str.getBytes(), str.length());
+    }
     public static native Parser ch(byte c);
+    public static Parser ch(String s) {
+	return ch(s.getBytes()[0]);
+    }
+    public static Parser ch(int c) {
+	return ch((byte)c);
+    }
     public static native Parser chRange(byte from, byte to);
+    public static Parser chRange(String from, String to) {
+	return chRange(from.getBytes()[0], to.getBytes()[0]);
+    }
+    public static Parser chRange(int from, int to) {
+	return chRange((byte)from, (byte)to);
+    }
     public static native Parser intRange(Parser p, long lower, long upper);
     public static native Parser bits(int len, boolean sign);
     public static native Parser int64();
@@ -53,11 +71,18 @@ public class Hammer
     public static native Parser middle(Parser p, Parser x, Parser q);
 //    public static native Parser action(Parser p, Action a);
     public static native Parser in(byte[] charset, int length);
+    public static Parser in(String s) {
+	return in(s.getBytes(), s.length());
+    }
+    public static native Parser notIn(byte[] charset, int length);
+    public static Parser notIn(String s) {
+	return notIn(s.getBytes(), s.length());
+    }
     public static native Parser endP();
     public static native Parser nothingP();
     public static native Parser sequence(Parser... parsers);
     public static native Parser choice(Parser... parsers);
-    public static native Parser butNot(Parser p1, Parser p2);
+    public static native Parser butnot(Parser p1, Parser p2);
     public static native Parser difference(Parser p1, Parser p2);
     public static native Parser xor(Parser p1, Parser p2);
     public static native Parser many(Parser p);

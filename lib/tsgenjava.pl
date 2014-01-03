@@ -119,11 +119,11 @@ pp_test_elem(exec, parser(P)) -->
     ";\n".
 pp_test_elem(decl, subparser(Name,_)) -->
     !, indent(2),
-    "IndirectParser ", pp_parser(ref(Name)),
-    " = Hammer.Indirect();\n".
+    "Parser ", pp_parser(ref(Name)),
+    " = Hammer.indirect();\n".
 pp_test_elem(init, subparser(Name, Parser)) -->
     !, indent(2),
-    pp_parser(ref(Name)), ".Bind(",
+    pp_parser(ref(Name)), ".bindIndirect(",
     pp_parser(Parser),
     ");\n".
 pp_test_elem(exec, subparser(_,_)) --> !.
@@ -165,16 +165,17 @@ pp_byte_seq_r([X|Xs]) --> !,
     pp_byte_seq_r(Xs).
 
 pp_parse_result(char(C)) --> !,
-    "(byte)",
-    pp_parser(char(C)).
+    %"(byte)",
+    pp_parser(char(C)),
+    ".getBytes()[0]".
 pp_parse_result(seq(Args)) --> !,
-    "new object[]{ ", pp_result_seq(Args), "}".
+    "new Object[]{ ", pp_result_seq(Args), "}".
 pp_parse_result(none) --> !,
     "null".
 pp_parse_result(uint(V)) --> !,
-    "(System.UInt64)", pp_parser(num(V)).
+    "new BigInteger(\"", pp_parser(num(V)), "\", 16)".
 pp_parse_result(sint(V)) --> !,
-    "(System.Int64)(", pp_parser(num(V)), ")".
+    "new BigInteger(\"", pp_parser(num(V)), "\", 16)".
 pp_parse_result(string(A)) --> !,
     "new byte[]{ ", pp_byte_seq(A), "}".
 %pp_parse_result(A) -->
@@ -209,7 +210,9 @@ pp_test_cases([A|As]) -->
 
 pp_test_suite(Suite) -->
     "package com.upstandinghackers.hammer; \n\n",
-    "import org.testng.annotations.*;\n\n",
+    "import java.math.BigInteger;\n",
+    "import org.testng.annotations.*;\n",
+    "import org.testng.Assert;\n\n",
     "public class HammerTest {\n",
     pp_test_cases(Suite),
     "}\n".
