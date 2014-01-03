@@ -25,7 +25,15 @@
   </dependencies>
 
   <build>
+    <testSourceDirectory>../src/test/java</testSourceDirectory>
     <plugins>
+      <plugin>
+	<artifactId>maven-compiler-plugin</artifactId>
+	<configuration>
+	  <source>1.7</source>
+	  <target>1.7</target>
+	</configuration>
+      </plugin>
       <plugin>
 	<groupId>org.codehaus.mojo</groupId>
 	<artifactId>native-maven-plugin</artifactId>
@@ -57,20 +65,23 @@
 	    <id>javah</id>
 	    <phase>generate-sources</phase>
 	    <configuration>
-	      <javahOS>hp-ux</javahOS>
-	      <javahProvider>default</javahProvider>
-<!--	      <javahClassNames>
-		<javahClassName>Hammer</javahClassName>
-		<javahClassName>ParsedToken</javahClassName>
-		<javahClassName>Parser</javahClassName>
-		<javahClassName>ParseResult</javahClassName>
-	      </javahClassNames> -->
+	      <javahOS>linux</javahOS>
+ 	      <javahProvider>default</javahProvider>
 	    </configuration>
 	    <goals>
 	      <goal>javah</goal>
 	    </goals>
 	  </execution>
 	</executions>
+      </plugin>
+      <plugin>
+	<artifactId>maven-surefire-plugin</artifactId>
+	<configuration>
+	  <forkMode>once</forkMode>
+	  <environmentVariables>
+	    <LD_LIBRARY_PATH>${project.build.directory}:${project.build.directory}/../../../../</LD_LIBRARY_PATH>
+	  </environmentVariables>
+	</configuration>
       </plugin>
     </plugins>
   </build>

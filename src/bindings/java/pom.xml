@@ -38,18 +38,6 @@
 	</plugin>
       </plugins>
     </pluginManagement>
-
-    <plugins>
-      <plugin>
-	<artifactId>maven-surefire-plugin</artifactId>
-	<configuration>
-	  <forkMode>once</forkMode>
-	  <environmentVariables>
-	    <LD_LIBRARY_PATH>${project.build.directory}/../../</LD_LIBRARY_PATH>
-	  </environmentVariables>
-	</configuration>
-      </plugin>
-    </plugins>
   </build>
   
 </project>
