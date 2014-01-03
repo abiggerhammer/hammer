@@ -59,12 +59,12 @@
 	    <configuration>
 	      <javahOS>hp-ux</javahOS>
 	      <javahProvider>default</javahProvider>
-	      <javahClassNames>
+<!--	      <javahClassNames>
 		<javahClassName>Hammer</javahClassName>
 		<javahClassName>ParsedToken</javahClassName>
 		<javahClassName>Parser</javahClassName>
 		<javahClassName>ParseResult</javahClassName>
-	      </javahClassNames>
+	      </javahClassNames> -->
 	    </configuration>
 	    <goals>
 	      <goal>javah</goal>
