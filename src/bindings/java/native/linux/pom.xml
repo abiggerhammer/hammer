@@ -8,7 +8,7 @@
   </parent>
 
   <groupId>com.upstandinghackers</groupId>
-  <artifactId>hammer-native</artifactId>
+  <artifactId>libhammer</artifactId>
   <version>0.9</version>
   <name>Hammer JNI Bindings - Linux Native</name>
 
@@ -20,7 +20,6 @@
       <artifactId>hammer-java</artifactId>
       <version>0.9</version>
       <type>jar</type>
-      <scope>compile</scope>
     </dependency>
   </dependencies>
 
@@ -79,8 +78,11 @@
 	<configuration>
 	  <forkMode>once</forkMode>
 	  <environmentVariables>
-	    <LD_LIBRARY_PATH>${project.build.directory}:${project.build.directory}/../../../../</LD_LIBRARY_PATH>
+	    <LD_LIBRARY_PATH>${project.build.directory}:../../../../</LD_LIBRARY_PATH>
 	  </environmentVariables>
+	  <systemPropertyVariables>
+	    <java.library.path>${project.build.directory}</java.library.path>
+	  </systemPropertyVariables>
 	</configuration>
       </plugin>
     </plugins>
