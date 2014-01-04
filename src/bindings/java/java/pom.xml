@@ -8,7 +8,7 @@
   </parent>
 
   <groupId>com.upstandinghackers</groupId>
-  <artifactId>hammer-java</artifactId>
+  <artifactId>java</artifactId>
   <version>0.9</version>
   <name>Hammer JNI Bindings - Java</name>
 

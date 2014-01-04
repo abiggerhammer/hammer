@@ -8,7 +8,7 @@
   </parent>
 
   <groupId>com.upstandinghackers</groupId>
-  <artifactId>libhammer</artifactId>
+  <artifactId>libhammer-java</artifactId>
   <version>0.9</version>
   <name>Hammer JNI Bindings - Linux Native</name>
 

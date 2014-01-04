@@ -94,28 +94,28 @@ JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_int8
 }
 
 
-JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_uInt64
+JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_uint64
   (JNIEnv *env, jclass class)
 {
     RETURNWRAP(env, h_uint64());
 }
 
 
-JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_uInt32
+JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_uint32
   (JNIEnv *env, jclass class)
 {
     RETURNWRAP(env, h_uint32()); 
 }
 
 
-JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_uInt16
+JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_uint16
   (JNIEnv *env, jclass class)
 {
     RETURNWRAP(env, h_uint16());
 }
 
 
-JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_uInt8
+JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_uint8
   (JNIEnv *env, jclass class)
 {
     RETURNWRAP(env, h_uint8());
@@ -227,7 +227,7 @@ JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_choice
 }
 
 
-JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_butNot
+JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_butnot
   (JNIEnv *env, jclass class, jobject p, jobject q)
 {
     RETURNWRAP(env, h_butnot(UNWRAP(env, p), UNWRAP(env, q)));

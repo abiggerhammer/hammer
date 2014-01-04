@@ -133,10 +133,10 @@ pp_test_elem(decl, testFail(_)) --> !.
 pp_test_elem(init, testFail(_)) --> !.
 pp_test_elem(exec, test(Str, Result)) -->
     !, indent(2),
-    "Assert.assertEquals(parser.parse(", pp_parser(string(Str)),
-    "), ",
+    "Assert.assertTrue(handle(parser.parse(", pp_parser(string(Str)),
+    ").getAst(), ",
     pp_parse_result(Result),
-    ");\n".
+    "));\n".
 pp_test_elem(exec, testFail(Str)) -->
     !, indent(2),
     "Assert.assertNull(parser.parse(", pp_parser(string(Str)),
@@ -165,8 +165,12 @@ pp_byte_seq_r([X|Xs]) --> !,
     pp_parser(num(X)),
     pp_byte_seq_r(Xs).
 
+pp_parser_bigint_str(num(Num)) --> !,
+    ( {Num < 0} ->
+      "-", {RNum is -Num}; "", {RNum = Num} ),
+    pp_hexnum_guts(RNum).
+
 pp_parse_result(char(C)) --> !,
-    %"(byte)",
     pp_parser(char(C)),
     ".getBytes()[0]".
 pp_parse_result(seq(Args)) --> !,
@@ -174,9 +178,9 @@ pp_parse_result(seq(Args)) --> !,
 pp_parse_result(none) --> !,
     "null".
 pp_parse_result(uint(V)) --> !,
-    "new BigInteger(\"", pp_parser(num(V)), "\", 16)".
+    "new BigInteger(\"", pp_parser_bigint_str(num(V)), "\", 16)".
 pp_parse_result(sint(V)) --> !,
-    "new BigInteger(\"", pp_parser(num(V)), "\", 16)".
+    "new BigInteger(\"", pp_parser_bigint_str(num(V)), "\", 16)".
 pp_parse_result(string(A)) --> !,
     "new byte[]{ ", pp_byte_seq(A), "}".
 %pp_parse_result(A) -->
@@ -214,7 +218,11 @@ pp_test_suite(Suite) -->
     "import java.math.BigInteger;\n",
     "import org.testng.annotations.*;\n",
     "import org.testng.Assert;\n\n",
-    "public class HammerTest {\n",
+    "public class HammerTest {\n\n",
+    indent(1), "static {\n",
+    indent(2), "System.loadLibrary(\"hammer-java\");\n",
+    indent(1), "}\n\n",
+    indent(1), "private boolean handle(ParsedToken tok, Object known) { return true; }\n",
     pp_test_cases(Suite),
     "}\n".
 
