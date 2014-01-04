@@ -42,3 +42,39 @@
  }
 
 %include "../swig/hammer.i";
+
+%{
+HTokenType dotnet_tagged_token_type;
+ %}
+%inline {
+  void h_set_dotnet_tagged_token_type(HTokenType new_tt) {
+    dotnet_tagged_token_type = new_tt;
+  }
+  // Need this inline as well
+  struct HTaggedToken {
+    HParsedToken *token;
+    uint64_t label;
+  };
+
+// this is to make it easier to access via SWIG
+struct HTaggedToken *h_parsed_token_get_tagged_token(HParsedToken* hpt) {
+  return (struct HTaggedToken*)hpt->token_data.user;
+}
+
+HParsedToken *act_tag(const HParseResult* p, void* user_data) {
+  struct HTaggedToken *tagged = H_ALLOC(struct HTaggedToken);
+  tagged->label = *(uint64_t*)user_data;
+  tagged->token = p->ast;
+  return h_make(p->arena, dotnet_tagged_token_type, tagged);
+}
+
+HParser *h_tag__m(HAllocator *mm__, HParser *p, uint64_t tag) {
+  uint64_t *tagptr = h_new(uint64_t, 1);
+  *tagptr = tag;
+  return h_action__m(mm__, p, act_tag, tagptr);
+}
+
+HParser *h_tag(HParser *p, uint64_t tag) {
+  return h_tag__m(&system_allocator, p, tag);
+}
+ }

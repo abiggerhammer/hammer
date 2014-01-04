@@ -1,8 +1,22 @@
 using Hammer.Internal;
 using System;
 using System.Runtime.InteropServices;
+using System.Collections;
 namespace Hammer
 {
+
+  public delegate Object HAction(Object obj);
+  public delegate bool HPredicate(Object obj);
+
+  public class ParseError : Exception
+  {
+    public readonly string Reason;
+    public ParseError() : this(null) {}
+    public ParseError(string reason) : base() {
+      Reason = reason;
+    }
+  }
+    
 
   public class Parser
   {
@@ -19,7 +33,7 @@ namespace Hammer
       pins.Add(o);
       return this;
     }
-    
+
     public Object Parse(byte[] str)
     {
       byte[] strp;
@@ -27,15 +41,20 @@ namespace Hammer
         strp = new byte[1];
       else
         strp = str;
-      unsafe {
-        fixed(byte* b = &strp[0]) {
-          HParseResult res = hammer.h_parse(wrapped, (IntPtr)b, (uint)str.Length);
-          if (res != null) {
-            return Unmarshal(res.ast);
-          } else {
-            return null;
+      try {
+        unsafe {
+          fixed(byte* b = &strp[0]) {
+            HParseResult res = hammer.h_parse(wrapped, (IntPtr)b, (uint)str.Length);
+            if (res != null) {
+              // TODO: free the PR
+              return Unmarshal(res.ast);
+            } else {
+              throw new ParseError();
+            }
           }
         }
+      } catch (ParseError e) {
+        return null;
       }
     }
     
@@ -65,6 +84,22 @@ namespace Hammer
           return ret;
         }
       default:
+        if (tok.token_type == Hammer.tt_dotnet)
+          {
+            HTaggedToken tagged = hammer.h_parsed_token_get_tagged_token(tok);
+            Object cb = Hammer.tag_to_action[tagged.label];
+            Object unmarshalled = Unmarshal(tagged.token);
+            if (cb is HAction) {
+              HAction act = (HAction)cb;
+              return act(unmarshalled);
+            } else if (cb is HPredicate) {
+              HPredicate pred = (HPredicate)cb;
+              if (!pred(unmarshalled))
+                throw new ParseError("Predicate failed");
+              else
+                return unmarshalled;
+            }
+          }
         throw new Exception("Should not reach here");
       }
     }
@@ -83,10 +118,25 @@ namespace Hammer
       hammer.h_bind_indirect(this.wrapped, p.wrapped);
     }
   }
-    
+
   public class Hammer
   {
-
+    internal static IDictionary tag_to_action;
+    internal static HTokenType tt_dotnet;
+    static Hammer()
+    {
+      tt_dotnet = hammer.h_allocate_token_type("com.upstandinghackers.hammer.dotnet.tagged");
+      hammer.h_set_dotnet_tagged_token_type(tt_dotnet);
+      tag_to_action = new System.Collections.Hashtable();
+    }
+    
+    internal static ulong RegisterAction(HAction action)
+    {
+      ulong newAction = (ulong)tag_to_action.Count;
+      tag_to_action[newAction] = action;
+      return newAction;
+    }
+    
     internal static byte[] ToBytes(string s)
     {
       // Probably not what you want unless you're parsing binary data.
@@ -104,7 +154,7 @@ namespace Hammer
       IntPtr[] rlist = new IntPtr[parsers.Length+1];
       for (int i = 0; i < parsers.Length; i++)
         {
-          rlist[i] = HParser.getCPtr(parsers[i].wrapped).Handle;          
+          rlist[i] = HParser.getCPtr(parsers[i].wrapped).Handle;
         }
       rlist[parsers.Length] = IntPtr.Zero;
       return rlist;
@@ -307,7 +357,11 @@ namespace Hammer
     {
       return new Parser(hammer.h_repeat_n(p.wrapped, count));
     }
-
+    public static Parser Action(Parser p, HAction action)
+    {
+      ulong actionNo = Hammer.RegisterAction(action);
+      return new Parser(hammer.h_tag(p.wrapped, actionNo)).Pin(p).Pin(action);
+    }
   }
   
 }
