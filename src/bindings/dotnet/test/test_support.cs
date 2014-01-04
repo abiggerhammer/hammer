@@ -80,6 +80,14 @@ namespace Hammer.Test
           System.UInt64 i = (System.UInt64)o;
           return "u0x" + i.ToString("X");
         }
+      else if (o is System.String)
+        {
+          return "\"" + o.ToString() + "\"";
+        }
+      else if (o is System.Char)
+        {
+          return "\'" + o.ToString() + "\'";
+        }
       else
         return "WAT(" + o.GetType() + ")";
     }

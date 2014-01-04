@@ -151,7 +151,7 @@ pp_byte_seq_r([X|Xs]) --> !,
     pp_byte_seq_r(Xs).
 
 pp_parse_result(char(C)) --> !,
-    "(System.UInt64)",
+    %"(System.UInt64)",
     pp_parser(char(C)).
 pp_parse_result(seq(Args)) --> !,
     "new object[]{ ", pp_result_seq(Args), "}".

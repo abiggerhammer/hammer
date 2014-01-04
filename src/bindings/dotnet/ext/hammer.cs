@@ -122,12 +122,17 @@ namespace Hammer
   public class Hammer
   {
     internal static IDictionary tag_to_action;
+    internal static ulong charify_action;
     internal static HTokenType tt_dotnet;
     static Hammer()
     {
       tt_dotnet = hammer.h_allocate_token_type("com.upstandinghackers.hammer.dotnet.tagged");
       hammer.h_set_dotnet_tagged_token_type(tt_dotnet);
       tag_to_action = new System.Collections.Hashtable();
+      charify_action = RegisterAction(x => {
+          //System.Console.WriteLine(x.GetType());
+          return char.ConvertFromUtf32((int)(ulong)x)[0];
+        });
     }
     
     internal static ulong RegisterAction(HAction action)
@@ -137,6 +142,18 @@ namespace Hammer
       return newAction;
     }
     
+    internal static ulong RegisterPredicate(HPredicate predicate)
+    {
+      ulong newPredicate = (ulong)tag_to_action.Count;
+      tag_to_action[newPredicate] = predicate;
+      return newPredicate;
+    }
+    
+    internal static Parser CharParser(Parser p)
+    {
+      return new Parser(hammer.h_tag(p.wrapped, charify_action)).Pin(p);
+    }
+
     internal static byte[] ToBytes(string s)
     {
       // Probably not what you want unless you're parsing binary data.
@@ -192,7 +209,7 @@ namespace Hammer
 
     public static Parser Ch(byte ch)
     {
-      return new Parser(hammer.h_ch(ch));
+      return CharParser(new Parser(hammer.h_ch(ch)));
       
     }
     public static Parser Ch(char ch)
@@ -202,12 +219,12 @@ namespace Hammer
 
     public static Parser Ch_range(byte c1, byte c2)
     {
-      return new Parser(hammer.h_ch_range(c1, c2));
+      return CharParser(new Parser(hammer.h_ch_range(c1, c2)));
     }
 
     public static Parser Ch_range(char c1, char c2)
     {
-      return new Parser(hammer.h_ch_range((byte)c1, (byte)c2));
+      return CharParser(new Parser(hammer.h_ch_range((byte)c1, (byte)c2)));
     }
 
     public static Parser Int_range(Parser p, System.Int64 i1, System.Int64 i2)
@@ -230,7 +247,7 @@ namespace Hammer
       unsafe {
         fixed(byte* b = &charset[0])
           {
-            return new Parser(hammer.h_in((IntPtr)b, (uint)charset.Length));
+            return CharParser(new Parser(hammer.h_in((IntPtr)b, (uint)charset.Length)));
           }
       }
     }
@@ -240,7 +257,7 @@ namespace Hammer
       unsafe {
         fixed(byte* b = &charset[0])
           {
-            return new Parser(hammer.h_not_in((IntPtr)b, (uint)charset.Length));
+            return CharParser(new Parser(hammer.h_not_in((IntPtr)b, (uint)charset.Length)));
           }
       }
     }
@@ -277,7 +294,6 @@ namespace Hammer
     public static Parser Nothing_p() {return new Parser(hammer.h_nothing_p());}
     public static Parser Epsilon_p() {return new Parser(hammer.h_epsilon_p());}
 
-    
     // 1-arg parsers
     public static Parser Ignore(Parser p)
     {
@@ -361,6 +377,11 @@ namespace Hammer
     {
       ulong actionNo = Hammer.RegisterAction(action);
       return new Parser(hammer.h_tag(p.wrapped, actionNo)).Pin(p).Pin(action);
+    }
+    public static Parser AttrBool(Parser p, HPredicate predicate)
+    {
+      ulong predNo = Hammer.RegisterPredicate(predicate);
+      return new Parser(hammer.h_tag(p.wrapped, predNo)).Pin(p).Pin(predicate);
     }
   }
   
