@@ -22,14 +22,14 @@
 
 typedef struct Entry_ {
   const char* name;
-  int value;
+  HTokenType value;
 } Entry;
 
 static void *tt_registry = NULL;
 static Entry** tt_by_id = NULL;
-static int tt_by_id_sz = 0;
+static unsigned int tt_by_id_sz = 0;
 #define TT_START TT_USER
-static int tt_next = TT_START;
+static HTokenType tt_next = TT_START;
 
 /*
   // TODO: These are for the extension registry, which does not yet have a good name.
@@ -45,12 +45,12 @@ static int compare_entries(const void* v1, const void* v2) {
   return strcmp(e1->name, e2->name);
 }
 
-int h_allocate_token_type(const char* name) {
+HTokenType h_allocate_token_type(const char* name) {
   Entry* new_entry = malloc(sizeof(*new_entry));
   new_entry->name = name;
-  new_entry->value = -1;
+  new_entry->value = 0;
   Entry* probe = *(Entry**)tsearch(new_entry, &tt_registry, compare_entries);
-  if (probe->value != -1) {
+  if (probe->value != 0) {
     // Token type already exists...
     // TODO: treat this as a bug?
     free(new_entry);
@@ -70,16 +70,16 @@ int h_allocate_token_type(const char* name) {
     return probe->value;
   }
 }
-int h_get_token_type_number(const char* name) {
+HTokenType h_get_token_type_number(const char* name) {
   Entry e;
   e.name = name;
   Entry **ret = (Entry**)tfind(&e, &tt_registry, compare_entries);
   if (ret == NULL)
-    return -1;
+    return 0;
   else
     return (*ret)->value;
 }
-const char* h_get_token_type_name(int token_type) {
+const char* h_get_token_type_name(HTokenType token_type) {
   if (token_type >= tt_next || token_type < TT_START)
     return NULL;
   else
