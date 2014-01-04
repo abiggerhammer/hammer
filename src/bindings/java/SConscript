@@ -6,7 +6,7 @@ javaenv = env.Clone()
 javaenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
 
 pom = ['pom.xml']
-hammer_jar = javaenv.Command(['target/hammer-0.9.jar'], [pom], "mvn -e compile")
+hammer_jar = javaenv.Command(['target/hammer-0.9.jar'], [pom, Dir('src/')], "mvn -e -X compile")
 Default(hammer_jar)
 
 javatestenv = javaenv.Clone()
