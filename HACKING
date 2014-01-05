@@ -59,4 +59,8 @@ There is a language-independent representation of the Hammer test
 suite in `lib/test-suite`.  This is intended to be used with the
 tsparser.pl prolog library, along with a language-specific frontend.
 
-No language-specific frontends have been written yet.
+Only the C# frontend exists so far; to regenerate the test suites using it, run
+
+    $ swipl -q  -t halt -g tsgencsharp:prolog tsgencsharp.pl \
+          >../src/bindings/dotnet/test/hammer_tests.cs
+

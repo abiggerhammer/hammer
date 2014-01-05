@@ -1,0 +1,59 @@
+# -*- python -*-
+import os.path
+Import("env libhammer_shared testruns targets")
+
+dotnetenv = env.Clone()
+
+dotnetenv.Append(CCFLAGS=["-fpic", '-DSWIG', '-Wno-all',
+                       '-Wno-extra', '-Wno-error',
+                       '-DHAMMER_INTERNAL__NO_STDARG_H'],
+              CPPPATH=["../.."],
+              LIBS=['hammer'],
+              LIBPATH=["../.."],
+              SWIGFLAGS=["-DHAMMER_INTERNAL__NO_STDARG_H",
+                         "-Isrc/", "-csharp",
+                         "-dllimport","hammer_dotnet",
+                         "-namespace", "Hammer.Internal"])
+import os
+
+swig = ['hammer.i']
+thisdir = os.path.join(os.path.dirname(str(libhammer_shared[0])), "bindings","dotnet")
+csfiles = os.path.join(thisdir, "*.cs")
+
+# These AlwaysBuilds are annoying, but alas there doesn't seem to be a
+# better way. I'd love to be corrected. Send PRs!
+
+# This also generates a bunch of .cs files, which we'll just use this
+# target to stand in for.
+hammer_wrap = AlwaysBuild(dotnetenv.Command(['hammer_wrap.c'], swig,
+                                            ["rm %s/*.cs || true" % (thisdir,),
+                                             "swig $SWIGFLAGS $SOURCE"]))
+libhammer_dotnet = dotnetenv.SharedLibrary(['hammer_dotnet'], hammer_wrap)
+hammer_dll = AlwaysBuild(dotnetenv.Command(['hammer.dll'], Glob('ext/*.cs'),
+                                           '$CSC -t:library -unsafe -out:$TARGET %s/*.cs $SOURCE' %(thisdir,)))
+Depends(hammer_dll, hammer_wrap)
+Default(libhammer_dotnet, hammer_dll)
+
+dotnettestenv = dotnetenv.Clone()
+
+def makeCIL(env, cmd):
+    libs = cmd.split(' ')
+    for lib in libs:
+        env.Append(CILLIBS=[lib[3:]])
+
+dotnettestenv.ParseConfig('pkg-config --libs nunit', makeCIL)
+dotnettestenv.Append(CILLIBS=[thisdir + "/hammer.dll"])
+dotnettestlib = dotnettestenv.CLILibrary('hammer_test.dll', Glob('test/*.cs'))
+Depends(dotnettestlib, hammer_dll)
+
+dotnettestenv['ENV']["LD_LIBRARY_PATH"] = ":".join([thisdir, os.path.dirname(str(libhammer_shared[0]))])
+dotnettestexec = dotnettestenv.Command(None, dotnettestlib, "nunit-console $SOURCE")
+Depends(dotnettestlib, hammer_dll)
+Depends(dotnettestlib, libhammer_dotnet)
+dotnettest = Alias("testdotnet", [dotnettestexec], dotnettestexec)
+AlwaysBuild(dotnettestexec)
+testruns.append(dotnettestexec)
+
+#dotnetinstallexec = dotnetenv.Command(None, libhammer_dotnet, "make install -C " + targetdir)
+#dotnetinstall = Alias("installdotnet", [dotnetinstallexec], dotnetinstallexec)
+#targets.append(dotnetinstall)

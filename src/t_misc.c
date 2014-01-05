@@ -26,7 +26,7 @@ static void test_tt_registry(void) {
     g_test_message("Unknown token type should not return a name");
     g_test_fail();
   }
-  g_check_cmp_int32(h_get_token_type_number("com.upstandinghackers.test.unkown_token_type"), ==, -1);
+  g_check_cmp_int32(h_get_token_type_number("com.upstandinghackers.test.unkown_token_type"), ==, 0);
 }
 
 void register_misc_tests(void) {

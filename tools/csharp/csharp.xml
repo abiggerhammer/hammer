@@ -1,0 +1,156 @@
+<!--
+__COPYRIGHT__
+
+This file is processed by the bin/SConsDoc.py module.
+See its __doc__ string for a discussion of the format.
+-->
+<tool name="mscs">
+<summary>
+Sets construction variables for the Microsoft CSharp Compiler
+</summary>
+</tool>
+
+<builder name="CLILibrary">
+<summary>
+Builds a .NET assembly (dynamically linkable binary) from a list of sources.
+<example>
+env.CLILibrary('MyAsm', 'MyAsm.cs')
+</example>
+</summary>
+</builder>
+
+<builder name="CLILink">
+<summary>
+Uses Microsoft C++ linker to link netmodules into a single .NET assembly:
+
+<example>
+env.CLILink('Common', ['mod1.netmodule', 'mod2.netmodule'])
+</example>
+</summary>
+</builder>
+
+<builder name="CLIModule">
+<summary>
+Builds a .NET netmodule (statically linkable binary) from a list of sources:
+
+<example>
+env.CLIModule('MyMod', 'MyMod.cs')
+</example>
+</summary>
+</builder>
+
+<builder name="CLIProgram">
+<summary>
+Builds a .NET executable from a list of sources.
+If the $WINEXE value is set, the sources will be compiled as a windows app, rather than a console app:
+
+<example>
+env.Program('MyApp', 'MyApp.cs', WINEXE=1)
+</example>
+</summary>
+</builder>
+
+<builder name="CLIRes">
+<summary>
+Builds a Microsoft binary resource file (extension of .resources) from XML source files.
+If the $NAMESPACE value is set, its value is prepended to the name of the target file:
+
+<example>
+env.CLIRes('app.resx', NAMESPACE='MyCompany.ProductX')
+</example>
+</summary>
+</builder>
+
+<builder name="CLITypeLib">
+<summary>
+Builds a .NET interop assembly that contains converted type definitions found within a COM type library DLL.  Prepends the .NET assembly with 'Interop.':
+
+<example>
+env.CLITypeLib('MyLib', ['MyLib.dll', 'keyfile.snk'])
+</example>
+</summary>
+</builder>
+
+<cvar name="CLILINK">
+<summary>
+The Microsoft C++ linker.
+</summary>
+</cvar>
+
+<cvar name="CLILINKFLAGS">
+<summary>
+General options passed to the Microsoft C++ linker.
+</summary>
+</cvar>
+
+<cvar name="CLILINKCOM">
+<summary>
+The command line used to link .NET netmodules into an assembly.  Any options specified in the $CLILINKFLAGS construction variable is included on this command line.
+</summary>
+</cvar>
+
+<cvar name="CSC">
+<summary>
+The CSharp Compiler.
+</summary>
+</cvar>
+
+<cvar name="CSCFLAGS">
+<summary>
+General options that are passed to the CSharp Compiler.
+</summary>
+</cvar>
+
+<cvar name="CSCCOM">
+<summary>
+The command line used to compile a CSharp source file to a console or windows executable. Any options specified in the $CSCFLAGS is included on this command line.
+</summary>
+</cvar>
+
+<cvar name="CSCLIBCOM">
+<summary>
+The command line used to compile a CSharp source file to a .NET assembly. Any options specified in the $CSCFLAGS is included on this command line.
+</summary>
+</cvar>
+
+<cvar name="CSCMODCOM">
+<summary>
+The command line used to compile a CSharp source file to a .NET netmodule. Any options specified in the $CSCFLAGS is included on this command line.
+</summary>
+</cvar>
+
+<cvar name="CLIRC">
+<summary>
+The Microsoft .NET resource compiler.
+</summary>
+</cvar>
+
+<cvar name="CLIRCFLAGS">
+<summary>
+General options passed to the Microsoft .NET resource compiler.
+</summary>
+</cvar>
+
+<cvar name="CLIRCCOM">
+<summary>
+The command line used to compile XML resource files to a .NET resource binary.  Any options specified in the $CLIRCFLAGS construction variable is included on this command line.
+</summary>
+</cvar>
+
+<cvar name="TYPELIBIMP">
+<summary>
+The Microsoft Type Library Importer.
+</summary>
+</cvar>
+
+<cvar name="TYPELIBIMPFLAGS">
+<summary>
+General options passed to the Microsoft Type Library Importer.
+</summary>
+</cvar>
+
+<cvar name="TYPELIBIMPCOM">
+<summary>
+The command line used to convert type definitions found within a COM type library into equivalent definitions in a .NET assembly.  Any options specified in the $TYPELIBIMPFLAGS construction variable is included on this command line.
+</summary>
+</cvar>

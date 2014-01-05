@@ -24,7 +24,7 @@ Features
   * Perl
   * [Go](https://github.com/prevoty/hammer)
   * PHP
-  * .NET (not yet implemented)
+  * .NET 
 
 Installing
 ==========
@@ -39,8 +39,10 @@ Installing
 * python2.7-dev (for Python bindings)
 * a JDK (for Java bindings)
 * a working [phpenv](https://github.com/CHH/phpenv) configuration (for PHP bindings)
+* mono-devel and mono-mcs (>= 3.0.6) (for .NET bindings)
+* nunit (for testing .NET bindings)
 
-To build, type `scons`. To run the built-in test suite, type `scons test`. For a debug build, add `--variant=debug`
+To build, type `scons`. To run the built-in test suite, type `scons test`. For a debug build, add `--variant=debug`.
 
 To build bindings, pass a "bindings" argument to scons, e.g. `scons bindings=python`. `scons bindings=python test` will build Python bindings and run tests for both C and Python. `--variant=debug` is valid here too. You can build more than one set of bindings at a time; just separate them with commas, e.g. `scons bindings=python,perl`.
 
@@ -68,6 +70,8 @@ Known Issues
 The Python bindings only work with Python 2.7. SCons doesn't work with Python 3, and PyCapsule isn't available in 2.6 and below, so 2.7 is all you get. Sorry about that.
 
 The requirement for SWIG >= 2.0.8 for Perl bindings is due to a [known bug](http://sourceforge.net/p/swig/patches/324/) in SWIG. [ppa:dns/irc](https://launchpad.net/~dns/+archive/irc) has backports of SWIG 2.0.8 for Ubuntu versions 10.04-12.10; you can also [build SWIG from source](http://www.swig.org/download.html).
+
+The .NET bindings are for Mono 3.0.6 and greater. If you're on a Debian-based distro that only provides Mono 2 (e.g., Ubuntu 12.04), there are backports for [3.0.x](http://www.meebey.net/posts/mono_3.0_preview_debian_ubuntu_packages/), and a [3.2.x PPA](https://launchpad.net/~directhex/+archive/monoxide) maintained by the Mono team.
 
 Community
 =========
