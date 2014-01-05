@@ -16,7 +16,7 @@ pytests = ['hammer_tests.py']
 pytestexec = pytestenv.Command(['hammer.pyc', 'hammer_tests.pyc'], pytests + libhammer_python, "LD_LIBRARY_PATH=" + os.path.dirname(str(libhammer_shared[0])) + " nosetests -vv $SOURCE")
 pytest = Alias("testpython", [pytestexec], pytestexec)
 AlwaysBuild(pytestexec)
-testruns.extend(pytest)
+testruns.append(pytest)
 
 pyinstallexec = pythonenv.Command(None, libhammer_python, 'python ' + os.path.join(pydir, 'setup.py ') + ' install')
 pyinstall = Alias("installpython", [pyinstallexec], pyinstallexec)

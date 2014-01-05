@@ -56,7 +56,7 @@ Depends(dotnettestlib, hammer_dll)
 Depends(dotnettestlib, libhammer_dotnet)
 dotnettest = Alias("testdotnet", [dotnettestexec], dotnettestexec)
 AlwaysBuild(dotnettestexec)
-testruns.extend(dotnettestlib)
+testruns.append(dotnettestexec)
 
 #dotnetinstallexec = dotnetenv.Command(None, libhammer_dotnet, "make install -C " + targetdir)
 #dotnetinstall = Alias("installdotnet", [dotnetinstallexec], dotnetinstallexec)
