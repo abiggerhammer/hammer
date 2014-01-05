@@ -1,0 +1,1 @@
+The minimum version of Mono required to use these bindings is 3.0.x. The 2.x series is not currently supported, though we'll happily accept a PR for one.

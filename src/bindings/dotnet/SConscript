@@ -32,13 +32,9 @@ libhammer_dotnet = dotnetenv.SharedLibrary(['hammer_dotnet'], hammer_wrap)
 hammer_dll = AlwaysBuild(dotnetenv.Command(['hammer.dll'], Glob('ext/*.cs'),
                                            '$CSC -t:library -unsafe -out:$TARGET %s/*.cs $SOURCE' %(thisdir,)))
 Depends(hammer_dll, hammer_wrap)
-#hammer_dll = dotnetenv.CLILibrary('hammer.dll', hammer.cs)
 Default(libhammer_dotnet, hammer_dll)
 
 dotnettestenv = dotnetenv.Clone()
-
-#dotnettestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
-#dotnettests = ['t/hammer.t']
 
 def makeCIL(env, cmd):
     libs = cmd.split(' ')
