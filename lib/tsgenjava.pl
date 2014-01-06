@@ -182,7 +182,8 @@ pp_parse_result(uint(V)) --> !,
 pp_parse_result(sint(V)) --> !,
     "new BigInteger(\"", pp_parser_bigint_str(num(V)), "\", 16)".
 pp_parse_result(string(A)) --> !,
-    "new byte[]{ ", pp_byte_seq(A), "}".
+    %"new byte[]{ ", pp_byte_seq(A), " }".
+    "\"", pp_string_guts(A), "\"".		       
 %pp_parse_result(A) -->
 %    "\x1b[1;31m",
 %    {with_output_to(codes(C), write(A))},
@@ -216,13 +217,33 @@ pp_test_cases([A|As]) -->
 pp_test_suite(Suite) -->
     "package com.upstandinghackers.hammer; \n\n",
     "import java.math.BigInteger;\n",
+    "import java.util.Arrays;\n",
     "import org.testng.annotations.*;\n",
     "import org.testng.Assert;\n\n",
     "public class HammerTest {\n\n",
     indent(1), "static {\n",
     indent(2), "System.loadLibrary(\"hammer-java\");\n",
     indent(1), "}\n\n",
-    indent(1), "private boolean handle(ParsedToken tok, Object known) { return true; }\n",
+    indent(1), "private boolean handle(ParsedToken p, Object known) {\n",
+    indent(2), "switch (p.getTokenType()) {\n",
+    indent(2), "case BYTES:\n",
+    indent(3), "return Arrays.toString(p.getBytesValue()).equals((String)known);\n",
+    indent(2), "case SINT:\n",
+    indent(3), "return ((Long)p.getSIntValue()).equals(known);\n",
+    indent(2), "case UINT:\n",
+    indent(3), "return ((Long)p.getUIntValue()).equals(known);\n",
+    indent(2), "case SEQUENCE:\n",
+    indent(3), "int i=0;\n",
+    indent(3), "for (ParsedToken tok : p.getSeqValue()) {\n",
+    indent(4), "if (!handle(tok, ((Object[])known)[i]))\n",
+    indent(5), "return false;\n",
+    indent(4), "++i;\n",
+    indent(3), "}\n",
+    indent(3), "return true;\n",
+    indent(2), "default:\n",
+    indent(3), "return false;\n",
+    indent(2), "}\n",
+    indent(1), "}\n\n", 
     pp_test_cases(Suite),
     "}\n".
 
