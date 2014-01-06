@@ -157,6 +157,13 @@ JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_in
 }
 
 
+JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_notIn
+  (JNIEnv *env, jclass class, jbyteArray charset, jint length)
+{
+    RETURNWRAP(env, h_not_in((uint8_t*) ((*env)->GetByteArrayElements(env, charset, NULL)), (size_t)length)); 
+}
+
+
 JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_Hammer_endP
   (JNIEnv *env, jclass class)
 {
