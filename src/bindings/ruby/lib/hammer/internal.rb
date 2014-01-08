@@ -4,7 +4,7 @@ module Hammer
   module Internal
     extend FFI::Library
 
-    ffi_lib 'libhammer.dylib'
+    ffi_lib 'hammer'
 
     # Maybe we can implement Hammer::Parser with FFI::DataConverter.
     # That way, most hammer functions won't need to be wrapped.
