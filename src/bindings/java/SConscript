@@ -29,5 +29,10 @@ pom = ['pom.xml']
 hammer_jar = javaenv.Command(['target/hammer-0.9.jar'], [pom, Dir('src/')], "mvn package -P " + platform)
 Default(hammer_jar)
 
-javatestenv = javaenv.Clone()
-javatestenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
+javatest = Alias("testjava", [hammer_jar], hammer_jar)
+AlwaysBuild(hammer_jar)
+testruns.append(javatest)
+
+javainstallexec = javaenv.Command(None, hammer_jar, "mvn install -P " + platform)
+javainstall = Alias("installjava", [javainstallexec], javainstallexec)
+targets.append(javainstall)
