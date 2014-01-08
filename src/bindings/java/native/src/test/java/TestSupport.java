@@ -6,26 +6,19 @@ import org.testng.Assert;
 
 public class TestSupport {
   protected boolean deepEqual(ParsedToken p, Object known) {
-    //if (known != null || p == null)
-    //  throw new RuntimeException("Actually got here!");
     if (p == null) {
       return known == null;
     }
-    System.err.println("Saw token of type: " + p.getTokenType());
-    System.err.println("Arg of type: " + (known == null ? "null" : known.getClass().toString()));
     switch (p.getTokenType()) {
     case BYTES:
       
       byte[] tmp_byte_buffer = p.getBytesValue();
       String knowns = (String)known;
       for (int i = 0; i < tmp_byte_buffer.length; i++) {
-        System.err.println("Comparing char " + i);
         if (tmp_byte_buffer[i] != (byte)knowns.charAt(i)) {
-          System.err.println("Compare failed at char " + i + ": " + (byte)knowns.charAt(i) + " != " + tmp_byte_buffer[i]);
           return false;
         }
       }
-      System.err.println("Compare succeeded");
       return true;
     case SINT:
       return p.getSIntValue().equals(known);
@@ -42,7 +35,6 @@ public class TestSupport {
     case NONE:
       return known == null;
     default:
-      System.err.println("Unkown token type " + p.getTokenType());
       return false;
     }
   }

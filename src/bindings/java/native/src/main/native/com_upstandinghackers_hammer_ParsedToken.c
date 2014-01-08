@@ -91,14 +91,6 @@ static jobject make_bignum(JNIEnv *env, uint64_t num, int signedp) {
   jbyteArray byteArray = (*env)->NewByteArray(env, 9);
   (*env)->SetByteArrayRegion(env, byteArray, (jsize)0, (jsize)9, bytebuf);
 
-  printf("Formatted %s 0x%016lx as [", signedp ? "signed" : "unsigned", num);
-  for (int i = 0; i < 9; i++)
-    printf("%02hhx%s", bytebuf[i], (i == 8) ? "]\n":".");
-  /*
-    int buflen = 0;
-    jchar* numbuf = format_number(num, 0, signedp, *buflen, 0);
-    jstring numstr = env->NewString(env, numbuf, buflen);
-  */
   jclass BigNum;
   FIND_CLASS(BigNum, env, "java/math/BigInteger");
   jmethodID bignum_ctor = (*env)->GetMethodID(env, BigNum, "<init>", "([B)V");
