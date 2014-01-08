@@ -60,6 +60,30 @@ matrix:
     - compiler: clang
       language: dotnet
       env: BINDINGS=dotnet CC=clang
+    - compiler: gcc
+      language: java
+      jdk: oraclejdk7
+      env: BINDINGS=java
+    - compiler: clang
+      language: java
+      jdk: oraclejdk7
+      env: BINDINGS=java CC=clang
+    - compiler: gcc
+      language: java
+      jdk: openjdk7
+      env: BINDINGS=java
+    - compiler: clang
+      language: java
+      jdk: openjdk7
+      env: BINDINGS=java CC=clang
+    - compiler: gcc
+      language: java
+      jdk: openjdk6
+      env: BINDINGS=java
+    - compiler: clang
+      language: java
+      jdk: openjdk6
+      env: BINDINGS=java CC=clang
 before_install:
   - sudo apt-get update -qq
   - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; fi
