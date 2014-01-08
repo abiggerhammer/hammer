@@ -17,6 +17,6 @@
   </dependencies>
 
   <modules>
-    <module>build/opt/src/bindings/java</module>
+    <module>src/bindings/java</module>
   </modules>
 </project>

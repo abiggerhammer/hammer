@@ -4,9 +4,29 @@ Import('env libhammer_shared testruns targets')
 
 javaenv = env.Clone()
 javaenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
+java_base = os.environ.get('JAVA_HOME')
+if javaenv['PLATFORM'] == 'darwin':
+    java_headers = [os.path.join(java_base, 'Headers')]
+    java_libs = [os.path.join(java_base, 'Libraries')]
+else:
+    java_headers = [os.path.join(java_base, 'include')]
+    java_libs = [os.path.join(java_base, 'lib')]
+    java_bin = os.path.join(java_base, 'bin')
+javaenv.Append(CPPPATH = java_headers)
+javaenv.Append(LIBPATH = java_libs)
+javaenv.AppendENVPath('PATH', java_bin)
+
+javaenv['ENV']['JAVA_HOME'] = java_base
+javaenv['ENV']['JNI_CPPPATH'] = java_headers
+javaenv['ENV']['JNI_LIBPATH'] = java_libs
+
+if sys.platform.startswith('linux'):
+    platform = 'linux'
+else:
+    platform = sys.platform
 
 pom = ['pom.xml']
-hammer_jar = javaenv.Command(['target/hammer-0.9.jar'], [pom, Dir('src/')], "mvn -e -X compile")
+hammer_jar = javaenv.Command(['target/hammer-0.9.jar'], [pom, Dir('src/')], "mvn package -P " + platform)
 Default(hammer_jar)
 
 javatestenv = javaenv.Clone()
