@@ -1,6 +1,22 @@
 #include "jhammer.h"
 #include "com_upstandinghackers_hammer_ParsedToken.h"
 
+#ifdef __GNUC__
+#ifndef BRANCH_LIKELY
+#define BRANCH_LIKELY(cond) __builtin_expect((cond),1)
+#endif
+#ifndef BRANCH_UNLIKELY
+#define BRANCH_UNLIKELY(cond) __builtin_expect((cond),0)
+#endif
+#else /* unknown compiler */
+#ifndef BRANCH_LIKELY
+#define BRANCH_LIKELY(cond) (cond)
+#endif
+#ifndef BRANCH_UNLIKELY
+#define BRANCH_UNLIKELY(cond) (cond)
+#endif
+#endif
+
 #define HPT_UNWRAP(env, this) HParsedToken *inner = unwrap_parsed_token(env, this); assert(inner!=NULL)
 
 HParsedToken *unwrap_parsed_token(JNIEnv *env, jobject obj)
@@ -45,19 +61,64 @@ JNIEXPORT jbyteArray JNICALL Java_com_upstandinghackers_hammer_ParsedToken_getBy
     (*env)->SetByteArrayRegion(env, outArray, (jsize) 0, (jsize)(inner->bytes.len), (jbyte *)(inner->bytes.token));
     return outArray; 
 }
+#if 0
+static jchar* format_number(uint64_t number, int length, int signedp, int *tlen, int had_neg) {
+  if (BRANCH_UNLIKELY(signedp && (number & 0x8000000000000000UL /* sign bit */) && length == 0)) {
+    jchar* ret = format_number((~number) + 1, 1, 0, tlen, 1);
+    ret[0] = '-';
+    return ret;
+  } else {
+    // no negative sign possible
+    if (BRANH_UNLIKELY(number == 0 && (length - had_neg) > 0)) {
+      *tlen = length;
+      return (jchar*)malloc(sizeof(jchar) * *tlen);
+    }
+    const jchar hexchars = {'0','1','2','3','4','5','6','7',
+                            '8','9','A','B','C','D','E','F'};
+    jchar* ret - format_number(number >> 4, length + 1, 0, tlen, had_neg);
+    ret[*tlen - length - 1 + had_neg] = hexchars[number & 0xF];
+    return ret;
+  }
+}    
+#endif
+static jobject make_bignum(JNIEnv *env, uint64_t num, int signedp) {
+  jbyte bytebuf[9];
+  for (int i = 0; i < 8; i++) {
+    bytebuf[i+1] = (num >> (8 * (7 - i))) & 0xFF;
+  }
 
-JNIEXPORT jlong JNICALL Java_com_upstandinghackers_hammer_ParsedToken_getSIntValue
-  (JNIEnv *env, jobject this)
-{
-    HPT_UNWRAP(env, this);
-    return (jlong) (inner->sint);
+  bytebuf[0] = (signedp && (num & (1LL << 63))) ? 0xFF : 0;
+  jbyteArray byteArray = (*env)->NewByteArray(env, 9);
+  (*env)->SetByteArrayRegion(env, byteArray, (jsize)0, (jsize)9, bytebuf);
+
+  printf("Formatted %s 0x%016lx as [", signedp ? "signed" : "unsigned", num);
+  for (int i = 0; i < 9; i++)
+    printf("%02hhx%s", bytebuf[i], (i == 8) ? "]\n":".");
+  /*
+    int buflen = 0;
+    jchar* numbuf = format_number(num, 0, signedp, *buflen, 0);
+    jstring numstr = env->NewString(env, numbuf, buflen);
+  */
+  jclass BigNum;
+  FIND_CLASS(BigNum, env, "java/math/BigInteger");
+  jmethodID bignum_ctor = (*env)->GetMethodID(env, BigNum, "<init>", "([B)V");
+  jobject ret = (*env)->NewObject(env, BigNum, bignum_ctor, byteArray);
+  return ret;
+  
 }
 
-JNIEXPORT jlong JNICALL Java_com_upstandinghackers_hammer_ParsedToken_getUIntValue
+JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_ParsedToken_getSIntValue
   (JNIEnv *env, jobject this)
 {
     HPT_UNWRAP(env, this);
-    return (jlong) (inner->uint);
+    return make_bignum(env, inner->uint, 1);
+}
+
+JNIEXPORT jobject JNICALL Java_com_upstandinghackers_hammer_ParsedToken_getUIntValue
+  (JNIEnv *env, jobject this)
+{
+    HPT_UNWRAP(env, this);
+    return make_bignum(env, inner->uint, 0);
 }
 
 JNIEXPORT jdouble JNICALL Java_com_upstandinghackers_hammer_ParsedToken_getDoubleValue

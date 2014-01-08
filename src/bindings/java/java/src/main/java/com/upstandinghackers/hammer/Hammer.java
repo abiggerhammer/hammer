@@ -33,24 +33,37 @@ public class Hammer
         }
     }
 
+  private static byte[] toRawBytes(String input) {
+    byte[] bytes = new byte[input.length()];
+    for (int i = 0; i < input.length(); i++)
+      bytes[i] = (byte)input.charAt(i);
+    return bytes;
+  }
+  
     public static native ParseResult parse(Parser parser, byte[] input, int length);
     public static ParseResult parse(Parser parser, String input) {
-	return parse(parser, input.getBytes(), input.length());
+      return parse(parser, Hammer.toRawBytes(input), input.length());
     }
     public static native Parser token(byte[] str, int length);
     public static Parser token(String str) {
-	return token(str.getBytes(), str.length());
+      return token(Hammer.toRawBytes(str), str.length());
     }
     public static native Parser ch(byte c);
     public static Parser ch(String s) {
-	return ch(s.getBytes()[0]);
+      return ch((byte)s.charAt(0));
     }
     public static Parser ch(int c) {
 	return ch((byte)c);
     }
+    public static Parser ch(char c) {
+	return ch((byte)c);
+    }
     public static native Parser chRange(byte from, byte to);
     public static Parser chRange(String from, String to) {
-	return chRange(from.getBytes()[0], to.getBytes()[0]);
+      return chRange(from.charAt(0), to.charAt(0));
+    }
+    public static Parser chRange(char from, char to) {
+	return chRange((byte)from, (byte)to);
     }
     public static Parser chRange(int from, int to) {
 	return chRange((byte)from, (byte)to);

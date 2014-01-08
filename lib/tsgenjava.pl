@@ -132,15 +132,15 @@ pp_test_elem(init, test(_,_)) --> !.
 pp_test_elem(decl, testFail(_)) --> !.
 pp_test_elem(init, testFail(_)) --> !.
 pp_test_elem(exec, test(Str, Result)) -->
-    !, indent(2),
-    "Assert.assertTrue(handle(parser.parse(", pp_parser(string(Str)),
-    ").getAst(), ",
+    !, indent(3),
+    "checkParseOK(parser, ", pp_parser(string(Str)),
+    ", ",
     pp_parse_result(Result),
-    "));\n".
+    ");\n".
 pp_test_elem(exec, testFail(Str)) -->
-    !, indent(2),
-    "Assert.assertNull(parser.parse(", pp_parser(string(Str)),
-    "));\n".
+    !, indent(3),
+    "checkParseFail(parser, ", pp_parser(string(Str)),
+    ");\n".
 
 % pp_test_elem(_, _) --> !.
 
@@ -171,8 +171,11 @@ pp_parser_bigint_str(num(Num)) --> !,
     pp_hexnum_guts(RNum).
 
 pp_parse_result(char(C)) --> !,
-    pp_parser(char(C)),
-    ".getBytes()[0]".
+    "new BigInteger(\"",
+    pp_parser_bigint_str(num(C)),
+    "\", 16)".
+    %pp_parser(char(C)),
+        %".getBytes()[0]".
 pp_parse_result(seq(Args)) --> !,
     "new Object[]{ ", pp_result_seq(Args), "}".
 pp_parse_result(none) --> !,
@@ -220,30 +223,11 @@ pp_test_suite(Suite) -->
     "import java.util.Arrays;\n",
     "import org.testng.annotations.*;\n",
     "import org.testng.Assert;\n\n",
-    "public class HammerTest {\n\n",
+    "public class HammerTest extends TestSupport {\n\n",
     indent(1), "static {\n",
     indent(2), "System.loadLibrary(\"hammer-java\");\n",
     indent(1), "}\n\n",
-    indent(1), "private boolean handle(ParsedToken p, Object known) {\n",
-    indent(2), "switch (p.getTokenType()) {\n",
-    indent(2), "case BYTES:\n",
-    indent(3), "return Arrays.toString(p.getBytesValue()).equals((String)known);\n",
-    indent(2), "case SINT:\n",
-    indent(3), "return ((Long)p.getSIntValue()).equals(known);\n",
-    indent(2), "case UINT:\n",
-    indent(3), "return ((Long)p.getUIntValue()).equals(known);\n",
-    indent(2), "case SEQUENCE:\n",
-    indent(3), "int i=0;\n",
-    indent(3), "for (ParsedToken tok : p.getSeqValue()) {\n",
-    indent(4), "if (!handle(tok, ((Object[])known)[i]))\n",
-    indent(5), "return false;\n",
-    indent(4), "++i;\n",
-    indent(3), "}\n",
-    indent(3), "return true;\n",
-    indent(2), "default:\n",
-    indent(3), "return false;\n",
-    indent(2), "}\n",
-    indent(1), "}\n\n", 
+
     pp_test_cases(Suite),
     "}\n".
 

@@ -6,7 +6,10 @@ public class Parser
     public native void free();
     public long getInner() {return this.inner;}
     public ParseResult parse(String input) {
-	return Hammer.parse(this, input.getBytes(), input.length());
+      byte[] bytes = new byte[input.length()];
+      for (int i = 0; i < input.length(); i++)
+        bytes[i] = (byte)input.charAt(i);
+      return Hammer.parse(this, bytes, bytes.length);
     }
     public ParseResult parse(byte[] input, int length) {
 	return Hammer.parse(this, input, length);
