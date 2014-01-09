@@ -90,6 +90,7 @@ before_install:
   - if [ "$BINDINGS" == "perl" ]; then sudo add-apt-repository ppa:dns/irc -y; sudo apt-get update -qq; sudo apt-get install -qq swig=2.0.8-1irc1~12.04; fi
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
   - if [ "$BINDINGS" == "dotnet" ]; then sudo add-apt-repository ppa:directhex/monoxide -y; sudo apt-get update -qq; sudo apt-get install -qq mono-devel mono-mcs nunit nunit-console; mozroots --import --sync; fi
+  - if [ "$BINDINGS" == "java" ]; then sudo cp settings.xml $M2_HOME/conf/; fi
 
 install: true
 before_script:
