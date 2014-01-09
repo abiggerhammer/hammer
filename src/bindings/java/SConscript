@@ -19,6 +19,7 @@ javaenv.AppendENVPath('PATH', java_bin)
 javaenv['ENV']['JAVA_HOME'] = java_base
 javaenv['ENV']['JNI_CPPPATH'] = java_headers
 javaenv['ENV']['JNI_LIBPATH'] = java_libs
+javaenv['ENV']['M2_HOME'] = os.environ.get('M2_HOME')
 
 if sys.platform.startswith('linux'):
     platform = 'linux'
