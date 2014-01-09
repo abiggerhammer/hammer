@@ -95,7 +95,7 @@ install: true
 before_script:
   - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
 script: 
-  - if [ "$BINDINGS" == "java" ]; then sudo scons bindings=$BINDINGS test; else scons bindings=$BINDINGS test; fi
+  - if [ "$BINDINGS" == "java" ]; then mvn install -P linux; else scons bindings=$BINDINGS test; fi
 notifications:
   irc: 
     channels: 
