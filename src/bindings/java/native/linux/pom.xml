@@ -79,7 +79,7 @@
 	  <argLine>-Djava.library.path=${project.build.directory}</argLine>
 	  <forkMode>once</forkMode>
 	  <environmentVariables>
-	    <LD_LIBRARY_PATH>${project.build.directory}:../../../../</LD_LIBRARY_PATH>
+	    <LD_LIBRARY_PATH>${project.build.directory}:src</LD_LIBRARY_PATH>
 	  </environmentVariables>
 	</configuration>
       </plugin>
