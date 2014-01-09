@@ -63,34 +63,34 @@ matrix:
     - compiler: gcc
       language: java
       jdk: oraclejdk7
-      env: BINDINGS=java
+      env: BINDINGS=java M2_HOME=/tmp
     - compiler: clang
       language: java
       jdk: oraclejdk7
-      env: BINDINGS=java CC=clang
+      env: BINDINGS=java CC=clang M2_HOME=/tmp
     - compiler: gcc
       language: java
       jdk: openjdk7
-      env: BINDINGS=java
+      env: BINDINGS=java M2_HOME=/tmp
     - compiler: clang
       language: java
       jdk: openjdk7
-      env: BINDINGS=java CC=clang
+      env: BINDINGS=java CC=clang M2_HOME=/tmp
     - compiler: gcc
       language: java
       jdk: openjdk6
-      env: BINDINGS=java
+      env: BINDINGS=java M2_HOME=/tmp
     - compiler: clang
       language: java
       jdk: openjdk6
-      env: BINDINGS=java CC=clang
+      env: BINDINGS=java CC=clang M2_HOME=/tmp
 before_install:
   - sudo apt-get update -qq
   - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; fi
   - if [ "$BINDINGS" == "perl" ]; then sudo add-apt-repository ppa:dns/irc -y; sudo apt-get update -qq; sudo apt-get install -qq swig=2.0.8-1irc1~12.04; fi
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
   - if [ "$BINDINGS" == "dotnet" ]; then sudo add-apt-repository ppa:directhex/monoxide -y; sudo apt-get update -qq; sudo apt-get install -qq mono-devel mono-mcs nunit nunit-console; mozroots --import --sync; fi
-  - if [ "$BINDINGS" == "java" ]; then sudo mkdir $M2_HOME/conf; sudo cp settings.xml $M2_HOME/conf/; fi
+  - if [ "$BINDINGS" == "java" ]; then mkdir $M2_HOME/conf; cp settings.xml $M2_HOME/conf/; fi
 
 install: true
 before_script:
