@@ -13,7 +13,7 @@ class TestToken < Minitest::Test
   end
 
   def test_2
-    refute_parse_ok @parser_1, "95\xa2"
+    refute_parse_ok @parser_1, "95\xa3"
   end
 end
 
@@ -25,7 +25,7 @@ class TestCh < Minitest::Test
   end
 
   def test_1
-    assert_parse_ok @parser_1, "\xa2", '\xa2'
+    assert_parse_ok @parser_1, "\xa2", 0xa2
   end
 
   def test_2
@@ -41,7 +41,7 @@ class TestChRange < Minitest::Test
   end
 
   def test_1
-    assert_parse_ok @parser_1, "b", 'b'
+    assert_parse_ok @parser_1, "b", 0x62
   end
 
   def test_2
@@ -197,7 +197,7 @@ class TestIntRange < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.int_range(h.uint8, 0x3, 0x10)
+    @parser_1 = h.int_range(h.uint8, 0x3, 0xa)
   end
 
   def test_1
@@ -218,19 +218,19 @@ class TestWhitespace < Minitest::Test
   end
 
   def test_1
-    assert_parse_ok @parser_1, "a", 'a'
+    assert_parse_ok @parser_1, "a", 0x61
   end
 
   def test_2
-    assert_parse_ok @parser_1, " a", 'a'
+    assert_parse_ok @parser_1, " a", 0x61
   end
 
   def test_3
-    assert_parse_ok @parser_1, "  a", 'a'
+    assert_parse_ok @parser_1, "  a", 0x61
   end
 
   def test_4
-    assert_parse_ok @parser_1, "\x09a", 'a'
+    assert_parse_ok @parser_1, "\x09a", 0x61
   end
 
   def test_5
@@ -238,11 +238,11 @@ class TestWhitespace < Minitest::Test
   end
 
   def test_6
-    assert_parse_ok @parser_2, "", null
+    assert_parse_ok @parser_2, "", nil
   end
 
   def test_7
-    assert_parse_ok @parser_2, "  ", null
+    assert_parse_ok @parser_2, "  ", nil
   end
 
   def test_8
@@ -258,7 +258,7 @@ class TestLeft < Minitest::Test
   end
 
   def test_1
-    assert_parse_ok @parser_1, "a ", 'a'
+    assert_parse_ok @parser_1, "a ", 0x61
   end
 
   def test_2
@@ -278,11 +278,11 @@ class TestMiddle < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.middle(h.ch(' '), h.ch('a'), h.ch(' '))
+    @parser_1 = h.middle(h.ch(0x20), h.ch(0x61), h.ch(0x20))
   end
 
   def test_1
-    assert_parse_ok @parser_1, " a ", 'a'
+    assert_parse_ok @parser_1, " a ", 0x61
   end
 
   def test_2
@@ -318,7 +318,7 @@ class TestIn < Minitest::Test
   end
 
   def test_1
-    assert_parse_ok @parser_1, "b", 'b'
+    assert_parse_ok @parser_1, "b", 0x62
   end
 
   def test_2
@@ -334,7 +334,7 @@ class TestNotIn < Minitest::Test
   end
 
   def test_1
-    assert_parse_ok @parser_1, "d", 'd'
+    assert_parse_ok @parser_1, "d", 0x64
   end
 
   def test_2
@@ -346,11 +346,11 @@ class TestEndP < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.sequence(h.ch('a'), h.end_p)
+    @parser_1 = h.sequence(h.ch(0x61), h.end_p)
   end
 
   def test_1
-    assert_parse_ok @parser_1, "a", ['a']
+    assert_parse_ok @parser_1, "a", [0x61]
   end
 
   def test_2
@@ -374,12 +374,12 @@ class TestSequence < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.sequence(h.ch('a'), h.ch('b'))
-    @parser_2 = h.sequence(h.ch('a'), h.whitespace(h.ch('b')))
+    @parser_1 = h.sequence(h.ch(0x61), h.ch(0x62))
+    @parser_2 = h.sequence(h.ch(0x61), h.whitespace(h.ch(0x62)))
   end
 
   def test_1
-    assert_parse_ok @parser_1, "ab", ['a', 'b']
+    assert_parse_ok @parser_1, "ab", [0x61, 0x62]
   end
 
   def test_2
@@ -391,15 +391,15 @@ class TestSequence < Minitest::Test
   end
 
   def test_4
-    assert_parse_ok @parser_2, "ab", ['a', 'b']
+    assert_parse_ok @parser_2, "ab", [0x61, 0x62]
   end
 
   def test_5
-    assert_parse_ok @parser_2, "a b", ['a', 'b']
+    assert_parse_ok @parser_2, "a b", [0x61, 0x62]
   end
 
   def test_6
-    assert_parse_ok @parser_2, "a  b", ['a', 'b']
+    assert_parse_ok @parser_2, "a  b", [0x61, 0x62]
   end
 end
 
@@ -407,19 +407,19 @@ class TestChoice < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.choice(h.ch('a'), h.ch('b'))
+    @parser_1 = h.choice(h.ch(0x61), h.ch(0x62))
   end
 
   def test_1
-    assert_parse_ok @parser_1, "a", 'a'
+    assert_parse_ok @parser_1, "a", 0x61
   end
 
   def test_2
-    assert_parse_ok @parser_1, "b", 'b'
+    assert_parse_ok @parser_1, "b", 0x62
   end
 
   def test_3
-    assert_parse_ok @parser_1, "ab", 'a'
+    assert_parse_ok @parser_1, "ab", 0x61
   end
 
   def test_4
@@ -431,12 +431,12 @@ class TestButnot < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.butnot(h.ch('a'), h.token("ab"))
-    @parser_2 = h.butnot(h.ch_range('0', '9'), h.ch('6'))
+    @parser_1 = h.butnot(h.ch(0x61), h.token("ab"))
+    @parser_2 = h.butnot(h.ch_range(0x30, 0x39), h.ch(0x36))
   end
 
   def test_1
-    assert_parse_ok @parser_1, "a", 'a'
+    assert_parse_ok @parser_1, "a", 0x61
   end
 
   def test_2
@@ -444,11 +444,11 @@ class TestButnot < Minitest::Test
   end
 
   def test_3
-    assert_parse_ok @parser_1, "aa", 'a'
+    assert_parse_ok @parser_1, "aa", 0x61
   end
 
   def test_4
-    assert_parse_ok @parser_2, "5", '5'
+    assert_parse_ok @parser_2, "5", 0x35
   end
 
   def test_5
@@ -460,7 +460,7 @@ class TestDifference < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.difference(h.token("ab"), h.ch('a'))
+    @parser_1 = h.difference(h.token("ab"), h.ch(0x61))
   end
 
   def test_1
@@ -476,15 +476,15 @@ class TestXor < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.xor(h.ch_range('0', '6'), h.ch_range('5', '9'))
+    @parser_1 = h.xor(h.ch_range(0x30, 0x36), h.ch_range(0x35, 0x39))
   end
 
   def test_1
-    assert_parse_ok @parser_1, "0", '0'
+    assert_parse_ok @parser_1, "0", 0x30
   end
 
   def test_2
-    assert_parse_ok @parser_1, "9", '9'
+    assert_parse_ok @parser_1, "9", 0x39
   end
 
   def test_3
@@ -500,7 +500,7 @@ class TestMany < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.many(h.choice(h.ch('a'), h.ch('b')))
+    @parser_1 = h.many(h.choice(h.ch(0x61), h.ch(0x62)))
   end
 
   def test_1
@@ -508,15 +508,15 @@ class TestMany < Minitest::Test
   end
 
   def test_2
-    assert_parse_ok @parser_1, "a", ['a']
+    assert_parse_ok @parser_1, "a", [0x61]
   end
 
   def test_3
-    assert_parse_ok @parser_1, "b", ['b']
+    assert_parse_ok @parser_1, "b", [0x62]
   end
 
   def test_4
-    assert_parse_ok @parser_1, "aabbaba", ['a', 'a', 'b', 'b', 'a', 'b', 'a']
+    assert_parse_ok @parser_1, "aabbaba", [0x61, 0x61, 0x62, 0x62, 0x61, 0x62, 0x61]
   end
 end
 
@@ -524,7 +524,7 @@ class TestMany1 < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.many1(h.choice(h.ch('a'), h.ch('b')))
+    @parser_1 = h.many1(h.choice(h.ch(0x61), h.ch(0x62)))
   end
 
   def test_1
@@ -532,15 +532,15 @@ class TestMany1 < Minitest::Test
   end
 
   def test_2
-    assert_parse_ok @parser_1, "a", ['a']
+    assert_parse_ok @parser_1, "a", [0x61]
   end
 
   def test_3
-    assert_parse_ok @parser_1, "b", ['b']
+    assert_parse_ok @parser_1, "b", [0x62]
   end
 
   def test_4
-    assert_parse_ok @parser_1, "aabbaba", ['a', 'a', 'b', 'b', 'a', 'b', 'a']
+    assert_parse_ok @parser_1, "aabbaba", [0x61, 0x61, 0x62, 0x62, 0x61, 0x62, 0x61]
   end
 
   def test_5
@@ -552,7 +552,7 @@ class TestRepeatN < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.repeat_n(h.choice(h.ch('a'), h.ch('b')), 0x2)
+    @parser_1 = h.repeat_n(h.choice(h.ch(0x61), h.ch(0x62)), 0x2)
   end
 
   def test_1
@@ -560,7 +560,7 @@ class TestRepeatN < Minitest::Test
   end
 
   def test_2
-    assert_parse_ok @parser_1, "abdef", ['a', 'b']
+    assert_parse_ok @parser_1, "abdef", [0x61, 0x62]
   end
 
   def test_3
@@ -572,19 +572,19 @@ class TestOptional < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.sequence(h.ch('a'), h.optional(h.choice(h.ch('b'), h.ch('c'))), h.ch('d'))
+    @parser_1 = h.sequence(h.ch(0x61), h.optional(h.choice(h.ch(0x62), h.ch(0x63))), h.ch(0x64))
   end
 
   def test_1
-    assert_parse_ok @parser_1, "abd", ['a', 'b', 'd']
+    assert_parse_ok @parser_1, "abd", [0x61, 0x62, 0x64]
   end
 
   def test_2
-    assert_parse_ok @parser_1, "acd", ['a', 'c', 'd']
+    assert_parse_ok @parser_1, "acd", [0x61, 0x63, 0x64]
   end
 
   def test_3
-    assert_parse_ok @parser_1, "ad", ['a', null, 'd']
+    assert_parse_ok @parser_1, "ad", [0x61, nil, 0x64]
   end
 
   def test_4
@@ -604,11 +604,11 @@ class TestIgnore < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.sequence(h.ch('a'), h.ignore(h.ch('b')), h.ch('c'))
+    @parser_1 = h.sequence(h.ch(0x61), h.ignore(h.ch(0x62)), h.ch(0x63))
   end
 
   def test_1
-    assert_parse_ok @parser_1, "abc", ['a', 'c']
+    assert_parse_ok @parser_1, "abc", [0x61, 0x63]
   end
 
   def test_2
@@ -620,23 +620,23 @@ class TestSepBy < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.sepBy(h.choice(h.ch('1'), h.ch('2'), h.ch('3')), h.ch(','))
+    @parser_1 = h.sepBy(h.choice(h.ch(0x31), h.ch(0x32), h.ch(0x33)), h.ch(0x2c))
   end
 
   def test_1
-    assert_parse_ok @parser_1, "1,2,3", ['1', '2', '3']
+    assert_parse_ok @parser_1, "1,2,3", [0x31, 0x32, 0x33]
   end
 
   def test_2
-    assert_parse_ok @parser_1, "1,3,2", ['1', '3', '2']
+    assert_parse_ok @parser_1, "1,3,2", [0x31, 0x33, 0x32]
   end
 
   def test_3
-    assert_parse_ok @parser_1, "1,3", ['1', '3']
+    assert_parse_ok @parser_1, "1,3", [0x31, 0x33]
   end
 
   def test_4
-    assert_parse_ok @parser_1, "3", ['3']
+    assert_parse_ok @parser_1, "3", [0x33]
   end
 
   def test_5
@@ -648,23 +648,23 @@ class TestSepBy1 < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.sepBy1(h.choice(h.ch('1'), h.ch('2'), h.ch('3')), h.ch(','))
+    @parser_1 = h.sepBy1(h.choice(h.ch(0x31), h.ch(0x32), h.ch(0x33)), h.ch(0x2c))
   end
 
   def test_1
-    assert_parse_ok @parser_1, "1,2,3", ['1', '2', '3']
+    assert_parse_ok @parser_1, "1,2,3", [0x31, 0x32, 0x33]
   end
 
   def test_2
-    assert_parse_ok @parser_1, "1,3,2", ['1', '3', '2']
+    assert_parse_ok @parser_1, "1,3,2", [0x31, 0x33, 0x32]
   end
 
   def test_3
-    assert_parse_ok @parser_1, "1,3", ['1', '3']
+    assert_parse_ok @parser_1, "1,3", [0x31, 0x33]
   end
 
   def test_4
-    assert_parse_ok @parser_1, "3", ['3']
+    assert_parse_ok @parser_1, "3", [0x33]
   end
 
   def test_5
@@ -676,13 +676,13 @@ class TestAnd < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.sequence(h.and(h.ch('0')), h.ch('0'))
-    @parser_2 = h.sequence(h.and(h.ch('0')), h.ch('1'))
-    @parser_3 = h.sequence(h.ch('1'), h.and(h.ch('2')))
+    @parser_1 = h.sequence(h.and(h.ch(0x30)), h.ch(0x30))
+    @parser_2 = h.sequence(h.and(h.ch(0x30)), h.ch(0x31))
+    @parser_3 = h.sequence(h.ch(0x31), h.and(h.ch(0x32)))
   end
 
   def test_1
-    assert_parse_ok @parser_1, "0", ['0']
+    assert_parse_ok @parser_1, "0", [0x30]
   end
 
   def test_2
@@ -698,7 +698,7 @@ class TestAnd < Minitest::Test
   end
 
   def test_5
-    assert_parse_ok @parser_3, "12", ['1']
+    assert_parse_ok @parser_3, "12", [0x31]
   end
 
   def test_6
@@ -710,12 +710,12 @@ class TestNot < Minitest::Test
   def setup
     super
     h = Hammer::Parser
-    @parser_1 = h.sequence(h.ch('a'), h.choice(h.token("+"), h.token("++")), h.ch('b'))
-    @parser_2 = h.sequence(h.ch('a'), h.choice(h.sequence(h.token("+"), h.not(h.ch('+'))), h.token("++")), h.ch('b'))
+    @parser_1 = h.sequence(h.ch(0x61), h.choice(h.token("+"), h.token("++")), h.ch(0x62))
+    @parser_2 = h.sequence(h.ch(0x61), h.choice(h.sequence(h.token("+"), h.not(h.ch(0x2b))), h.token("++")), h.ch(0x62))
   end
 
   def test_1
-    assert_parse_ok @parser_1, "a+b", ['a', "+", 'b']
+    assert_parse_ok @parser_1, "a+b", [0x61, "+", 0x62]
   end
 
   def test_2
@@ -723,11 +723,11 @@ class TestNot < Minitest::Test
   end
 
   def test_3
-    assert_parse_ok @parser_2, "a+b", ['a', ["+"], 'b']
+    assert_parse_ok @parser_2, "a+b", [0x61, ["+"], 0x62]
   end
 
   def test_4
-    assert_parse_ok @parser_2, "a++b", ['a', "++", 'b']
+    assert_parse_ok @parser_2, "a++b", [0x61, "++", 0x62]
   end
 end
 
@@ -736,46 +736,20 @@ class TestRightrec < Minitest::Test
     super
     h = Hammer::Parser
     @sp_rr = h.indirect
-    @sp_rr.bind h.choice(h.sequence(h.ch('a'), @sp_rr), h.epsilon_p)
+    @sp_rr.bind h.choice(h.sequence(h.ch(0x61), @sp_rr), h.epsilon_p)
     @parser_1 = @sp_rr
   end
 
   def test_1
-    assert_parse_ok @parser_1, "a", ['a']
+    assert_parse_ok @parser_1, "a", [0x61]
   end
 
   def test_2
-    assert_parse_ok @parser_1, "aa", ['a', ['a']]
+    assert_parse_ok @parser_1, "aa", [0x61, [0x61]]
   end
 
   def test_3
-    assert_parse_ok @parser_1, "aaa", ['a', ['a', ['a']]]
-  end
-end
-
-class TestAmbiguous < Minitest::Test
-  def setup
-    super
-    h = Hammer::Parser
-    @sp_d = h.indirect
-    @sp_p = h.indirect
-    @sp_e = h.indirect
-    @sp_d.bind h.ch('d')
-    @sp_p.bind h.ch('+')
-    @sp_e.bind h.choice(h.sequence(@sp_e, @sp_p, @sp_e), @sp_d)
-    @parser_1 = @sp_e
-  end
-
-  def test_1
-    assert_parse_ok @parser_1, "d", 'd'
-  end
-
-  def test_2
-    assert_parse_ok @parser_1, "d+d", ['d', '+', 'd']
-  end
-
-  def test_3
-    assert_parse_ok @parser_1, "d+d+d", [['d', '+', 'd'], '+', 'd']
+    assert_parse_ok @parser_1, "aaa", [0x61, [0x61, [0x61]]]
   end
 end
 

@@ -18,7 +18,10 @@ module Minitest
     def refute_parse_ok(parser, probe)
       refute_nil parser, "Parser must not be nil (this is a problem with your test)"
       parse_result = parser.parse(probe)
-      assert_nil parse_result, "Parse succeeded unexpectedly with " + parse_result.ast.inspect
+
+      if not parse_result.nil?
+        assert_nil parse_result, "Parse succeeded unexpectedly with " + parse_result.ast.inspect
+      end
     end
   end
   

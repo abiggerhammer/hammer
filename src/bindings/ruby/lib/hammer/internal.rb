@@ -28,13 +28,26 @@ module Hammer
               :arena, :pointer,
               :elements, :pointer # HParsedToken**
 
-      def used
+      def length
         self[:used]
       end
 
       def elements
         elem_array = FFI::Pointer.new(:pointer, self[:elements])
         return (0...self[:used]).map { |i| HParsedToken.new(elem_array[i].read_pointer) }
+      end
+
+      #def [](idx)
+      #  raise ArgumentError, "Index out of range" unless idx >= 0 and idx < length
+      #  elem_array = FFI::Pointer.new(:pointer, self[:elements])
+      #  return HParsedToken.new(elem_array[i].read_pointer)
+      #end
+
+      def map(&code)
+        elements.map {|x| code.call x}
+      end
+      def each(&code)
+        elements.each {|x| code.call x}
       end
     end
 
@@ -72,6 +85,12 @@ module Hammer
               :index, :size_t,
               :bit_offset, :char
 
+      def normalize
+        # If I'm null, return nil.
+        return nil if null?
+        return self
+      end
+      
       def token_type
         self[:token_type]
       end
@@ -106,7 +125,7 @@ module Hammer
       def unmarshal
         case token_type
         when :sequence
-          self[:data][:seq].each {|x| x.unmarshal}
+          self[:data][:seq].map {|x| x.unmarshal}
         when :bytes
           self[:data][:bytes].token
         when :uint
@@ -127,7 +146,7 @@ module Hammer
               :arena, :pointer
 
       def ast
-        self[:ast]
+        self[:ast].normalize
       end
 
       def bit_length
@@ -140,13 +159,13 @@ module Hammer
     end
 
     # run a parser
-    attach_function :h_parse, [:h_parser, :string, :size_t], HParseResult.auto_ptr # TODO: Use :buffer_in instead of :string?
+    attach_function :h_parse, [:h_parser, :pointer, :size_t], HParseResult.auto_ptr # TODO: Use :buffer_in instead of :string?
 
     # build a parser
     attach_function :h_token, [:buffer_in, :size_t], :h_parser
     attach_function :h_ch, [:uint8], :h_parser
     attach_function :h_ch_range, [:uint8, :uint8], :h_parser
-    attach_function :h_int_range, [:int64, :int64], :h_parser
+    attach_function :h_int_range, [:h_parser, :int64, :int64], :h_parser
     attach_function :h_bits, [:size_t, :bool], :h_parser
     attach_function :h_int64, [], :h_parser
     attach_function :h_int32, [], :h_parser
@@ -160,8 +179,8 @@ module Hammer
     attach_function :h_left,   [:h_parser, :h_parser], :h_parser
     attach_function :h_right,  [:h_parser, :h_parser], :h_parser
     attach_function :h_middle, [:h_parser, :h_parser, :h_parser], :h_parser
-    #attach_function :h_in, [:buffer_in, :size_t], :h_parser
-    #attach_function :h_not_in, [:buffer_in, :size_t], :h_parser
+    attach_function :h_in, [:pointer, :size_t], :h_parser
+    attach_function :h_not_in, [:pointer, :size_t], :h_parser
     attach_function :h_end_p, [], :h_parser
     attach_function :h_nothing_p, [], :h_parser
     attach_function :h_sequence, [:varargs], :h_parser
@@ -171,7 +190,7 @@ module Hammer
     attach_function :h_xor, [:h_parser, :h_parser], :h_parser
     attach_function :h_many, [:h_parser], :h_parser
     attach_function :h_many1, [:h_parser], :h_parser
-    #attach_function :h_repeat_n, [:h_parser, :size_t], :h_parser
+    attach_function :h_repeat_n, [:h_parser, :size_t], :h_parser
     attach_function :h_optional, [:h_parser], :h_parser
     attach_function :h_ignore, [:h_parser], :h_parser
     attach_function :h_sepBy, [:h_parser, :h_parser], :h_parser

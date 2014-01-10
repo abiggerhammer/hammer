@@ -25,7 +25,8 @@ module Hammer
       raise RuntimeError, '@h_parser is nil' if @h_parser.nil?
       raise ArgumentError, 'expecting a String' unless data.is_a? String # TODO: Not needed, FFI checks that.
 
-      result = Hammer::Internal.h_parse(@h_parser, data, data.bytesize)
+      ibuf = FFI::MemoryPointer.from_string(data)
+      result = Hammer::Internal.h_parse(@h_parser, ibuf, data.bytesize) # Don't include the trailing null
       if result.null?
         return nil
       else
@@ -73,11 +74,52 @@ module Hammer
       return Hammer::Parser.new(:token, h_parser, buffer)
     end
 
-    def self.ch(num)
-      raise ArgumentError, 'expecting a Fixnum in 0..255' unless num.is_a?(Fixnum) and num.between?(0, 255)
+    def self.marshal_ch_arg(num)
+      if num.is_a?(String)
+        raise ArgumentError, "Expecting either a fixnum in 0..255 or a single-byte String" unless num.bytes.length == 1
+        num = num.bytes[0]
+      end
+      raise ArgumentError, 'Expecting a Fixnum in 0..255 or a single-byte String' unless num.is_a?(Fixnum) and num.between?(0, 255)
+      return num
+    end
+    private_class_method :marshal_ch_arg
+    
+    def self.ch(ch)
+      num = marshal_ch_arg(ch)
       h_parser = Hammer::Internal.h_ch(num)
 
       return Hammer::Parser.new(:ch, h_parser, nil)
+    end
+
+    def self.ch_range(ch1, ch2)
+      ch1 = marshal_ch_arg(ch1)
+      ch2 = marshal_ch_arg(ch2)
+      h_parser = Hammer::Internal.h_ch_range(ch1, ch2)
+      return Hammer::Parser.new(:ch_range, h_parser, nil)
+    end
+
+    def self.int_range(parser, i1, i2)
+      h_parser = Hammer::Internal.h_int_range(parser.h_parser, i1, i2)
+      return Hammer::Parser.new(:int_range, h_parser, nil)
+    end
+
+    def self.in(charset)
+      raise ArgumentError, "Expected a String" unless charset.is_a?(String)
+      ibuf = FFI::MemoryPointer.from_string(charset)
+      h_parser = Hammer::Internal.h_in(ibuf, charset.bytesize)
+      return Hammer::Parser.new(:in, h_parser, nil)
+    end
+
+    def self.repeat_n(parser, count)
+      h_parser = Hammer::Internal.h_repeat_n(parser.h_parser, count)
+      return Hammer::Parser.new(:repeat_n, h_parser, nil)
+    end
+
+    def self.not_in(charset)
+      raise ArgumentError, "Expected a String" unless charset.is_a?(String)
+      ibuf = FFI::MemoryPointer.from_string(charset)
+      h_parser = Hammer::Internal.h_not_in(ibuf, charset.bytesize)
+      return Hammer::Parser.new(:not_in, h_parser, nil)
     end
 
     # Defines a parser constructor with the given name.

@@ -96,7 +96,8 @@ pp_parser(num(Num)) --> !,
       "-0x", {RNum is -Num}; "0x", {RNum = Num} ),
     pp_hexnum_guts(RNum).
 pp_parser(char(C)) --> !,
-    "'", pp_char_guts(C), "'", !.
+        pp_parser(num(C)).
+        %"'", pp_char_guts(C), "'", !.
 
 pp_parser(ref(Name)) -->
     {atom_codes(Name,CName)},
@@ -198,7 +199,7 @@ pp_parse_result(char(C)) --> !,
 pp_parse_result(seq(Args)) --> !,
     "[", pp_result_seq(Args), "]".
 pp_parse_result(none) --> !,
-    "null".
+    "nil".
 pp_parse_result(uint(V)) --> !,
         pp_parser(num(V)).
 pp_parse_result(sint(V)) --> !,
