@@ -102,6 +102,23 @@ module Hammer
       def bit_offset
         self[:bit_offset]
       end
+
+      def unmarshal
+        case token_type
+        when :sequence
+          self[:data][:seq].each {|x| x.unmarshal}
+        when :bytes
+          self[:data][:bytes].token
+        when :uint
+          self[:data][:uint]
+        when :sint
+          self[:data][:sint]
+        when :none
+          nil
+        end
+      end
+      
+
     end
 
     class HParseResult < FFI::Struct
