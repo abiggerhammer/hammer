@@ -81,8 +81,10 @@ module Hammer
       predicate = block if predicate.nil?
       raise ArgumentError, 'no predicate' if predicate.nil?
 
-      h_parser = Hammer::Internal.h_attr_bool(parser.h_parser, predicate)
-      return Hammer::Parser.new(:attr_bool, h_parser, [parser, predicate])
+      real_pred = Proc.new {|hpr| predicate.call hpr.ast}
+
+      h_parser = Hammer::Internal.h_attr_bool(parser.h_parser, real_pred)
+      return Hammer::Parser.new(:attr_bool, h_parser, [parser, predicate, real_pred])
     end
 
     def self.token(string)
@@ -118,19 +120,23 @@ module Hammer
       return num
     end
     private_class_method :marshal_ch_arg
-    
+
+    def self.ch_parser_wrapper(parser)
+      return Hammer::Parser.action(parser) {|x| x.data.chr}
+    end
+
     def self.ch(ch)
       num = marshal_ch_arg(ch)
       h_parser = Hammer::Internal.h_ch(num)
 
-      return Hammer::Parser.new(:ch, h_parser, nil)
+      return ch_parser_wrapper(Hammer::Parser.new(:ch, h_parser, nil))
     end
 
     def self.ch_range(ch1, ch2)
       ch1 = marshal_ch_arg(ch1)
       ch2 = marshal_ch_arg(ch2)
       h_parser = Hammer::Internal.h_ch_range(ch1, ch2)
-      return Hammer::Parser.new(:ch_range, h_parser, nil)
+      return ch_parser_wrapper(Hammer::Parser.new(:ch_range, h_parser, nil))
     end
 
     def self.int_range(parser, i1, i2)
@@ -142,7 +148,7 @@ module Hammer
       raise ArgumentError, "Expected a String" unless charset.is_a?(String)
       ibuf = FFI::MemoryPointer.from_string(charset)
       h_parser = Hammer::Internal.h_in(ibuf, charset.bytesize)
-      return Hammer::Parser.new(:in, h_parser, nil)
+      return ch_parser_wrapper(Hammer::Parser.new(:in, h_parser, nil))
     end
 
     def self.repeat_n(parser, count)
@@ -154,7 +160,7 @@ module Hammer
       raise ArgumentError, "Expected a String" unless charset.is_a?(String)
       ibuf = FFI::MemoryPointer.from_string(charset)
       h_parser = Hammer::Internal.h_not_in(ibuf, charset.bytesize)
-      return Hammer::Parser.new(:not_in, h_parser, nil)
+      return ch_parser_wrapper(Hammer::Parser.new(:not_in, h_parser, nil))
     end
 
     # Defines a parser constructor with the given name.

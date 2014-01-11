@@ -96,8 +96,8 @@ pp_parser(num(Num)) --> !,
       "-0x", {RNum is -Num}; "0x", {RNum = Num} ),
     pp_hexnum_guts(RNum).
 pp_parser(char(C)) --> !,
-        pp_parser(num(C)).
-        %"'", pp_char_guts(C), "'", !.
+        pp_parser(num(C)), ".chr". % Ruby is encoding-aware; this is a
+                                   % more reasonable implementation
 
 pp_parser(ref(Name)) -->
     {atom_codes(Name,CName)},

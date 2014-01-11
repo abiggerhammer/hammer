@@ -48,5 +48,5 @@ $r = parser.parse 'abcdefgh'
 
 
 h = Hammer::Parser
-parser = h.many(h.attr_bool(h.uint8) { |r| r.ast.data <= 100 })
+parser = h.many(h.attr_bool(h.uint8) { |r| r.data <= 100 })
 #p parser.parse('abcdefgh').ast.data.map(&:data)

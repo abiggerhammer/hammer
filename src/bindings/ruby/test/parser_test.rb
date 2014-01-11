@@ -92,3 +92,23 @@ class ParserTest < Minitest::Test
     test_token_encoding('EUC-JP')
   end
 end
+
+class AttrBoolTest < Minitest::Test
+  def setup
+    h = Hammer::Parser
+    @parser = h.attr_bool(h.many1(h.choice(h.ch('a'), h.ch('b')))) {|x|
+                data = x.unmarshal
+                data.length > 1 && data[0] == data[1]
+              }
+  end
+
+  def test_1
+    assert_parse_ok @parser, "aa", ['a','a']
+  end
+  def test_2
+    assert_parse_ok @parser, "bb", ['b','b']
+  end
+  def test_3
+    refute_parse_ok @parser, "ab"
+  end
+end
