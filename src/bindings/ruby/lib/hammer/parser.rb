@@ -1,5 +1,9 @@
+require 'hammer/internal'
+
 module Hammer
   class Parser
+
+    @@saved_objects = Hammer::Internal::DynamicVariable.new nil, "Hammer parse-time pins"
 
     # Don't create new instances with Hammer::Parser.new,
     # use the constructor methods instead (i.e. Hammer::Parser.int64 etc.)
@@ -26,17 +30,20 @@ module Hammer
       raise ArgumentError, 'expecting a String' unless data.is_a? String # TODO: Not needed, FFI checks that.
 
       ibuf = FFI::MemoryPointer.from_string(data)
-      result = Hammer::Internal.h_parse(@h_parser, ibuf, data.bytesize) # Don't include the trailing null
-      if result.null?
-        return nil
-      else
-        # NOTE:
-        # The parse result *must* hold a reference to the parser that created it!
-        # Otherwise, the parser might get garbage-collected while the result is still valid.
-        # Any pointers to token strings will then be invalid.
-        result.instance_variable_set :@parser, self
-        return result
-      end
+      @@saved_objects.with([]) do
+          result = Hammer::Internal.h_parse(@h_parser, ibuf, data.bytesize) # Don't include the trailing null
+          if result.null?
+            return nil
+          else
+            # NOTE:
+            # The parse result *must* hold a reference to the parser that created it!
+            # Otherwise, the parser might get garbage-collected while the result is still valid.
+            # Any pointers to token strings will then be invalid.
+            result.instance_variable_set :@parser, self
+            result.instance_variable_set :@pins, @@saved_objects.value
+            return result
+          end
+        end
     end
 
     # Binds an indirect parser.
@@ -71,7 +78,7 @@ module Hammer
       buffer = FFI::MemoryPointer.from_string(string)
       h_parser = Hammer::Internal.h_token(buffer, buffer.size-1) # buffer.size includes the null byte at the end
 
-      return Hammer::Parser.new(:token, h_parser, buffer)
+      return Hammer::Parser.new(:token, h_parser, [buffer, string])
     end
 
     def self.marshal_ch_arg(num)
@@ -100,7 +107,7 @@ module Hammer
 
     def self.int_range(parser, i1, i2)
       h_parser = Hammer::Internal.h_int_range(parser.h_parser, i1, i2)
-      return Hammer::Parser.new(:int_range, h_parser, nil)
+      return Hammer::Parser.new(:int_range, h_parser, [parser])
     end
 
     def self.in(charset)

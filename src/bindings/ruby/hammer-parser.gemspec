@@ -11,7 +11,15 @@ Gem::Specification.new do |s|
 
   files = []
   files << 'README.md'
-  files << Dir['{lib,test}/**/*.rb']
+  files << [
+    "lib/hammer/internal.rb",
+    "lib/hammer/parser.rb",
+    "lib/hammer/parser_builder.rb",
+    "lib/hammer.rb",
+    "lib/minitest/hamer-parser_plugin.rb",
+    "test/autogen_test.rb",
+    "test/parser_test.rb"
+  ]
   s.files = files
   s.test_files = s.files.select { |path| path =~ /^test\/.*_test.rb/ }
 

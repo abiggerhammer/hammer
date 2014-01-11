@@ -6,22 +6,123 @@ module Hammer
 
     ffi_lib 'hammer'
 
+    class DynamicVariable
+      SYMBOL_PREFIX = "Hammer::Internal::DynamicVariable gensym "
+      @@current_symbol = 0
+
+      def initialize(default=nil, name=nil, &block)
+        # This can take either a default value or a block.  If a
+        # default value is given, all threads' dynvars are initialized
+        # to that object.  If a block is given, the block is lazilly
+        # called on each thread to generate the initial value.  If
+        # both a block and a default value are passed, the block is
+        # called with the literal value.
+        @default = default
+        @block = block || Proc.new{|x| x}
+        @@current_symbol += 1
+        @sym = (SYMBOL_PREFIX + @@current_symbol.to_s).to_sym
+      end
+
+      def value
+        if Thread.current.key? @sym
+          return Thread.current[@sym]
+        else
+          return Thread.current[@sym] = @block.call(@default)
+        end
+      end
+
+      def value=(new_value)
+        Thread.current[@sym] = new_value
+      end
+
+      def with(new_value, &block)
+        old_value = value
+        begin
+          self.value = new_value
+          return block.call
+        ensure
+          self.value = old_value
+        end
+      end
+    end
+
     # Maybe we can implement Hammer::Parser with FFI::DataConverter.
     # That way, most hammer functions won't need to be wrapped.
     # (Probably need to wrap token, sequence and choice only).
     # See http://www.elabs.se/blog/61-advanced-topics-in-ruby-ffi
     typedef :pointer, :h_parser
 
-    HTokenType = enum(:none, 1,
-                      :bytes, 2,
-                      :sint, 4,
-                      :uint, 8,
-                      :sequence, 16,
-                      :reserved_1,
-                      :err, 32,
-                      :user, 64,
-                      :max)
+    class HTokenType
+      extend FFI::DataConverter
 
+      @@known_type_map = {
+        :none => 1,
+        :bytes => 2,
+        :sint => 4,
+        :uint => 8,
+        :sequence => 16,
+      }
+
+      @@inverse_type_map = @@known_type_map.invert
+
+      def self.new(name)
+        if name.is_a?(Symbol)
+          name_sym = name
+          name_str = name.to_s
+        else
+          name_str = name.to_s
+          name_sym = name.to_sym
+        end
+        num = h_allocate_token_type(name_str)
+        @@known_type_map[name_sym] = num
+        @@inverse_type_map[num] = name
+      end
+
+      def self.from_name(name)
+        unless @@known_type_map.key? name
+          num =  h_get_token_type_number(name.to_s)
+          if num <= 0
+            raise ArgumentError, "Unknown token type #{name}"
+          end
+          @@known_type_map[name] = num
+          @@inverse_type_map[num] = name
+        end
+        return @@known_type_map[name]
+      end
+
+      def self.from_num(num)
+        unless @@inverse_type_map.key? num
+          name = h_get_token_type_name(num)
+          if name.nil?
+            return nil
+          end
+          name = name.to_sym
+          @@known_type_map[name] = num
+          @@inverse_type_map_type_map[num] = name
+        end
+        return @@inverse_type_map[num]
+      end
+
+      def self.native_type
+        FFI::Type::INT
+      end
+
+      def self.to_native(val, ctx)
+        return val if val.is_a?(Integer)
+        return from_name(val)
+      end
+
+      def self.from_native(val, ctx)
+        return from_num(val) || val
+      end
+    end
+
+    # Define these as soon as possible, so that they can be used
+    # without fear elsewhere
+    attach_function :h_allocate_token_type, [:string], HTokenType
+    attach_function :h_get_token_type_number, [:string], HTokenType
+    attach_function :h_get_token_type_name, [HTokenType], :string
+    
     class HCountedArray < FFI::Struct
       layout  :capacity, :size_t,
               :used, :size_t,
@@ -213,5 +314,7 @@ module Hammer
     attach_function :h_parse_result_free, [HParseResult.by_ref], :void
 
     # TODO: Does the HParser* need to be freed?
+
+    # Token type registry
   end
 end
