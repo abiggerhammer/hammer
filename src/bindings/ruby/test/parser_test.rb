@@ -112,3 +112,21 @@ class AttrBoolTest < Minitest::Test
     refute_parse_ok @parser, "ab"
   end
 end
+
+class ActionTest < Minitest::Test
+  def setup
+    h = Hammer::Parser
+    @parser = h.action(h.sequence(h.choice(h.ch('a'), h.ch('A')),
+                                  h.choice(h.ch('b'), h.ch('B')))) {|x|
+                x.unmarshal.join(",")}
+  end
+  def test_1
+    assert_parse_ok @parser, "ab", "a,b"
+  end
+  def test_2
+    assert_parse_ok @parser, "AB", "A,B"
+  end
+  def test_3
+    refute_parse_ok @parser, "XX"
+  end
+end
