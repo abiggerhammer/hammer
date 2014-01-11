@@ -58,8 +58,22 @@ module Hammer
       action = block if action.nil?
       raise ArgumentError, 'no action' if action.nil?
 
-      h_parser = Hammer::Internal.h_action(parser.h_parser, action)
-      return Hammer::Parser.new(:action, h_parser, [parser, action])
+      real_action = Proc.new {|hpr|
+                          ret = action.call(hpr.ast)
+                          # Pin the result
+                          @@saved_objects.value << ret
+                          hpt = hpr.arena_alloc(Hammer::Internal::HParsedToken)
+                          unless hpr.ast.nil?
+                            hpt[:index] = hpr[:ast][:index]
+                            hpt[:bit_offset] = hpr[:ast][:bit_offset]
+                          end
+                          hpt[:token_type] = :"com.upstandinghackers.hammer.ruby.object"
+                          hpt[:data][:uint] = ret.object_id
+                          hpt
+                        }
+
+      h_parser = Hammer::Internal.h_action(parser.h_parser, real_action)
+      return Hammer::Parser.new(:action, h_parser, [parser, action, real_action])
     end
 
     # Can pass the predicate either as a Proc in second parameter, or as block.
@@ -77,8 +91,22 @@ module Hammer
       # * We need a constant memory address (Ruby string might be moved around by the Ruby VM)
       buffer = FFI::MemoryPointer.from_string(string)
       h_parser = Hammer::Internal.h_token(buffer, buffer.size-1) # buffer.size includes the null byte at the end
+      encoding = string.encoding
 
-      return Hammer::Parser.new(:token, h_parser, [buffer, string])
+      wrapping_action = Proc.new {|hpr|
+                              hstr = hpr.arena_alloc(Hammer::Internal::HString)
+                              hstr[:content] = hpr[:ast][:data][:bytes]
+                              hstr[:encoding] = encoding.object_id
+
+                              hpt = hpr.arena_alloc(Hammer::Internal::HParsedToken)
+                              hpt[:token_type] = :"com.upstandinghackers.hammer.ruby.encodedStr"
+                              hpt[:data][:user] = hstr.to_ptr
+                              hpt[:bit_offset] = hpr[:ast][:bit_offset]
+                              hpt[:index] = hpr[:ast][:index]
+                              hpt
+                            }
+      wrapped_parser = Hammer::Internal.h_action(h_parser, wrapping_action)
+      return Hammer::Parser.new(:token, wrapped_parser, [buffer, string, encoding, wrapping_action, h_parser])
     end
 
     def self.marshal_ch_arg(num)

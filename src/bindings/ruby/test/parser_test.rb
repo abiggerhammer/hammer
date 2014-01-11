@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require 'bundler/setup'
 require 'hammer'
 require 'minitest/autorun'
@@ -84,7 +85,7 @@ class ParserTest < Minitest::Test
   def test_token_encoding(encoding='UTF-8')
     string = '今日'.encode(encoding)
     parser = Hammer::Parser.token(string)
-    assert_equal string, parser.parse(string)[:ast][:data][:bytes].token
+    assert_equal string, parser.parse(string).ast.unmarshal
   end
 
   def test_token_encoding_2

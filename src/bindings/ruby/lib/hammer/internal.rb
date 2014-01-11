@@ -65,7 +65,15 @@ module Hammer
 
       @@inverse_type_map = @@known_type_map.invert
 
-      def self.new(name)
+      @@from_hpt = {
+        :none => Proc.new { nil },
+        :bytes => Proc.new {|hpt| hpt[:data][:bytes].token},
+        :sint => Proc.new {|hpt| hpt[:data][:sint]},
+        :uint => Proc.new {|hpt| hpt[:data][:uint]},
+        :sequence => Proc.new {|hpt| hpt[:data][:seq].map {|x| x.unmarshal}},
+      }
+
+      def self.new(name, &block)
         if name.is_a?(Symbol)
           name_sym = name
           name_str = name.to_s
@@ -73,14 +81,15 @@ module Hammer
           name_str = name.to_s
           name_sym = name.to_sym
         end
-        num = h_allocate_token_type(name_str)
+        num = Hammer::Internal.h_allocate_token_type(name_str)
         @@known_type_map[name_sym] = num
-        @@inverse_type_map[num] = name
+        @@inverse_type_map[num] = name_sym
+        @@from_hpt[name_sym] = block
       end
 
       def self.from_name(name)
         unless @@known_type_map.key? name
-          num =  h_get_token_type_number(name.to_s)
+          num =  Hammer::Internal.h_get_token_type_number(name.to_s)
           if num <= 0
             raise ArgumentError, "Unknown token type #{name}"
           end
@@ -92,13 +101,13 @@ module Hammer
 
       def self.from_num(num)
         unless @@inverse_type_map.key? num
-          name = h_get_token_type_name(num)
+          name = Hammer::Internal.h_get_token_type_name(num)
           if name.nil?
             return nil
           end
           name = name.to_sym
           @@known_type_map[name] = num
-          @@inverse_type_map_type_map[num] = name
+          @@inverse_type_map[num] = name
         end
         return @@inverse_type_map[num]
       end
@@ -119,10 +128,10 @@ module Hammer
 
     # Define these as soon as possible, so that they can be used
     # without fear elsewhere
-    attach_function :h_allocate_token_type, [:string], HTokenType
-    attach_function :h_get_token_type_number, [:string], HTokenType
-    attach_function :h_get_token_type_name, [HTokenType], :string
-    
+    attach_function :h_allocate_token_type, [:string], :int
+    attach_function :h_get_token_type_number, [:string], :int
+    attach_function :h_get_token_type_name, [:int], :string
+
     class HCountedArray < FFI::Struct
       layout  :capacity, :size_t,
               :used, :size_t,
@@ -161,7 +170,7 @@ module Hammer
         # Should be the same encoding as the string the token was created with.
         # But how do we get to this knowledge at this point?
         # Cheap solution: Just ask the user (additional parameter with default value of UTF-8).
-        self[:token].read_string(self[:len]).force_encoding('UTF-8')
+        self[:token].read_string(self[:len])
       end
 
       # TODO: Probably should rename this to match ruby conventions: length, count, size
@@ -169,6 +178,22 @@ module Hammer
         self[:len]
       end
     end
+
+    class HString < FFI::Struct
+      layout :content, HBytes.by_ref,
+             :encoding, :uint64
+      def token
+        return self[:content].token.force_encoding(
+                  ObjectSpace._id2ref(self[:encoding]))
+      end
+    end
+
+    HTokenType.new(:"com.upstandinghackers.hammer.ruby.encodedStr") {|hpt|
+        hpt.user(HString).token
+      }
+    HTokenType.new(:"com.upstandinghackers.hammer.ruby.object") {|hpt|
+        ObjectSpace._id2ref(hpt[:data][:uint])
+      }
 
     class HParsedTokenDataUnion < FFI::Union
       layout  :bytes, HBytes.by_value,
@@ -223,22 +248,13 @@ module Hammer
         self[:bit_offset]
       end
 
-      def unmarshal
-        case token_type
-        when :sequence
-          self[:data][:seq].map {|x| x.unmarshal}
-        when :bytes
-          self[:data][:bytes].token
-        when :uint
-          self[:data][:uint]
-        when :sint
-          self[:data][:sint]
-        when :none
-          nil
-        end
+      def user(struct)
+        struct.by_ref.from_native(self[:data][:user], nil)
       end
-      
 
+      def unmarshal
+        Hammer::Internal::HTokenType.class_variable_get(:@@from_hpt)[token_type].call self
+      end
     end
 
     class HParseResult < FFI::Struct
@@ -257,6 +273,15 @@ module Hammer
       def self.release(ptr)
         Hammer::Internal.h_parse_result_free(ptr) unless ptr.null?
       end
+
+      def arena_alloc(type)
+        Hammer::Internal.arena_alloc(self[:arena], type)
+      end
+    end
+
+    def self.arena_alloc(arena, type)
+      ptr = h_arena_malloc(arena, type.size)
+      return type.by_ref.from_native(ptr, nil)
     end
 
     # run a parser
@@ -315,6 +340,7 @@ module Hammer
 
     # TODO: Does the HParser* need to be freed?
 
-    # Token type registry
+    # Add the arena
+    attach_function :h_arena_malloc, [:pointer, :size_t], :pointer
   end
 end

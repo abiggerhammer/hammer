@@ -27,8 +27,7 @@ parser =
   h.many(
     h.action(h.uint8) { |r|
       #p "TT=#{r[:ast][:token_type]}, value=#{r[:ast][:data][:uint]}"
-      r[:ast][:data][:uint] *= 2
-      r[:ast] if r[:ast][:data][:uint] % 3 == 0
+      r.data * 2
     })
 
 #parser = Hammer::Parser.build {
