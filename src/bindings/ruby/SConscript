@@ -9,11 +9,15 @@ rubysources = [
     "hammer-parser.gemspec",
     "Rakefile",
     "Gemfile",
-    "Gemfile.lock",
     "README.md",
 ]
 
 rubyenv = env.Clone()
+
+for k,v in os.environ.items():
+     if "RUBY" in k or "GEM" in k or "rvm" in k:
+         rubyenv['ENV'][k] = v
+
 rubyenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
 rubyenv['RBDIR'] = os.path.dirname(str(rubyenv.File("Gemfile").path))
 

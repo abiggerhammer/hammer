@@ -113,8 +113,8 @@ module Hammer
 
     def self.marshal_ch_arg(num)
       if num.is_a?(String)
-        raise ArgumentError, "Expecting either a fixnum in 0..255 or a single-byte String" unless num.bytes.length == 1
-        num = num.bytes[0]
+        raise ArgumentError, "Expecting either a fixnum in 0..255 or a single-byte String" unless num.bytesize == 1
+        num = num.bytes.first
       end
       raise ArgumentError, 'Expecting a Fixnum in 0..255 or a single-byte String' unless num.is_a?(Fixnum) and num.between?(0, 255)
       return num
