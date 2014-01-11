@@ -14,9 +14,9 @@ Ruby bindings for [hammer](https://github.com/UpstandingHackers/hammer), a parsi
 
 2. Run `bundle install` to install dependencies.
 
-3. Run `irb -I ./lib -r hammer` to open `irb` with hammer loaded.
+3. Run `bundle console` to open `irb` with hammer loaded.
 
-4. To run tests, just run `rake`.
+4. To run tests, just run `bundle exec rake test`.
 
 
 ## Installation
@@ -60,11 +60,17 @@ parser = h.sequence(h.token('Hello '), h.choice(h.token('Mom'), h.token('Dad')),
 ### Parsing
 
 ```ruby
-parser.parse 'Hello Mom!'
-=> true
-parser.parse 'Hello Someone!'
-=> false
+result = parser.parse 'Hello Mom!'
+=> #<HParseResult>
+result = parser.parse 'Hello Someone!'
+=> nil
 ```
 
-Currently you only get `true` or `false` depending on whether the parse succeeded or failed.
-There's no way to access the parsed data yet.
+The `parse` method returns an `HParseResult` object, which needs to be
+kept around until you're entirely done with the parse tree, which can
+be accessed with `result.ast`.
+
+While the AST can be accessed using the same interface as the C
+HParsedToken type, we recommend using `result.ast.unmarshal` instead.
+This converts the entire parse tree into a standalone Ruby-native
+datastructure which will likely be much easier to work with.
