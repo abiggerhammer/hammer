@@ -17,7 +17,7 @@ Features
   * LALR
   * Regular expressions 
 * Language bindings: 
-  * C++ (not yet implemented)
+  * C++
   * Java (not currently building; give us a few days)
   * Python
   * Ruby

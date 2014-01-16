@@ -47,8 +47,13 @@
 #define h_new(type, count) ((type*)(mm__->alloc(mm__, sizeof(type)*(count))))
 #define h_free(addr) (mm__->free(mm__, (addr)))
 
+#ifndef __cplusplus
 #define false 0
 #define true 1
+#endif
+#ifdef __cplusplus 
+extern "C" {
+#endif
 
 // This is going to be generally useful.
 static inline void h_generic_free(HAllocator *allocator, void* ptr) {
@@ -388,5 +393,7 @@ bool h_not_regular(HRVMProg*, void*);
 #include <stdlib.h>
 #define h_arena_malloc(a, s) malloc(s)
 #endif
-
+#ifdef __cplusplus
+} // extern "C"
+#endif
 #endif // #ifndef HAMMER_INTERNAL__H

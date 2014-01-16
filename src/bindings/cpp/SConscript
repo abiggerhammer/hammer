@@ -1,0 +1,22 @@
+# -*- python -*-
+import os.path
+Import("env libhammer_shared testruns targets")
+
+cppenv = env.Clone()
+cppenv.Append(CPPPATH=[".", "vendor/gtest-1.7.0/fused-src", "../.."],
+              LIBS=["hammer"],
+              LIBPATH=["../../"])
+cppenv.MergeFlags("-Wno-missing-field-initializers -DGTEST_HAS_PTHREAD=0")
+
+
+gtest = cppenv.Object("vendor/gtest-1.7.0/fused-src/gtest/gtest-all.cc")
+
+
+hammer_test = cppenv.Program("hammer_test", libhammer_shared + gtest + ['cpp_tests.cpp'])
+cpptest = Alias('testcpp', [hammer_test], "".join(["env LD_LIBRARY_PATH=", os.path.dirname(str(libhammer_shared[0])), " ", hammer_test[0].path]))
+AlwaysBuild(cpptest)
+testruns.append(cpptest)
+
+cppinstallexec = cppenv.Install("$incpath", ['hammer/hammer.hpp', 'hammer/hammer_test.hpp'])
+cppinstall = Alias("installcpp", [cppinstallexec], cppinstallexec)
+targets.append(cppinstall)
