@@ -1,0 +1,33 @@
+# -*- python -*-
+import os.path
+Import("env libhammer_shared testruns targets")
+
+rubysources = [
+    Glob("test/*.rb"),
+    Glob("lib/hammer.rb"),
+    Glob("lib/*/*.rb"),
+    "hammer-parser.gemspec",
+    "Rakefile",
+    "Gemfile",
+    "README.md",
+]
+
+rubyenv = env.Clone()
+
+for k,v in os.environ.items():
+     if "RUBY" in k or "GEM" in k or "rvm" in k:
+         rubyenv['ENV'][k] = v
+
+rubyenv['ENV']['LD_LIBRARY_PATH'] = os.path.dirname(str(libhammer_shared[0]))
+rubyenv['RBDIR'] = os.path.dirname(str(rubyenv.File("Gemfile").path))
+
+setup = rubyenv.Command(Dir(".bundle"), rubysources, "cd $RBDIR && bundle install")
+AlwaysBuild(setup)
+
+rubytestexec = rubyenv.Command(None, [setup] + rubysources, "cd $RBDIR && bundle exec rake test")
+
+rubytest = Alias("testruby", [rubytestexec], rubytestexec)
+AlwaysBuild(rubytestexec)
+testruns.append(rubytest)
+
+# No need for an install target; everybody just uses gems for that.
