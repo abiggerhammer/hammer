@@ -1,7 +1,7 @@
 #ifndef HAMMER_HAMMER__HPP
 #define HAMMER_HAMMER__HPP
 
-#include <hammer/hammer.h>
+#include "../../../hammer.h"
 #include <string>
 #include <stdint.h>
 #include <cstdarg>

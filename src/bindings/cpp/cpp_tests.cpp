@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <hammer/hammer.hpp>
-#include <hammer/internal.h>
+#include "../../internal.h"
 #include <hammer/hammer_test.hpp>
 
 #define a_new_(arena, typ, count) ((typ*)h_arena_malloc((arena), sizeof(typ)*(count)))
