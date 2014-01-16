@@ -19,6 +19,10 @@
 #define HAMMER_ALLOCATOR__H__
 #include <sys/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // TODO(thequux): Turn this into an "HAllocatorVtable", and add a wrapper that also takes an environment pointer.
 typedef struct HAllocator_ {
   void* (*alloc)(struct HAllocator_* allocator, size_t size);
@@ -44,5 +48,8 @@ typedef struct {
 
 void h_allocator_stats(HArena *arena, HArenaStats *stats);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // #ifndef LIB_ALLOCATOR__H__

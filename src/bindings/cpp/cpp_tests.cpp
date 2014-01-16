@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 #include <hammer/hammer.hpp>
+#include <hammer/internal.h>
 #include <hammer/hammer_test.hpp>
+
+#define a_new_(arena, typ, count) ((typ*)h_arena_malloc((arena), sizeof(typ)*(count)))
 
 namespace {
   using namespace ::hammer;
@@ -24,23 +27,23 @@ namespace {
 
   TEST(ParserTypes, Int64) {
     Parser p = Int64();
-    EXPECT_TRUE(ParsesTo(p, "\xff\xff\xff\xfe\x00\x00\x00\x00", "s-0x200000000"));
-    EXPECT_TRUE(ParseFails(p, "\xff\xff\xff\xfe\x00\x00\x00"));
+    EXPECT_TRUE(ParsesTo(p, std::string("\xff\xff\xff\xfe\x00\x00\x00\x00", 8), "s-0x200000000"));
+    EXPECT_TRUE(ParseFails(p, std::string("\xff\xff\xff\xfe\x00\x00\x00", 7)));
   }
 
   TEST(ParserTypes, Int32) {
     Parser p = Int32();
-    EXPECT_TRUE(ParsesTo(p, "\xff\xfe\x00\x00", "s-0x20000"));
-    EXPECT_TRUE(ParseFails(p, "\xff\xfe\x00"));
-    EXPECT_TRUE(ParsesTo(p, "\x00\x02\x00\x00","s0x20000"));
-    EXPECT_TRUE(ParseFails(p, "\x00\x02\x00"));
+    EXPECT_TRUE(ParsesTo(p, std::string("\xff\xfe\x00\x00", 4), "s-0x20000"));
+    EXPECT_TRUE(ParseFails(p, std::string("\xff\xfe\x00", 3)));
+    EXPECT_TRUE(ParsesTo(p, std::string("\x00\x02\x00\x00",4) ,"s0x20000"));
+    EXPECT_TRUE(ParseFails(p, std::string("\x00\x02\x00", 3)));
   }
 
   TEST(ParserTypes, Int16) {
     Parser p = Int16();
-    EXPECT_TRUE(ParsesTo(p, "\xfe\x00", "s-0x200"));
+    EXPECT_TRUE(ParsesTo(p, std::string("\xfe\x00", 2), "s-0x200"));
     EXPECT_TRUE(ParseFails(p, "\xfe"));
-    EXPECT_TRUE(ParsesTo(p, "\x02\x00", "s0x200"));
+    EXPECT_TRUE(ParsesTo(p, std::string("\x02\x00", 2), "s0x200"));
     EXPECT_TRUE(ParseFails(p, "\x01"));
   }
 
@@ -52,19 +55,19 @@ namespace {
 
   TEST(ParserTypes, Uint64) {
     Parser p = Uint64();
-    EXPECT_TRUE(ParsesTo(p, "\x00\x00\x00\x02\x00\x00\x00\x00", "u0x200000000"));
-    EXPECT_TRUE(ParseFails(p, "\x00\x00\x00\x02\x00\x00\x00"));
+    EXPECT_TRUE(ParsesTo(p, std::string("\x00\x00\x00\x02\x00\x00\x00\x00", 8), "u0x200000000"));
+    EXPECT_TRUE(ParseFails(p, std::string("\x00\x00\x00\x02\x00\x00\x00", 7)));
   }
 
   TEST(ParserTypes, Uint32) {
     Parser p = Uint32();
-    EXPECT_TRUE(ParsesTo(p, "\x00\x02\x00\x00", "u0x20000"));
-    EXPECT_TRUE(ParseFails(p, "\x00\x02\x00"));
+    EXPECT_TRUE(ParsesTo(p, std::string("\x00\x02\x00\x00", 4), "u0x20000"));
+    EXPECT_TRUE(ParseFails(p, std::string("\x00\x02\x00", 3)));
   }
 
   TEST(ParserTypes, Uint16) {
     Parser p = Uint16();
-    EXPECT_TRUE(ParsesTo(p, "\x02\x00", "u0x200"));
+    EXPECT_TRUE(ParsesTo(p, std::string("\x02\x00", 2), "u0x200"));
     EXPECT_TRUE(ParseFails(p, "\x02"));
   }
 
@@ -82,7 +85,7 @@ namespace {
 
   TEST(ParserTypes, Whitespace) {
     Parser p = Whitespace(Ch('a'));
-    Parser q = Whitespace(EndP());
+    Parser q = Whitespace(End());
     EXPECT_TRUE(ParsesTo(p, "a", "u0x61"));
     EXPECT_TRUE(ParsesTo(p, " a", "u0x61"));
     EXPECT_TRUE(ParsesTo(p, "  a", "u0x61"));
@@ -121,13 +124,45 @@ namespace {
     EXPECT_TRUE(ParseFails(p, " ab"));
   }
 
-  // TODO action function
+#include <ctype.h>
 
+  HParsedToken* upcase(const HParseResult *p, void* user_data) {
+    switch(p->ast->token_type) {
+    case TT_SEQUENCE:
+      {
+	HParsedToken *ret = a_new_(p->arena, HParsedToken, 1);
+	HCountedArray *seq = h_carray_new_sized(p->arena, p->ast->seq->used);
+	ret->token_type = TT_SEQUENCE;
+	for (size_t i=0; i<p->ast->seq->used; ++i) {
+	  if (TT_UINT == ((HParsedToken*)p->ast->seq->elements[i])->token_type) {
+	    HParsedToken *tmp = a_new_(p->arena, HParsedToken, 1);
+	    tmp->token_type = TT_UINT;
+	    tmp->uint = toupper(((HParsedToken*)p->ast->seq->elements[i])->uint);
+	    h_carray_append(seq, tmp);
+	  } else {
+	    h_carray_append(seq, p->ast->seq->elements[i]);
+	  }
+	}
+	ret->seq = seq;
+	return ret;
+      }
+    case TT_UINT:
+      {
+	HParsedToken *ret = a_new_(p->arena, HParsedToken, 1);
+	ret->token_type = TT_UINT;
+	ret->uint = toupper(p->ast->uint);
+	return ret;
+      }
+    default:
+      return (HParsedToken*)p->ast;
+    }
+  }
+  
   TEST(ParserTypes, Action) {
     Parser p = Action(Sequence(Choice(Ch('a'), Ch('A'), NULL),
 			       Choice(Ch('b'), Ch('B'), NULL),
 			       NULL),
-		      toupper); // this won't compile
+		      upcase); 
     EXPECT_TRUE(ParsesTo(p, "ab", "(u0x41 u0x42)"));
     EXPECT_TRUE(ParsesTo(p, "AB", "(u0x41 u0x42)"));
     EXPECT_TRUE(ParseFails(p, "XX"));
@@ -145,14 +180,14 @@ namespace {
     EXPECT_TRUE(ParseFails(p, "a"));
   }
 
-  TEST(ParserTypes, EndP) {
-    Parser p = Sequence(Ch('a'), EndP(), NULL);
+  TEST(ParserTypes, End) {
+    Parser p = Sequence(Ch('a'), End(), NULL);
     EXPECT_TRUE(ParsesTo(p, "a", "(u0x61)"));
     EXPECT_TRUE(ParseFails(p, "aa"));
   }
 
-  TEST(ParserTypes, NothingP) {
-    Parser p = NothingP();
+  TEST(ParserTypes, Nothing) {
+    Parser p = Nothing();
     EXPECT_TRUE(ParseFails(p, "a"));
   }
 
@@ -207,7 +242,7 @@ namespace {
 
   TEST(ParserTypes, Many1) {
     Parser p = Many1(Choice(Ch('a'), Ch('b'), NULL));
-    EXPECT_TRUE(ParseFails(p, "", "()"));
+    EXPECT_TRUE(ParseFails(p, ""));
     EXPECT_TRUE(ParsesTo(p, "a", "(u0x61)"));
     EXPECT_TRUE(ParsesTo(p, "b", "(u0x62)"));
     EXPECT_TRUE(ParsesTo(p, "aabbaba", "(u0x61 u0x61 u0x62 u0x62 u0x61 u0x62 u0x61)"));
@@ -232,7 +267,7 @@ namespace {
   }
 
   TEST(ParserTypes, Ignore) {
-    Parser p = Sequence(Ch('a'), Ignore(Ch('b'), Ch('c'), NULL));
+    Parser p = Sequence(Ch('a'), Ignore(Ch('b')), Ch('c'), NULL);
     EXPECT_TRUE(ParsesTo(p, "abc", "(u0x61 u0x63)"));
     EXPECT_TRUE(ParseFails(p, "ac"));
   }
@@ -256,15 +291,23 @@ namespace {
   }
 
   TEST(ParserTypes, EpsilonP) {
-    Parser p = Sequence(Ch('a'), EpsilonP(), Ch('b'), NULL);
-    Parser q = Sequence(EpsilonP(), Ch('a'), NULL);
-    Parser r = Sequence(Ch('a'), EpsilonP(), NULL);
+    Parser p = Sequence(Ch('a'), Epsilon(), Ch('b'), NULL);
+    Parser q = Sequence(Epsilon(), Ch('a'), NULL);
+    Parser r = Sequence(Ch('a'), Epsilon(), NULL);
     EXPECT_TRUE(ParsesTo(p, "ab", "(u0x61 u0x62)"));
     EXPECT_TRUE(ParsesTo(q, "a", "(u0x61)"));
     EXPECT_TRUE(ParsesTo(r, "a", "(u0x61)"));
   }
 
-  bool validate_test_ab() { return false; }
+  bool validate_test_ab(HParseResult *p, void* user_data) {
+    if (TT_SEQUENCE != p->ast->token_type) 
+      return false;
+    if (TT_UINT != p->ast->seq->elements[0]->token_type)
+      return false;
+    if (TT_UINT != p->ast->seq->elements[1]->token_type)
+      return false;
+    return (p->ast->seq->elements[0]->uint == p->ast->seq->elements[1]->uint);
+  }
 
   TEST(ParserTypes, AttrBool) {
     Parser p = AttrBool(Many1(Choice(Ch('a'), Ch('b'), NULL)),
@@ -293,21 +336,21 @@ namespace {
 			Ch('b'), NULL);
     EXPECT_TRUE(ParsesTo(p, "a+b", "(u0x61 u0x2b u0x62)"));
     EXPECT_TRUE(ParseFails(p, "a++b"));
-    EXPECT_TRUE(ParsesTo(p, "a+b", "(u0x61 (u0x2b) u0x62)"));
-    EXPECT_TRUE(ParsesTo(p, "a++b", "(u0x61 <2b.2b> u0x62)"));
+    EXPECT_TRUE(ParsesTo(q, "a+b", "(u0x61 (u0x2b) u0x62)"));
+    EXPECT_TRUE(ParsesTo(q, "a++b", "(u0x61 <2b.2b> u0x62)"));
   }
-
+  /*
   TEST(ParserTypes, Leftrec) {
-    IndirectParser p = Indirect();
-    p.bind(Choice(Sequence(p, Ch('a'), NULL), EpsilonP(), NULL));
+    Indirect p = Indirect();
+    p.bind(Choice(Sequence(p, Ch('a'), NULL), Epsilon(), NULL));
     EXPECT_TRUE(ParsesTo(p, "a", "(u0x61)"));
     EXPECT_TRUE(ParsesTo(p, "aa", "((u0x61) u0x61)"));
     EXPECT_TRUE(ParsesTo(p, "aaa", "(((u0x61) u0x61) u0x61)"));
   }
-
+  */
   TEST(ParserTypes, Rightrec) {
-    IndirectParser p = Indirect();
-    p.bind(Choice(Sequence(Ch('a'), p, NULL), EpsilonP(), NULL));
+    Indirect p = Indirect();
+    p.bind(Choice(Sequence(Ch('a'), p, NULL), Epsilon(), NULL));
     EXPECT_TRUE(ParsesTo(p, "a", "(u0x61)"));
     EXPECT_TRUE(ParsesTo(p, "aa", "(u0x61 (u0x61))"));
     EXPECT_TRUE(ParsesTo(p, "aaa", "(u0x61 (u0x61 (u0x61)))"));
