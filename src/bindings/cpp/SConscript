@@ -2,7 +2,7 @@
 Import("env libhammer_shared")
 
 cppenv = env.Clone()
-cppenv.Append(CPPPATH=[".", "vendor/gtest-1.7.0/fused-src"])
+cppenv.Append(CPPPATH=[".", "vendor/gtest-1.7.0/fused-src", "../.."])
 cppenv.MergeFlags("-Wno-missing-field-initializers -DGTEST_HAS_PTHREAD=0")
 
 

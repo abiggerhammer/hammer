@@ -7,9 +7,8 @@
 
 #define HAMMER_DECL_UNUSED __attribute__((unused))
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused"
-
+static ::testing::AssertionResult ParseFails (hammer::Parser parser,
+					      const std::string &input) HAMMER_DECL_UNUSED;
 static ::testing::AssertionResult ParseFails (hammer::Parser parser,
 					     const std::string &input) {
   hammer::ParseResult result = parser.parse(input);
@@ -21,6 +20,8 @@ static ::testing::AssertionResult ParseFails (hammer::Parser parser,
 }
 
 static ::testing::AssertionResult ParsesOK(hammer::Parser parser,
+					   const std::string &input) HAMMER_DECL_UNUSED;
+static ::testing::AssertionResult ParsesOK(hammer::Parser parser,
 					   const std::string &input) {
   hammer::ParseResult result = parser.parse(input);
   if (!result) {
@@ -30,6 +31,9 @@ static ::testing::AssertionResult ParsesOK(hammer::Parser parser,
   }
 }
 
+static ::testing::AssertionResult ParsesTo(hammer::Parser parser,
+					   const std::string &input,
+					   const std::string &expected_result) HAMMER_DECL_UNUSED;
 static ::testing::AssertionResult ParsesTo(hammer::Parser parser,
 					   const std::string &input,
 					   const std::string &expected_result) {
@@ -46,7 +50,5 @@ static ::testing::AssertionResult ParsesTo(hammer::Parser parser,
     return ::testing::AssertionSuccess();
   }
 }
-
-#pragma GCC diagnostic pop
 
 #endif // defined(HAMMER_HAMMER_TEST__HPP)

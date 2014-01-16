@@ -4,6 +4,9 @@
 #include <hammer/hammer.h>
 #include <string>
 #include <stdint.h>
+#include <cstdarg>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused"
 
 namespace hammer {
   class ParseResult;
@@ -12,9 +15,9 @@ namespace hammer {
     const HParser *parser;
 
     Parser(const HParser* inner) : parser(inner) {}
-    Parser(const Parser &other) : parser(other.parser) {}
 
-    ParseResult parse(std::string string);
+    //static Parser nil = Parser(NULL);
+    ParseResult parse(const std::string &string);
   };
 
   class ParsedToken {
@@ -39,7 +42,7 @@ namespace hammer {
     void* getUser() const {return token->user;}
     uint64_t getUint() const {return token->uint;}
     int64_t getSint() const {return token->sint;}
-    // TODO: Sequence GetSeq() const {return Sequence(token->seq);}
+    // TODO: Sequence getSeq() const {return Sequence(token->seq);}
     std::string getBytes() const {return std::string((char*)token->bytes.token, token->bytes.len); }
     
     
@@ -78,7 +81,7 @@ namespace hammer {
     }
   };
 
-  inline ParseResult Parser::parse(std::string string) {
+  inline ParseResult Parser::parse(const std::string &string) {
     return ParseResult(h_parse(parser, (uint8_t*)string.data(), string.length()));
   }
 
@@ -96,66 +99,109 @@ namespace hammer {
     return Parser(h_ch_range(lower,upper));
   }
 
-  static inline Parser int64() { return Parser(h_int64()); }
-  static inline Parser int32() { return Parser(h_int32()); }
-  static inline Parser int16() { return Parser(h_int16()); }
-  static inline Parser int8 () { return Parser(h_int8 ()); }
+  static inline Parser Int64() { return Parser(h_int64()); }
+  static inline Parser Int32() { return Parser(h_int32()); }
+  static inline Parser Int16() { return Parser(h_int16()); }
+  static inline Parser Int8 () { return Parser(h_int8 ()); }
 
-  static inline Parser uint64() { return Parser(h_uint64()); }
-  static inline Parser uint32() { return Parser(h_uint32()); }
-  static inline Parser uint16() { return Parser(h_uint16()); }
-  static inline Parser uint8 () { return Parser(h_uint8 ()); }
+  static inline Parser Uint64() { return Parser(h_uint64()); }
+  static inline Parser Uint32() { return Parser(h_uint32()); }
+  static inline Parser Uint16() { return Parser(h_uint16()); }
+  static inline Parser Uint8 () { return Parser(h_uint8 ()); }
 
-  static inline Parser int_range(Parser p, int64_t lower, int64_t upper) {
+  static inline Parser IntRange(Parser p, int64_t lower, int64_t upper) {
     return Parser(h_int_range(p.parser, lower, upper));
   }
 
-  static inline Parser bits(size_t len, bool sign) { return Parser(h_bits(len, sign)); }
-  static inline Parser whitespace(Parser p) { return Parser(h_whitespace(p.parser)); }
-  static inline Parser left(Parser p, Parser q) { return Parser(h_left(p.parser, q.parser)); }
-  static inline Parser right(Parser p, Parser q) { return Parser(h_right(p.parser, q.parser)); }
-  static inline Parser middle(Parser p, Parser q, Parser r) {
+  static inline Parser Bits(size_t len, bool sign) { return Parser(h_bits(len, sign)); }
+  static inline Parser Whitespace(Parser p) { return Parser(h_whitespace(p.parser)); }
+  static inline Parser Left(Parser p, Parser q) { return Parser(h_left(p.parser, q.parser)); }
+  static inline Parser Right(Parser p, Parser q) { return Parser(h_right(p.parser, q.parser)); }
+  static inline Parser Middle(Parser p, Parser q, Parser r) {
     return Parser(h_middle(p.parser, q.parser, r.parser));
   }
 
-  // TODO: Define Action
-  //Parser action(Parser p, Action a);
+  // User is responsible for ensuring that function remains allocated.
+  Parser Action(Parser p, HAction action, void* user_data) {
+    return Parser(h_action(p.parser, action, user_data));
+  }
 
-  static inline Parser in(std::string charset);
-  static inline Parser in(const uint8_t *charset, size_t length);
-  static inline Parser in(std::set<uint8_t> charset);
+  Parser Action(Parser p, HAction action) {
+    return Parser(h_action(p.parser, action, NULL));
+  }
 
-  static inline Parser not_in(std::string charset);
-  static inline Parser not_in(const uint8_t *charset, size_t length);
-  static inline Parser not_in(std::set<uint8_t> charset);
+  Parser AttrBool(Parser p, HPredicate pred, void* user_data) {
+    return Parser(h_attr_bool(p.parser, pred, user_data));
+  }
 
-  static inline Parser end() { return Parser(h_end_p()); }
-  static inline Parser nothing() { return Parser(h_nothing_p()); }
+  Parser AttrBool(Parser p, HPredicate pred) {
+    return Parser(h_attr_bool(p.parser, pred, NULL));
+  }
+
+  static inline Parser In(const std::string &charset) {
+    return Parser(h_in((const uint8_t*)charset.data(), charset.length()));
+  }
+  static inline Parser In(const uint8_t *charset, size_t length) {
+    return Parser(h_in(charset, length));
+  }
+  /* TODO
+  static inline Parser In(std::set<uint8_t> charset) {
+
+  }
+  */
+
+  static inline Parser NotIn(const std::string &charset) {
+    return Parser(h_not_in((const uint8_t*)charset.data(), charset.length()));
+  }
+  static inline Parser NotIn(const uint8_t *charset, size_t length) {
+    return Parser(h_not_in(charset, length));
+  }
+  /* TODO
+  static inline Parser NotIn(std::set<uint8_t> charset) { }
+  */
+  static inline Parser End() { return Parser(h_end_p()); }
+  static inline Parser Nothing() { return Parser(h_nothing_p()); }
 
   // TODO: figure out varargs
-  //Parser sequence();
-  //
-  //Parser choice();
+  static inline Parser Sequence(Parser p, ...) {
+      va_list ap;
+      va_start(ap, p);
+      // old-skool reinterpret_cast<HParser*>(p)
+      HParser* ret = h_sequence__v(*(HParser**)(void*)&p,
+				   ap);
+      va_end(ap);
+      return Parser(ret);
+  }
 
-  static inline Parser butnot(Parser p1, Parser p2) { return Parser(h_butnot(p1.parser, p2.parser)); }
-  static inline Parser difference(Parser p1, Parser p2) { return Parser(h_difference(p1.parser, p2.parser)); }
-  static inline Parser xor_(Parser p1, Parser p2) { return Parser(h_xor(p1.parser, p2.parser)); }
-  static inline Parser many(Parser p) { return Parser(h_many(p.parser)); }
-  static inline Parser many1(Parser p) { return Parser(h_many1(p.parser)); }
-  static inline Parser repeat_n(Parser p, size_t n) { return Parser(h_repeat_n(p.parser, n)); }
-  static inline Parser optional(Parser p) { return Parser(h_optional(p.parser)); }
-  static inline Parser ignore(Parser p) { return Parser(h_ignore(p.parser)); }
-  static inline Parser sepBy(Parser p, Parser sep) { return Parser(h_sepBy(p.parser, sep.parser)); }
-  static inline Parser sepBy1(Parser p, Parser sep) { return Parser(h_sepBy1(p.parser, sep.parser)); }
-  static inline Parser epsilon() { return Parser(h_epsilon_p()); }
-  static inline Parser length_value(Parser length, Parser value) { return Parser(h_length_value(length.parser, value.parser)); }
+  static inline Parser Choice(Parser p, ...) {
+      va_list ap;
+      va_start(ap, p);
+      // old-skool reinterpret_cast<HParser*>(p)
+      HParser* ret = h_choice__v(*(HParser**)(void*)&p,
+				 ap);
+      va_end(ap);
+      return Parser(ret);
+  }
+
+  static inline Parser ButNot(Parser p1, Parser p2) { return Parser(h_butnot(p1.parser, p2.parser)); }
+  static inline Parser Difference(Parser p1, Parser p2) { return Parser(h_difference(p1.parser, p2.parser)); }
+  static inline Parser Xor(Parser p1, Parser p2) { return Parser(h_xor(p1.parser, p2.parser)); }
+  static inline Parser Many(Parser p) { return Parser(h_many(p.parser)); }
+  static inline Parser Many1(Parser p) { return Parser(h_many1(p.parser)); }
+  static inline Parser RepeatN(Parser p, size_t n) { return Parser(h_repeat_n(p.parser, n)); }
+  static inline Parser Optional(Parser p) { return Parser(h_optional(p.parser)); }
+  static inline Parser Ignore(Parser p) { return Parser(h_ignore(p.parser)); }
+  static inline Parser SepBy(Parser p, Parser sep) { return Parser(h_sepBy(p.parser, sep.parser)); }
+  static inline Parser SepBy1(Parser p, Parser sep) { return Parser(h_sepBy1(p.parser, sep.parser)); }
+  static inline Parser Epsilon() { return Parser(h_epsilon_p()); }
+  static inline Parser LengthValue(Parser length, Parser value) { return Parser(h_length_value(length.parser, value.parser)); }
 
   // Was attr_bool in the old C bindings.
   // TODO: Figure out closure
   //Parser validate(Parser p, Predicate pred);
 
-  static inline Parser and_(Parser p) { return Parser(h_and(p.parser)); }
-  static inline Parser not_(Parser p) { return Parser(h_not(p.parser)); }
+  static inline Parser And(Parser p) { return Parser(h_and(p.parser)); }
+  static inline Parser Not(Parser p) { return Parser(h_not(p.parser)); }
 
   class Indirect : public Parser {
   public:
@@ -169,4 +215,6 @@ namespace hammer {
   //  return Parser(foo);
   //}
 }
+
+#pragma GCC diagnostic pop
 #endif
