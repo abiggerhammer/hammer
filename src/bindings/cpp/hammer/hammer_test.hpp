@@ -5,19 +5,24 @@
 #include <gtest/gtest.h>
 #include <hammer/hammer.hpp>
 
-static ::testing::AssertionResult ParseFails(hammer::Parser parser,
-					     const string &input) {
-  hammer::ParseResult result = parser.Parse(input);
+#define HAMMER_DECL_UNUSED __attribute__((unused))
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused"
+
+static ::testing::AssertionResult ParseFails (hammer::Parser parser,
+					     const std::string &input) {
+  hammer::ParseResult result = parser.parse(input);
   if (result) {
-    return ::testing::AssertionFailure() << "Parse succeeded with " << result.AsUnambiguous() << "; expected failure";
+    return ::testing::AssertionFailure() << "Parse succeeded with " << result.asUnambiguous() << "; expected failure";
   } else {
     return ::testing::AssertionSuccess();
   }
 }
 
 static ::testing::AssertionResult ParsesOK(hammer::Parser parser,
-					   const string &input) {
-  hammer::ParseResult result = parser.Parse(input);
+					   const std::string &input) {
+  hammer::ParseResult result = parser.parse(input);
   if (!result) {
     return ::testing::AssertionFailure() << "Parse failed; expected success";
   } else {
@@ -26,15 +31,15 @@ static ::testing::AssertionResult ParsesOK(hammer::Parser parser,
 }
 
 static ::testing::AssertionResult ParsesTo(hammer::Parser parser,
-					   const string &input,
-					   const string &expected_result) {
-  hammer::ParseResult result = parser.Parse(input);
+					   const std::string &input,
+					   const std::string &expected_result) {
+  hammer::ParseResult result = parser.parse(input);
   if (!result) {
     return ::testing::AssertionFailure() << "Parse failed; expected success";
-  } else if (result.AsUnambiguous() != expected_result) {
+  } else if (result.asUnambiguous() != expected_result) {
     return ::testing::AssertionFailure()
       << "Parse succeeded with wrong result: got "
-      << result.AsUnambiguous()
+      << result.asUnambiguous()
       << "; expected "
       << expected_result;
   } else {
@@ -42,5 +47,6 @@ static ::testing::AssertionResult ParsesTo(hammer::Parser parser,
   }
 }
 
+#pragma GCC diagnostic pop
 
 #endif // defined(HAMMER_HAMMER_TEST__HPP)
