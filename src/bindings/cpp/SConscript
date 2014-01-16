@@ -1,0 +1,9 @@
+# -*- python -*-
+Import("env libhammer_shared")
+
+cppenv = env.Clone()
+cppenv.Append(INCPATH=["."])
+
+
+libhammerxx = env.SharedLibrary("hammer++", libhammer_shared + ["hammer.cpp"])
+
