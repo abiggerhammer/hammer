@@ -84,6 +84,12 @@ matrix:
     - compiler: clang
       language: dotnet
       env: BINDINGS=dotnet CC=clang
+    - compiler: gcc
+      language: cpp
+      env: BINDINGS=cpp
+    - compiler: gcc
+      language: cpp
+      env: BINDINGS=cpp CC=clang
 before_install:
   - sudo apt-get update -qq
   - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; fi
