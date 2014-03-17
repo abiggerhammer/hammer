@@ -17,10 +17,10 @@ Features
   * LALR
   * Regular expressions 
 * Language bindings: 
-  * C++ (not yet implemented)
+  * C++
   * Java (not currently building; give us a few days)
   * Python
-  * Ruby (not yet implemented)
+  * Ruby
   * Perl
   * [Go](https://github.com/prevoty/hammer)
   * PHP
@@ -39,6 +39,7 @@ Installing
 * python2.7-dev (for Python bindings)
 * a JDK (for Java bindings)
 * a working [phpenv](https://github.com/CHH/phpenv) configuration (for PHP bindings)
+* Ruby >= 1.9.3 and bundler, for the Ruby bindings
 * mono-devel and mono-mcs (>= 3.0.6) (for .NET bindings)
 * nunit (for testing .NET bindings)
 

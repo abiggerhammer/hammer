@@ -19,7 +19,7 @@
 token {
   parser token("95\xa2");
   test "95\xa2" --> "95\xa2";
-  test "95\xa2" --> fail;
+  test "95\xa3" --> fail;
 }
 
 ch {
@@ -87,7 +87,7 @@ uint8 {
 }
 
 int_range {
-  parser int_range(uint8(), 0x3, 0x10);
+  parser int_range(uint8(), 0x3, 0xa);
   test <05> --> u0x05;
   test <0b> --> fail;
 }
@@ -299,17 +299,17 @@ rightrec {
   test "aa" --> ['a',['a']];
   test "aaa" --> ['a',['a',['a']]];
 }
-
-ambiguous {
-  subparser $d = ch('d');
-  subparser $p = ch('+');
-  subparser $e = choice(sequence($e, $p, $e), $d);
-  # TODO: implement action/h_act_flatten
-  parser $e;
-  
-  test "d" --> 'd';
-  test "d+d" --> ['d','+','d'];
-  test "d+d+d" --> [['d','+','d'],'+','d'];
-}
+## Only for GLR
+#ambiguous {
+#  subparser $d = ch('d');
+#  subparser $p = ch('+');
+#  subparser $e = choice(sequence($e, $p, $e), $d);
+#  # TODO: implement action/h_act_flatten
+#  parser $e;
+#  
+#  test "d" --> 'd';
+#  test "d+d" --> ['d','+','d'];
+#  test "d+d+d" --> [['d','+','d'],'+','d'];
+#}
 
 
