@@ -1,6 +1,7 @@
 # -*- python -*-
 import os
 import os.path
+import platform
 import sys
 
 
@@ -20,6 +21,7 @@ if not 'bindings' in env:
 def calcInstallPath(*elements):
     path = os.path.abspath(os.path.join(*map(env.subst, elements)))
     if 'DESTDIR' in env:
+        print "Prefixing " + env['DESTDIR']
         path = os.path.join(env['DESTDIR'], os.path.relpath(path, start="/"))
     return path
 
@@ -34,6 +36,8 @@ if 'DESTDIR' in env:
 
 
 env['libpath'] = calcInstallPath("$prefix", "lib")
+if env['PLATFORM'] != 'darwin' and platform.machine()[-2:] == '64':
+    env['libpath'] += '64'
 env['incpath'] = calcInstallPath("$prefix", "include", "hammer")
 env['parsersincpath'] = calcInstallPath("$prefix", "include", "hammer", "parsers")
 env['backendsincpath'] = calcInstallPath("$prefix", "include", "hammer", "backends")
