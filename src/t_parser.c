@@ -614,6 +614,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/lalr/attr_bool", GINT_TO_POINTER(PB_LALR), test_attr_bool);
   g_test_add_data_func("/core/parser/lalr/ignore", GINT_TO_POINTER(PB_LALR), test_ignore);
   g_test_add_data_func("/core/parser/lalr/leftrec", GINT_TO_POINTER(PB_LALR), test_leftrec);
+  g_test_add_data_func("/core/parser/lalr/leftrec-ne", GINT_TO_POINTER(PB_LALR), test_leftrec_ne);
   g_test_add_data_func("/core/parser/lalr/rightrec", GINT_TO_POINTER(PB_LALR), test_rightrec);
 
   g_test_add_data_func("/core/parser/glr/token", GINT_TO_POINTER(PB_GLR), test_token);
@@ -652,6 +653,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/glr/attr_bool", GINT_TO_POINTER(PB_GLR), test_attr_bool);
   g_test_add_data_func("/core/parser/glr/ignore", GINT_TO_POINTER(PB_GLR), test_ignore);
   g_test_add_data_func("/core/parser/glr/leftrec", GINT_TO_POINTER(PB_GLR), test_leftrec);
+  g_test_add_data_func("/core/parser/glr/leftrec-ne", GINT_TO_POINTER(PB_GLR), test_leftrec_ne);
   g_test_add_data_func("/core/parser/glr/rightrec", GINT_TO_POINTER(PB_GLR), test_rightrec);
   g_test_add_data_func("/core/parser/glr/ambiguous", GINT_TO_POINTER(PB_GLR), test_ambiguous);
 }
