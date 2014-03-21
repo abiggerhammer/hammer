@@ -414,6 +414,7 @@ static void test_leftrec(gconstpointer backend) {
   HParser *lr_ = h_indirect();
   h_bind_indirect(lr_, h_choice(h_sequence(lr_, a_, NULL), h_epsilon_p(), NULL));
 
+  g_check_parse_match(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "", 0, "NULL");
   g_check_parse_match(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "(u0x61)");
   g_check_parse_match(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "aa", 2, "((u0x61) u0x61)");
   g_check_parse_match(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "aaa", 3, "(((u0x61) u0x61) u0x61)");
