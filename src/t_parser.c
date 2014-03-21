@@ -420,7 +420,7 @@ static void test_leftrec(gconstpointer backend) {
   g_check_parse_match(lr_, (HParserBackend)GPOINTER_TO_INT(backend), "aaa", 3, "(((u0x61) u0x61) u0x61)");
 }
 
-static void test_leftrec_nonempty(gconstpointer backend) {
+static void test_leftrec_ne(gconstpointer backend) {
   HParser *a_ = h_ch('a');
 
   HParser *lr_ = h_indirect();
@@ -499,7 +499,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/not", GINT_TO_POINTER(PB_PACKRAT), test_not);
   g_test_add_data_func("/core/parser/packrat/ignore", GINT_TO_POINTER(PB_PACKRAT), test_ignore);
   g_test_add_data_func("/core/parser/packrat/leftrec", GINT_TO_POINTER(PB_PACKRAT), test_leftrec);
-  g_test_add_data_func("/core/parser/packrat/leftrec_nonempty", GINT_TO_POINTER(PB_PACKRAT), test_leftrec_nonempty);
+  g_test_add_data_func("/core/parser/packrat/leftrec-ne", GINT_TO_POINTER(PB_PACKRAT), test_leftrec_ne);
   g_test_add_data_func("/core/parser/packrat/rightrec", GINT_TO_POINTER(PB_PACKRAT), test_rightrec);
 
   g_test_add_data_func("/core/parser/llk/token", GINT_TO_POINTER(PB_LLk), test_token);
