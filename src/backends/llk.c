@@ -81,11 +81,8 @@ static void *combine_entries(HHashSet *workset, void *dst, const void *src)
 
 // add the mappings of src to dst, marking conflicts and adding the conflicting
 // values to workset.
-// note: reuses parts of src to build dst!
 static void stringmap_merge(HHashSet *workset, HStringMap *dst, HStringMap *src)
 {
-  assert(src->arena == dst->arena);
-
   if(src->epsilon_branch) {
     if(dst->epsilon_branch)
       dst->epsilon_branch =
@@ -120,10 +117,13 @@ static void stringmap_merge(HHashSet *workset, HStringMap *dst, HStringMap *src)
 
       if(src_) {
         HStringMap *dst_ = h_hashtable_get(dst->char_branches, (void *)c);
-        if(dst_)
+        if(dst_) {
           stringmap_merge(workset, dst_, src_);
-        else
+        } else {
+	  if(src_->arena != dst->arena)
+	    src_ = h_stringmap_copy(dst->arena, src_);
           h_hashtable_put(dst->char_branches, (void *)c, src_);
+	}
       }
     }
   }
