@@ -40,6 +40,7 @@ typedef struct HStringMap_ {
 } HStringMap;
 
 HStringMap *h_stringmap_new(HArena *a);
+HStringMap *h_stringmap_copy(HArena *a, const HStringMap *m);
 void h_stringmap_put_end(HStringMap *m, void *v);
 void h_stringmap_put_epsilon(HStringMap *m, void *v);
 void h_stringmap_put_after(HStringMap *m, uint8_t c, HStringMap *ends);

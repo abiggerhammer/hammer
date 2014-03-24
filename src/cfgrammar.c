@@ -281,6 +281,13 @@ void h_stringmap_update(HStringMap *m, const HStringMap *n)
   h_hashtable_merge(combine_stringmap, m->char_branches, n->char_branches);
 }
 
+HStringMap *h_stringmap_copy(HArena *a, const HStringMap *m)
+{
+  HStringMap *res = h_stringmap_new(a);
+  h_stringmap_update(res, m);
+  return res;
+}
+
 /* Replace all occurances of old in m with new.
  * If old is NULL, replace all values in m with new.
  * If new is NULL, remove the respective values.
