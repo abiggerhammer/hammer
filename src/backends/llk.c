@@ -84,6 +84,8 @@ static void *combine_entries(HHashSet *workset, void *dst, const void *src)
 // note: reuses parts of src to build dst!
 static void stringmap_merge(HHashSet *workset, HStringMap *dst, HStringMap *src)
 {
+  assert(src->arena == dst->arena);
+
   if(src->epsilon_branch) {
     if(dst->epsilon_branch)
       dst->epsilon_branch =
