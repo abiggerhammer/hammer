@@ -86,7 +86,7 @@ static void stringmap_merge(HHashSet *workset, HStringMap *dst, HStringMap *src)
   if(src->epsilon_branch) {
     if(dst->epsilon_branch)
       dst->epsilon_branch =
-	combine_entries(workset, dst->epsilon_branch, src->epsilon_branch);
+        combine_entries(workset, dst->epsilon_branch, src->epsilon_branch);
     else
       dst->epsilon_branch = src->epsilon_branch;
   } else {
@@ -100,7 +100,7 @@ static void stringmap_merge(HHashSet *workset, HStringMap *dst, HStringMap *src)
   if(src->end_branch) {
     if(dst->end_branch)
       dst->end_branch =
-	combine_entries(workset, dst->end_branch, src->end_branch);
+        combine_entries(workset, dst->end_branch, src->end_branch);
     else
       dst->end_branch = src->end_branch;
   }
@@ -120,10 +120,10 @@ static void stringmap_merge(HHashSet *workset, HStringMap *dst, HStringMap *src)
         if(dst_) {
           stringmap_merge(workset, dst_, src_);
         } else {
-	  if(src_->arena != dst->arena)
-	    src_ = h_stringmap_copy(dst->arena, src_);
+          if(src_->arena != dst->arena)
+            src_ = h_stringmap_copy(dst->arena, src_);
           h_hashtable_put(dst->char_branches, (void *)c, src_);
-	}
+        }
       }
     }
   }
