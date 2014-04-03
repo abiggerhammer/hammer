@@ -1,0 +1,14 @@
+include/hammer/internal.h
+include/hammer/allocator.h
+include/hammer/parsers/parser_internal.h
+include/hammer/backends/regex.h
+include/hammer/backends/contextfree.h
+include/hammer/glue.h
+include/hammer/hammer.h
+lib/libhammer.so
+lib/libhammer.a
+lib/pkgconfig/libhammer.pc
+@dirrm include/hammer/parsers
+@dirrm include/hammer/backends
+@dirrm include/hammer
+@dirrmtry lib/pkgconfig
