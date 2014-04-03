@@ -1,0 +1,4 @@
+Hammer is a fast parser combinator library written in C with bindings
+for many languages.
+
+WWW: http://github.com/UpstandingHackers/hammer
