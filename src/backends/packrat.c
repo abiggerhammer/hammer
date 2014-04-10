@@ -3,10 +3,22 @@
 #include "../internal.h"
 #include "../parsers/parser_internal.h"
 
-// short-hand for constructing HCachedResult's
-static HCachedResult *cached_result(const HParseState *state, HParseResult *result) {
-  HCachedResult *ret = a_new(HCachedResult, 1);
-  ret->result = result;
+// short-hand for creating cache values (regular case)
+static
+HParserCacheValue * cached_result(HParseState *state, HParseResult *result) {
+  HParserCacheValue *ret = a_new(HParserCacheValue, 1);
+  ret->value_type = PC_RIGHT;
+  ret->right = result;
+  ret->input_stream = state->input_stream;
+  return ret;
+}
+
+// short-hand for caching parse results (left recursion case)
+static
+HParserCacheValue *cached_lr(HParseState *state, HLeftRec *lr) {
+  HParserCacheValue *ret = a_new(HParserCacheValue, 1);
+  ret->value_type = PC_LEFT;
+  ret->left = lr;
   ret->input_stream = state->input_stream;
   return ret;
 }
@@ -44,27 +56,28 @@ static inline HParseResult* perform_lowlevel_parse(HParseState *state, const HPa
 
 HParserCacheValue* recall(HParserCacheKey *k, HParseState *state) {
   HParserCacheValue *cached = h_hashtable_get(state->cache, k);
-  HRecursionHead *head = h_hashtable_get(state->recursion_heads, k);
+  HRecursionHead *head = h_hashtable_get(state->recursion_heads, &k->input_pos);
   if (!head) { // No heads found
     return cached;
   } else { // Some heads found
     if (!cached && head->head_parser != k->parser && !h_slist_find(head->involved_set, k->parser)) {
       // Nothing in the cache, and the key parser is not involved
-      HParseResult *tmp = a_new(HParseResult, 1);
-      tmp->ast = NULL; tmp->arena = state->arena;
-      HParserCacheValue *ret = a_new(HParserCacheValue, 1);
-      ret->value_type = PC_RIGHT; ret->right = cached_result(state, tmp);
-      return ret;
+      cached = cached_result(state, NULL);
+      cached->input_stream = k->input_pos;
     }
     if (h_slist_find(head->eval_set, k->parser)) {
       // Something is in the cache, and the key parser is in the eval set. Remove the key parser from the eval set of the head. 
       head->eval_set = h_slist_remove_all(head->eval_set, k->parser);
       HParseResult *tmp_res = perform_lowlevel_parse(state, k->parser);
-      // we know that cached has an entry here, modify it
-      if (!cached)
-	cached = a_new(HParserCacheValue, 1);
-      cached->value_type = PC_RIGHT;
-      cached->right = cached_result(state, tmp_res);
+      // update the cache
+      if (!cached) {
+	cached = cached_result(state, tmp_res);
+	h_hashtable_put(state->cache, k, cached);
+      } else {
+	cached->value_type = PC_RIGHT;
+	cached->right = tmp_res;
+	cached->input_stream = state->input_stream;
+      }
     }
     return cached;
   }
@@ -83,14 +96,23 @@ void setupLR(const HParser *p, HParseState *state, HLeftRec *rec_detect) {
     some->eval_set = NULL;
     rec_detect->head = some;
   }
-  //assert(state->lr_stack->head != NULL);
-  HSlistNode *head = state->lr_stack->head;
-  HLeftRec *lr;
-  while (head && (lr = head->elem)->rule != p) {
+
+  HSlistNode *it;
+  for(it=state->lr_stack->head; it; it=it->next) {
+    HLeftRec *lr = it->elem;
+
+    if(lr->rule == p)
+      break;
+
     lr->head = rec_detect->head;
     h_slist_push(lr->head->involved_set, (void*)lr->rule);
-    head = head->next;
   }
+}
+
+// helper: true iff pos1 is less than pos2
+static inline bool pos_lt(HInputStream pos1, HInputStream pos2) {
+  return ((pos1.index < pos2.index) ||
+	  (pos1.index == pos2.index && pos1.bit_offset < pos2.bit_offset));
 }
 
 /* If recall() returns NULL, we need to store a dummy failure in the cache and compute the
@@ -99,35 +121,37 @@ void setupLR(const HParser *p, HParseState *state, HLeftRec *rec_detect) {
 
 HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head) {
   // Store the head into the recursion_heads
-  h_hashtable_put(state->recursion_heads, k, head);
+  h_hashtable_put(state->recursion_heads, &k->input_pos, head);
   HParserCacheValue *old_cached = h_hashtable_get(state->cache, k);
   if (!old_cached || PC_LEFT == old_cached->value_type)
     errx(1, "impossible match");
-  HParseResult *old_res = old_cached->right->result;
+  HParseResult *old_res = old_cached->right;
+
+  // rewind the input
+  state->input_stream = k->input_pos;
   
   // reset the eval_set of the head of the recursion at each beginning of growth
   head->eval_set = h_slist_copy(head->involved_set);
   HParseResult *tmp_res = perform_lowlevel_parse(state, k->parser);
 
   if (tmp_res) {
-    if ((old_res->ast->index < tmp_res->ast->index) || 
-	(old_res->ast->index == tmp_res->ast->index && old_res->ast->bit_offset < tmp_res->ast->bit_offset)) {
-      HParserCacheValue *v = a_new(HParserCacheValue, 1);
-      v->value_type = PC_RIGHT; v->right = cached_result(state, tmp_res);
-      h_hashtable_put(state->cache, k, v);
+    if (pos_lt(old_cached->input_stream, state->input_stream)) {
+      h_hashtable_put(state->cache, k, cached_result(state, tmp_res));
       return grow(k, state, head);
     } else {
       // we're done with growing, we can remove data from the recursion head
-      h_hashtable_del(state->recursion_heads, k);
+      h_hashtable_del(state->recursion_heads, &k->input_pos);
       HParserCacheValue *cached = h_hashtable_get(state->cache, k);
       if (cached && PC_RIGHT == cached->value_type) {
-	return cached->right->result;
+        state->input_stream = cached->input_stream;
+	return cached->right;
       } else {
 	errx(1, "impossible match");
       }
     }
   } else {
-    h_hashtable_del(state->recursion_heads, k);
+    h_hashtable_del(state->recursion_heads, &k->input_pos);
+    state->input_stream = old_cached->input_stream;
     return old_res;
   }
 }
@@ -140,9 +164,7 @@ HParseResult* lr_answer(HParserCacheKey *k, HParseState *state, HLeftRec *growab
     }
     else {
       // update cache
-      HParserCacheValue *v = a_new(HParserCacheValue, 1);
-      v->value_type = PC_RIGHT; v->right = cached_result(state, growable->seed);
-      h_hashtable_put(state->cache, k, v);
+      h_hashtable_put(state->cache, k, cached_result(state, growable->seed));
       if (!growable->seed)
 	return NULL;
       else
@@ -165,18 +187,18 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
     base->seed = NULL; base->rule = parser; base->head = NULL;
     h_slist_push(state->lr_stack, base);
     // cache it
-    HParserCacheValue *dummy = a_new(HParserCacheValue, 1);
-    dummy->value_type = PC_LEFT; dummy->left = base;
-    h_hashtable_put(state->cache, key, dummy);
+    h_hashtable_put(state->cache, key, cached_lr(state, base));
     // parse the input
     HParseResult *tmp_res = perform_lowlevel_parse(state, parser);
     // the base variable has passed equality tests with the cache
     h_slist_pop(state->lr_stack);
+    // update the cached value to our new position
+    HParserCacheValue *cached = h_hashtable_get(state->cache, key);
+    assert(cached != NULL);
+    cached->input_stream = state->input_stream;
     // setupLR, used below, mutates the LR to have a head if appropriate, so we check to see if we have one
     if (NULL == base->head) {
-      HParserCacheValue *right = a_new(HParserCacheValue, 1);
-      right->value_type = PC_RIGHT; right->right = cached_result(state, tmp_res);
-      h_hashtable_put(state->cache, key, right);
+      h_hashtable_put(state->cache, key, cached_result(state, tmp_res));
       return tmp_res;
     } else {
       base->seed = tmp_res;
@@ -185,12 +207,12 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
     }
   } else {
     // it exists!
+    state->input_stream = m->input_stream;
     if (PC_LEFT == m->value_type) {
       setupLR(parser, state, m->left);
-      return m->left->seed; // BUG: this might not be correct
+      return m->left->seed;
     } else {
-      state->input_stream = m->right->input_stream;
-      return m->right->result;
+      return m->right;
     }
   }
 }
@@ -212,6 +234,14 @@ static bool cache_key_equal(const void* key1, const void* key2) {
   return memcmp(key1, key2, sizeof(HParserCacheKey)) == 0;
 }
 
+static uint32_t pos_hash(const void* key) {
+  return h_djbhash(key, sizeof(HInputStream));
+}
+
+static bool pos_equal(const void* key1, const void* key2) {
+  return memcmp(key1, key2, sizeof(HInputStream)) == 0;
+}
+
 HParseResult *h_packrat_parse(HAllocator* mm__, const HParser* parser, HInputStream *input_stream) {
   HArena * arena = h_new_arena(mm__, 0);
   HParseState *parse_state = a_new_(arena, HParseState, 1);
@@ -219,8 +249,7 @@ HParseResult *h_packrat_parse(HAllocator* mm__, const HParser* parser, HInputStr
 				       cache_key_hash); // hash_func
   parse_state->input_stream = *input_stream;
   parse_state->lr_stack = h_slist_new(arena);
-  parse_state->recursion_heads = h_hashtable_new(arena, cache_key_equal,
-						 cache_key_hash);
+  parse_state->recursion_heads = h_hashtable_new(arena, pos_equal, pos_hash);
   parse_state->arena = arena;
   HParseResult *res = h_do_parse(parser, parse_state);
   h_slist_free(parse_state->lr_stack);
