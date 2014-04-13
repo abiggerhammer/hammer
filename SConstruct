@@ -48,6 +48,8 @@ env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attr
 
 if env['PLATFORM'] == 'darwin':
     env.Append(SHLINKFLAGS = '-install_name ' + env["libpath"] + '/${TARGET.file}')
+elif os.uname()[0] == "OpenBSD":
+    pass
 else:
     env.MergeFlags("-lrt")
 
