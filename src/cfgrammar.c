@@ -648,7 +648,7 @@ void h_pprint_char(FILE *f, char c)
   case '\n': fputs("\\n", f); break;
   case '\r': fputs("\\r", f); break;
   default:
-    if(isprint(c)) {
+    if(isprint((int)c)) {
       fputc(c, f);
     } else {
       fprintf(f, "\\x%.2X", c);

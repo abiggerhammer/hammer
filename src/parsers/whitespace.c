@@ -10,7 +10,7 @@ static HParseResult* parse_whitespace(void* env, HParseState *state) {
     c = h_read_bits(&state->input_stream, 8, false);
     if (state->input_stream.overrun)
       break;
-  } while (isspace(c));
+  } while (isspace((int)c));
   state->input_stream = bak;
   return h_do_parse((HParser*)env, state);
 }
