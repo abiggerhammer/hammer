@@ -92,6 +92,7 @@ HParser* h_optional(const HParser* p) {
 HParser* h_optional__m(HAllocator* mm__, const HParser* p) {
   // TODO: re-add this
   //assert_message(p->vtable != &ignore_vt, "Thou shalt ignore an option, rather than the other way 'round.");
-  return h_new_parser(mm__, &optional_vt, (void *)p);
+  void* env = (void*)p;
+  return h_new_parser(mm__, &optional_vt, env);
 }
 

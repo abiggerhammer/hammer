@@ -21,5 +21,6 @@ HParser* h_not(const HParser* p) {
   return h_not__m(&system_allocator, p);
 }
 HParser* h_not__m(HAllocator* mm__, const HParser* p) {
-  return h_new_parser(mm__, &not_vt, (void *)p);
+  void* env = (void*)p;
+  return h_new_parser(mm__, &not_vt, env);
 }
