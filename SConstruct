@@ -9,9 +9,13 @@ vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packa
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
 vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['cpp', 'dotnet', 'perl', 'php', 'python', 'ruby']))
 
+tools = ['default', 'scanreplace']
+if 'dotnet' in ARGUMENTS.get('bindings', []):
+	tools.append('csharp/mono')
+
 env = Environment(ENV = {'PATH' : os.environ['PATH']},
                   variables = vars,
-                  tools=['default', 'scanreplace', 'csharp/mono'],
+                  tools=tools,
                   toolpath=['tools'])
 
 if not 'bindings' in env:
