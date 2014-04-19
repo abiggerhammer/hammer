@@ -10,9 +10,13 @@ vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packa
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
 vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['cpp', 'dotnet', 'perl', 'php', 'python', 'ruby']))
 
+tools = ['default', 'scanreplace']
+if 'dotnet' in ARGUMENTS.get('bindings', []):
+	tools.append('csharp/mono')
+
 env = Environment(ENV = {'PATH' : os.environ['PATH']},
                   variables = vars,
-                  tools=['default', 'scanreplace', 'csharp/mono'],
+                  tools=tools,
                   toolpath=['tools'])
 
 if not 'bindings' in env:
@@ -47,6 +51,8 @@ env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attr
 
 if env['PLATFORM'] == 'darwin':
     env.Append(SHLINKFLAGS = '-install_name ' + env["libpath"] + '/${TARGET.file}')
+elif os.uname()[0] == "OpenBSD":
+    pass
 else:
     env.MergeFlags("-lrt")
 
