@@ -353,7 +353,7 @@ static void h_regex_free(HParser *parser) {
 
 static int h_regex_compile(HAllocator *mm__, HParser* parser, const void* params) {
   if (!parser->vtable->isValidRegular(parser->env)) {
-    return 1;
+    return -1;
   }
   HRVMProg *prog = h_new(HRVMProg, 1);
   prog->length = prog->action_count = 0;
