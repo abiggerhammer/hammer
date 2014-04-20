@@ -39,8 +39,6 @@ if 'DESTDIR' in env:
 
 
 env['libpath'] = calcInstallPath("$prefix", "lib")
-if env['PLATFORM'] != 'darwin' and platform.machine()[-2:] == '64':
-    env['libpath'] += '64'
 env['incpath'] = calcInstallPath("$prefix", "include", "hammer")
 env['parsersincpath'] = calcInstallPath("$prefix", "include", "hammer", "parsers")
 env['backendsincpath'] = calcInstallPath("$prefix", "include", "hammer", "backends")
