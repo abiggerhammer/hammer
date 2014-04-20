@@ -150,10 +150,15 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
 
 void h_benchmark_report(FILE* stream, HBenchmarkResults* result) {
   for (size_t i=0; i<result->len; ++i) {
-    fprintf(stream, "Backend %zd ... \n", i);
+    if (result->results[i].cases == NULL) {
+      fprintf(stream, "Skipping %s because grammar did not compile for it\n", HParserBackendNames[i]);
+    } else {
+      fprintf(stream, "Backend %zd (%s) ... \n", i, HParserBackendNames[i]);
+    }
     for (size_t j=0; j<result->results[i].n_testcases; ++j) {
-      if(result->results[i].cases == NULL)
+      if (result->results[i].cases == NULL) {
         continue;
+      }
       fprintf(stream, "Case %zd: %zd ns/parse, %zd ns/byte\n", j,  result->results[i].cases[j].parse_time, result->results[i].cases[j].parse_time / result->results[i].cases[j].length);
     }
   }
