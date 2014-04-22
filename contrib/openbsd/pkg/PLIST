@@ -1,0 +1,15 @@
+@comment $OpenBSD$
+%%SHARED%%
+include/hammer/
+include/hammer/allocator.h
+include/hammer/backends/
+include/hammer/backends/contextfree.h
+include/hammer/backends/regex.h
+include/hammer/glue.h
+include/hammer/hammer.h
+include/hammer/internal.h
+include/hammer/parsers/
+include/hammer/parsers/parser_internal.h
+lib/libhammer.a
+lib/pkgconfig/
+lib/pkgconfig/libhammer.pc
