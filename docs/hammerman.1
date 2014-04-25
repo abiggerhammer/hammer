@@ -1,0 +1,55 @@
+.TH HAMMER 1 2014-04-23  Hammer
+.SH NAME
+Hammer \- a bit oriented parsing library
+.SH SYNOPSIS
+#include <hammer\/hammer.h>
+.SH DESCRIPTION
+.B Hammer
+is a parsing library. Like many modern parsing libraries, it provides a parser combinator interface for writing grammars as inline domain-specific languages, but Hammer also provides a variety of parsing backends. It's also bit-oriented rather than character-oriented, making it ideal for parsing binary data such as images, network packets, audio, and executables.
+
+Hammer is written in C, but will provide bindings for other languages. If you don't see a language you're interested in on the list, just ask.
+
+Hammer currently builds under Linux, OS X, and Windows.
+.SH NOTES
+Bit-oriented -- grammars can include single-bit flags or multi-bit constructs that span character boundaries, with no hassle
+
+Thread-safe, reentrant
+
+Benchmarking for parsing backends -- determine empirically which backend will be most time-efficient for your grammar
+
+    Parsing backends:
+        Packrat parsing
+        LL(k)
+        GLR
+        LALR
+        Regular expressions
+    Language bindings:
+        C++
+        Java (not currently building; give us a few days)
+        Python
+        Ruby
+        Perl
+        Go
+        PHP
+        .NET
+.SH EXAMPLE
+.nf
+ 1  #include <hammer/hammer.h>
+ 2  #include <stdio.h>
+ 3
+ 4  int main(int argc, char *argv[]) {
+ 5      uint8_t input[1024];
+ 6      size_t inputsize;
+ 7
+ 8      HParser *hello_parser = h_token("Hello World", 11);
+ 9
+10      inputsize = fread(input, 1, sizeof(input), stdin);
+11
+12      HParseResult *result = h_parse(hello_parser, input, inputsize);
+13      if(result) {
+14          printf("yay!\n");
+15      } else {
+16          printf("boo!\n");
+17      }
+18  }
+.fi
