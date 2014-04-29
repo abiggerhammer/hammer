@@ -1,0 +1,94 @@
+'\" t
+.\"     Title: hammer
+.\"    Author: [see the "AUTHOR" section]
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 29 April 2014
+.\"    Manual: \ \&
+.\"    Source: \ \& 8.6.9
+.\"  Language: English
+.\"
+.TH "HAMMER" "3" "29 April 2014" "\ \& 8\&.6\&.9" "\ \&"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+Hammer \- a bit oriented parsing library
+.SH "SYNOPSIS"
+.sp
+.B #include <hammer/hammer.h>
+.SH "DESCRIPTION"
+.sp
+.B Hammer(3)
+is a parsing library. Like many modern parsing libraries, it provides a parser combinator interface for  writing  grammars as  inline domain-specific languages, but Hammer also provides a variety of parsing backends. It's also bit-oriented rather  than character-oriented, making it ideal for parsing binary data such as images, network packets, audio, and executables.
+
+Hammer is written in C, but will provide bindings for other languages.  If you don't see a language you're interested in on the list, just ask.
+
+Hammer currently builds under Linux, OS X, and Windows.
+.SH "NOTES"
+Bit-oriented -- grammars can include single-bit flags or multi-bit constructs that span character boundaries, with no hassle
+
+Thread-safe, reentrant
+
+Benchmarking for parsing backends -- determine empirically which backend will be most time-efficient for your grammar
+
+    Parsing backends:
+        Packrat parsing
+        LL(k)
+        GLR
+        LALR
+        Regular expressions
+    Language bindings:
+        C++
+        Java (not currently building; give us a few days)
+        Python
+        Ruby
+        Perl
+        Go
+        PHP
+        .NET
+.SH "EXAMPLE"
+.nf
+ 1  #include <hammer/hammer.h>
+ 2  #include <stdio.h>
+ 3
+ 4  int main(int argc, char *argv[]) {
+ 5      uint8_t input[1024];
+ 6      size_t inputsize;
+ 7
+ 8      HParser *hello_parser = h_token("Hello World", 11);
+ 9
+10      inputsize = fread(input, 1, sizeof(input), stdin);
+11
+12      HParseResult *result = h_parse(hello_parser, input, inputsize);
+13      if(result) {
+14          printf("yay!\n");
+15      } else {
+16          printf("boo!\n");
+17      }
+18  }
+.fi
+.SH "AUTHOR"
+.sp
+Hammer was originally written by Meredith Patterson and TQ Hirsch\&. Many people have contributed to it\&.
+.SH "RESOURCES"
+.sp
+github: https://github\&.com/upstandinghackers/hammer/
+.SH "COPYING"
+.sp
+Free use of this software is granted under the terms of the GNU General Public License (GPL)\& v2.
