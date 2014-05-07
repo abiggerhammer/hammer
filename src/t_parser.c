@@ -456,6 +456,45 @@ static void test_ambiguous(gconstpointer backend) {
   g_check_parse_failed(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+", 2);
 }
 
+static void test_endianness(gconstpointer backend) {
+  HParserBackend be = (HParserBackend)GPOINTER_TO_INT(backend);
+
+  HParser *u32_ = h_uint32();
+  HParser *u5_ = h_bits(5, false);
+
+	char bb = BYTE_BIG_ENDIAN | BIT_BIG_ENDIAN;
+	char bl = BYTE_BIG_ENDIAN | BIT_LITTLE_ENDIAN;
+	char lb = BYTE_LITTLE_ENDIAN | BIT_BIG_ENDIAN;
+	char ll = BYTE_LITTLE_ENDIAN | BIT_LITTLE_ENDIAN;
+
+  HParser *bb_u32_ = h_with_endianness(bb, u32_);
+  HParser *bb_u5_ = h_with_endianness(bb, u5_);
+  HParser *ll_u32_ = h_with_endianness(ll, u32_);
+  HParser *ll_u5_ = h_with_endianness(ll, u5_);
+  HParser *bl_u32_ = h_with_endianness(bl, u32_);
+  HParser *bl_u5_ = h_with_endianness(bl, u5_);
+  HParser *lb_u32_ = h_with_endianness(lb, u32_);
+  HParser *lb_u5_ = h_with_endianness(lb, u5_);
+
+	// default: big-endian
+  g_check_parse_match(u32_, be, "abcd", 4, "u0x61626364");
+  g_check_parse_match(u5_,  be, "abcd", 4, "u0xc");		// 0x6 << 1
+
+	// both big-endian
+  g_check_parse_match(bb_u32_, be, "abcd", 4, "u0x61626364");
+  g_check_parse_match(bb_u5_,  be, "abcd", 4, "u0xc");		// 0x6 << 1
+
+	// both little-endian
+  g_check_parse_match(ll_u32_, be, "abcd", 4, "u0x64636261");
+  g_check_parse_match(ll_u5_,  be, "abcd", 4, "u0x1");
+
+	// mixed cases
+  g_check_parse_match(bl_u32_, be, "abcd", 4, "u0x61626364");
+  g_check_parse_match(bl_u5_,  be, "abcd", 4, "u0x1");
+  g_check_parse_match(lb_u32_, be, "abcd", 4, "u0x64636261");
+  g_check_parse_match(lb_u5_,  be, "abcd", 4, "u0xc");
+}
+
 void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/token", GINT_TO_POINTER(PB_PACKRAT), test_token);
   g_test_add_data_func("/core/parser/packrat/ch", GINT_TO_POINTER(PB_PACKRAT), test_ch);
@@ -502,6 +541,7 @@ void register_parser_tests(void) {
   //g_test_add_data_func("/core/parser/packrat/leftrec", GINT_TO_POINTER(PB_PACKRAT), test_leftrec);
   g_test_add_data_func("/core/parser/packrat/leftrec-ne", GINT_TO_POINTER(PB_PACKRAT), test_leftrec_ne);
   g_test_add_data_func("/core/parser/packrat/rightrec", GINT_TO_POINTER(PB_PACKRAT), test_rightrec);
+  g_test_add_data_func("/core/parser/packrat/endianness", GINT_TO_POINTER(PB_PACKRAT), test_endianness);
 
   g_test_add_data_func("/core/parser/llk/token", GINT_TO_POINTER(PB_LLk), test_token);
   g_test_add_data_func("/core/parser/llk/ch", GINT_TO_POINTER(PB_LLk), test_ch);

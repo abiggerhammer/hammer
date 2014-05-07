@@ -612,6 +612,16 @@ HAMMER_FN_DECL_NOARG(HParser*, h_indirect);
 HAMMER_FN_DECL(void, h_bind_indirect, HParser* indirect, const HParser* inner);
 
 /**
+ * This parser runs its argument parser with the given endianness setting.
+ *
+ * The value of 'endianness' should be a bit-wise or of the constants
+ * BYTE_BIG_ENDIAN/BYTE_LITTLE_ENDIAN and BIT_BIG_ENDIAN/BIT_LITTLE_ENDIAN.
+ *
+ * Result token type: p's result type.
+ */
+HAMMER_FN_DECL(HParser*, h_with_endianness, char endianness, const HParser* p);
+
+/**
  * Free the memory allocated to an HParseResult when it is no longer needed.
  */
 HAMMER_FN_DECL(void, h_parse_result_free, HParseResult *result);
