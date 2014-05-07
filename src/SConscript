@@ -29,6 +29,7 @@ parsers = ['parsers/%s.c'%s for s in
             'choice',
             'difference',
             'end',
+            'endianness',
             'epsilon',
             'ignore',
             'ignoreseq',
