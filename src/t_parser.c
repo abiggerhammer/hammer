@@ -462,10 +462,10 @@ static void test_endianness(gconstpointer backend) {
   HParser *u32_ = h_uint32();
   HParser *u5_ = h_bits(5, false);
 
-	char bb = BYTE_BIG_ENDIAN | BIT_BIG_ENDIAN;
-	char bl = BYTE_BIG_ENDIAN | BIT_LITTLE_ENDIAN;
-	char lb = BYTE_LITTLE_ENDIAN | BIT_BIG_ENDIAN;
-	char ll = BYTE_LITTLE_ENDIAN | BIT_LITTLE_ENDIAN;
+  char bb = BYTE_BIG_ENDIAN | BIT_BIG_ENDIAN;
+  char bl = BYTE_BIG_ENDIAN | BIT_LITTLE_ENDIAN;
+  char lb = BYTE_LITTLE_ENDIAN | BIT_BIG_ENDIAN;
+  char ll = BYTE_LITTLE_ENDIAN | BIT_LITTLE_ENDIAN;
 
   HParser *bb_u32_ = h_with_endianness(bb, u32_);
   HParser *bb_u5_ = h_with_endianness(bb, u5_);
@@ -476,19 +476,19 @@ static void test_endianness(gconstpointer backend) {
   HParser *lb_u32_ = h_with_endianness(lb, u32_);
   HParser *lb_u5_ = h_with_endianness(lb, u5_);
 
-	// default: big-endian
+  // default: big-endian
   g_check_parse_match(u32_, be, "abcd", 4, "u0x61626364");
   g_check_parse_match(u5_,  be, "abcd", 4, "u0xc");		// 0x6 << 1
 
-	// both big-endian
+  // both big-endian
   g_check_parse_match(bb_u32_, be, "abcd", 4, "u0x61626364");
   g_check_parse_match(bb_u5_,  be, "abcd", 4, "u0xc");		// 0x6 << 1
 
-	// both little-endian
+  // both little-endian
   g_check_parse_match(ll_u32_, be, "abcd", 4, "u0x64636261");
   g_check_parse_match(ll_u5_,  be, "abcd", 4, "u0x1");
 
-	// mixed cases
+  // mixed cases
   g_check_parse_match(bl_u32_, be, "abcd", 4, "u0x61626364");
   g_check_parse_match(bl_u5_,  be, "abcd", 4, "u0x1");
   g_check_parse_match(lb_u32_, be, "abcd", 4, "u0x64636261");
