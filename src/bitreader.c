@@ -62,9 +62,10 @@ int64_t h_read_bits(HInputStream* state, int count, char signed_p) {
 	out = (out << 8) | state->input[state->index++];
       }
     } else {
-      while (count > 0) {
+      int i;
+      for (i = 0; count > 0; i += 8) {
 	count -= 8;
-	out |= state->input[state->index++] << count;
+	out |= state->input[state->index++] << i;
       }
     }
   } else {
