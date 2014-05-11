@@ -3,7 +3,7 @@
 #include "parser_internal.h"
 
 static HParseResult* parse_ch(void* env, HParseState *state) {
-  uint8_t c = (uint8_t)(unsigned long)(env);
+  uint8_t c = (uint8_t)(uintptr_t)(env);
   uint8_t r = (uint8_t)h_read_bits(&state->input_stream, 8, false);
   if (c == r) {
     HParsedToken *tok = a_new(HParsedToken, 1);    
@@ -15,7 +15,7 @@ static HParseResult* parse_ch(void* env, HParseState *state) {
 }
 
 static void desugar_ch(HAllocator *mm__, HCFStack *stk__, void *env) {
-  HCFS_ADD_CHAR( (uint8_t)(unsigned long)(env) );
+  HCFS_ADD_CHAR( (uint8_t)(uintptr_t)(env) );
 }
 
 static bool h_svm_action_ch(HArena *arena, HSVMContext *ctx, void* env) {
@@ -31,7 +31,7 @@ static bool h_svm_action_ch(HArena *arena, HSVMContext *ctx, void* env) {
 }
 
 static bool ch_ctrvm(HRVMProg *prog, void* env) {
-  uint8_t c = (uint8_t)(unsigned long)(env);
+  uint8_t c = (uint8_t)(uintptr_t)(env);
   // TODO: Does this capture anything?
   h_rvm_insert_insn(prog, RVM_PUSH, 0);
   h_rvm_insert_insn(prog, RVM_MATCH, c | c << 8);
