@@ -1,6 +1,7 @@
 #include "internal.h"
 #include "hammer.h"
 #include "allocator.h"
+#include "parsers/parser_internal.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -391,6 +392,28 @@ uint32_t h_djbhash(const uint8_t *buf, size_t len) {
     hash = hash * 33 + *buf++;
   }
   return hash;
+}
+
+void h_symbol_put(HParseState *state, const char* key, void *value) {
+  if (!state->symbol_table) {
+    state->symbol_table = h_slist_new(state->arena);
+    h_slist_push(state->symbol_table, h_hashtable_new(state->arena,
+						      h_eq_ptr,
+						      h_hash_ptr));
+  }
+  HHashTable *head = h_slist_top(state->symbol_table);
+  assert(!h_hashtable_present(head, key));
+  h_hashtable_put(head, key, value);
+}
+
+void* h_symbol_get(HParseState *state, const char* key) {
+  if (state->symbol_table) {
+    HHashTable *head = h_slist_top(state->symbol_table);
+    if (head) {
+      return h_hashtable_get(head, key);
+    }
+  }
+  return NULL;
 }
 
 HSArray *h_sarray_new(HAllocator *mm__, size_t size) {
