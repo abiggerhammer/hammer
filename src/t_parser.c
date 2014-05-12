@@ -456,6 +456,26 @@ static void test_ambiguous(gconstpointer backend) {
   g_check_parse_failed(expr_, (HParserBackend)GPOINTER_TO_INT(backend), "d+", 2);
 }
 
+HParsedToken* act_get(const HParseResult *p, void* user_data) {
+  HParsedToken *ret = a_new_(p->arena, HParsedToken, 1);
+  ret->token_type = TT_UINT;
+  ret->uint = 3 * (1 << p->ast->uint);
+  return ret;
+}
+
+static void test_put_get(gconstpointer backend) {
+  HParser *p = h_sequence(h_put_value(h_uint8(), "size"),
+			  h_token((const uint8_t*)"foo", 3),
+			  h_length_value(h_action(h_get_value("size"),
+						  act_get, NULL),
+					 h_uint8()),
+			  NULL);
+  // Yes, the quotes in the next line look weird. Leave them alone,
+  // this is to deal with how C strings handle hex-formatted chars.
+  g_check_parse_match(p, (HParserBackend)GPOINTER_TO_INT(backend), "\x01""fooabcdef", 10, "(u0x1 <66.6f.6f> (u0x61 u0x62 u0x63 u0x64 u0x65 u0x66))");
+  g_check_parse_failed(p, (HParserBackend)GPOINTER_TO_INT(backend), "\x01""fooabcde", 9);
+}
+
 void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/token", GINT_TO_POINTER(PB_PACKRAT), test_token);
   g_test_add_data_func("/core/parser/packrat/ch", GINT_TO_POINTER(PB_PACKRAT), test_ch);
@@ -502,6 +522,7 @@ void register_parser_tests(void) {
   //g_test_add_data_func("/core/parser/packrat/leftrec", GINT_TO_POINTER(PB_PACKRAT), test_leftrec);
   g_test_add_data_func("/core/parser/packrat/leftrec-ne", GINT_TO_POINTER(PB_PACKRAT), test_leftrec_ne);
   g_test_add_data_func("/core/parser/packrat/rightrec", GINT_TO_POINTER(PB_PACKRAT), test_rightrec);
+  g_test_add_data_func("/core/parser/packrat/putget", GINT_TO_POINTER(PB_PACKRAT), test_put_get);
 
   g_test_add_data_func("/core/parser/llk/token", GINT_TO_POINTER(PB_LLk), test_token);
   g_test_add_data_func("/core/parser/llk/ch", GINT_TO_POINTER(PB_LLk), test_ch);
