@@ -515,6 +515,59 @@ static void test_put_get(gconstpointer backend) {
   g_check_parse_failed(p, (HParserBackend)GPOINTER_TO_INT(backend), "\x01""fooabcde", 9);
 }
 
+static void test_permutation(gconstpointer backend) {
+  HParserBackend be = (HParserBackend)GPOINTER_TO_INT(backend);
+  const HParser *p = h_permutation(h_ch('a'), h_ch('b'), h_ch('c'), NULL);
+
+  g_check_parse_match(p, be, "abc", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(p, be, "acb", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(p, be, "bac", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(p, be, "bca", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(p, be, "cab", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(p, be, "cba", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_failed(p, be, "a", 1);
+  g_check_parse_failed(p, be, "ab", 2);
+  g_check_parse_failed(p, be, "abb", 3);
+
+  const HParser *po = h_permutation(h_ch('a'), h_ch('b'), h_optional(h_ch('c')), NULL);
+
+  g_check_parse_match(po, be, "abc", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "acb", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "bac", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "bca", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "cab", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "cba", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "ab", 2, "(u0x61 u0x62 null)");
+  g_check_parse_match(po, be, "ba", 2, "(u0x61 u0x62 null)");
+  g_check_parse_failed(po, be, "a", 1);
+  g_check_parse_failed(po, be, "b", 1);
+  g_check_parse_failed(po, be, "c", 1);
+  g_check_parse_failed(po, be, "ca", 2);
+  g_check_parse_failed(po, be, "cb", 2);
+  g_check_parse_failed(po, be, "cc", 2);
+  g_check_parse_failed(po, be, "ccab", 4);
+  g_check_parse_failed(po, be, "ccc", 3);
+
+  const HParser *po2 = h_permutation(h_optional(h_ch('c')), h_ch('a'), h_ch('b'), NULL);
+
+  g_check_parse_match(po2, be, "abc", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "acb", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "bac", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "bca", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "cab", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "cba", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "ab", 2, "(null u0x61 u0x62)");
+  g_check_parse_match(po2, be, "ba", 2, "(null u0x61 u0x62)");
+  g_check_parse_failed(po2, be, "a", 1);
+  g_check_parse_failed(po2, be, "b", 1);
+  g_check_parse_failed(po2, be, "c", 1);
+  g_check_parse_failed(po2, be, "ca", 2);
+  g_check_parse_failed(po2, be, "cb", 2);
+  g_check_parse_failed(po2, be, "cc", 2);
+  g_check_parse_failed(po2, be, "ccab", 4);
+  g_check_parse_failed(po2, be, "ccc", 3);
+}
+
 void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/token", GINT_TO_POINTER(PB_PACKRAT), test_token);
   g_test_add_data_func("/core/parser/packrat/ch", GINT_TO_POINTER(PB_PACKRAT), test_ch);
@@ -563,6 +616,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/rightrec", GINT_TO_POINTER(PB_PACKRAT), test_rightrec);
   g_test_add_data_func("/core/parser/packrat/endianness", GINT_TO_POINTER(PB_PACKRAT), test_endianness);
   g_test_add_data_func("/core/parser/packrat/putget", GINT_TO_POINTER(PB_PACKRAT), test_put_get);
+  g_test_add_data_func("/core/parser/packrat/permutation", GINT_TO_POINTER(PB_PACKRAT), test_permutation);
 
   g_test_add_data_func("/core/parser/llk/token", GINT_TO_POINTER(PB_LLk), test_token);
   g_test_add_data_func("/core/parser/llk/ch", GINT_TO_POINTER(PB_LLk), test_ch);

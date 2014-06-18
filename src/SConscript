@@ -39,6 +39,7 @@ parsers = ['parsers/%s.c'%s for s in
             'not',
             'nothing',
             'optional',
+            'permutation',
             'sequence',
             'token',
             'unimplemented',
