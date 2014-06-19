@@ -438,6 +438,32 @@ HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_sequence, HPa
 HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_choice, HParser* p);
 
 /**
+ * Given a null-terminated list of parsers, match a permutation phrase of these
+ * parsers, i.e. match all parsers exactly once in any order.
+ *
+ * If multiple orders would match, the lexically smallest permutation is used;
+ * in other words, at any step the remaining available parsers are tried in
+ * the order in which they appear in the arguments.
+ * 
+ * As an exception, 'h_optional' parsers (actually those that return a result
+ * of token type TT_NONE) are detected and the algorithm will try to match them
+ * with a non-empty result. Specifically, a result of TT_NONE is treated as a
+ * non-match as long as any other argument matches.
+ *
+ * Other parsers that succeed on any input (e.g. h_many), that match the same
+ * input as others, or that match input which is a prefix of another match can
+ * lead to unexpected results and should probably not be used as arguments.
+ *
+ * The result is a sequence of the same length as the argument list.
+ * Each parser's result is placed at that parser's index in the arguments.
+ * The permutation itself (the order in which the arguments were matched) is
+ * not returned.
+ *
+ * Result token type: TT_SEQUENCE
+ */
+HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_permutation, HParser* p);
+
+/**
  * Given two parsers, p1 and p2, this parser succeeds in the following 
  * cases: 
  * - if p1 succeeds and p2 fails
