@@ -161,7 +161,11 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
 
 /* LR(0) table generation */
 
+#ifndef _MSC_VER
 static inline
+#else
+static __inline
+#endif
 void put_shift(HLRTable *table, size_t state, const HCFChoice *symbol,
                size_t nextstate)
 {

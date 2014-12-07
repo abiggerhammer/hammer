@@ -44,7 +44,11 @@ static bool eq_lr_item(const void *p, const void *q)
 }
 
 // hash LALR items
+#ifndef _MSC_VER
 static inline HHashValue hash_lr_item(const void *p)
+#else
+static __inline HHashValue hash_lr_item(const void *p)
+#endif
 {
   const HLRItem *x = p;
   HHashValue hash = 0;

@@ -19,6 +19,12 @@
 #define HAMMER_ALLOCATOR__H__
 #include <sys/types.h>
 
+#ifdef _MSC_VER
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT __attribute__ ((visibility ("default")))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -33,7 +39,9 @@ typedef struct HAllocator_ {
 typedef struct HArena_ HArena ; // hidden implementation
 
 HArena *h_new_arena(HAllocator* allocator, size_t block_size); // pass 0 for default...
-#ifndef SWIG
+#ifdef _MSC_VER
+void* h_arena_malloc(HArena *arena, size_t count);
+#elif !defined(SWIG)
 void* h_arena_malloc(HArena *arena, size_t count) __attribute__(( malloc, alloc_size(2) ));
 #else
 void* h_arena_malloc(HArena *arena, size_t count);

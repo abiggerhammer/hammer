@@ -23,6 +23,28 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
+#ifdef _WIN32
+#include <stdarg.h>
+
+int vasprintf(char **sptr, char *fmt, va_list argv)
+{
+	int wanted = vsnprintf(*sptr = NULL, 0, fmt, argv);
+	if ((wanted > 0) && ((*sptr = malloc(1 + wanted)) != NULL))
+		return vsprintf(*sptr, fmt, argv);
+	return wanted;
+}
+
+int asprintf(char **sptr, char *fmt, ...)
+{
+	int retval;
+	va_list argv;
+	va_start(argv, fmt);
+	retval = vasprintf(sptr, fmt, argv);
+	va_end(argv);
+	return retval;
+}
+#endif
+
 typedef struct pp_state {
   int delta;
   int indent_amt;
@@ -85,18 +107,30 @@ struct result_buf {
   size_t capacity;
 };
 
+#ifndef _MSC_VER
 static inline void ensure_capacity(struct result_buf *buf, int amt) {
+#else
+static __inline void ensure_capacity(struct result_buf *buf, int amt) {
+#endif
   while (buf->len + amt >= buf->capacity)
     buf->output = realloc(buf->output, buf->capacity *= 2);
 }
 
+#ifndef _MSC_VER
 static inline void append_buf(struct result_buf *buf, const char* input, int len) {
+#else
+static __inline void append_buf(struct result_buf *buf, const char* input, int len) {
+#endif
   ensure_capacity(buf, len);
   memcpy(buf->output + buf->len, input, len);
   buf->len += len;
 }
 
+#ifndef _MSC_VER
 static inline void append_buf_c(struct result_buf *buf, char v) {
+#else
+static __inline void append_buf_c(struct result_buf *buf, char v) {
+#endif
   ensure_capacity(buf, 1);
   buf->output[buf->len++] = v;
 }

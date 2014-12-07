@@ -354,7 +354,11 @@ static bool hte_subset(HEqualFunc eq, HHashTableEntry *xs, HHashTableEntry *ys)
 }
 
 // compare two lists of HHashTableEntries
+#ifndef _MSC_VER
 static inline bool hte_equal(HEqualFunc eq, HHashTableEntry *xs, HHashTableEntry *ys) {
+#else
+static __inline bool hte_equal(HEqualFunc eq, HHashTableEntry *xs, HHashTableEntry *ys) {
+#endif
   return (hte_same_length(xs, ys) && hte_subset(eq, xs, ys));
 }
 

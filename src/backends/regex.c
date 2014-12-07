@@ -381,6 +381,6 @@ HParserBackendVTable h__regex_backend_vtable = {
   .free = h_regex_free
 };
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(_MSC_VER)
 #include "regex_debug.c"
 #endif

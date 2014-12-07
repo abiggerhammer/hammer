@@ -21,11 +21,20 @@ struct HCFStack_ {
 };
 
 #ifndef UNUSED
+#ifndef _MSC_VER
 #define UNUSED __attribute__((unused))
+#else
+#define UNUSED
+#endif
 #endif
 
+#ifndef _MSC_VER
 static inline HCFChoice* h_cfstack_new_choice_raw(HAllocator *mm__, HCFStack *stk__) UNUSED;
 static inline void h_cfstack_begin_choice(HAllocator *mm__, HCFStack *stk__) UNUSED;
+#else
+static __inline HCFChoice* h_cfstack_new_choice_raw(HAllocator *mm__, HCFStack *stk__) UNUSED;
+static __inline void h_cfstack_begin_choice(HAllocator *mm__, HCFStack *stk__) UNUSED;
+#endif
 static HCFStack* h_cfstack_new(HAllocator *mm__) UNUSED; 
 static HCFStack* h_cfstack_new(HAllocator *mm__) {
   HCFStack *stack = h_new(HCFStack, 1);
@@ -43,8 +52,13 @@ static void h_cfstack_free(HAllocator *mm__, HCFStack *stk__) {
   h_free(stk__);
 }
 
+#ifndef _MSC_VER
 static inline void h_cfstack_add_to_seq(HAllocator *mm__, HCFStack *stk__, HCFChoice *item) UNUSED;
 static inline void h_cfstack_add_to_seq(HAllocator *mm__, HCFStack *stk__, HCFChoice *item) {
+#else
+static __inline void h_cfstack_add_to_seq(HAllocator *mm__, HCFStack *stk__, HCFChoice *item) UNUSED;
+static __inline void h_cfstack_add_to_seq(HAllocator *mm__, HCFStack *stk__, HCFChoice *item) {
+#endif
   HCFChoice *cur_top = stk__->stack[stk__->count-1];
   assert(cur_top->type == HCF_CHOICE);
   assert(cur_top->seq[0] != NULL); // There must be at least one sequence...
@@ -64,7 +78,11 @@ static inline void h_cfstack_add_to_seq(HAllocator *mm__, HCFStack *stk__, HCFCh
   }
 }
 
+#ifndef _MSC_VER
 static inline HCFChoice* h_cfstack_new_choice_raw(HAllocator *mm__, HCFStack *stk__) {
+#else
+static __inline HCFChoice* h_cfstack_new_choice_raw(HAllocator *mm__, HCFStack *stk__) {
+#endif
   HCFChoice *ret = stk__->prealloc? stk__->prealloc : h_new(HCFChoice, 1);
   stk__->prealloc = NULL;
 
@@ -80,28 +98,43 @@ static inline HCFChoice* h_cfstack_new_choice_raw(HAllocator *mm__, HCFStack *st
   return ret;
 }
 
+#ifndef _MSC_VER
 static inline void h_cfstack_add_charset(HAllocator *mm__, HCFStack *stk__, HCharset charset) {
+#else
+static __inline void h_cfstack_add_charset(HAllocator *mm__, HCFStack *stk__, HCharset charset) {
+#endif
   HCFChoice *ni = h_cfstack_new_choice_raw(mm__, stk__);
   ni->type = HCF_CHARSET;
   ni->charset = charset;
   stk__->last_completed = ni;
 }
 
-
+#ifndef _MSC_VER
 static inline void h_cfstack_add_char(HAllocator *mm__, HCFStack *stk__, uint8_t chr) {
+#else
+static __inline void h_cfstack_add_char(HAllocator *mm__, HCFStack *stk__, uint8_t chr) {
+#endif
   HCFChoice *ni = h_cfstack_new_choice_raw(mm__, stk__);
   ni->type = HCF_CHAR;
   ni->chr = chr;
   stk__->last_completed = ni;
 }
 
+#ifndef _MSC_VER
 static inline void h_cfstack_add_end(HAllocator *mm__, HCFStack *stk__) {
+#else
+static __inline void h_cfstack_add_end(HAllocator *mm__, HCFStack *stk__) {
+#endif
   HCFChoice *ni = h_cfstack_new_choice_raw(mm__, stk__);
   ni->type = HCF_END;
   stk__->last_completed = ni;
 }
 
+#ifndef _MSC_VER
 static inline void h_cfstack_begin_choice(HAllocator *mm__, HCFStack *stk__) {
+#else
+static __inline void h_cfstack_begin_choice(HAllocator *mm__, HCFStack *stk__) {
+#endif
   HCFChoice *choice = h_cfstack_new_choice_raw(mm__, stk__);
   choice->type = HCF_CHOICE;
   choice->seq = h_new(HCFSequence*, 1);
@@ -116,7 +149,11 @@ static inline void h_cfstack_begin_choice(HAllocator *mm__, HCFStack *stk__) {
   stk__->stack[stk__->count++] = choice;
 }
 
+#ifndef _MSC_VER
 static inline void h_cfstack_begin_seq(HAllocator *mm__, HCFStack *stk__) {
+#else
+static __inline void h_cfstack_begin_seq(HAllocator *mm__, HCFStack *stk__) {
+#endif
   HCFChoice *top = stk__->stack[stk__->count-1];
   for (int i = 0;; i++) {
     if (top->seq[i] == NULL) {
@@ -130,13 +167,23 @@ static inline void h_cfstack_begin_seq(HAllocator *mm__, HCFStack *stk__) {
   }
 }
 
+#ifndef _MSC_VER
 static inline void h_cfstack_end_seq(HAllocator *mm__, HCFStack *stk__) UNUSED;
 static inline void h_cfstack_end_seq(HAllocator *mm__, HCFStack *stk__) {
+#else
+static __inline void h_cfstack_end_seq(HAllocator *mm__, HCFStack *stk__) UNUSED;
+static __inline void h_cfstack_end_seq(HAllocator *mm__, HCFStack *stk__) {
+#endif
   // do nothing. You should call this anyway.
 }
 
+#ifndef _MSC_VER
 static inline void h_cfstack_end_choice(HAllocator *mm__, HCFStack *stk__) UNUSED;
 static inline void h_cfstack_end_choice(HAllocator *mm__, HCFStack *stk__) {
+#else
+static __inline void h_cfstack_end_choice(HAllocator *mm__, HCFStack *stk__) UNUSED;
+static __inline void h_cfstack_end_choice(HAllocator *mm__, HCFStack *stk__) {
+#endif
   assert(stk__->count > 0);
   stk__->last_completed = stk__->stack[stk__->count-1];
   stk__->count--;

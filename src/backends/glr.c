@@ -67,7 +67,11 @@ static HSlist *demerge_stack(HSlistNode *bottom, HSlist *stack)
   return ret;
 }
 
+#ifndef _MSC_VER
 static inline HLREngine *respawn(HLREngine *eng, HSlist *stack)
+#else
+static __inline HLREngine *respawn(HLREngine *eng, HSlist *stack)
+#endif
 {
   // NB: this can be a destructive update because an engine is not used for
   // anything after it is merged.

@@ -20,6 +20,10 @@
 #include "hammer.h"
 #include "internal.h"
 
+#ifdef _MSC_VER
+#include "msvc/tsearch.h"
+#endif
+
 typedef struct Entry_ {
   const char* name;
   HTokenType value;

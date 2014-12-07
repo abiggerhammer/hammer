@@ -1,6 +1,6 @@
 #include "parser_internal.h"
 
-static HParseResult* parse_nothing() {
+static HParseResult* parse_nothing(void* env, HParseState* state) {
   // not a mistake, this parser always fails
   return NULL;
 }

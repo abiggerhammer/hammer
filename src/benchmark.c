@@ -14,6 +14,77 @@
 #include <sys/resource.h>
 #endif
 
+#ifdef _WIN32
+#define CLOCK_THREAD_CPUTIME_ID 0
+#include <windows.h>
+#include <winnt.h>
+
+struct timespec {
+	LONGLONG tv_sec;
+	long tv_nsec;
+};
+
+LARGE_INTEGER getFILETIMEoffset()
+{
+	SYSTEMTIME s;
+	FILETIME f;
+	LARGE_INTEGER t;
+
+
+	s.wYear = 1970;
+	s.wMonth = 1;
+	s.wDay = 1;
+	s.wHour = 0;
+	s.wMinute = 0;
+	s.wSecond = 0;
+	s.wMilliseconds = 0;
+	SystemTimeToFileTime(&s, &f);
+	t.QuadPart = f.dwHighDateTime;
+	t.QuadPart <<= 32;
+	t.QuadPart |= f.dwLowDateTime;
+	return (t);
+}
+
+void clock_gettime(int X, struct timespec *tv)
+{
+	LARGE_INTEGER           t;
+	FILETIME                f;
+	double                  nanoseconds;
+	static LARGE_INTEGER    offset;
+	static double           frequencyToNanoseconds;
+	static int              initialized = 0;
+	static BOOL             usePerformanceCounter = 0;
+
+
+	if (!initialized) {
+		LARGE_INTEGER performanceFrequency;
+		initialized = 1;
+		usePerformanceCounter = QueryPerformanceFrequency(&performanceFrequency);
+		if (usePerformanceCounter) {
+			QueryPerformanceCounter(&offset);
+			frequencyToNanoseconds = (double)performanceFrequency.QuadPart / 1000.;
+		}
+		else {
+			offset = getFILETIMEoffset();
+			frequencyToNanoseconds = 0.010;
+		}
+	}
+	if (usePerformanceCounter) QueryPerformanceCounter(&t);
+	else {
+		GetSystemTimeAsFileTime(&f);
+		t.QuadPart = f.dwHighDateTime;
+		t.QuadPart <<= 32;
+		t.QuadPart |= f.dwLowDateTime;
+	}
+
+	t.QuadPart -= offset.QuadPart;
+	nanoseconds = (double)t.QuadPart / frequencyToNanoseconds;
+	t.QuadPart = (LONGLONG)nanoseconds;
+	tv->tv_sec = t.QuadPart / 1000000000;
+	tv->tv_nsec = t.QuadPart % 1000000000;
+}
+#endif
+
 void h_benchmark_clock_gettime(struct timespec *ts) {
   if (ts == NULL)
     return;
@@ -153,13 +224,21 @@ void h_benchmark_report(FILE* stream, HBenchmarkResults* result) {
     if (result->results[i].cases == NULL) {
       fprintf(stream, "Skipping %s because grammar did not compile for it\n", HParserBackendNames[i]);
     } else {
-      fprintf(stream, "Backend %zd (%s) ... \n", i, HParserBackendNames[i]);
+#ifndef _MSC_VER
+      errx(stream, "Backend %zd (%s) ... \n", i, HParserBackendNames[i]);
+#else
+	  fprintf(stream, "Backend %u (%s) ... \n", i, HParserBackendNames[i]);
+#endif
     }
     for (size_t j=0; j<result->results[i].n_testcases; ++j) {
       if (result->results[i].cases == NULL) {
         continue;
       }
-      fprintf(stream, "Case %zd: %zd ns/parse, %zd ns/byte\n", j,  result->results[i].cases[j].parse_time, result->results[i].cases[j].parse_time / result->results[i].cases[j].length);
-    }
+#ifndef _MSC_VER
+	  errx(stream, "Case %zd: %zd ns/parse, %zd ns/byte\n", j, result->results[i].cases[j].parse_time, result->results[i].cases[j].parse_time / result->results[i].cases[j].length);
+#else
+	  fprintf(stream, "Case %u: %u ns/parse, %u ns/byte\n", j, result->results[i].cases[j].parse_time, result->results[i].cases[j].parse_time / result->results[i].cases[j].length);
+#endif
+	}
   }
 }

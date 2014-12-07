@@ -25,6 +25,12 @@
 #include <stdio.h>
 #include "allocator.h"
 
+#ifdef _MSC_VER
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT __attribute__ ((visibility ("default")))
+#endif
+
 #define BYTE_BIG_ENDIAN 0x1
 #define BIT_BIG_ENDIAN 0x2
 #define BIT_LITTLE_ENDIAN 0x0
@@ -216,7 +222,7 @@ typedef struct HBenchmarkResults_ {
   rtype_t name(__VA_ARGS__) attr;					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__) attr
 
-#ifndef SWIG
+#ifndef SWIG 
 #define HAMMER_FN_DECL_VARARGS(rtype_t, name, ...)			\
   rtype_t name(__VA_ARGS__, ...);					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...);		\
@@ -226,6 +232,15 @@ typedef struct HBenchmarkResults_ {
   rtype_t name##__ma(HAllocator *mm__, void *args[])
 
 // Note: this drops the attributes on the floor for the __v versions
+#ifdef _MSC_VER
+#define HAMMER_FN_DECL_VARARGS_ATTR(attr, rtype_t, name, ...)		\
+  rtype_t name(__VA_ARGS__, ...);                                 \
+  rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...);			\
+  rtype_t name##__mv(HAllocator* mm__, __VA_ARGS__, va_list ap);	\
+  rtype_t name##__v(__VA_ARGS__, va_list ap);				\
+  rtype_t name##__a(void *args[]);					\
+  rtype_t name##__ma(HAllocator *mm__, void *args[])
+#else
 #define HAMMER_FN_DECL_VARARGS_ATTR(attr, rtype_t, name, ...)		\
   rtype_t name(__VA_ARGS__, ...) attr;					\
   rtype_t name##__m(HAllocator* mm__, __VA_ARGS__, ...) attr;		\
@@ -233,6 +248,7 @@ typedef struct HBenchmarkResults_ {
   rtype_t name##__v(__VA_ARGS__, va_list ap);				\
   rtype_t name##__a(void *args[]);					\
   rtype_t name##__ma(HAllocator *mm__, void *args[])
+#endif
 #else
 #define HAMMER_FN_DECL_VARARGS(rtype_t, name, params...)  \
   rtype_t name(params, ...);				  \
@@ -249,6 +265,9 @@ typedef struct HBenchmarkResults_ {
 #endif // SWIG
 // }}}
 
+#ifdef _MSVC_VER
+#define __attribute__(x)
+#endif
 
 /**
  * Top-level function to call a parser that has been built over some

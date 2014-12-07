@@ -24,7 +24,11 @@ HParserCacheValue *cached_lr(HParseState *state, HLeftRec *lr) {
 }
 
 // Really library-internal tool to perform an uncached parse, and handle any common error-handling.
+#ifndef _MSC_VER
 static inline HParseResult* perform_lowlevel_parse(HParseState *state, const HParser *parser) {
+#else
+static __inline HParseResult* perform_lowlevel_parse(HParseState *state, const HParser *parser) {
+#endif
   // TODO(thequux): these nested conditions are ugly. Factor this appropriately, so that it is clear which codes is executed when.
   HParseResult *tmp_res;
   if (parser) {
@@ -110,7 +114,11 @@ void setupLR(const HParser *p, HParseState *state, HLeftRec *rec_detect) {
 }
 
 // helper: true iff pos1 is less than pos2
+#ifndef _MSC_VER
 static inline bool pos_lt(HInputStream pos1, HInputStream pos2) {
+#else
+static __inline bool pos_lt(HInputStream pos1, HInputStream pos2) {
+#endif
   return ((pos1.index < pos2.index) ||
 	  (pos1.index == pos2.index && pos1.bit_offset < pos2.bit_offset));
 }
@@ -124,7 +132,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
   h_hashtable_put(state->recursion_heads, &k->input_pos, head);
   HParserCacheValue *old_cached = h_hashtable_get(state->cache, k);
   if (!old_cached || PC_LEFT == old_cached->value_type)
-    errx(1, "impossible match");
+    fprintf(stderr, "impossible match");
   HParseResult *old_res = old_cached->right;
 
   // rewind the input
@@ -146,7 +154,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
         state->input_stream = cached->input_stream;
 	return cached->right;
       } else {
-	errx(1, "impossible match");
+	fprintf(stderr, "impossible match");
       }
     }
   } else {
@@ -171,7 +179,7 @@ HParseResult* lr_answer(HParserCacheKey *k, HParseState *state, HLeftRec *growab
 	return grow(k, state, growable->head);
     }
   } else {
-    errx(1, "lrAnswer with no head");
+    fprintf(stderr, "lrAnswer with no head");
   }
 }
 

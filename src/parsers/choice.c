@@ -53,7 +53,12 @@ static void desugar_choice(HAllocator *mm__, HCFStack *stk__, void *env) {
 
 static bool choice_ctrvm(HRVMProg *prog, void* env) {
   HSequence *s = (HSequence*)env;
+#ifndef _MSC_VER
   uint16_t gotos[s->len];
+#else
+  HAllocator *mm__ = prog->allocator;
+  uint16_t *gotos = h_new(uint16_t, s->len);
+#endif
   for (size_t i=0; i<s->len; ++i) {
     uint16_t insn = h_rvm_insert_insn(prog, RVM_FORK, 0);
     if (!h_compile_regex(prog, s->p_array[i]))

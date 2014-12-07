@@ -24,8 +24,13 @@ typedef struct HCFGrammar_ {
  * To use these as keys, we must avoid 0 as because NULL means "not set".
  */
 typedef uintptr_t HCharKey;
+#ifndef _MSC_VER
 static inline HCharKey char_key(uint8_t c) { return (0x100 | c); }
 static inline uint8_t key_char(HCharKey k) { return (0xFF & k); }
+#else
+static __inline HCharKey char_key(uint8_t c) { return (0x100 | c); }
+static __inline uint8_t key_char(HCharKey k) { return (0xFF & k); }
+#endif
 
 /* Mapping strings of input tokens to arbitrary values (or serving as a set).
  * Common prefixes are folded into a tree of HHashTables, branches labeled with
@@ -53,7 +58,11 @@ bool h_stringmap_present(const HStringMap *m, const uint8_t *str, size_t n, bool
 bool h_stringmap_present_epsilon(const HStringMap *m);
 bool h_stringmap_empty(const HStringMap *m);
 
+#ifndef _MSC_VER
 static inline HStringMap *h_stringmap_get_char(const HStringMap *m, const uint8_t c)
+#else
+static __inline HStringMap *h_stringmap_get_char(const HStringMap *m, const uint8_t c)
+#endif
  { return h_hashtable_get(m->char_branches, (void *)char_key(c)); }
 
 

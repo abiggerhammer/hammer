@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include "internal.h"
 #include "hammer.h"
-#include "test_suite.h"
 
 #define LSB(range) (0:range)
 #define MSB(range) (1:range)

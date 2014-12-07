@@ -5,8 +5,11 @@
 
 
 /* LALR-via-SLR grammar transformation */
-
+#ifndef _MSC_VER
 static inline size_t seqsize(void *p_)
+#else
+static __inline size_t seqsize(void *p_)
+#endif
 {
   size_t n=0;
   for(void **p=p_; *p; p++) n++;
@@ -35,7 +38,11 @@ static size_t follow_transition(const HLRTable *table, size_t x, HCFChoice *A)
   return action->nextstate;
 }
 
+#ifndef _MSC_VER
 static inline HLRTransition *transition(HArena *arena,
+#else
+static __inline HLRTransition *transition(HArena *arena,
+#endif
                                         size_t x, const HCFChoice *A, size_t y)
 {
   HLRTransition *t = h_arena_malloc(arena, sizeof(HLRTransition));
@@ -139,8 +146,11 @@ static HLREnhGrammar *enhance_grammar(const HCFGrammar *g, const HLRDFA *dfa,
 
 
 /* LALR table generation */
-
+#ifndef _MSC_VER
 static inline bool has_conflicts(HLRTable *table)
+#else
+static __inline bool has_conflicts(HLRTable *table)
+#endif
 {
   return !h_slist_empty(table->inadeq);
 }

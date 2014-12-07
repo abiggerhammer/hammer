@@ -24,7 +24,6 @@
 #define HAMMER_INTERNAL__H
 #include <stdint.h>
 #include <assert.h>
-#include <err.h>
 #include <string.h>
 #include "hammer.h"
 
@@ -33,7 +32,7 @@
 #else
 #define assert_message(check, message) do {				\
     if (!(check))							\
-      errx(1, "Assertion failed (programmer error): %s", message);	\
+      fprintf(stderr, "Assertion failed (programmer error): %s", message);	\
   } while(0)
 #endif
 
@@ -56,11 +55,21 @@ extern "C" {
 #endif
 
 // This is going to be generally useful.
+#ifndef _MSC_VER
 static inline void h_generic_free(HAllocator *allocator, void* ptr) {
+#else
+static __inline void h_generic_free(HAllocator *allocator, void* ptr) {
+#endif
   allocator->free(allocator, ptr);
 }
 
-extern HAllocator system_allocator;
+#if COMPILING_DLL
+#define DLLEXPORT
+#else
+#define DLLEXPORT __declspec(dllimport)
+#endif
+
+extern DLLEXPORT HAllocator system_allocator;
 typedef struct HCFStack_ HCFStack;
 
 
@@ -103,18 +112,31 @@ typedef struct HSArray_ {
 
 HSArray *h_sarray_new(HAllocator *mm__, size_t size);
 void h_sarray_free(HSArray *arr);
+#ifndef _MSC_VER
 static inline bool h_sarray_isset(HSArray *arr, size_t n) {
+#else
+static __inline bool h_sarray_isset(HSArray *arr, size_t n) {
+#endif
   assert(n < arr->capacity);
   return (arr->nodes[n].index < arr->used && arr->nodes[arr->nodes[n].index].elem == n);
 }
+
+#ifndef _MSC_VER
 static inline void* h_sarray_get(HSArray *arr, size_t n) {
+#else
+static __inline void* h_sarray_get(HSArray *arr, size_t n) {
+#endif
   assert(n < arr->capacity);
   if (h_sarray_isset(arr, n))
     return arr->nodes[n].content;
   return NULL;
 }
 
+#ifndef _MSC_VER
 static inline void* h_sarray_set(HSArray *arr, size_t n, void* val) {
+#else
+static __inline void* h_sarray_set(HSArray *arr, size_t n, void* val) {
+#endif
   assert(n < arr->capacity);
   arr->nodes[n].content = val;
   if (h_sarray_isset(arr, n))
@@ -124,7 +146,11 @@ static inline void* h_sarray_set(HSArray *arr, size_t n, void* val) {
   return val;
 }
 
+#ifndef _MSC_VER
 static inline void h_sarray_clear(HSArray *arr) {
+#else
+static __inline void h_sarray_clear(HSArray *arr) {
+#endif
   arr->used = 0;
 }
 
@@ -145,17 +171,29 @@ static inline void h_sarray_clear(HSArray *arr) {
 
 typedef unsigned int *HCharset;
 
+#ifndef _MSC_VER
 static inline HCharset new_charset(HAllocator* mm__) {
+#else
+static __inline HCharset new_charset(HAllocator* mm__) {
+#endif
   HCharset cs = h_new(unsigned int, 256 / sizeof(unsigned int));
   memset(cs, 0, 256);
   return cs;
 }
 
+#ifndef _MSC_VER
 static inline int charset_isset(HCharset cs, uint8_t pos) {
+#else
+static __inline int charset_isset(HCharset cs, uint8_t pos) {
+#endif
   return !!(cs[pos / sizeof(*cs)] & (1 << (pos % sizeof(*cs))));
 }
 
+#ifndef _MSC_VER
 static inline void charset_set(HCharset cs, uint8_t pos, int val) {
+#else
+static __inline void charset_set(HCharset cs, uint8_t pos, int val) {
+#endif
   cs[pos / sizeof(*cs)] =
     val
     ? cs[pos / sizeof(*cs)] |  (1 << (pos % sizeof(*cs)))
@@ -299,7 +337,11 @@ int64_t h_read_bits(HInputStream* state, int count, char signed_p);
 HParseResult* h_do_parse(const HParser* parser, HParseState *state);
 void put_cached(HParseState *ps, const HParser *p, HParseResult *cached);
 
+#ifndef _MSC_VER
 static inline
+#else
+static __inline
+#endif
 HParser *h_new_parser(HAllocator *mm__, const HParserVtable *vt, void *env) {
   HParser *p = h_new(HParser, 1);
   memset(p, 0, sizeof(HParser));
@@ -318,12 +360,20 @@ HSlist* h_slist_new(HArena *arena);
 HSlist* h_slist_copy(HSlist *slist);
 void* h_slist_pop(HSlist *slist);
 void* h_slist_drop(HSlist *slist);
+#ifndef _MSC_VER
 static inline void* h_slist_top(HSlist *sl) { return sl->head->elem; }
+#else
+static __inline void* h_slist_top(HSlist *sl) { return sl->head->elem; }
+#endif
 void h_slist_push(HSlist *slist, void* item);
 bool h_slist_find(HSlist *slist, const void* item);
 HSlist* h_slist_remove_all(HSlist *slist, const void* item);
 void h_slist_free(HSlist *slist);
+#ifndef _MSC_VER
 static inline bool h_slist_empty(const HSlist *sl) { return (sl->head == NULL); }
+#else
+static __inline bool h_slist_empty(const HSlist *sl) { return (sl->head == NULL); }
+#endif
 
 HHashTable* h_hashtable_new(HArena *arena, HEqualFunc equalFunc, HHashFunc hashFunc);
 void* h_hashtable_get(const HHashTable* ht, const void* key);
@@ -334,7 +384,11 @@ void  h_hashtable_merge(void *(*combine)(void *v1, const void *v2),
 int   h_hashtable_present(const HHashTable* ht, const void* key);
 void  h_hashtable_del(HHashTable* ht, const void* key);
 void  h_hashtable_free(HHashTable* ht);
+#ifndef _MSC_VER
 static inline bool h_hashtable_empty(const HHashTable* ht) { return (ht->used == 0); }
+#else
+static __inline bool h_hashtable_empty(const HHashTable* ht) { return (ht->used == 0); }
+#endif
 
 typedef HHashTable HHashSet;
 #define h_hashset_new(a,eq,hash) h_hashtable_new(a,eq,hash)

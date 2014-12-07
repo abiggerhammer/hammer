@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30723.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hammer", "hammer.vcxproj", "{E615CCA5-FB3C-46B6-898E-6CCBF0114E33}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hammer-test", "..\hammer-test\hammer-test.vcxproj", "{0C6BD1ED-CA4C-40FD-BD46-0774C22A76ED}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E615CCA5-FB3C-46B6-898E-6CCBF0114E33}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E615CCA5-FB3C-46B6-898E-6CCBF0114E33}.Debug|Win32.Build.0 = Debug|Win32
+		{E615CCA5-FB3C-46B6-898E-6CCBF0114E33}.Debug|x64.ActiveCfg = Debug|x64
+		{E615CCA5-FB3C-46B6-898E-6CCBF0114E33}.Debug|x64.Build.0 = Debug|x64
+		{E615CCA5-FB3C-46B6-898E-6CCBF0114E33}.Release|Win32.ActiveCfg = Release|Win32
+		{E615CCA5-FB3C-46B6-898E-6CCBF0114E33}.Release|Win32.Build.0 = Release|Win32
+		{E615CCA5-FB3C-46B6-898E-6CCBF0114E33}.Release|x64.ActiveCfg = Release|x64
+		{E615CCA5-FB3C-46B6-898E-6CCBF0114E33}.Release|x64.Build.0 = Release|x64
+		{0C6BD1ED-CA4C-40FD-BD46-0774C22A76ED}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0C6BD1ED-CA4C-40FD-BD46-0774C22A76ED}.Debug|Win32.Build.0 = Debug|Win32
+		{0C6BD1ED-CA4C-40FD-BD46-0774C22A76ED}.Debug|x64.ActiveCfg = Debug|x64
+		{0C6BD1ED-CA4C-40FD-BD46-0774C22A76ED}.Debug|x64.Build.0 = Debug|x64
+		{0C6BD1ED-CA4C-40FD-BD46-0774C22A76ED}.Release|Win32.ActiveCfg = Release|Win32
+		{0C6BD1ED-CA4C-40FD-BD46-0774C22A76ED}.Release|Win32.Build.0 = Release|Win32
+		{0C6BD1ED-CA4C-40FD-BD46-0774C22A76ED}.Release|x64.ActiveCfg = Release|x64
+		{0C6BD1ED-CA4C-40FD-BD46-0774C22A76ED}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

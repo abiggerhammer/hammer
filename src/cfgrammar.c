@@ -541,7 +541,11 @@ static void remove_all_shorter(size_t k, HStringMap *m)
 }
 
 // h_follow adapted to the signature of StringSetFun
+#ifndef _MSC_VER
 static inline
+#else
+static __inline
+#endif
 const HStringMap *h_follow_(size_t k, HCFGrammar *g, HCFChoice **s)
 {
   return h_follow(k, g, *s);
