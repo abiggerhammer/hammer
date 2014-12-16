@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "../internal.h"
 #include "../parsers/parser_internal.h"
@@ -131,8 +133,10 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
   // Store the head into the recursion_heads
   h_hashtable_put(state->recursion_heads, &k->input_pos, head);
   HParserCacheValue *old_cached = h_hashtable_get(state->cache, k);
-  if (!old_cached || PC_LEFT == old_cached->value_type)
+  if (!old_cached || PC_LEFT == old_cached->value_type) {
     fprintf(stderr, "impossible match");
+    exit(1);
+  }
   HParseResult *old_res = old_cached->right;
 
   // rewind the input
@@ -155,6 +159,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
 	return cached->right;
       } else {
 	fprintf(stderr, "impossible match");
+        exit(1);
       }
     }
   } else {
@@ -180,6 +185,7 @@ HParseResult* lr_answer(HParserCacheKey *k, HParseState *state, HLeftRec *growab
     }
   } else {
     fprintf(stderr, "lrAnswer with no head");
+    exit(1);
   }
 }
 
