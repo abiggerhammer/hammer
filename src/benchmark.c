@@ -225,7 +225,7 @@ void h_benchmark_report(FILE* stream, HBenchmarkResults* result) {
       fprintf(stream, "Skipping %s because grammar did not compile for it\n", HParserBackendNames[i]);
     } else {
 #ifndef _MSC_VER
-      errx(stream, "Backend %zd (%s) ... \n", i, HParserBackendNames[i]);
+      fprintf(stream, "Backend %zd (%s) ... \n", i, HParserBackendNames[i]);
 #else
 	  fprintf(stream, "Backend %u (%s) ... \n", i, HParserBackendNames[i]);
 #endif
@@ -235,7 +235,7 @@ void h_benchmark_report(FILE* stream, HBenchmarkResults* result) {
         continue;
       }
 #ifndef _MSC_VER
-	  errx(stream, "Case %zd: %zd ns/parse, %zd ns/byte\n", j, result->results[i].cases[j].parse_time, result->results[i].cases[j].parse_time / result->results[i].cases[j].length);
+	  fprintf(stream, "Case %zd: %zd ns/parse, %zd ns/byte\n", j, result->results[i].cases[j].parse_time, result->results[i].cases[j].parse_time / result->results[i].cases[j].length);
 #else
 	  fprintf(stream, "Case %u: %u ns/parse, %u ns/byte\n", j, result->results[i].cases[j].parse_time, result->results[i].cases[j].parse_time / result->results[i].cases[j].length);
 #endif

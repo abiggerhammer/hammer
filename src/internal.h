@@ -63,10 +63,10 @@ static __inline void h_generic_free(HAllocator *allocator, void* ptr) {
   allocator->free(allocator, ptr);
 }
 
-#if COMPILING_DLL
-#define DLLEXPORT
+#if defined _MSC_VER && !defined COMPILING_DLL
+# define DLLEXPORT __declspec(dllimport)
 #else
-#define DLLEXPORT __declspec(dllimport)
+# define DLLEXPORT
 #endif
 
 extern DLLEXPORT HAllocator system_allocator;
