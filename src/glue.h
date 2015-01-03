@@ -11,7 +11,8 @@
 //
 // A few standard semantic actions are defined below. The H_ACT_APPLY macro
 // allows semantic actions to be defined by "partial application" of
-// a generic action to fixed paramters.
+// a generic action to fixed paramters. H_VALIDATE_APPLY is similar for
+// h_atter_bool.
 //
 // The definition of more complex semantic actions will usually consist of
 // extracting data from the given parse tree and constructing a token of custom
@@ -111,6 +112,12 @@ HParsedToken *h_act_ignore(const HParseResult *p, void* user_data);
 #define H_ACT_APPLY(myaction, paction, ...) \
   HParsedToken *myaction(const HParseResult *p, void* user_data) {      \
     return paction(__VA_ARGS__, p, user_data);                          \
+  }
+
+// Similar, but for validations.
+#define H_VALIDATE_APPLY(myvalidation, pvalidation, ...)  \
+  bool myvalidation(HParseResult* p, void* user_data) {   \
+    return pvalidation(__VA_ARGS__, p, user_data);        \
   }
 
 
