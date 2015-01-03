@@ -66,13 +66,13 @@
     h_attr_bool(h_action(def, act_ ## rule, NULL), validate_ ## rule, NULL)
 #define H_AVRULE(rule, def) HParser *rule = \
     h_action(h_attr_bool(def, validate_ ## rule, NULL), act_ ## rule, NULL)
-#define H_ADRULE(rule, def, data) HParser *rule =	\
+#define H_ADRULE(rule, def, data) HParser *rule =       \
     h_action(def, act_ ## rule, data)
-#define H_VDRULE(rule, def, data) HParser *rule =	\
+#define H_VDRULE(rule, def, data) HParser *rule =       \
     h_attr_bool(def, validate_ ## rule, data)
-#define H_VADRULE(rule, def, data) HParser *rule =		\
+#define H_VADRULE(rule, def, data) HParser *rule =              \
     h_attr_bool(h_action(def, act_ ## rule, data), validate_ ## rule, data)
-#define H_AVDRULE(rule, def, data) HParser *rule =		\
+#define H_AVDRULE(rule, def, data) HParser *rule =              \
     h_action(h_attr_bool(def, validate_ ## rule, data), act_ ## rule, data)
 
 
@@ -109,8 +109,8 @@ HParsedToken *h_act_ignore(const HParseResult *p, void* user_data);
 // Define 'myaction' as a specialization of 'paction' by supplying the leading
 // parameters.
 #define H_ACT_APPLY(myaction, paction, ...) \
-  HParsedToken *myaction(const HParseResult *p, void* user_data) {	\
-    return paction(__VA_ARGS__, p, user_data);				\
+  HParsedToken *myaction(const HParseResult *p, void* user_data) {      \
+    return paction(__VA_ARGS__, p, user_data);                          \
   }
 
 
