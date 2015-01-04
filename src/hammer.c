@@ -52,7 +52,7 @@ HParseResult* h_parse__m(HAllocator* mm__, const HParser* parser, const uint8_t*
   // Set up a parse state...
   HInputStream input_stream = {
     .index = 0,
-    .bit_offset = 8,
+    .bit_offset = 0,
     .overrun = 0,
     .endianness = BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN,
     .length = length,
