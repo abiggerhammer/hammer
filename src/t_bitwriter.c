@@ -24,7 +24,7 @@ void run_bitwriter_test(bitwriter_test_elem data[], char flags) {
     .input = buf,
     .index = 0,
     .length = len,
-    .bit_offset = (flags & BIT_BIG_ENDIAN) ? 8 : 0,
+    .bit_offset = 0,
     .endianness = flags,
     .overrun = 0
   };

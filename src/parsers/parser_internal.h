@@ -18,6 +18,7 @@ static inline HParseResult* make_result(HArena *arena, HParsedToken *tok) {
   HParseResult *ret = h_arena_malloc(arena, sizeof(HParseResult));
   ret->ast = tok;
   ret->arena = arena;
+  ret->bit_length = 0; // This way it gets overridden in h_do_parse
   return ret;
 }
 

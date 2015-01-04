@@ -39,10 +39,7 @@ int64_t h_read_bits(HInputStream* state, int count, char signed_p) {
   if (bits_left <= 64) { // Large enough to handle any valid count, but small enough that overflow isn't a problem.
     // not in danger of overflowing, so add in bits
     // add in number of bits...
-    if (state->endianness & BIT_BIG_ENDIAN)
-      bits_left = (bits_left << 3) - 8 + state->bit_offset;
-    else
-      bits_left = (bits_left << 3) - state->bit_offset;
+    bits_left = (bits_left << 3) - state->bit_offset - state->margin;
     if (bits_left < count) {
       if (state->endianness & BYTE_BIG_ENDIAN)
 	final_shift = count - bits_left;
@@ -54,7 +51,7 @@ int64_t h_read_bits(HInputStream* state, int count, char signed_p) {
       final_shift = 0;
   }
   
-  if ((state->bit_offset & 0x7) == 0 && (count & 0x7) == 0) {
+  if ((state->bit_offset & 0x7) == 0 && (count & 0x7) == 0 && (state->margin == 0)) {
     // fast path
     if (state->endianness & BYTE_BIG_ENDIAN) {
       while (count > 0) {
@@ -73,22 +70,24 @@ int64_t h_read_bits(HInputStream* state, int count, char signed_p) {
       int segment, segment_len;
       // Read a segment...
       if (state->endianness & BIT_BIG_ENDIAN) {
-	if (count >= state->bit_offset) {
-	  segment_len = state->bit_offset;
-	  state->bit_offset = 8;
-	  segment = state->input[state->index] & ((1 << segment_len) - 1);
-	  state->index++;
-	} else {
-	  segment_len = count;
-	  state->bit_offset -= count;
-	  segment = (state->input[state->index] >> state->bit_offset) & ((1 << segment_len) - 1);
-	}
-      } else { // BIT_LITTLE_ENDIAN
-	if (count + state->bit_offset >= 8) {
-	  segment_len = 8 - state->bit_offset;
-	  segment = (state->input[state->index] >> state->bit_offset);
+	if (count + state->bit_offset + state->margin >= 8) {
+	  segment_len = 8 - state->bit_offset - state->margin;
+	  segment = (state->input[state->index] >> state->margin) & ((1 << segment_len) - 1);
 	  state->index++;
 	  state->bit_offset = 0;
+	  state->margin = 0;
+	} else {
+	  segment_len = count;
+	  state->bit_offset += count;
+	  segment = (state->input[state->index] >> (8 - state->bit_offset)) & ((1 << segment_len) - 1);
+	}
+      } else { // BIT_LITTLE_ENDIAN
+	if (count + state->bit_offset + state->margin >= 8) {
+	  segment_len = 8 - state->bit_offset - state->margin;
+	  segment = (state->input[state->index] >> state->bit_offset) & ((1 << segment_len) - 1);
+	  state->index++;
+	  state->bit_offset = 0;
+	  state->margin = 0;
 	} else {
 	  segment_len = count;
 	  segment = (state->input[state->index] >> state->bit_offset) & ((1 << segment_len) - 1);
