@@ -675,7 +675,7 @@ HAMMER_FN_DECL(HParser*, h_get_value, const char* name);
  * Sequencing where later parsers may depend on the result(s) of earlier ones.
  *
  * Run p and call the result x. Then run k(env,x).  Fail if p fails or if
- * k(env,x) fails.
+ * k(env,x) fails or if k(env,x) is NULL.
  *
  * Result: the result of k(x,env).
  */

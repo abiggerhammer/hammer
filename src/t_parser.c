@@ -569,18 +569,23 @@ static void test_permutation(gconstpointer backend) {
 }
 
 static HParser *f_test_bind(const HParsedToken *p, void *env) {
-	uint8_t one = (uintptr_t)env;
-	
-	assert(p);
-	assert(p->token_type == TT_SEQUENCE);
+  uint8_t one = (uintptr_t)env;
+  
+  assert(p);
+  assert(p->token_type == TT_SEQUENCE);
 
-	int v=0;
-	for(size_t i=0; i<p->seq->used; i++) {
-		assert(p->seq->elements[i]->token_type == TT_UINT);
-		v = v*10 + p->seq->elements[i]->uint - '0';
-	}
+  int v=0;
+  for(size_t i=0; i<p->seq->used; i++) {
+    assert(p->seq->elements[i]->token_type == TT_UINT);
+    v = v*10 + p->seq->elements[i]->uint - '0';
+  }
 
-	return h_ch(one - 1 + v);
+  if(v > 26)
+    return h_nothing_p();	// fail
+  else if(v > 127)
+    return NULL;		// equivalent to the above
+  else
+    return h_ch(one - 1 + v);
 }
 static void test_bind(gconstpointer backend) {
   HParserBackend be = (HParserBackend)GPOINTER_TO_INT(backend);
@@ -594,6 +599,8 @@ static void test_bind(gconstpointer backend) {
   g_check_parse_failed(p, be, "1x", 2);
   g_check_parse_failed(p, be, "29y", 3);
   g_check_parse_failed(p, be, "@", 1);
+  g_check_parse_failed(p, be, "27{", 3);
+  g_check_parse_failed(p, be, "272{", 4);
 }
 
 void register_parser_tests(void) {

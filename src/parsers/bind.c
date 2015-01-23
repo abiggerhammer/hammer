@@ -14,6 +14,9 @@ static HParseResult *parse_bind(void *be_, HParseState *state) {
         return NULL;
 
     HParser *kx = be->k(res->ast, be->env);
+    if(!kx)
+        return NULL;
+
     return h_do_parse(kx, state);
 }
 
