@@ -122,6 +122,19 @@ typedef struct HParseResult_ {
  */
 typedef struct HBitWriter_ HBitWriter;
 
+typedef struct HCFChoice_ HCFChoice;
+typedef struct HRVMProg_ HRVMProg;
+typedef struct HParserVtable_ HParserVtable;
+
+// TODO: Make this internal
+typedef struct HParser_ {
+  const HParserVtable *vtable;
+  HParserBackend backend;
+  void* backend_data;
+  void *env;
+  HCFChoice *desugared; /* if the parser can be desugared, its desugared form */
+} HParser;
+
 /**
  * Type of an action to apply to an AST, used in the action() parser. 
  * It can be any (user-defined) function that takes a HParseResult*
@@ -141,18 +154,12 @@ typedef HParsedToken* (*HAction)(const HParseResult *p, void* user_data);
  */
 typedef bool (*HPredicate)(HParseResult *p, void* user_data);
 
-typedef struct HCFChoice_ HCFChoice;
-typedef struct HRVMProg_ HRVMProg;
-typedef struct HParserVtable_ HParserVtable;
-
-// TODO: Make this internal
-typedef struct HParser_ {
-  const HParserVtable *vtable;
-  HParserBackend backend;
-  void* backend_data;
-  void *env;
-  HCFChoice *desugared; /* if the parser can be desugared, its desugared form */
-} HParser;
+/**
+ * Type of a parser that depends on the result of a previous parser,
+ * used in h_bind(). The void* argument is passed through from h_bind() and can
+ * be used to arbitrarily parameterize the function further.
+ */
+typedef HParser* (*HContinuation)(const HParsedToken *x, void *env);
 
 // {{{ Stuff for benchmarking
 typedef struct HParserTestcase_ {
@@ -662,6 +669,17 @@ HAMMER_FN_DECL(HParser*, h_put_value, const HParser *p, const char* name);
  * present. If absent, NULL (and thus parse failure).
  */
 HAMMER_FN_DECL(HParser*, h_get_value, const char* name);
+
+/**
+ * Monadic bind for HParsers, i.e.:
+ * Sequencing where later parsers may depend on the result(s) of earlier ones.
+ *
+ * Run p and call the result x. Then run k(env,x).  Fail if p fails or if
+ * k(env,x) fails.
+ *
+ * Result: the result of k(x,env).
+ */
+HAMMER_FN_DECL(HParser*, h_bind, const HParser *p, HContinuation k, void *env);
 
 /**
  * Free the memory allocated to an HParseResult when it is no longer needed.
