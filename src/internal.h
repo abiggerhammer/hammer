@@ -70,6 +70,8 @@ typedef struct HInputStream_ {
   size_t index;
   size_t length;
   char bit_offset;
+  char margin; // The number of bits on the end that is being read
+	       // towards that should be ignored.
   char endianness;
   char overrun;
 } HInputStream;
@@ -295,6 +297,9 @@ extern HParserBackendVTable h__glr_backend_vtable;
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
 
 int64_t h_read_bits(HInputStream* state, int count, char signed_p);
+static inline size_t h_input_stream_pos(HInputStream* state) {
+  return state->index * 8 + state->bit_offset + state->margin;
+}
 // need to decide if we want to make this public. 
 HParseResult* h_do_parse(const HParser* parser, HParseState *state);
 void put_cached(HParseState *ps, const HParser *p, HParseResult *cached);

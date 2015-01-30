@@ -33,11 +33,13 @@ static inline HParseResult* perform_lowlevel_parse(HParseState *state, const HPa
     if (tmp_res) {
       tmp_res->arena = state->arena;
       if (!state->input_stream.overrun) {
-	tmp_res->bit_length = ((state->input_stream.index - bak.index) << 3);
-	if (state->input_stream.endianness & BIT_BIG_ENDIAN)
-	  tmp_res->bit_length += state->input_stream.bit_offset - bak.bit_offset;
-	else
-	  tmp_res->bit_length += bak.bit_offset - state->input_stream.bit_offset;
+	size_t bit_length = h_input_stream_pos(&state->input_stream) - h_input_stream_pos(&bak);
+	if (tmp_res->bit_length == 0) { // Don't modify if forwarding.
+	  tmp_res->bit_length = bit_length;
+	}
+	if (tmp_res->ast && tmp_res->ast->bit_length != 0) {
+	  ((HParsedToken*)(tmp_res->ast))->bit_length = bit_length;
+	}
       } else
 	tmp_res->bit_length = 0;
     }
