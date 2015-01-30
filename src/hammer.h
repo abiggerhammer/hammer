@@ -99,6 +99,7 @@ typedef struct HParsedToken_ {
   HTokenData token_data;
 #endif
   size_t index;
+  size_t bit_length;
   char bit_offset;
 } HParsedToken;
 

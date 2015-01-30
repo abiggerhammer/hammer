@@ -11,19 +11,9 @@ static void switch_bit_order(HInputStream *input)
 {
     assert(input->bit_offset <= 8);
 
-    if((input->bit_offset % 8) != 0) {
-        // switching bit order in the middle of a byte
-        // we leave bit_offset untouched. this means that something like
-        //     le(bits(5)),le(bits(3))
-        // is equivalent to
-        //     le(bits(5),bits(3)) .
-        // on the other hand,
-        //     le(bits(5)),be(bits(5))
-        // will read the same 5 bits twice and discard the top 3.
-    } else {
-        // flip offset (0 <-> 8)
-        input->bit_offset = 8 - input->bit_offset;
-    }
+    char tmp = input->bit_offset;
+    input->bit_offset = input->margin;
+    input->margin = tmp;
 }
 
 static HParseResult *parse_endianness(void *env, HParseState *state)
