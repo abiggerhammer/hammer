@@ -173,7 +173,7 @@ HParsedToken *h_seq_index_vpath(const HParsedToken *p, size_t i, va_list va)
   int j;
 
   while((j = va_arg(va, int)) >= 0)
-    ret = h_seq_index(p, j);
+    ret = h_seq_index(ret, j);
 
   return ret;
 }
