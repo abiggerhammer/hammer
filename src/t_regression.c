@@ -54,7 +54,49 @@ static void test_seq_index_path(void) {
   g_check_cmp_int64(h_seq_index_path(seq, 0, 1, -1)->uint, ==, 42);
 }
 
+#define MK_INPUT_STREAM(buf,len,endianness_)  \
+  {					      \
+      .input = (uint8_t*)buf,		      \
+      .length = len,			      \
+      .index = 0,			      \
+      .bit_offset = 0,			      \
+      .endianness = endianness_		      \
+  }
+
+static void test_read_bits_48(void) {
+  {
+    HInputStream is = MK_INPUT_STREAM("\x12\x34\x56\x78\x9A\xBC", 6, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
+    g_check_cmp_int64(h_read_bits(&is, 32, false), ==, 0x78563412);
+    g_check_cmp_int64(h_read_bits(&is, 16, false), ==, 0xBC9A);
+  }
+  {
+    HInputStream is = MK_INPUT_STREAM("\x12\x34\x56\x78\x9A\xBC", 6, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
+    g_check_cmp_int64(h_read_bits(&is, 31, false), ==, 0x78563412);
+    g_check_cmp_int64(h_read_bits(&is, 17, false), ==, 0x17934);
+  }
+  {
+    HInputStream is = MK_INPUT_STREAM("\x12\x34\x56\x78\x9A\xBC", 6, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
+    g_check_cmp_int64(h_read_bits(&is, 33, false), ==, 0x78563412);
+    g_check_cmp_int64(h_read_bits(&is, 17, false), ==, 0x5E4D);
+  }
+  {
+    HInputStream is = MK_INPUT_STREAM("\x12\x34\x56\x78\x9A\xBC", 6, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
+    g_check_cmp_int64(h_read_bits(&is, 36, false), ==, 0xA78563412);
+    g_check_cmp_int64(h_read_bits(&is, 12, false), ==, 0xBC9);
+  }
+  {
+    HInputStream is = MK_INPUT_STREAM("\x12\x34\x56\x78\x9A\xBC", 6, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
+    g_check_cmp_int64(h_read_bits(&is, 40, false), ==, 0x9A78563412);
+    g_check_cmp_int64(h_read_bits(&is, 8, false), ==, 0xBC);
+  }
+  {
+    HInputStream is = MK_INPUT_STREAM("\x12\x34\x56\x78\x9A\xBC", 6, BIT_LITTLE_ENDIAN | BYTE_LITTLE_ENDIAN);
+    g_check_cmp_int64(h_read_bits(&is, 48, false), ==, 0xBC9A78563412);
+  }
+}
+
 void register_regression_tests(void) {
   g_test_add_func("/core/regression/bug118", test_bug118);
   g_test_add_func("/core/regression/seq_index_path", test_seq_index_path);
+  g_test_add_func("/core/regression/read_bits_48", test_read_bits_48);
 }
