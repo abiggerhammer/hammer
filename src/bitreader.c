@@ -62,7 +62,7 @@ int64_t h_read_bits(HInputStream* state, int count, char signed_p) {
       int i;
       for (i = 0; count > 0; i += 8) {
 	count -= 8;
-	out |= state->input[state->index++] << i;
+	out |= (int64_t)state->input[state->index++] << i;
       }
     }
   } else {
@@ -99,7 +99,7 @@ int64_t h_read_bits(HInputStream* state, int count, char signed_p) {
       if (state->endianness & BYTE_BIG_ENDIAN) {
 	out = out << segment_len | segment;
       } else { // BYTE_LITTLE_ENDIAN
-	out |= segment << offset;
+	out |= (int64_t)segment << offset;
 	offset += segment_len;
       }
       count -= segment_len;
