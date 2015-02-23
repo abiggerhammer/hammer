@@ -568,7 +568,7 @@ static void test_permutation(gconstpointer backend) {
   g_check_parse_failed(po2, be, "ccc", 3);
 }
 
-static HParser *f_test_bind(const HParsedToken *p, void *env) {
+static HParser *k_test_bind(HAllocator *mm__, const HParsedToken *p, void *env) {
   uint8_t one = (uintptr_t)env;
   
   assert(p);
@@ -581,17 +581,17 @@ static HParser *f_test_bind(const HParsedToken *p, void *env) {
   }
 
   if(v > 26)
-    return h_nothing_p();	// fail
+    return h_nothing_p__m(mm__);	// fail
   else if(v > 127)
-    return NULL;		// equivalent to the above
+    return NULL;			// equivalent to the above
   else
-    return h_ch(one - 1 + v);
+    return h_ch__m(mm__, one - 1 + v);
 }
 static void test_bind(gconstpointer backend) {
   HParserBackend be = (HParserBackend)GPOINTER_TO_INT(backend);
   const HParser *digit = h_ch_range('0', '9');
   const HParser *nat = h_many1(digit);
-  const HParser *p = h_bind(nat, f_test_bind, (void *)(uintptr_t)'a');
+  const HParser *p = h_bind(nat, k_test_bind, (void *)(uintptr_t)'a');
 
   g_check_parse_match(p, be, "1a", 2, "u0x61");
   g_check_parse_match(p, be, "2b", 2, "u0x62");

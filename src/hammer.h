@@ -159,8 +159,13 @@ typedef bool (*HPredicate)(HParseResult *p, void* user_data);
  * Type of a parser that depends on the result of a previous parser,
  * used in h_bind(). The void* argument is passed through from h_bind() and can
  * be used to arbitrarily parameterize the function further.
+ *
+ * The HAllocator* argument gives access to temporary memory and is to be used
+ * for any allocations inside the function. Specifically, construction of any
+ * HParsers should use the '__m' combinator variants with the given allocator.
+ * Anything allocated thus will be freed by 'h_bind'.
  */
-typedef HParser* (*HContinuation)(const HParsedToken *x, void *env);
+typedef HParser* (*HContinuation)(HAllocator *mm__, const HParsedToken *x, void *env);
 
 // {{{ Stuff for benchmarking
 typedef struct HParserTestcase_ {
