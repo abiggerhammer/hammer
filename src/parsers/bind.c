@@ -13,20 +13,20 @@ typedef struct {
     HArena *arena;
 } ArenaAllocator;
 
-void *aa_alloc(HAllocator *allocator, size_t size)
+static void *aa_alloc(HAllocator *allocator, size_t size)
 {
     HArena *arena = ((ArenaAllocator *)allocator)->arena;
     return h_arena_malloc(arena, size);
 }
 
-void *aa_realloc(HAllocator *allocator, void *ptr, size_t size)
+static void *aa_realloc(HAllocator *allocator, void *ptr, size_t size)
 {
     HArena *arena = ((ArenaAllocator *)allocator)->arena;
     assert(0);  // XXX realloc for arena allocator
     return NULL;
 }
 
-void aa_free(HAllocator *allocator, void *ptr)
+static void aa_free(HAllocator *allocator, void *ptr)
 {
     HArena *arena = ((ArenaAllocator *)allocator)->arena;
     h_arena_free(arena, ptr);
