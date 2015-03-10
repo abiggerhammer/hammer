@@ -22,6 +22,7 @@ parsers = ['parsers/%s.c'%s for s in
            ['action',
             'and',
             'attr_bool',
+            'bind',
             'bits',
             'butnot',
             'ch',
