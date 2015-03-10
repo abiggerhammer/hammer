@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <string.h>
 #include "hammer.h"
@@ -120,6 +121,7 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
 	ret->results[backend].failed_testcases++;
       }
       h_parse_result_free(res);
+      free(res_unamb);
     }
 
     if (tc_failed > 0) {
