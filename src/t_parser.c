@@ -495,6 +495,114 @@ static void test_endianness(gconstpointer backend) {
   g_check_parse_match(lb_u5_,  be, "abcd", 4, "u0xc");
 }
 
+HParsedToken* act_get(const HParseResult *p, void* user_data) {
+  HParsedToken *ret = a_new_(p->arena, HParsedToken, 1);
+  ret->token_type = TT_UINT;
+  ret->uint = 3 * (1 << p->ast->uint);
+  return ret;
+}
+
+static void test_put_get(gconstpointer backend) {
+  HParser *p = h_sequence(h_put_value(h_uint8(), "size"),
+			  h_token((const uint8_t*)"foo", 3),
+			  h_length_value(h_action(h_get_value("size"),
+						  act_get, NULL),
+					 h_uint8()),
+			  NULL);
+  // Yes, the quotes in the next line look weird. Leave them alone,
+  // this is to deal with how C strings handle hex-formatted chars.
+  g_check_parse_match(p, (HParserBackend)GPOINTER_TO_INT(backend), "\x01""fooabcdef", 10, "(u0x1 <66.6f.6f> (u0x61 u0x62 u0x63 u0x64 u0x65 u0x66))");
+  g_check_parse_failed(p, (HParserBackend)GPOINTER_TO_INT(backend), "\x01""fooabcde", 9);
+}
+
+static void test_permutation(gconstpointer backend) {
+  HParserBackend be = (HParserBackend)GPOINTER_TO_INT(backend);
+  const HParser *p = h_permutation(h_ch('a'), h_ch('b'), h_ch('c'), NULL);
+
+  g_check_parse_match(p, be, "abc", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(p, be, "acb", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(p, be, "bac", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(p, be, "bca", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(p, be, "cab", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(p, be, "cba", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_failed(p, be, "a", 1);
+  g_check_parse_failed(p, be, "ab", 2);
+  g_check_parse_failed(p, be, "abb", 3);
+
+  const HParser *po = h_permutation(h_ch('a'), h_ch('b'), h_optional(h_ch('c')), NULL);
+
+  g_check_parse_match(po, be, "abc", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "acb", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "bac", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "bca", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "cab", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "cba", 3, "(u0x61 u0x62 u0x63)");
+  g_check_parse_match(po, be, "ab", 2, "(u0x61 u0x62 null)");
+  g_check_parse_match(po, be, "ba", 2, "(u0x61 u0x62 null)");
+  g_check_parse_failed(po, be, "a", 1);
+  g_check_parse_failed(po, be, "b", 1);
+  g_check_parse_failed(po, be, "c", 1);
+  g_check_parse_failed(po, be, "ca", 2);
+  g_check_parse_failed(po, be, "cb", 2);
+  g_check_parse_failed(po, be, "cc", 2);
+  g_check_parse_failed(po, be, "ccab", 4);
+  g_check_parse_failed(po, be, "ccc", 3);
+
+  const HParser *po2 = h_permutation(h_optional(h_ch('c')), h_ch('a'), h_ch('b'), NULL);
+
+  g_check_parse_match(po2, be, "abc", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "acb", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "bac", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "bca", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "cab", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "cba", 3, "(u0x63 u0x61 u0x62)");
+  g_check_parse_match(po2, be, "ab", 2, "(null u0x61 u0x62)");
+  g_check_parse_match(po2, be, "ba", 2, "(null u0x61 u0x62)");
+  g_check_parse_failed(po2, be, "a", 1);
+  g_check_parse_failed(po2, be, "b", 1);
+  g_check_parse_failed(po2, be, "c", 1);
+  g_check_parse_failed(po2, be, "ca", 2);
+  g_check_parse_failed(po2, be, "cb", 2);
+  g_check_parse_failed(po2, be, "cc", 2);
+  g_check_parse_failed(po2, be, "ccab", 4);
+  g_check_parse_failed(po2, be, "ccc", 3);
+}
+
+static HParser *k_test_bind(HAllocator *mm__, const HParsedToken *p, void *env) {
+  uint8_t one = (uintptr_t)env;
+  
+  assert(p);
+  assert(p->token_type == TT_SEQUENCE);
+
+  int v=0;
+  for(size_t i=0; i<p->seq->used; i++) {
+    assert(p->seq->elements[i]->token_type == TT_UINT);
+    v = v*10 + p->seq->elements[i]->uint - '0';
+  }
+
+  if(v > 26)
+    return h_nothing_p__m(mm__);	// fail
+  else if(v > 127)
+    return NULL;			// equivalent to the above
+  else
+    return h_ch__m(mm__, one - 1 + v);
+}
+static void test_bind(gconstpointer backend) {
+  HParserBackend be = (HParserBackend)GPOINTER_TO_INT(backend);
+  const HParser *digit = h_ch_range('0', '9');
+  const HParser *nat = h_many1(digit);
+  const HParser *p = h_bind(nat, k_test_bind, (void *)(uintptr_t)'a');
+
+  g_check_parse_match(p, be, "1a", 2, "u0x61");
+  g_check_parse_match(p, be, "2b", 2, "u0x62");
+  g_check_parse_match(p, be, "26z", 3, "u0x7a");
+  g_check_parse_failed(p, be, "1x", 2);
+  g_check_parse_failed(p, be, "29y", 3);
+  g_check_parse_failed(p, be, "@", 1);
+  g_check_parse_failed(p, be, "27{", 3);
+  g_check_parse_failed(p, be, "272{", 4);
+}
+
 void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/token", GINT_TO_POINTER(PB_PACKRAT), test_token);
   g_test_add_data_func("/core/parser/packrat/ch", GINT_TO_POINTER(PB_PACKRAT), test_ch);
@@ -542,6 +650,9 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/leftrec-ne", GINT_TO_POINTER(PB_PACKRAT), test_leftrec_ne);
   g_test_add_data_func("/core/parser/packrat/rightrec", GINT_TO_POINTER(PB_PACKRAT), test_rightrec);
   g_test_add_data_func("/core/parser/packrat/endianness", GINT_TO_POINTER(PB_PACKRAT), test_endianness);
+  g_test_add_data_func("/core/parser/packrat/putget", GINT_TO_POINTER(PB_PACKRAT), test_put_get);
+  g_test_add_data_func("/core/parser/packrat/permutation", GINT_TO_POINTER(PB_PACKRAT), test_permutation);
+  g_test_add_data_func("/core/parser/packrat/bind", GINT_TO_POINTER(PB_PACKRAT), test_bind);
 
   g_test_add_data_func("/core/parser/llk/token", GINT_TO_POINTER(PB_LLk), test_token);
   g_test_add_data_func("/core/parser/llk/ch", GINT_TO_POINTER(PB_LLk), test_ch);

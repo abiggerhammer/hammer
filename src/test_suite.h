@@ -212,6 +212,7 @@
 
 
 
+#define g_check_cmp_int(n1, op, n2) g_check_inttype("%d", int, n1, op, n2)
 #define g_check_cmp_int32(n1, op, n2) g_check_inttype("%d", int32_t, n1, op, n2)
 #define g_check_cmp_int64(n1, op, n2) g_check_inttype("%" PRId64, int64_t, n1, op, n2)
 #define g_check_cmp_uint32(n1, op, n2) g_check_inttype("%u", uint32_t, n1, op, n2)

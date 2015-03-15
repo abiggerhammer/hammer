@@ -22,6 +22,7 @@ parsers = ['parsers/%s.c'%s for s in
            ['action',
             'and',
             'attr_bool',
+            'bind',
             'bits',
             'butnot',
             'ch',
@@ -39,11 +40,13 @@ parsers = ['parsers/%s.c'%s for s in
             'not',
             'nothing',
             'optional',
+            'permutation',
             'sequence',
             'token',
             'unimplemented',
             'whitespace',
-            'xor']] 
+            'xor',
+            'value']] 
 
 backends = ['backends/%s.c' % s for s in
             ['packrat', 'llk', 'regex', 'glr', 'lalr', 'lr', 'lr0']]
@@ -67,7 +70,8 @@ ctests = ['t_benchmark.c',
           't_bitwriter.c',
           't_parser.c',
           't_grammar.c',
-          't_misc.c']
+          't_misc.c',
+	  't_regression.c']
 
 libhammer_shared = env.SharedLibrary('hammer', parsers + backends + misc_hammer_parts)
 libhammer_static = env.StaticLibrary('hammer', parsers + backends + misc_hammer_parts)

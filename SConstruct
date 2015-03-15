@@ -14,7 +14,11 @@ tools = ['default', 'scanreplace']
 if 'dotnet' in ARGUMENTS.get('bindings', []):
 	tools.append('csharp/mono')
 
-env = Environment(ENV = {'PATH' : os.environ['PATH']},
+envvars = {'PATH' : os.environ['PATH']}
+if 'PKG_CONFIG_PATH' in os.environ:
+    envvars['PKG_CONFIG_PATH'] = os.environ['PKG_CONFIG_PATH']
+
+env = Environment(ENV = envvars,
                   variables = vars,
                   tools=tools,
                   toolpath=['tools'])

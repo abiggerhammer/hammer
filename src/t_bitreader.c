@@ -4,14 +4,14 @@
 #include "internal.h"
 #include "test_suite.h"
 
-#define MK_INPUT_STREAM(buf,len,endianness_)   \
+#define MK_INPUT_STREAM(buf,len,endianness_)  \
   {					      \
-    .input = (uint8_t*)buf,					\
-      .length = len,						\
-      .index = 0,						\
-      .bit_offset = (((endianness_) & BIT_BIG_ENDIAN) ? 8 : 0),	\
-      .endianness = endianness_					\
-      }
+      .input = (uint8_t*)buf,		      \
+      .length = len,			      \
+      .index = 0,			      \
+      .bit_offset = 0,			      \
+      .endianness = endianness_		      \
+  }
 
 
 static void test_bitreader_ints(void) {
@@ -55,7 +55,6 @@ static void test_offset_largebits_le(void) {
   g_check_cmp_int32(h_read_bits(&is, 5, false), ==, 0xA);
   g_check_cmp_int32(h_read_bits(&is, 11, false), ==, 0x2D3);
 }
-
 
 void register_bitreader_tests(void)  {
   g_test_add_func("/core/bitreader/be", test_bitreader_be);

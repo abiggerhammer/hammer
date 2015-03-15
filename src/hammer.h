@@ -46,14 +46,6 @@ typedef enum HParserBackend_ {
   PB_MAX = PB_GLR
 } HParserBackend;
 
-static const char* HParserBackendNames[] = { 
-  "Packrat",
-  "Regular",
-  "LL(k)",
-  "LALR",
-  "GLR"
-};
-
 typedef enum HTokenType_ {
   // Before you change the explicit values of these, think of the poor bindings ;_;
   TT_NONE = 1,
@@ -107,6 +99,7 @@ typedef struct HParsedToken_ {
   HTokenData token_data;
 #endif
   size_t index;
+  size_t bit_length;
   char bit_offset;
 } HParsedToken;
 
@@ -130,6 +123,19 @@ typedef struct HParseResult_ {
  */
 typedef struct HBitWriter_ HBitWriter;
 
+typedef struct HCFChoice_ HCFChoice;
+typedef struct HRVMProg_ HRVMProg;
+typedef struct HParserVtable_ HParserVtable;
+
+// TODO: Make this internal
+typedef struct HParser_ {
+  const HParserVtable *vtable;
+  HParserBackend backend;
+  void* backend_data;
+  void *env;
+  HCFChoice *desugared; /* if the parser can be desugared, its desugared form */
+} HParser;
+
 /**
  * Type of an action to apply to an AST, used in the action() parser. 
  * It can be any (user-defined) function that takes a HParseResult*
@@ -149,18 +155,17 @@ typedef HParsedToken* (*HAction)(const HParseResult *p, void* user_data);
  */
 typedef bool (*HPredicate)(HParseResult *p, void* user_data);
 
-typedef struct HCFChoice_ HCFChoice;
-typedef struct HRVMProg_ HRVMProg;
-typedef struct HParserVtable_ HParserVtable;
-
-// TODO: Make this internal
-typedef struct HParser_ {
-  const HParserVtable *vtable;
-  HParserBackend backend;
-  void* backend_data;
-  void *env;
-  HCFChoice *desugared; /* if the parser can be desugared, its desugared form */
-} HParser;
+/**
+ * Type of a parser that depends on the result of a previous parser,
+ * used in h_bind(). The void* argument is passed through from h_bind() and can
+ * be used to arbitrarily parameterize the function further.
+ *
+ * The HAllocator* argument gives access to temporary memory and is to be used
+ * for any allocations inside the function. Specifically, construction of any
+ * HParsers should use the '__m' combinator variants with the given allocator.
+ * Anything allocated thus will be freed by 'h_bind'.
+ */
+typedef HParser* (*HContinuation)(HAllocator *mm__, const HParsedToken *x, void *env);
 
 // {{{ Stuff for benchmarking
 typedef struct HParserTestcase_ {
@@ -438,6 +443,32 @@ HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_sequence, HPa
 HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_choice, HParser* p);
 
 /**
+ * Given a null-terminated list of parsers, match a permutation phrase of these
+ * parsers, i.e. match all parsers exactly once in any order.
+ *
+ * If multiple orders would match, the lexically smallest permutation is used;
+ * in other words, at any step the remaining available parsers are tried in
+ * the order in which they appear in the arguments.
+ * 
+ * As an exception, 'h_optional' parsers (actually those that return a result
+ * of token type TT_NONE) are detected and the algorithm will try to match them
+ * with a non-empty result. Specifically, a result of TT_NONE is treated as a
+ * non-match as long as any other argument matches.
+ *
+ * Other parsers that succeed on any input (e.g. h_many), that match the same
+ * input as others, or that match input which is a prefix of another match can
+ * lead to unexpected results and should probably not be used as arguments.
+ *
+ * The result is a sequence of the same length as the argument list.
+ * Each parser's result is placed at that parser's index in the arguments.
+ * The permutation itself (the order in which the arguments were matched) is
+ * not returned.
+ *
+ * Result token type: TT_SEQUENCE
+ */
+HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_permutation, HParser* p);
+
+/**
  * Given two parsers, p1 and p2, this parser succeeds in the following 
  * cases: 
  * - if p1 succeeds and p2 fails
@@ -620,6 +651,41 @@ HAMMER_FN_DECL(void, h_bind_indirect, HParser* indirect, const HParser* inner);
  * Result token type: p's result type.
  */
 HAMMER_FN_DECL(HParser*, h_with_endianness, char endianness, const HParser* p);
+
+/**
+ * The 'h_put_value' combinator stashes the result of the parser
+ * it wraps in a symbol table in the parse state, so that non-
+ * local actions and predicates can access this value. 
+ *
+ * Try not to use this combinator if you can avoid it. 
+ *
+ * Result token type: p's token type if name was not already in
+ * the symbol table. It is an error, and thus a NULL result (and
+ * parse failure), to attempt to rename a symbol.
+ */
+HAMMER_FN_DECL(HParser*, h_put_value, const HParser *p, const char* name);
+
+/**
+ * The 'h_get_value' combinator retrieves a named HParseResult that
+ * was previously stashed in the parse state. 
+ * 
+ * Try not to use this combinator if you can avoid it.
+ * 
+ * Result token type: whatever the stashed HParseResult is, if
+ * present. If absent, NULL (and thus parse failure).
+ */
+HAMMER_FN_DECL(HParser*, h_get_value, const char* name);
+
+/**
+ * Monadic bind for HParsers, i.e.:
+ * Sequencing where later parsers may depend on the result(s) of earlier ones.
+ *
+ * Run p and call the result x. Then run k(env,x).  Fail if p fails or if
+ * k(env,x) fails or if k(env,x) is NULL.
+ *
+ * Result: the result of k(x,env).
+ */
+HAMMER_FN_DECL(HParser*, h_bind, const HParser *p, HContinuation k, void *env);
 
 /**
  * Free the memory allocated to an HParseResult when it is no longer needed.

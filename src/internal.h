@@ -70,6 +70,8 @@ typedef struct HInputStream_ {
   size_t index;
   size_t length;
   char bit_offset;
+  char margin; // The number of bits on the end that is being read
+	       // towards that should be ignored.
   char endianness;
   char overrun;
 } HInputStream;
@@ -190,6 +192,7 @@ typedef struct HHashTable_ {
  *   arena - the arena that has been allocated for the parse this state is in.
  *   lr_stack - a stack of HLeftRec's, used in Warth's recursion
  *   recursion_heads - table of recursion heads. Keys are HParserCacheKey's with only an HInputStream (parser can be NULL), values are HRecursionHead's.
+ *   symbol_table - stack of tables of values that have been stashed in the context of this parse.
  *
  */
   
@@ -199,6 +202,7 @@ struct HParseState_ {
   HArena * arena;
   HSlist *lr_stack;
   HHashTable *recursion_heads;
+  HSlist *symbol_table; // its contents are HHashTables
 };
 
 typedef struct HParserBackendVTable_ {
@@ -293,6 +297,9 @@ extern HParserBackendVTable h__glr_backend_vtable;
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
 
 int64_t h_read_bits(HInputStream* state, int count, char signed_p);
+static inline size_t h_input_stream_pos(HInputStream* state) {
+  return state->index * 8 + state->bit_offset + state->margin;
+}
 // need to decide if we want to make this public. 
 HParseResult* h_do_parse(const HParser* parser, HParseState *state);
 void put_cached(HParseState *ps, const HParser *p, HParseResult *cached);
@@ -316,6 +323,7 @@ HSlist* h_slist_new(HArena *arena);
 HSlist* h_slist_copy(HSlist *slist);
 void* h_slist_pop(HSlist *slist);
 void* h_slist_drop(HSlist *slist);
+static inline void* h_slist_top(HSlist *sl) { return sl->head->elem; }
 void h_slist_push(HSlist *slist, void* item);
 bool h_slist_find(HSlist *slist, const void* item);
 HSlist* h_slist_remove_all(HSlist *slist, const void* item);
@@ -347,8 +355,10 @@ bool h_eq_ptr(const void *p, const void *q);
 HHashValue h_hash_ptr(const void *p);
 uint32_t h_djbhash(const uint8_t *buf, size_t len);
 
-typedef struct HCFSequence_ HCFSequence;
+void h_symbol_put(HParseState *state, const char* key, void *value);
+void* h_symbol_get(HParseState *state, const char* key);
 
+typedef struct HCFSequence_ HCFSequence;
 
 struct HCFChoice_ {
   enum HCFChoiceType {

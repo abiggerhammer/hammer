@@ -29,9 +29,9 @@ HParsedToken *act_bsfdig(const HParseResult *p, void* user_data)
 
     uint8_t c = H_CAST_UINT(p->ast);
 
-    if(c >= 0x40 && c <= 0x5A) // A-Z
+    if(c >= 0x41 && c <= 0x5A) // A-Z
         res->uint = c - 0x41;
-    else if(c >= 0x60 && c <= 0x7A) // a-z
+    else if(c >= 0x61 && c <= 0x7A) // a-z
         res->uint = c - 0x61 + 26;
     else if(c >= 0x30 && c <= 0x39) // 0-9
         res->uint = c - 0x30 + 52;
