@@ -311,4 +311,8 @@ function hammer.compile(parser, backend, params)
   return h.h_compile(parser, backend, params)
 end
 
+hammer.BYTE_BIG_ENDIAN = 0x1;
+hammer.BIT_BIG_ENDIAN = 0x2;
+hammer.BYTE_LITTLE_ENDIAN = 0x0;
+hammer.BIT_LITTLE_ENDIAN = 0x0;
 return hammer
