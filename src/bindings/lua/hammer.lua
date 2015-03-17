@@ -98,9 +98,9 @@ HParser* h_in(const uint8_t *charset, size_t length);
 HParser* h_not_in(const uint8_t *charset, size_t length);
 HParser* h_end_p();
 HParser* h_nothing_p();
-HParser* h_sequence__a(void *args[]);
-HParser* h_choice__a(void *args[]);
-HParser* h_permutation__a(void *args[]);
+HParser* h_sequence(HParser* p, ...);
+HParser* h_choice(HParser* p, ...);
+HParser* h_permutation(HParser* p, ...);
 HParser* h_butnot(const HParser* p1, const HParser* p2);
 HParser* h_difference(const HParser* p1, const HParser* p2);
 HParser* h_xor(const HParser* p1, const HParser* p2);
@@ -229,17 +229,17 @@ end
 function hammer.nothing_p()
   return h.h_nothing_p()
 end
-function hammer.sequence(...)
+function hammer.sequence(parser, ...)
   local parsers = append(nil, ...)
-  return h.h_sequence__a(parsers)
+  return h.h_sequence(parser, parsers)
 end
-function hammer.choice(...)
+function hammer.choice(parser, ...)
   local parsers = append(nil, ...)
-  return h.h_choice__a(parsers)
+  return h.h_choice(parser, parsers)
 end
-function hammer.permutation(...)
+function hammer.permutation(parser, ...)
   local parsers = append(nil, ...)
-  return h.h_permutation__a(parsers)
+  return h.h_permutation(parser, parsers)
 end
 function hammer.butnot(parser1, parser2)
   return h.h_butnot(parser1, parser2)
@@ -300,7 +300,7 @@ function hammer.put_value(parser, name)
   return h.h_put_value(parser, name)
 end
 function hammer.get_value(name)
-  return h.h_get_value(parser, name)
+  return h.h_get_value(name)
 end
 function hammer.bind(parser, continuation, env)
   local cb = ffi.cast("HContinuation", continuation)
