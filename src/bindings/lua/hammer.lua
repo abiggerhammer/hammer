@@ -153,7 +153,7 @@ local function ch(c)
   if type(c) == "number" then
     return h.h_ch(c)
   else
-    return h.h_ch(c:byte)
+    return h.h_ch(c:byte())
   end
 end
 local function ch_range(lower, upper)
@@ -161,7 +161,7 @@ local function ch_range(lower, upper)
     return h.h_ch_range(lower, upper)
   -- FIXME this is really not thorough type checking
   else
-    return h.h_ch_range(lower:byte, upper:byte)
+    return h.h_ch_range(lower:byte(), upper:byte())
   end
 end
 local function int_range(parser, lower, upper)
@@ -213,7 +213,7 @@ local function action(parser, action, user_data)
   local cb = ffi.cast("HAction", action)
   return h.h_action(parser, cb, user_data)
 end
-local function in(charset)
+local function in_(charset)
   return h.h_in(charset, #charset)
 end
 local function not_in(charset)
@@ -277,10 +277,10 @@ local function attr_bool(parser, predicate, user_data)
   local cb = ffi.cast("HPredicate", predicate)
   return h.h_attr_bool(parser, cb, user_data)
 end
-local function and(parser)
+local function and_(parser)
   return h.h_and(parser)
 end
-local function not(parser)
+local function not_(parser)
   return h.h_not(parser)
 end
 local function indirect(parser)
