@@ -1,10 +1,5 @@
 local ffi = require("ffi")
 ffi.cdef[[
-static const BYTE_BIG_ENDIAN = 0x1
-static const BIT_BIG_ENDIAN = 0x2
-static const BYTE_LITTLE_ENDIAN = 0x0
-static const BIT_LITTLE_ENDIAN = 0x0
-
 typedef enum HParserBackend_ {
   PB_MIN = 0,
   PB_PACKRAT = PB_MIN, // PB_MIN is always the default.
@@ -74,6 +69,8 @@ typedef struct HParser_ {
   HCFChoice *desugared;
 } HParser;
 
+typedef struct HAllocator_ HAllocator;
+
 typedef HParsedToken* (*HAction)(const HParseResult *p, void* user_data);
 typedef bool (*HPredicate)(HParseResult *p, void* user_data);
 typedef HParser* (*HContinuation)(HAllocator *mm__, const HParsedToken *x, void *env);
@@ -127,6 +124,11 @@ HParser* h_get_value(const char* name);
 HParser* h_bind(const HParser *p, HContinuation k, void *env);
 
 int h_compile(HParser* parser, HParserBackend backend, const void* params);
+
+static const uint8_t BYTE_BIG_ENDIAN = 0x1;
+static const uint8_t BIT_BIG_ENDIAN = 0x2;
+static const uint8_t BYTE_LITTLE_ENDIAN = 0x0;
+static const uint8_t BIT_LITTLE_ENDIAN = 0x0;
 ]]
 local h = ffi.load("hammer")
 
