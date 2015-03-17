@@ -140,16 +140,32 @@ local function append(a, ...)
   return helper(a, select('#', ...), ...)
 end
 
--- local parser
 local mt = {
   __index = {
     parse = function(p, str) return h.h_parse(p, str, #str) end,
   },
 }
--- parser = ffi.metatype("HParser", mt)
-
 local hammer = {}
 hammer.parser = ffi.metatype("HParser", mt)
+
+local counted_array
+local arr_mt = {
+  __index = function(table, key)
+    return table.elements[key]
+  end,
+  __len = function(table) return table.used end,
+  __ipairs = function(table)
+    local i, n = 0, #table
+    return function()
+      i = i + 1
+      if i <= n then
+        return i, table.elements[i]
+      end
+    end
+  end
+}
+counted_array = ffi.metatype("HCountedArray", arr_mt) 
+
 function hammer.token(str)
   return h.h_token(str, #str)
 end
