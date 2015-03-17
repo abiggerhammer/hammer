@@ -140,25 +140,27 @@ local function append(a, ...)
   return helper(a, select('#', ...), ...)
 end
 
-local parser
+-- local parser
 local mt = {
   __index = {
     parse = function(p, str) return h.h_parse(p, str, #str) end,
   },
 }
-parser = ffi.metatype("HParser", mt)
+-- parser = ffi.metatype("HParser", mt)
 
-local function token(str)
+local hammer = {}
+hammer.parser = ffi.metatype("HParser", mt)
+function hammer.token(str)
   return h.h_token(str, #str)
 end
-local function ch(c)
+function hammer.ch(c)
   if type(c) == "number" then
     return h.h_ch(c)
   else
     return h.h_ch(c:byte())
   end
 end
-local function ch_range(lower, upper)
+function hammer.ch_range(lower, upper)
   if type(lower) == "number" and type(upper) == "number" then
     return h.h_ch_range(lower, upper)
   -- FIXME this is really not thorough type checking
@@ -166,145 +168,147 @@ local function ch_range(lower, upper)
     return h.h_ch_range(lower:byte(), upper:byte())
   end
 end
-local function int_range(parser, lower, upper)
+function hammer.int_range(parser, lower, upper)
   return h.h_int_range(parser, lower, upper)
 end
-local function bits(len, sign)
+function hammer.bits(len, sign)
   return h.h_bits(len, sign)
 end
-local function int64()
+function hammer.int64()
   return h.h_int64()
 end
-local function int32()
+function hammer.int32()
   return h.h_int32()
 end
-local function int16()
+function hammer.int16()
   return h.h_int16()
 end
-local function int8()
+function hammer.int8()
   return h.h_int8()
 end
-local function uint64()
+function hammer.uint64()
   return h.h_uint64()
 end
-local function uint32()
+function hammer.uint32()
   return h.h_uint32()
 end
-local function uint16()
+function hammer.uint16()
   return h.h_uint16()
 end
-local function uint8()
+function hammer.uint8()
   return h.h_uint8()
 end
-local function whitespace(parser)
+function hammer.whitespace(parser)
   return h.h_whitespace(parser)
 end
-local function left(parser1, parser2)
+function hammer.left(parser1, parser2)
   return h.h_left(parser1, parser2)
 end
-local function right(parser1, parser2)
+function hammer.right(parser1, parser2)
   return h.h_right(parser1, parser2)
 end
-local function middle(parser1, parser2, parser3)
+function hammer.middle(parser1, parser2, parser3)
   return h.h_middle(parser1, parser2, parser3)
 end
 -- There could also be an overload of this that doesn't
 -- bother with the env pointer, and passes it as NIL by
 -- default, but I'm not going to deal with overloads now.
-local function action(parser, action, user_data)
+function hammer.action(parser, action, user_data)
   local cb = ffi.cast("HAction", action)
   return h.h_action(parser, cb, user_data)
 end
-local function in_(charset)
+function hammer.in_(charset)
   return h.h_in(charset, #charset)
 end
-local function not_in(charset)
+function hammer.not_in(charset)
   return h.h_not_in(charset, #charset)
 end
-local function end_p()
+function hammer.end_p()
   return h.h_end_p()
 end
-local function nothing_p()
+function hammer.nothing_p()
   return h.h_nothing_p()
 end
-local function sequence(...)
+function hammer.sequence(...)
   local parsers = append(nil, ...)
   return h.h_sequence__a(parsers)
 end
-local function choice(...)
+function hammer.choice(...)
   local parsers = append(nil, ...)
   return h.h_choice__a(parsers)
 end
-local function permutation(...)
+function hammer.permutation(...)
   local parsers = append(nil, ...)
   return h.h_permutation__a(parsers)
 end
-local function butnot(parser1, parser2)
+function hammer.butnot(parser1, parser2)
   return h.h_butnot(parser1, parser2)
 end
-local function difference(parser1, parser2)
+function hammer.difference(parser1, parser2)
   return h.h_difference(parser1, parser2)
 end
-local function xor(parser1, parser2)
+function hammer.xor(parser1, parser2)
   return h.h_xor(parser1, parser2)
 end
-local function many(parser)
+function hammer.many(parser)
   return h.h_many(parser)
 end
-local function many1(parser)
+function hammer.many1(parser)
   return h.h_many1(parser)
 end
-local function repeat_n(parser, n)
+function hammer.repeat_n(parser, n)
   return h.h_repeat_n(parser, n)
 end
-local function optional(parser)
+function hammer.optional(parser)
   return h.h_optional(parser)
 end
-local function ignore(parser)
+function hammer.ignore(parser)
   return h.h_ignore(parser)
 end
-local function sepBy(parser)
+function hammer.sepBy(parser)
   return h.h_sepBy(parser)
 end
-local function sepBy1(parser)
+function hammer.sepBy1(parser)
   return h.h_sepBy1(parser)
 end
-local function epsilon_p()
+function hammer.epsilon_p()
   return h.h_epsilon_p()
 end
-local function length_value(length, value)
+function hammer.length_value(length, value)
   return h.h_length_value(length, value)
 end
-local function attr_bool(parser, predicate, user_data)
+function hammer.attr_bool(parser, predicate, user_data)
   local cb = ffi.cast("HPredicate", predicate)
   return h.h_attr_bool(parser, cb, user_data)
 end
-local function and_(parser)
+function hammer.and_(parser)
   return h.h_and(parser)
 end
-local function not_(parser)
+function hammer.not_(parser)
   return h.h_not(parser)
 end
-local function indirect(parser)
+function hammer.indirect(parser)
   return h.h_indirect(parser)
 end
-local function bind_indirect(indirect, inner)
+function hammer.bind_indirect(indirect, inner)
   return h.h_bind_indirect(indirect, inner)
 end
-local function with_endianness(endianness, parser)
+function hammer.with_endianness(endianness, parser)
   return h.h_with_endianness(endianness, parser)
 end
-local function put_value(parser, name)
+function hammer.put_value(parser, name)
   return h.h_put_value(parser, name)
 end
-local function get_value(name)
+function hammer.get_value(name)
   return h.h_get_value(parser, name)
 end
-local function bind(parser, continuation, env)
+function hammer.bind(parser, continuation, env)
   local cb = ffi.cast("HContinuation", continuation)
   return h.h_bind(parser, cb, env)
 end
 
-local function compile(parser, backend, params)
+function hammer.compile(parser, backend, params)
   return h.h_compile(parser, backend, params)
 end
+
+return hammer
