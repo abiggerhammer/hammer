@@ -162,6 +162,13 @@ local arr_mt = {
         return i, table.elements[i]
       end
     end
+  end,
+  __call = function(self)
+    ret = {}
+    for i, v in ipairs(self)
+      do ret[#ret+1] = v
+    end
+    return ret
   end
 }
 counted_array = ffi.metatype("HCountedArray", arr_mt) 
@@ -234,7 +241,8 @@ function hammer.action(parser, action, user_data)
   return h.h_action(parser, cb, user_data)
 end
 function hammer.in_(charset)
-  return h.h_in(charset, #charset)
+  local cs = ffi.new("const unsigned char[" .. #charset .. "]", charset)
+  return h.h_in(cs, #charset)
 end
 function hammer.not_in(charset)
   return h.h_not_in(charset, #charset)
