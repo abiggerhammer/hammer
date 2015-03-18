@@ -171,7 +171,25 @@ local arr_mt = {
     return ret
   end
 }
-counted_array = ffi.metatype("HCountedArray", arr_mt) 
+counted_array = ffi.metatype("HCountedArray", arr_mt)
+
+local bytes_mt = {
+  __call = function(self)
+    local ret = ""
+    print(self.len)
+    for i = 0, tonumber(self.len)-1
+      do ret = ret .. string.char(self.token[i])
+    end
+    return ret
+  end
+}
+local byte_string = ffi.metatype("HBytes", bytes_mt)
+-- local parsed_token
+-- local tok_mt = {
+--   __call = function(self)
+--   end
+-- }
+-- parsed_token = ffi.metatype("HParsedToken", tok_mt)
 
 function hammer.token(str)
   return h.h_token(str, #str)
