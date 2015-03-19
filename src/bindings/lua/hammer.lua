@@ -176,20 +176,31 @@ counted_array = ffi.metatype("HCountedArray", arr_mt)
 local bytes_mt = {
   __call = function(self)
     local ret = ""
-    print(self.len)
-    for i = 0, tonumber(self.len)-1
+    for i = 0, tonumber(ffi.cast("uintptr_t", ffi.cast("void *", self.len)))-1
       do ret = ret .. string.char(self.token[i])
     end
     return ret
   end
 }
 local byte_string = ffi.metatype("HBytes", bytes_mt)
--- local parsed_token
--- local tok_mt = {
---   __call = function(self)
---   end
--- }
--- parsed_token = ffi.metatype("HParsedToken", tok_mt)
+
+local token_types = ffi.new("HTokenType")
+
+local parsed_token
+local tok_mt = {
+  __call = function(self)
+     if self.token_type == ffi.C.TT_BYTES then
+       return self.bytes()
+     elseif self.token_type == ffi.C.TT_SINT then
+       return tonumber(ffi.cast("intptr_t", ffi.cast("void *", self.sint)))
+     elseif self.token_type == ffi.C.TT_UINT then
+       return tonumber(ffi.cast("uintptr_t", ffi.cast("void *", self.uint)))
+     elseif self.token_type == ffi.C.TT_SEQUENCE then
+       return self.seq()
+     end
+  end
+}
+parsed_token = ffi.metatype("HParsedToken", tok_mt)
 
 function hammer.token(str)
   return h.h_token(str, #str)
