@@ -309,7 +309,7 @@ describe("Combinator tests", function()
   end)
 
   describe("End-of-input tests", function()
-    local parser = hammer.seq()uence(hammer.ch("a"), hammer.end_p())
+    local parser = hammer.sequence(hammer.ch("a"), hammer.end_p())
     it("parses a string that ends where it is expected to", function()
       local ret = parser:parse("a")
       assert.are.same({"a"}, ret.ast.seq())
