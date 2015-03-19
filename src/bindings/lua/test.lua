@@ -265,7 +265,7 @@ describe("Combinator tests", function()
       local chars = result.ast.seq()
       local ret = ""
       for i, v in ipairs(chars)
-        do ret = ret .. string.char(v.uint):upper()
+        do ret = ret .. string.char(tonumber(v.uint)):upper()
       end
       return ret
     end
