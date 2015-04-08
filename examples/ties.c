@@ -10,8 +10,30 @@
 #include "../src/backends/lr.h"
 #include <stdio.h>
 
-static const char *nonterminal_name(const HCFGrammar *g, const HCFChoice *nt)
-{
+
+HAllocator *mm__;
+
+// If a parser has user_data set, the generating function systems will try
+// to interpret it as a string:
+//
+// If this string for an h_ch starts with the character 0, then that character
+// will have weight 0 in the generating function.
+//
+// Use the remaining string to set the preferred name of that parser in the
+// generating function.
+
+
+
+static const char *nonterminal_name(const HCFGrammar *g, const HCFChoice *nt) {
+  if(nt->user_data != NULL) {
+    if(*(char*)(nt->user_data) != '0') {
+      // user_data is a non-empty string
+      return nt->user_data;
+    } else {
+      return nt->user_data+1;
+    }
+  }
+  
   static char buf[16] = {0}; // 14 characters in base 26 are enough for 64 bits
 
   // find nt's number in g
@@ -38,13 +60,16 @@ void readsequence(FILE *file, uint32_t *count, uint32_t *length,
   if (*x == NULL) {
     return;
   } else {
+    char has_user_data = (*x)->user_data != NULL && *(char*)(*x)->user_data != 0;
     fprintf(file, "1");
     HCharset cs;
     unsigned int i, cscount=0;
     for(; *x; x++) {
       switch((*x)->type) {
       case HCF_CHAR:
-	(*length)++;
+	if(!(has_user_data && *(char*)(*x)->user_data == '0')) {
+	  (*length)++;
+	}
 	break;
       case HCF_END:
 	break;
@@ -182,7 +207,21 @@ HParser* finkmaoTW() {
 			     h_epsilon_p(),
 			      NULL);
   h_bind_indirect(pairstar, pstar_);
-  return h_sequence(prefix, pairstar, tuck, NULL);
+
+  HParser* tie = h_sequence(prefix, pairstar, tuck, NULL);
+  h_desugar_augmented(mm__, tie);
+
+  
+  T->desugared->user_data = "T";
+  W->desugared->user_data = "W";
+  U->desugared->user_data = "0U";
+  prefix->desugared->user_data = "prefix";
+  pair->desugared->user_data = "pair";
+  tuck->desugared->user_data = "tuck";
+  pstar_->desugared->user_data = "pairstar";
+  tie->desugared->user_data = "tie";
+  
+  return tie;
 }
 
 HParser* depth1TW() {
@@ -341,9 +380,8 @@ HParser* depthNTW() {
 }
 
 
-int main(int argc, char **argv)
-{
-  HAllocator *mm__ = &system_allocator;
+int main(int argc, char **argv) {
+  mm__ = &system_allocator;
 
   HParser *p = finkmaoTW();
   HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, p));
