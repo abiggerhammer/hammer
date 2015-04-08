@@ -173,7 +173,12 @@ HParser* finkmaoTW() {
   HParser *tuck = h_choice(h_sequence(T, T, U, NULL),
 			   h_sequence(W, W, U, NULL),
 			   NULL);
-  return h_choice(h_sequence(prefix, h_many(pair), tuck, NULL), NULL);
+  HParser *pairstar = h_indirect();
+  HParser *pstar_ = h_choice(h_sequence(pair, tuckpairstar, NULL),
+			      h_epsilon_p(),
+			      NULL);
+  h_bind_indirect(pairstar, pstar_);
+  return h_choice(h_sequence(prefix, pairstar, tuck, NULL), NULL);
 }
 
 HParser* depth1TW() {
@@ -185,7 +190,13 @@ HParser* depth1TW() {
   HParser *tuck = h_choice(h_sequence(T, T, U, NULL),
 			   h_sequence(W, W, U, NULL),
 			   NULL);
-  return h_choice(h_sequence(prefix, h_many(h_choice(pair, tuck, NULL)), tuck, NULL), NULL);
+  HParser *tuckpairstar = h_indirect();
+  HParser *tpstar_ = h_choice(h_sequence(pair, tuckpairstar, NULL),
+			      h_sequence(tuck, tuckpairstar, NULL),
+			      h_epsilon_p(),
+			      NULL);
+  h_bind_indirect(tuckpairstar, tpstar_);
+  return h_choice(h_sequence(prefix, tuckpairstar, tuck, NULL), NULL);
 }
 
 HParser* depth1() {
@@ -307,9 +318,16 @@ HParser* depthNTW() {
   h_bind_indirect(wt0, wt0_);
   h_bind_indirect(wt1, wt1_);
   h_bind_indirect(wt2, wt2_);
-  
   HParser *tuck = h_choice(tstart, wstart, NULL);
-  return h_choice(h_sequence(prefix, h_many(h_choice(pair, tuck, NULL)), tuck, NULL), NULL);
+
+  HParser *tuckpairstar = h_indirect();
+  HParser *tpstar_ = h_choice(h_sequence(pair, tuckpairstar, NULL),
+			      h_sequence(tuck, tuckpairstar, NULL),
+			      h_epsilon_p(),
+			      NULL);
+  h_bind_indirect(tuckpairstar, tpstar_);
+			      
+  return h_choice(h_sequence(prefix, tuckpairstar, tuck, NULL), NULL);
 }
 
 
