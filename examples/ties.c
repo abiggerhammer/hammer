@@ -160,7 +160,7 @@ HParser* finkmao() {
   h_bind_indirect(Lnext, L_);
   h_bind_indirect(Rnext, R_);
   h_bind_indirect(Cnext, C_);
-  HParser *tie = h_choice(h_sequence(L, Lnext, NULL), NULL);
+  HParser *tie = h_sequence(L, Lnext, NULL);
   return tie;
 }
 
@@ -168,17 +168,21 @@ HParser* finkmaoTW() {
   HParser *T = h_ch('T');
   HParser *W = h_ch('W');
   HParser *U = h_ch('U');
-  HParser *prefix = h_choice(T, W, h_epsilon_p(), NULL);
-  HParser *pair = h_repeat_n(h_choice(T, W, NULL), 2);
+  HParser *prefix = h_choice(T, W, h_epsilon_p(),
+			     NULL);
+  HParser *pair = h_choice(h_sequence(T, T, NULL),
+			   h_sequence(W, T, NULL),
+			   h_sequence(T, W, NULL),
+			   h_sequence(W, W, NULL), NULL);
   HParser *tuck = h_choice(h_sequence(T, T, U, NULL),
 			   h_sequence(W, W, U, NULL),
 			   NULL);
   HParser *pairstar = h_indirect();
   HParser *pstar_ = h_choice(h_sequence(pair, pairstar, NULL),
-			      h_epsilon_p(),
+			     h_epsilon_p(),
 			      NULL);
   h_bind_indirect(pairstar, pstar_);
-  return h_choice(h_sequence(prefix, pairstar, tuck, NULL), NULL);
+  return h_sequence(prefix, pairstar, tuck, NULL);
 }
 
 HParser* depth1TW() {
@@ -186,7 +190,10 @@ HParser* depth1TW() {
   HParser *W = h_ch('W');
   HParser *U = h_ch('U');
   HParser *prefix = h_choice(T, W, h_epsilon_p(), NULL);
-  HParser *pair = h_repeat_n(h_choice(T, W, NULL), 2);
+  HParser *pair = h_choice(h_sequence(T, T, NULL),
+			   h_sequence(W, T, NULL),
+			   h_sequence(T, W, NULL),
+			   h_sequence(W, W, NULL), NULL);
   HParser *tuck = h_choice(h_sequence(T, T, U, NULL),
 			   h_sequence(W, W, U, NULL),
 			   NULL);
@@ -248,7 +255,10 @@ HParser* depthNTW() {
   HParser *W = h_ch('W');
   HParser *U = h_ch('U');
   HParser *prefix = h_choice(T, W, h_epsilon_p(), NULL);
-  HParser *pair = h_repeat_n(h_choice(T, W, NULL), 2);
+  HParser *pair = h_choice(h_sequence(T, T, NULL),
+			   h_sequence(W, T, NULL),
+			   h_sequence(T, W, NULL),
+			   h_sequence(W, W, NULL), NULL);
   HParser *tstart = h_indirect();
   HParser *tw0 = h_indirect();
   HParser *tw1 = h_indirect();
@@ -335,8 +345,8 @@ int main(int argc, char **argv)
 {
   HAllocator *mm__ = &system_allocator;
 
-
-  HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, finkmaoTW()));
+  HParser *p = finkmaoTW();
+  HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, p));
   if (g == NULL) {
     fprintf(stderr, "h_cfgrammar failed\n");
     return 1;
