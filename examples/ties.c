@@ -318,7 +318,7 @@ int main(int argc, char **argv)
   HAllocator *mm__ = &system_allocator;
 
 
-  HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, cfExample()));
+  HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, finkmaoTW()));
   if (g == NULL) {
     fprintf(stderr, "h_cfgrammar failed\n");
     return 1;
