@@ -174,7 +174,7 @@ HParser* finkmaoTW() {
 			   h_sequence(W, W, U, NULL),
 			   NULL);
   HParser *pairstar = h_indirect();
-  HParser *pstar_ = h_choice(h_sequence(pair, tuckpairstar, NULL),
+  HParser *pstar_ = h_choice(h_sequence(pair, pairstar, NULL),
 			      h_epsilon_p(),
 			      NULL);
   h_bind_indirect(pairstar, pstar_);
