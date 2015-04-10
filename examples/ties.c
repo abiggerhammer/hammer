@@ -47,6 +47,18 @@ HParser* finkmao() {
   h_bind_indirect(Rnext, R_);
   h_bind_indirect(Cnext, C_);
   HParser *tie = h_sequence(L, Lnext, NULL);
+
+  h_desugar_augmented(mm__, tie);
+
+  L->desugared->user_data = "L";
+  R->desugared->user_data = "R";
+  C->desugared->user_data = "C";
+  Lnext->desugared->user_data = "Ln";
+  Rnext->desugared->user_data = "Rn";
+  Cnext->desugared->user_data = "Cn";
+  tie->desugared->user_data = "tie";
+  U->desugared->user_data = "0U";
+  
   return tie;
 }
 
@@ -103,7 +115,20 @@ HParser* depth1TW() {
 			      h_epsilon_p(),
 			      NULL);
   h_bind_indirect(tuckpairstar, tpstar_);
-  return h_choice(h_sequence(prefix, tuckpairstar, tuck, NULL), NULL);
+  HParser *tie = h_choice(h_sequence(prefix, tuckpairstar, tuck, NULL), NULL);
+
+  h_desugar_augmented(mm__, tie);
+  
+  T->desugared->user_data = "T";
+  W->desugared->user_data = "W";
+  U->desugared->user_data = "0U";
+  prefix->desugared->user_data = "prefix";
+  pair->desugared->user_data = "pair";
+  tuck->desugared->user_data = "tuck";
+  tpstar_->desugared->user_data = "tuckpairstar";
+  tie->desugared->user_data = "tie";
+
+  return tie;
 }
 
 HParser* depth1() {
@@ -144,10 +169,23 @@ HParser* depth1() {
   h_bind_indirect(lastR, R_);
   h_bind_indirect(lastL, L_);
   h_bind_indirect(lastC, C_);
-  return h_choice(h_sequence(L, lastL, NULL),
+  HParser* tie = h_choice(h_sequence(L, lastL, NULL),
 		  h_sequence(R, lastR, NULL),
 		  h_sequence(C, lastC, NULL),
 		  NULL);
+
+  h_desugar_augmented(mm__, tie);
+
+  L->desugared->user_data = "L";
+  R->desugared->user_data = "R";
+  C->desugared->user_data = "C";
+  U->desugared->user_data = "0U";
+  lastL ->desugared->user_data = "Ln";
+  lastR->desugared->user_data = "Rn";
+  lastC->desugared->user_data = "Cn";
+  tie->desugared->user_data = "tie";
+
+  return tie;
 }
 
 HParser* depthNTW() {
@@ -237,14 +275,27 @@ HParser* depthNTW() {
 			      NULL);
   h_bind_indirect(tuckpairstar, tpstar_);
 			      
-  return h_choice(h_sequence(prefix, tuckpairstar, tuck, NULL), NULL);
+  HParser *tie = h_choice(h_sequence(prefix, tuckpairstar, tuck, NULL), NULL);
+
+  h_desugar_augmented(mm__, tie);
+
+  T->desugared->user_data = "T";
+  W->desugared->user_data = "W";
+  U->desugared->user_data = "0U";
+  prefix->desugared->user_data = "prefix";
+  pair->desugared->user_data = "pair";
+  tuck->desugared->user_data = "tuck";
+  tpstar_->desugared->user_data = "tuckpairstar";
+  tie->desugared->user_data = "tie";
+
+  return tie;
 }
 
 
 int main(int argc, char **argv) {
   mm__ = &system_allocator;
 
-  HParser *p = finkmaoTW();
+  HParser *p = finkmao();
   HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, p));
   if (g == NULL) {
     fprintf(stderr, "h_cfgrammar failed\n");

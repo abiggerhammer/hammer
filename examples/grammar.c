@@ -20,7 +20,8 @@
 #include <stdio.h>
 
 const char *nonterminal_name(const HCFGrammar *g, const HCFChoice *nt) {
-  if(nt->user_data != NULL) {
+  // if user_data exists and is printable:
+  if(nt->user_data != NULL && *(char*)(nt->user_data) > ' ' && *(char*)(nt->user_data) < 127) {
     if(*(char*)(nt->user_data) != '0') {
       // user_data is a non-empty string
       return nt->user_data;
@@ -80,7 +81,7 @@ void readsequence(FILE *file, uint32_t *count, uint32_t *length,
 	*count *= cscount;
 	break;
       default: // HCF_CHOICE, non-terminal symbol
-	fprintf(file, "*%s(t)", nonterminal_name(g, *x));
+	fprintf(file, "*%s", nonterminal_name(g, *x));
 	break;
       }
     }
@@ -101,19 +102,48 @@ void h_pprint_gfeqns(FILE *file, const HCFGrammar *g) {
   // determine maximum string length of symbol names
   int len;
   size_t s;
-  for(len=1, s=26; s < g->nts->used; len++, s*=26); 
+  for(len=1, s=26; s < g->nts->used; len++, s*=26);
 
-  // iterate over g->nts
+  // emit the SageMath ring init string
+  // iterate over g->nts, output symbols
   size_t i;
-  HHashTableEntry *hte;
+  HHashTableEntry *hte;  
+  fprintf(file, "ring.<t");
+  for(i=0; i < g->nts->capacity; i++) {
+    for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
+      if (hte->key == NULL) {
+        continue;
+      }
+      const HCFChoice *nt = hte->key;
+      fprintf(file, ",");
+      
+      fprintf(file, "%s", nonterminal_name(g, nt));
+    }
+  }
+  fprintf(file, "> = QQ[]\n");
+      
+  
+  // iterate over g->nts
+  // emit a Sage ideal definition
+  int j=0;
+  fprintf(file, "ID = ring.ideal(");
   for(i=0; i < g->nts->capacity; i++) {
     for(hte = &g->nts->contents[i]; hte; hte = hte->next) {
       if (hte->key == NULL) {
         continue;
       }
 
+      if(j>0) {
+	fprintf(file, ",");
+      }
+      j++;
+      
       const HCFChoice *nt = hte->key;
-      fprintf(file, "%s(t) = ", nonterminal_name(g, nt));
+      const char *ntn = nonterminal_name(g, nt);
+      if(*ntn == 0) {
+	continue;
+      }
+      fprintf(file, "%s - (", ntn);
 
       
       for(HCFSequence **seq = nt->seq; *seq; seq++) {
@@ -142,7 +172,8 @@ void h_pprint_gfeqns(FILE *file, const HCFGrammar *g) {
 	}
       }
 
-      fprintf(file, "\n");
+      fprintf(file, ")");
     }
   }
+  fprintf(file, ")\n");
 }
