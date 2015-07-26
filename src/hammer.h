@@ -268,6 +268,8 @@ HAMMER_FN_DECL(HParseResult*, h_parse, const HParser* parser, const uint8_t* inp
  */
 HAMMER_FN_DECL(HParser*, h_token, const uint8_t *str, const size_t len);
 
+#define h_literal(s) h_token(s, sizeof(s)-1)
+
 /**
  * Given a single character, returns a parser that parses that 
  * character. 
