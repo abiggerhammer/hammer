@@ -348,12 +348,7 @@ bool h_svm_action_clear_to_mark(HArena *arena, HSVMContext *ctx, void* env) {
 // Glue regex backend to rest of system
 
 bool h_compile_regex(HRVMProg *prog, const HParser *parser) {
-  if (setjmp(prog->except)) {
-    return false;
-  }
-  bool ret = parser->vtable->compile_to_rvm(prog, parser->env);
-  memset(prog->except, 0, sizeof(prog->except));
-  return ret;
+  return parser->vtable->compile_to_rvm(prog, parser->env);
 }
 
 static void h_regex_free(HParser *parser) {
@@ -375,12 +370,16 @@ static int h_regex_compile(HAllocator *mm__, HParser* parser, const void* params
   prog->insns = NULL;
   prog->actions = NULL;
   prog->allocator = mm__;
+  if (setjmp(prog->except)) {
+    return false;
+  }
   if (!h_compile_regex(prog, parser)) {
     h_free(prog->insns);
     h_free(prog->actions);
     h_free(prog);
     return 2;
   }
+  memset(prog->except, 0, sizeof(prog->except));
   h_rvm_insert_insn(prog, RVM_ACCEPT, 0);
   parser->backend_data = prog;
   return 0;
