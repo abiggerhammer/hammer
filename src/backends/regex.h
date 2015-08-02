@@ -43,7 +43,6 @@ typedef struct HSVMContext_ {
   HParsedToken **stack;
   size_t stack_count; // number of items on the stack. Thus stack[stack_count] is the first unused item on the stack.
   size_t stack_capacity;
-  char error;
 } HSVMContext;
 
 // These actions all assume that the items on the stack are not

@@ -184,13 +184,15 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
 
 
 
-void svm_stack_ensure_cap(HAllocator *mm__, HSVMContext *ctx, size_t addl) {
+bool svm_stack_ensure_cap(HAllocator *mm__, HSVMContext *ctx, size_t addl) {
   if (ctx->stack_count + addl >= ctx->stack_capacity) {
     ctx->stack = mm__->realloc(mm__, ctx->stack, sizeof(*ctx->stack) * (ctx->stack_capacity *= 2));
     if (!ctx->stack) {
-      ctx->error = 1;
+      return false;
     }
+    return true;
   }
+  return true;
 }
 
 HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace, const uint8_t *input, int len) {
@@ -199,7 +201,6 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
   HArena *arena = h_new_arena(mm__, 0);
   ctx.stack_count = 0;
   ctx.stack_capacity = 16;
-  ctx.error = 0;
   ctx.stack = h_new(HParsedToken*, ctx.stack_capacity);
 
   HParsedToken *tmp_res;
@@ -207,8 +208,7 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
   for (cur = trace; cur; cur = cur->next) {
     switch (cur->opcode) {
     case SVM_PUSH:
-      svm_stack_ensure_cap(mm__, &ctx, 1);
-      if (ctx.error) {
+      if (!svm_stack_ensure_cap(mm__, &ctx, 1)) {
 	goto fail;
       }
       tmp_res = a_new(HParsedToken, 1);
