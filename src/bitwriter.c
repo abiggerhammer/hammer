@@ -13,10 +13,14 @@ HBitWriter *h_bit_writer_new(HAllocator* mm__) {
   HBitWriter *writer = h_new(HBitWriter, 1);
   memset(writer, 0, sizeof(*writer));
   writer->buf = mm__->alloc(mm__, writer->capacity = 8);
+  if (!writer) {
+    return NULL;
+  }
   memset(writer->buf, 0, writer->capacity);
   writer->mm__ = mm__;
   writer->flags = BYTE_BIG_ENDIAN | BIT_BIG_ENDIAN;
-
+  writer->error = 0;
+  
   return writer;
 }
 
@@ -37,6 +41,10 @@ static void h_bit_writer_reserve(HBitWriter* w, size_t nbits) {
   size_t old_capacity = w->capacity;
   while (w->index + nbytes >= w->capacity) {
     w->buf = w->mm__->realloc(w->mm__, w->buf, w->capacity *= 2);
+    if (!w->buf) {
+      w->error = 1;
+      return;
+    }
   }
 
   if (old_capacity != w->capacity)

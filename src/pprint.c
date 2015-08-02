@@ -85,20 +85,33 @@ struct result_buf {
   size_t capacity;
 };
 
-static inline void ensure_capacity(struct result_buf *buf, int amt) {
-  while (buf->len + amt >= buf->capacity)
-    buf->output = realloc(buf->output, buf->capacity *= 2);
+static inline bool ensure_capacity(struct result_buf *buf, int amt) {
+  while (buf->len + amt >= buf->capacity) {
+    buf->output = (&system_allocator)->realloc(&system_allocator, buf->output, buf->capacity *= 2);
+    if (!buf->output) {
+      return false;
+    }
+  }
+  return true;
 }
 
-static inline void append_buf(struct result_buf *buf, const char* input, int len) {
-  ensure_capacity(buf, len);
-  memcpy(buf->output + buf->len, input, len);
-  buf->len += len;
+static inline bool append_buf(struct result_buf *buf, const char* input, int len) {
+  if (ensure_capacity(buf, len)) {
+    memcpy(buf->output + buf->len, input, len);
+    buf->len += len;
+    return true;
+  } else {
+    return false;
+  }
 }
 
-static inline void append_buf_c(struct result_buf *buf, char v) {
-  ensure_capacity(buf, 1);
-  buf->output[buf->len++] = v;
+static inline bool append_buf_c(struct result_buf *buf, char v) {
+  if (ensure_capacity(buf, 1)) {
+    buf->output[buf->len++] = v;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
@@ -161,10 +174,13 @@ static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
 
 char* h_write_result_unamb(const HParsedToken* tok) {
   struct result_buf buf = {
-    .output = malloc(16),
+    .output = (&system_allocator)->alloc(&system_allocator, 16),
     .len = 0,
     .capacity = 16
   };
+  if (!buf.output) {
+    return NULL;
+  }
   unamb_sub(tok, &buf);
   append_buf_c(&buf, 0);
   return buf.output;

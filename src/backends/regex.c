@@ -184,11 +184,15 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
 
 
 
-void svm_stack_ensure_cap(HAllocator *mm__, HSVMContext *ctx, size_t addl) {
+bool svm_stack_ensure_cap(HAllocator *mm__, HSVMContext *ctx, size_t addl) {
   if (ctx->stack_count + addl >= ctx->stack_capacity) {
     ctx->stack = mm__->realloc(mm__, ctx->stack, sizeof(*ctx->stack) * (ctx->stack_capacity *= 2));
-    // TODO: check for realloc failure
+    if (!ctx->stack) {
+      return false;
+    }
+    return true;
   }
+  return true;
 }
 
 HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace, const uint8_t *input, int len) {
@@ -204,7 +208,9 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
   for (cur = trace; cur; cur = cur->next) {
     switch (cur->opcode) {
     case SVM_PUSH:
-      svm_stack_ensure_cap(mm__, &ctx, 1);
+      if (!svm_stack_ensure_cap(mm__, &ctx, 1)) {
+	goto fail;
+      }
       tmp_res = a_new(HParsedToken, 1);
       tmp_res->token_type = TT_MARK;
       tmp_res->index = cur->input_pos;
@@ -264,7 +270,9 @@ uint16_t h_rvm_create_action(HRVMProg *prog, HSVMActionFunc action_func, void* e
     size_t array_size = (prog->action_count + 1) * 2; // action_count+1 is a
 					       // power of two
     prog->actions = prog->allocator->realloc(prog->allocator, prog->actions, array_size * sizeof(*prog->actions));
-    // TODO: Handle the allocation failed case nicely.
+    if (!prog->actions) {
+      longjmp(prog->except, 1);
+    }
   }
 
   HSVMAction *action = &prog->actions[prog->action_count];
@@ -280,7 +288,9 @@ uint16_t h_rvm_insert_insn(HRVMProg *prog, HRVMOp op, uint16_t arg) {
     size_t array_size = (prog->length + 1) * 2; // action_count+1 is a
 						// power of two
     prog->insns = prog->allocator->realloc(prog->allocator, prog->insns, array_size * sizeof(*prog->insns));
-    // TODO: Handle the allocation failed case nicely.
+    if (!prog->insns) {
+      longjmp(prog->except, 1);
+    }
   }
 
   prog->insns[prog->length].op = op;
@@ -360,12 +370,16 @@ static int h_regex_compile(HAllocator *mm__, HParser* parser, const void* params
   prog->insns = NULL;
   prog->actions = NULL;
   prog->allocator = mm__;
+  if (setjmp(prog->except)) {
+    return false;
+  }
   if (!h_compile_regex(prog, parser)) {
     h_free(prog->insns);
     h_free(prog->actions);
     h_free(prog);
     return 2;
   }
+  memset(prog->except, 0, sizeof(prog->except));
   h_rvm_insert_insn(prog, RVM_ACCEPT, 0);
   parser->backend_data = prog;
   return 0;

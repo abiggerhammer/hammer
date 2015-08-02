@@ -121,7 +121,7 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
 	ret->results[backend].failed_testcases++;
       }
       h_parse_result_free(res);
-      free(res_unamb);
+      (&system_allocator)->free(&system_allocator, res_unamb);
     }
 
     if (tc_failed > 0) {

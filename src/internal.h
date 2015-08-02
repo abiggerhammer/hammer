@@ -28,6 +28,11 @@
 #include <string.h>
 #include "hammer.h"
 
+/* "Internal" in this case means "we're not ready to commit
+ * to a public API." Many structures and routines here will be
+ * useful in client programs.
+ */
+
 #ifdef NDEBUG
 #define assert_message(check, message) do { } while(0)
 #else
@@ -282,6 +287,7 @@ struct HBitWriter_ {
 		   // of used bits in the current byte. i.e., 0 always
 		   // means that 8 bits are available for use.
   char flags;
+  char error;
 };
 
 // }}}
