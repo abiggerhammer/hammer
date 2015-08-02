@@ -7,6 +7,8 @@
 #ifndef HAMMER_BACKEND_REGEX__H
 #define HAMMER_BACKEND_REGEX__H
 
+#include <setjmp.h>
+
 // each insn is an 8-bit opcode and a 16-bit parameter
 // [a] are actions; they add an instruction to the stackvm that is being output.
 // [m] are match ops; they can either succeed or fail, depending on the current character
@@ -41,6 +43,7 @@ typedef struct HSVMContext_ {
   HParsedToken **stack;
   size_t stack_count; // number of items on the stack. Thus stack[stack_count] is the first unused item on the stack.
   size_t stack_capacity;
+  char error;
 } HSVMContext;
 
 // These actions all assume that the items on the stack are not
@@ -57,6 +60,7 @@ struct HRVMProg_ {
   size_t action_count;
   HRVMInsn *insns;
   HSVMAction *actions;
+  jmp_buf except;
 };
 
 // Returns true IFF the provided parser could be compiled.

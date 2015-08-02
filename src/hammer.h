@@ -48,6 +48,7 @@ typedef enum HParserBackend_ {
 
 typedef enum HTokenType_ {
   // Before you change the explicit values of these, think of the poor bindings ;_;
+  TT_INVALID = 0,
   TT_NONE = 1,
   TT_BYTES = 2,
   TT_SINT = 4,

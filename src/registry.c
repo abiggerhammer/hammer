@@ -46,24 +46,31 @@ static int compare_entries(const void* v1, const void* v2) {
 }
 
 HTokenType h_allocate_token_type(const char* name) {
-  Entry* new_entry = malloc(sizeof(*new_entry));
+  Entry* new_entry = (&system_allocator)->alloc(&system_allocator, sizeof(*new_entry));
+  if (!new_entry) {
+    return TT_INVALID;
+  }
   new_entry->name = name;
   new_entry->value = 0;
   Entry* probe = *(Entry**)tsearch(new_entry, &tt_registry, compare_entries);
   if (probe->value != 0) {
     // Token type already exists...
     // TODO: treat this as a bug?
-    free(new_entry);
+    (&system_allocator)->free(&system_allocator, new_entry);
     return probe->value;
   } else {
     // new value
     probe->name = strdup(probe->name); // drop ownership of name
     probe->value = tt_next++;
     if ((probe->value - TT_START) >= tt_by_id_sz) {
-      if (tt_by_id_sz == 0)
+      if (tt_by_id_sz == 0) {
 	tt_by_id = malloc(sizeof(*tt_by_id) * ((tt_by_id_sz = (tt_next - TT_START) * 16)));
-      else
+      } else {
 	tt_by_id = realloc(tt_by_id, sizeof(*tt_by_id) * ((tt_by_id_sz *= 2)));
+      }
+      if (!tt_by_id) {
+	return TT_INVALID;
+      }
     }
     assert(probe->value - TT_START < tt_by_id_sz);
     tt_by_id[probe->value - TT_START] = probe;

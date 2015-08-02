@@ -282,6 +282,7 @@ struct HBitWriter_ {
 		   // of used bits in the current byte. i.e., 0 always
 		   // means that 8 bits are available for use.
   char flags;
+  char error;
 };
 
 // }}}

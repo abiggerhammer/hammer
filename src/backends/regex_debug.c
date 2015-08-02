@@ -59,7 +59,7 @@ void dump_rvm_prog(HRVMProg *prog) {
       symref = getsym(prog->actions[insn->arg].action);
       // TODO: somehow format the argument to action
       printf("%s\n", symref);
-      free(symref);
+      (&system_allocator)->free(&system_allocator, symref);
       break;
     case RVM_MATCH: {
       uint8_t low, high;
@@ -95,7 +95,7 @@ void dump_svm_prog(HRVMProg *prog, HRVMTrace *trace) {
       symref = getsym(prog->actions[trace->arg].action);
       // TODO: somehow format the argument to action
       printf("%s\n", symref);
-      free(symref);
+      (&system_allocator)->free(&system_allocator, symref);
       break;
     default:
       printf("\n");

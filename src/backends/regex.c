@@ -187,7 +187,9 @@ void* h_rvm_run__m(HAllocator *mm__, HRVMProg *prog, const uint8_t* input, size_
 void svm_stack_ensure_cap(HAllocator *mm__, HSVMContext *ctx, size_t addl) {
   if (ctx->stack_count + addl >= ctx->stack_capacity) {
     ctx->stack = mm__->realloc(mm__, ctx->stack, sizeof(*ctx->stack) * (ctx->stack_capacity *= 2));
-    // TODO: check for realloc failure
+    if (!ctx->stack) {
+      ctx->error = 1;
+    }
   }
 }
 
@@ -197,6 +199,7 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
   HArena *arena = h_new_arena(mm__, 0);
   ctx.stack_count = 0;
   ctx.stack_capacity = 16;
+  ctx.error = 0;
   ctx.stack = h_new(HParsedToken*, ctx.stack_capacity);
 
   HParsedToken *tmp_res;
@@ -205,6 +208,9 @@ HParseResult *run_trace(HAllocator *mm__, HRVMProg *orig_prog, HRVMTrace *trace,
     switch (cur->opcode) {
     case SVM_PUSH:
       svm_stack_ensure_cap(mm__, &ctx, 1);
+      if (ctx.error) {
+	goto fail;
+      }
       tmp_res = a_new(HParsedToken, 1);
       tmp_res->token_type = TT_MARK;
       tmp_res->index = cur->input_pos;
@@ -264,7 +270,9 @@ uint16_t h_rvm_create_action(HRVMProg *prog, HSVMActionFunc action_func, void* e
     size_t array_size = (prog->action_count + 1) * 2; // action_count+1 is a
 					       // power of two
     prog->actions = prog->allocator->realloc(prog->allocator, prog->actions, array_size * sizeof(*prog->actions));
-    // TODO: Handle the allocation failed case nicely.
+    if (!prog->actions) {
+      longjmp(prog->except, 1);
+    }
   }
 
   HSVMAction *action = &prog->actions[prog->action_count];
@@ -280,7 +288,9 @@ uint16_t h_rvm_insert_insn(HRVMProg *prog, HRVMOp op, uint16_t arg) {
     size_t array_size = (prog->length + 1) * 2; // action_count+1 is a
 						// power of two
     prog->insns = prog->allocator->realloc(prog->allocator, prog->insns, array_size * sizeof(*prog->insns));
-    // TODO: Handle the allocation failed case nicely.
+    if (!prog->insns) {
+      longjmp(prog->except, 1);
+    }
   }
 
   prog->insns[prog->length].op = op;
@@ -338,7 +348,12 @@ bool h_svm_action_clear_to_mark(HArena *arena, HSVMContext *ctx, void* env) {
 // Glue regex backend to rest of system
 
 bool h_compile_regex(HRVMProg *prog, const HParser *parser) {
-  return parser->vtable->compile_to_rvm(prog, parser->env);
+  if (setjmp(prog->except)) {
+    return false;
+  }
+  bool ret = parser->vtable->compile_to_rvm(prog, parser->env);
+  memset(prog->except, 0, sizeof(prog->except));
+  return ret;
 }
 
 static void h_regex_free(HParser *parser) {

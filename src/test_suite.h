@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
+#include "internal.h"
+
 // Equivalent to g_assert_*, but not using g_assert...
 #define g_check_inttype(fmt, typ, n1, op, n2) do {				\
     typ _n1 = (n1);							\
@@ -132,7 +134,7 @@
     } else {								\
       char* cres = h_write_result_unamb(res->ast);			\
       g_check_string(cres, ==, result);					\
-      free(cres);							\
+      (&system_allocator)->free(&system_allocator, cres);		\
       HArenaStats stats;						\
       h_allocator_stats(res->arena, &stats);				\
       g_test_message("Parse used %zd bytes, wasted %zd bytes. "		\
