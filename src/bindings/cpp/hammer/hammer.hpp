@@ -2,6 +2,7 @@
 #define HAMMER_HAMMER__HPP
 
 #include "../../../hammer.h"
+#include "../../../internal.h"
 #include <string>
 #include <stdint.h>
 #include <cstdarg>
@@ -49,7 +50,7 @@ namespace hammer {
     std::string asUnambiguous() {
       char* buf = h_write_result_unamb(token);
       std::string s = std::string(buf);
-      free(buf);
+      (&system_allocator)->free(&system_allocator, buf);
       return s;
     }
   };
