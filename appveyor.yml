@@ -14,5 +14,6 @@ build_script:
     }
 - call "%VS140COMNTOOLS%\..\..\VC\vcvarsall.bat" %VCVARS_PLATFORM%
 - call tools\windows\build.bat
-- call tools\windows\build_examples.bat
+# FIXME(windows) TODO(uucidl): reactivate examples
+# - call tools\windows\build_examples.bat
 - exit /b 0
