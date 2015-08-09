@@ -12,9 +12,6 @@ REM Set up SRC, BUILD and CLFLAGS
 call %HEREPATH%\env.bat
 call %HEREPATH%\clvars.bat
 
-REM type conversion of a return value
-set CLFLAGS=%CLFLAGS% -wd4242
-
 echo SRC=%SRC%, BUILD=%BUILD%
 echo CLFLAGS=%CLFLAGS%
 
