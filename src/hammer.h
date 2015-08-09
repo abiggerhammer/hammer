@@ -18,11 +18,7 @@
 #ifndef HAMMER_HAMMER__H
 #define HAMMER_HAMMER__H
 
-#if defined(__clang__) || defined(__GNUC__)
-#define H_GCC_ATTRIBUTE(x) __attribute__(x)
-#else
-#define H_GCC_ATTRIBUTE(x)
-#endif
+#include "compiler_specifics.h"
 
 #ifndef HAMMER_INTERNAL__NO_STDARG_H
 #include <stdarg.h>

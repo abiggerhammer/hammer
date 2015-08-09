@@ -5,6 +5,7 @@ Import('env testruns')
 dist_headers = [
     "hammer.h",
     "allocator.h",
+    "compiler_specifics.h",
     "glue.h",
     "internal.h"
 ]
@@ -61,6 +62,7 @@ misc_hammer_parts = [
     'desugar.c',
     'glue.c',
     'hammer.c',
+    'platform_bsdlike.c',
     'pprint.c',
     'registry.c',
     'system_allocator.c']
