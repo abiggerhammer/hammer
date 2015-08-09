@@ -19,6 +19,9 @@ set WARNINGS=%WARNINGS% -wd4200
 REM c4204 (non-constant aggregate initializers) ressembles C99 support
 set WARNINGS=%WARNINGS% -wd4204
 
+REM c4201 (anonymous unions) ressembles C11 support
+set WARNINGS=%WARNINGS% -wd4201
+
 REM c4820 (warnings about padding) is not useful
 set WARNINGS=%WARNINGS% -wd4820
 

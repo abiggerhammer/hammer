@@ -17,6 +17,13 @@
 
 #ifndef HAMMER_HAMMER__H
 #define HAMMER_HAMMER__H
+
+#if defined(__clang__) || defined(__GNUC__)
+#define H_GCC_ATTRIBUTE(x) __attribute__(x)
+#else
+#define H_GCC_ATTRIBUTE(x)
+#endif
+
 #ifndef HAMMER_INTERNAL__NO_STDARG_H
 #include <stdarg.h>
 #endif // HAMMER_INTERNAL__NO_STDARG_H
@@ -434,7 +441,7 @@ HAMMER_FN_DECL_NOARG(HParser*, h_nothing_p);
  *
  * Result token type: TT_SEQUENCE
  */
-HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_sequence, HParser* p);
+HAMMER_FN_DECL_VARARGS_ATTR(H_GCC_ATTRIBUTE((sentinel)), HParser*, h_sequence, HParser* p);
 
 /**
  * Given an array of parsers, p_array, apply each parser in order. The 
@@ -443,7 +450,7 @@ HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_sequence, HPa
  *
  * Result token type: The type of the first successful parser's result.
  */
-HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_choice, HParser* p);
+HAMMER_FN_DECL_VARARGS_ATTR(H_GCC_ATTRIBUTE((sentinel)), HParser*, h_choice, HParser* p);
 
 /**
  * Given a null-terminated list of parsers, match a permutation phrase of these
@@ -469,7 +476,7 @@ HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_choice, HPars
  *
  * Result token type: TT_SEQUENCE
  */
-HAMMER_FN_DECL_VARARGS_ATTR(__attribute__((sentinel)), HParser*, h_permutation, HParser* p);
+HAMMER_FN_DECL_VARARGS_ATTR(H_GCC_ATTRIBUTE((sentinel)), HParser*, h_permutation, HParser* p);
 
 /**
  * Given two parsers, p1 and p2, this parser succeeds in the following 
