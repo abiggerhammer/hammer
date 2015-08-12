@@ -24,9 +24,9 @@
 #define HAMMER_INTERNAL__H
 #include <stdint.h>
 #include <assert.h>
-#include <err.h>
 #include <string.h>
 #include "hammer.h"
+#include "platform.h"
 
 /* "Internal" in this case means "we're not ready to commit
  * to a public API." Many structures and routines here will be
@@ -38,7 +38,7 @@
 #else
 #define assert_message(check, message) do {				\
     if (!(check))							\
-      errx(1, "Assertion failed (programmer error): %s", message);	\
+      h_platform_errx(1, "Assertion failed (programmer error): %s", message);	\
   } while(0)
 #endif
 

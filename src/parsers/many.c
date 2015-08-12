@@ -246,7 +246,7 @@ static HParseResult* parse_length_value(void *env, HParseState *state) {
   if (!len)
     return NULL;
   if (len->ast->token_type != TT_UINT)
-    errx(1, "Length parser must return an unsigned integer");
+    h_platform_errx(1, "Length parser must return an unsigned integer");
   // TODO: allocate this using public functions
   HRepeat repeat = {
     .p = lv->value,

@@ -126,7 +126,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
   h_hashtable_put(state->recursion_heads, &k->input_pos, head);
   HParserCacheValue *old_cached = h_hashtable_get(state->cache, k);
   if (!old_cached || PC_LEFT == old_cached->value_type)
-    errx(1, "impossible match");
+    h_platform_errx(1, "impossible match");
   HParseResult *old_res = old_cached->right;
 
   // rewind the input
@@ -148,7 +148,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
         state->input_stream = cached->input_stream;
 	return cached->right;
       } else {
-	errx(1, "impossible match");
+	h_platform_errx(1, "impossible match");
       }
     }
   } else {
@@ -173,7 +173,7 @@ HParseResult* lr_answer(HParserCacheKey *k, HParseState *state, HLeftRec *growab
 	return grow(k, state, growable->head);
     }
   } else {
-    errx(1, "lrAnswer with no head");
+    h_platform_errx(1, "lrAnswer with no head");
   }
 }
 

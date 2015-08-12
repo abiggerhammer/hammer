@@ -22,7 +22,7 @@ struct HCFStack_ {
 };
 
 #ifndef UNUSED
-#define UNUSED __attribute__((unused))
+#define UNUSED H_GCC_ATTRIBUTE((unused))
 #endif
 
 static inline HCFChoice* h_cfstack_new_choice_raw(HAllocator *mm__, HCFStack *stk__) UNUSED;
