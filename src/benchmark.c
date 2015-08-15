@@ -35,7 +35,6 @@ HBenchmarkResults *h_benchmark(HParser* parser, HParserTestcase* testcases) {
   return h_benchmark__m(&system_allocator, parser, testcases);
 }
 
-//TODO(uucidl): replace tabs with the right number of spaces
 HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTestcase* testcases) {
   // For now, just output the results to stderr
   HParserTestcase* tc = testcases;
@@ -67,18 +66,18 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
       HParseResult *res = h_parse(parser, tc->input, tc->length);
       char* res_unamb;
       if (res != NULL) {
-	res_unamb = h_write_result_unamb(res->ast);
+        res_unamb = h_write_result_unamb(res->ast);
       } else
-	res_unamb = NULL;
+        res_unamb = NULL;
       if ((res_unamb == NULL && tc->output_unambiguous != NULL)
-	  || (res_unamb != NULL && strcmp(res_unamb, tc->output_unambiguous) != 0)) {
-	// test case failed...
-	fprintf(stderr, "Parsing with %s failed\n", HParserBackendNames[backend]);
-	// We want to run all testcases, for purposes of generating a
-	// report. (eg, if users are trying to fix a grammar for a
-	// faster backend)
-	tc_failed++;
-	ret->results[backend].failed_testcases++;
+          || (res_unamb != NULL && strcmp(res_unamb, tc->output_unambiguous) != 0)) {
+        // test case failed...
+        fprintf(stderr, "Parsing with %s failed\n", HParserBackendNames[backend]);
+        // We want to run all testcases, for purposes of generating a
+        // report. (eg, if users are trying to fix a grammar for a
+        // faster backend)
+        tc_failed++;
+        ret->results[backend].failed_testcases++;
       }
       h_parse_result_free(res);
       (&system_allocator)->free(&system_allocator, res_unamb);
@@ -98,13 +97,13 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
       int count = 1, cur;
       int64_t time_diff;
       do {
-	count *= 2; // Yes, this means that the first run will run the function twice. This is fine, as we want multiple runs anyway.
-	struct HStopWatch stopwatch;
-	h_platform_stopwatch_reset(&stopwatch);
-	for (cur = 0; cur < count; cur++) {
-	  h_parse_result_free(h_parse(parser, tc->input, tc->length));
-	}
-	time_diff = h_platform_stopwatch_ns(&stopwatch);
+        count *= 2; // Yes, this means that the first run will run the function twice. This is fine, as we want multiple runs anyway.
+        struct HStopWatch stopwatch;
+        h_platform_stopwatch_reset(&stopwatch);
+        for (cur = 0; cur < count; cur++) {
+          h_parse_result_free(h_parse(parser, tc->input, tc->length));
+        }
+        time_diff = h_platform_stopwatch_ns(&stopwatch);
       } while (time_diff < 100000000);
       ret->results[backend].cases[cur_case].parse_time = (time_diff / count);
       ret->results[backend].cases[cur_case].length = tc->length;
