@@ -1,5 +1,6 @@
 platform_win32.c 
-allocator.c 
+allocator.c
+benchmark.c
 bitreader.c 
 bitwriter.c 
 cfgrammar.c 
