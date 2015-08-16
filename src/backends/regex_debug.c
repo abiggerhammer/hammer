@@ -1,6 +1,5 @@
 // Intended to be included from regex_debug.c
-#define _GNU_SOURCE
-#include <stdio.h>
+#include "../platform.h"
 #include <stdlib.h>
 
 #define USE_DLADDR (0)
@@ -22,7 +21,7 @@ char* getsym(HSVMActionFunc addr) {
       return retstr;
   } else
 #endif
-    if (asprintf(&retstr, "%p", addr) > 0)
+    if (h_platform_asprintf(&retstr, "%p", addr) > 0)
       return retstr;
     else
       return NULL;

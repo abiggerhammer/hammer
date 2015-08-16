@@ -15,7 +15,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#define _GNU_SOURCE
+#include "platform.h"
+
 #include <stdio.h>
 #include <string.h>
 #include "hammer.h"
@@ -114,9 +115,24 @@ static inline bool append_buf_c(struct result_buf *buf, char v) {
   }
 }
 
-static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
+/** append a formatted string to the result buffer */
+static inline bool append_buf_formatted(struct result_buf *buf, char* format, ...)
+{
   char* tmpbuf;
   int len;
+  bool result;
+  va_list ap;
+
+  va_start(ap, format);
+  len = h_platform_vasprintf(&tmpbuf, format, ap);
+  result = append_buf(buf, tmpbuf, len);
+  free(tmpbuf);
+  va_end(ap);
+
+  return result;
+}
+
+static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
   if (!tok) {
     append_buf(buf, "NULL", 4);
     return;
@@ -141,16 +157,12 @@ static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
     break;
   case TT_SINT:
     if (tok->sint < 0)
-      len = asprintf(&tmpbuf, "s-%#" PRIx64, -tok->sint);
+      append_buf_formatted(buf, "s-%#" PRIx64, -tok->sint);
     else
-      len = asprintf(&tmpbuf, "s%#" PRIx64, tok->sint);
-    append_buf(buf, tmpbuf, len);
-    free(tmpbuf);
+      append_buf_formatted(buf, "s%#" PRIx64, tok->sint);
     break;
   case TT_UINT:
-    len = asprintf(&tmpbuf, "u%#" PRIx64, tok->uint);
-    append_buf(buf, tmpbuf, len);
-    free(tmpbuf);
+    append_buf_formatted(buf, "u%#" PRIx64, tok->uint);
     break;
   case TT_ERR:
     append_buf(buf, "ERR", 3);

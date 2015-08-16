@@ -8,7 +8,16 @@
 
 #include "compiler_specifics.h"
 
+#include <stdarg.h>
 #include <stdint.h>
+
+/* String Formatting */
+
+/** see GNU C asprintf */
+int h_platform_asprintf(char **strp, const char *fmt, ...);
+
+/** see GNU C vasprintf */
+int h_platform_vasprintf(char **strp, const char *fmt, va_list arg);
 
 /* Error Reporting */
 
