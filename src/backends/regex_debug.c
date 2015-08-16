@@ -3,13 +3,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define USE_DLADDR (0)
 
-
+#if USE_DLADDR
 // This is some spectacularly non-portable code... but whee!
 #include <dlfcn.h>
-char* getsym(void* addr) {
+#endif
+
+char* getsym(HSVMActionFunc addr) {
   char* retstr;
-#if 0
+#if USE_DLADDR
   // This will be fixed later.
   Dl_info dli;
   if (dladdr(addr, &dli) != 0 && dli.dli_sname != NULL) {
