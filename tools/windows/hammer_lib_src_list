@@ -7,6 +7,7 @@ cfgrammar.c
 desugar.c 
 glue.c 
 hammer.c 
+system_allocator.c
 parsers/action.c 
 parsers/and.c 
 parsers/attr_bool.c 
