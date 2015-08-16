@@ -6,6 +6,7 @@
 // with this byte:
 // #define DEBUG__MEMFILL 0xFF
 
+#if defined(DEBUG__MEMFILL)
 /**
  * Blocks allocated by the system_allocator start with this header.
  * I.e. the user part of the allocation directly follows.
@@ -16,6 +17,9 @@ typedef struct HDebugBlockHeader_
 } HDebugBlockHeader;
 
 #define BLOCK_HEADER_SIZE (sizeof(HDebugBlockHeader))
+#else
+#define BLOCK_HEADER_SIZE (0)
+#endif
 
 /**
  * Compute the total size needed for a given allocation size.
@@ -46,8 +50,8 @@ static void* system_alloc(HAllocator *allocator, size_t size) {
   void *uptr = user_ptr(block);
 #ifdef DEBUG__MEMFILL
   memset(uptr, DEBUG__MEMFILL, size);
-#endif
   ((HDebugBlockHeader*)block)->size = size;
+#endif
   return uptr;
 }
 
@@ -65,8 +69,8 @@ static void* system_realloc(HAllocator *allocator, void* uptr, size_t size) {
   size_t old_size = ((HDebugBlockHeader*)block)->size;
   if (size > old_size)
     memset((char*)uptr+old_size, DEBUG__MEMFILL, size - old_size);
-#endif
   ((HDebugBlockHeader*)block)->size = size;
+#endif
   return uptr;
 }
 
