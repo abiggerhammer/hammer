@@ -1,19 +1,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
 #include "hammer.h"
 #include "internal.h"
-
-#ifdef __MACH__
-#include <mach/clock.h>
-#include <mach/mach.h>
-#endif
-
-#ifdef __NetBSD__
-#include <sys/resource.h>
-#endif
+#include "platform.h"
 
 static const char* HParserBackendNames[] = {
   "Packrat",
@@ -22,38 +13,6 @@ static const char* HParserBackendNames[] = {
   "LALR",
   "GLR"
 };
-
-void h_benchmark_clock_gettime(struct timespec *ts) {
-  if (ts == NULL)
-    return;
-#ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
-  /* 
-   * This returns real time, not CPU time. See http://stackoverflow.com/a/6725161
-   * Possible solution: http://stackoverflow.com/a/11659289
-   */
-  clock_serv_t cclock;
-  mach_timespec_t mts;
-  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-  clock_get_time(cclock, &mts);
-  mach_port_deallocate(mach_task_self(), cclock);
-  ts->tv_sec = mts.tv_sec;
-  ts->tv_nsec = mts.tv_nsec;
-#elif defined(__NetBSD__)
-  // NetBSD doesn't have CLOCK_THREAD_CPUTIME_ID. We'll use getrusage instead
-  struct rusage rusage;
-  getrusage(RUSAGE_SELF, &rusage);
-  ts->tv_nsec = (rusage.ru_utime.tv_usec + rusage.ru_stime.tv_usec) * 1000;
-  // not going to overflow; can be at most 2e9-2
-  ts->tv_sec = rusage.ru_utime.tv_sec + rusage.ru_utime.tv_sec;
-  if (ts->tv_nsec >= 1000000000) {
-    ts->tv_nsec -=   1000000000; // subtract a second
-    ts->tv_sec += 1; // add it back.
-  }
-  assert (ts->tv_nsec <= 1000000000);
-#else
-  clock_gettime(CLOCK_THREAD_CPUTIME_ID, ts);
-#endif
-}
 
 /*
   Usage:
@@ -107,18 +66,18 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
       HParseResult *res = h_parse(parser, tc->input, tc->length);
       char* res_unamb;
       if (res != NULL) {
-	res_unamb = h_write_result_unamb(res->ast);
+        res_unamb = h_write_result_unamb(res->ast);
       } else
-	res_unamb = NULL;
+        res_unamb = NULL;
       if ((res_unamb == NULL && tc->output_unambiguous != NULL)
-	  || (res_unamb != NULL && strcmp(res_unamb, tc->output_unambiguous) != 0)) {
-	// test case failed...
-	fprintf(stderr, "Parsing with %s failed\n", HParserBackendNames[backend]);
-	// We want to run all testcases, for purposes of generating a
-	// report. (eg, if users are trying to fix a grammar for a
-	// faster backend)
-	tc_failed++;
-	ret->results[backend].failed_testcases++;
+          || (res_unamb != NULL && strcmp(res_unamb, tc->output_unambiguous) != 0)) {
+        // test case failed...
+        fprintf(stderr, "Parsing with %s failed\n", HParserBackendNames[backend]);
+        // We want to run all testcases, for purposes of generating a
+        // report. (eg, if users are trying to fix a grammar for a
+        // faster backend)
+        tc_failed++;
+        ret->results[backend].failed_testcases++;
       }
       h_parse_result_free(res);
       (&system_allocator)->free(&system_allocator, res_unamb);
@@ -135,20 +94,16 @@ HBenchmarkResults *h_benchmark__m(HAllocator* mm__, HParser* parser, HParserTest
 
     for (tc = testcases; tc->input != NULL; tc++) {
       // The goal is to run each testcase for at least 50ms each
-      // TODO: replace this with a posix timer-based benchmark. (cf. timerfd_create, timer_create, setitimer)
       int count = 1, cur;
-      struct timespec ts_start, ts_end;
       int64_t time_diff;
       do {
-	count *= 2; // Yes, this means that the first run will run the function twice. This is fine, as we want multiple runs anyway.
-  h_benchmark_clock_gettime(&ts_start);
-	for (cur = 0; cur < count; cur++) {
-	  h_parse_result_free(h_parse(parser, tc->input, tc->length));
-	}
-  h_benchmark_clock_gettime(&ts_end);
-
-	// time_diff is in ns
-	time_diff = (ts_end.tv_sec - ts_start.tv_sec) * 1000000000 + (ts_end.tv_nsec - ts_start.tv_nsec);
+        count *= 2; // Yes, this means that the first run will run the function twice. This is fine, as we want multiple runs anyway.
+        struct HStopWatch stopwatch;
+        h_platform_stopwatch_reset(&stopwatch);
+        for (cur = 0; cur < count; cur++) {
+          h_parse_result_free(h_parse(parser, tc->input, tc->length));
+        }
+        time_diff = h_platform_stopwatch_ns(&stopwatch);
       } while (time_diff < 100000000);
       ret->results[backend].cases[cur_case].parse_time = (time_diff / count);
       ret->results[backend].cases[cur_case].length = tc->length;

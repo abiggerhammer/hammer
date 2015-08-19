@@ -1,11 +1,14 @@
 platform_win32.c 
-allocator.c 
+allocator.c
+benchmark.c
 bitreader.c 
 bitwriter.c 
 cfgrammar.c 
 desugar.c 
 glue.c 
 hammer.c 
+pprint.c
+system_allocator.c
 parsers/action.c 
 parsers/and.c 
 parsers/attr_bool.c 
@@ -32,6 +35,7 @@ parsers/xor.c
 parsers/value.c 
 backends/packrat.c
 backends/llk.c
+backends/regex.c
 backends/glr.c
 backends/lalr.c
 backends/lr.c
