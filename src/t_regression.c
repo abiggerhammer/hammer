@@ -95,8 +95,32 @@ static void test_read_bits_48(void) {
   }
 }
 
+static void test_llk_zero_end(void) {
+    HParserBackend be = PB_LLk;
+    HParser *z = h_ch('\x00');
+    HParser *az = h_sequence(h_ch('a'), z, NULL);
+    HParser *ze = h_sequence(z, h_end_p(), NULL);
+    HParser *aze = h_sequence(h_ch('a'), z, h_end_p(), NULL);
+
+    // some cases surrounding the bug
+    g_check_parse_match (z, be, "\x00", 1, "u0");
+    g_check_parse_failed(z, be, "", 0);
+    g_check_parse_match (ze, be, "\x00", 1, "(u0)");
+    g_check_parse_failed(ze, be, "\x00b", 2);
+    g_check_parse_failed(ze, be, "", 0);
+    g_check_parse_match (az, be, "a\x00", 2, "(u0x61 u0)");
+    g_check_parse_match (aze, be, "a\x00", 2, "(u0x61 u0)");
+    g_check_parse_failed(aze, be, "a\x00b", 3);
+
+    // the following should not parse but did when the LL(k) backend failed to
+    // check for the end of input, mistaking it for a zero character.
+    g_check_parse_failed(az, be, "a", 1);
+    g_check_parse_failed(aze, be, "a", 1);
+}
+
 void register_regression_tests(void) {
   g_test_add_func("/core/regression/bug118", test_bug118);
   g_test_add_func("/core/regression/seq_index_path", test_seq_index_path);
   g_test_add_func("/core/regression/read_bits_48", test_read_bits_48);
+  g_test_add_func("/core/regression/llk_zero_end", test_llk_zero_end);
 }
