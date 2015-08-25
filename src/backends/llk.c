@@ -349,6 +349,8 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
         break;
 
       case HCF_CHAR:
+        if(stream->overrun)
+          goto no_parse;
         if(input != x->chr)
           goto no_parse;
         tok->token_type = TT_UINT;
