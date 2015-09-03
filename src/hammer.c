@@ -43,6 +43,7 @@ typedef struct {
 
 
 
+#define DEFAULT_ENDIANNESS (BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN)
 
 HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length) {
   return h_parse__m(&system_allocator, parser, input, length);
@@ -53,7 +54,7 @@ HParseResult* h_parse__m(HAllocator* mm__, const HParser* parser, const uint8_t*
     .index = 0,
     .bit_offset = 0,
     .overrun = 0,
-    .endianness = BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN,
+    .endianness = DEFAULT_ENDIANNESS,
     .length = length,
     .input = input
   };
@@ -95,4 +96,60 @@ int h_compile__m(HAllocator* mm__, HParser* parser, HParserBackend backend, cons
   if (!ret)
     parser->backend = backend;
   return ret;
+}
+
+
+HSuspendedParser* h_parse_start(const HParser* parser) {
+  return h_parse_start__m(&system_allocator, parser);
+}
+HSuspendedParser* h_parse_start__m(HAllocator* mm__, const HParser* parser) {
+  if(!backends[parser->backend]->parse_start)
+    return NULL;
+
+  // allocate and init suspended state
+  HSuspendedParser *s = h_new(HSuspendedParser, 1);
+  if(!s)
+    return NULL;
+  s->mm__ = mm__;
+  s->parser = parser;
+  s->backend_state = NULL;
+  s->endianness = DEFAULT_ENDIANNESS;
+
+  // backend-specific initialization
+  // should allocate s->backend_state
+  backends[parser->backend]->parse_start(s);
+
+  return s;
+}
+
+bool h_parse_chunk(HSuspendedParser* s, const uint8_t* input, size_t length) {
+  assert(backends[s->parser->backend]->parse_chunk != NULL);
+
+  // input 
+  HInputStream input_stream = {
+    .index = 0,
+    .bit_offset = 0,
+    .overrun = 0,
+    .endianness = s->endianness,
+    .length = length,
+    .input = input
+  };
+
+  // process chunk
+  backends[s->parser->backend]->parse_chunk(s, &input_stream);
+  s->endianness = input_stream.endianness;
+
+  return !input_stream.overrun; // parser wants no more input? done.
+}
+
+HParseResult* h_parse_finish(HSuspendedParser* s) {
+  assert(backends[s->parser->backend]->parse_finish != NULL);
+
+  HAllocator *mm__ = s->mm__;
+
+  HParseResult *r = backends[s->parser->backend]->parse_finish(s);
+    // NB: backend should have freed backend_state
+  h_free(s);
+
+  return r;
 }
