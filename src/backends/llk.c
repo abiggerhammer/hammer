@@ -461,12 +461,45 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
   return llk_parse_finish_(mm__, s);
 }
 
+void h_llk_parse_start(HSuspendedParser *s)
+{
+  s->backend_state = llk_parse_start_(s->mm__, s->parser);
+}
+
+void h_llk_parse_chunk(HSuspendedParser *s, HInputStream *input)
+{
+  HLLkState *state = s->backend_state;
+
+  state->seq = llk_parse_chunk_(state, s->parser, input, false);
+}
+
+HParseResult *h_llk_parse_finish(HSuspendedParser *s)
+{
+  HLLkState *state = s->backend_state;
+  HInputStream empty = {
+    .index = 0,
+    .bit_offset = 0,
+    .overrun = 0,
+    .endianness = s->endianness,
+    .length = 0,
+    .input = NULL
+  };
+
+  // signal end of input (no-op parse already done)
+  state->seq = llk_parse_chunk_(state, s->parser, &empty, true);
+
+  return llk_parse_finish_(s->mm__, s->backend_state);
+}
 
 
 HParserBackendVTable h__llk_backend_vtable = {
   .compile = h_llk_compile,
   .parse = h_llk_parse,
-  .free = h_llk_free
+  .free = h_llk_free,
+
+  .parse_start = h_llk_parse_start,
+  .parse_chunk = h_llk_parse_chunk,
+  .parse_finish = h_llk_parse_finish
 };
 
 
