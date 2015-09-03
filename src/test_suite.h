@@ -145,6 +145,49 @@
     }									\
   } while(0)
 
+#define g_check_parse_chunks_failed(parser, backend, chunk1, c1_len, chunk2, c2_len) do {	\
+    int skip = h_compile((HParser *)(parser), (HParserBackend)backend, NULL); \
+    HSuspendedParser *s = h_parse_start(parser);			\
+    if(skip || !s) {							\
+      g_test_message("Backend not applicable, skipping test");		\
+      break;								\
+    }									\
+    h_parse_chunk(s, (const uint8_t*)chunk1, c1_len);			\
+    h_parse_chunk(s, (const uint8_t*)chunk2, c2_len);			\
+    const HParseResult *res = h_parse_finish(s);			\
+    if (NULL != res) {							\
+      g_test_message("Check failed: shouldn't have succeeded, but did"); \
+      g_test_fail();							\
+    }									\
+  } while(0)
+
+#define g_check_parse_chunks_match(parser, backend, chunk1, c1_len, chunk2, c2_len, result) do { \
+    int skip = h_compile((HParser *)(parser), (HParserBackend) backend, NULL); \
+    HSuspendedParser *s = h_parse_start(parser);			\
+    if(skip || !s) {							\
+      g_test_message("Backend not applicable, skipping test");		\
+      break;								\
+    }									\
+    h_parse_chunk(s, (const uint8_t*)chunk1, c1_len);			\
+    h_parse_chunk(s, (const uint8_t*)chunk2, c2_len);			\
+    HParseResult *res = h_parse_finish(s);				\
+    if (!res) {								\
+      g_test_message("Parse failed on line %d", __LINE__);		\
+      g_test_fail();							\
+    } else {								\
+      char* cres = h_write_result_unamb(res->ast);			\
+      g_check_string(cres, ==, result);					\
+      (&system_allocator)->free(&system_allocator, cres);		\
+      HArenaStats stats;						\
+      h_allocator_stats(res->arena, &stats);				\
+      g_test_message("Parse used %zd bytes, wasted %zd bytes. "		\
+                     "Inefficiency: %5f%%",				\
+		     stats.used, stats.wasted,				\
+		     stats.wasted * 100. / (stats.used+stats.wasted));	\
+      h_delete_arena(res->arena);					\
+    }									\
+  } while(0)
+
 #define g_check_hashtable_present(table, key) do {			\
     if(!h_hashtable_present(table, key)) {				\
       g_test_message("Check failed: key should have been in table, but wasn't"); \
