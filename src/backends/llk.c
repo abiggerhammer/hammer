@@ -259,44 +259,74 @@ void h_llk_free(HParser *parser)
 
 /* LL(k) driver */
 
-HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
+typedef struct {
+  HArena *arena;        // will hold the results
+  HArena *tarena;       // tmp, deleted after parse
+  HSlist *stack;
+  HCountedArray *seq;   // accumulates current parse result
+} HLLkState;
+
+// in order to construct the parse tree, we delimit the symbol stack into
+// frames corresponding to production right-hand sides. since only left-most
+// derivations are produced this linearization is unique.
+// the 'mark' allocated below simply reserves a memory address to use as the
+// frame delimiter.
+// nonterminals, instead of being popped and forgotten, are put back onto the
+// stack below the mark to tell us which validations and semantic actions to
+// execute on their corresponding result.
+// also on the stack below the mark, we store the previously accumulated
+// value for the surrounding production.
+static int dummy;
+static void *MARK = &dummy;   // stack frame delimiter
+
+static HLLkState *llk_parse_start_(HAllocator* mm__, const HParser* parser)
 {
   const HLLkTable *table = parser->backend_data;
   assert(table != NULL);
 
-  HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
-  HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
-  HSlist *stack  = h_slist_new(tarena);
-  HCountedArray *seq = h_carray_new(arena); // accumulates current parse result
-
-  // in order to construct the parse tree, we delimit the symbol stack into
-  // frames corresponding to production right-hand sides. since only left-most
-  // derivations are produced this linearization is unique.
-  // the 'mark' allocated below simply reserves a memory address to use as the
-  // frame delimiter.
-  // nonterminals, instead of being popped and forgotten, are put back onto the
-  // stack below the mark to tell us which validations and semantic actions to
-  // execute on their corresponding result.
-  // also on the stack below the mark, we store the previously accumulated
-  // value for the surrounding production.
-  void *mark = h_arena_malloc(tarena, 1);
+  HLLkState *s = h_new(HLLkState, 1);
+  s->arena  = h_new_arena(mm__, 0);
+  s->tarena = h_new_arena(mm__, 0);
+  s->stack  = h_slist_new(s->tarena);
+  s->seq    = h_carray_new(s->arena);
 
   // initialize with the start symbol on the stack.
-  h_slist_push(stack, table->start);
+  h_slist_push(s->stack, table->start);
+
+  return s;
+}
+
+// returns partial result or NULL
+static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
+                                       HInputStream* stream, bool last_chunk)
+{
+  HParsedToken *tok = NULL;   // will hold result token
+  HCFChoice *x = NULL;        // current symbol (from top of stack)
+
+  const HLLkTable *table = parser->backend_data;
+  assert(table != NULL);
+
+  HArena *arena = s->arena;
+  HArena *tarena = s->tarena;
+  HSlist *stack = s->stack;
+  HCountedArray *seq = s->seq;
+
+  if(!seq)
+    return NULL;  // parse already failed
 
   // when we empty the stack, the parse is complete.
   while(!h_slist_empty(stack)) {
     // pop top of stack for inspection
-    HCFChoice *x = h_slist_pop(stack);
+    x = h_slist_pop(stack);
     assert(x != NULL);
 
-    if(x != mark && x->type == HCF_CHOICE) {
+    if(x != MARK && x->type == HCF_CHOICE) {
       // x is a nonterminal; apply the appropriate production and continue
 
       // push stack frame
       h_slist_push(stack, seq);   // save current partial value
       h_slist_push(stack, x);     // save the nonterminal
-      h_slist_push(stack, mark);  // frame delimiter
+      h_slist_push(stack, MARK);  // frame delimiter
 
       // open a fresh result sequence
       seq = h_carray_new(arena);
@@ -319,11 +349,10 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
     }
 
     // the top of stack is such that there will be a result...
-    HParsedToken *tok;  // will hold result token
     tok = h_arena_malloc(arena, sizeof(HParsedToken));
     tok->index = stream->index;
     tok->bit_offset = stream->bit_offset;
-    if(x == mark) {
+    if(x == MARK) {
       // hit stack frame boundary...
       // wrap the accumulated parse result, this sequence is finished
       tok->token_type = TT_SEQUENCE;
@@ -344,13 +373,15 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       case HCF_END:
         if(!stream->overrun)
           goto no_parse;
+        if(!last_chunk)
+          goto need_input;
         h_arena_free(arena, tok);
         tok = NULL;
         break;
 
       case HCF_CHAR:
         if(stream->overrun)
-          goto no_parse;
+          goto need_input;
         if(input != x->chr)
           goto no_parse;
         tok->token_type = TT_UINT;
@@ -359,7 +390,7 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
       case HCF_CHARSET:
         if(stream->overrun)
-          goto no_parse;
+          goto need_input;
         if(!charset_isset(x->charset, input))
           goto no_parse;
         tok->token_type = TT_UINT;
@@ -388,16 +419,46 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
     h_carray_append(seq, tok);
   }
 
+  // success
   // since we started with a single nonterminal on the stack, seq should
   // contain exactly the parse result.
   assert(seq->used == 1);
-  h_delete_arena(tarena);
-  return make_result(arena, seq->elements[0]);
+  return seq;
 
  no_parse:
-  h_delete_arena(tarena);
   h_delete_arena(arena);
+  s->arena = NULL;
   return NULL;
+
+ need_input:
+  if(last_chunk)
+    goto no_parse;
+  h_arena_free(arena, tok); // no result, yet
+  h_slist_push(stack, x);   // try this symbol again next time
+  return seq;
+}
+
+static HParseResult *llk_parse_finish_(HAllocator *mm__, HLLkState *s)
+{
+  HParseResult *res = NULL;
+
+  if(s->seq) {
+    assert(s->seq->used == 1);
+    res = make_result(s->arena, s->seq->elements[0]);
+  }
+
+  h_delete_arena(s->tarena);
+  h_free(s);
+  return res;
+}
+
+HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
+{
+  HLLkState *s = llk_parse_start_(mm__, parser);
+
+  s->seq = llk_parse_chunk_(s, parser, stream, true /* last chunk */);
+
+  return llk_parse_finish_(mm__, s);
 }
 
 

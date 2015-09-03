@@ -225,13 +225,13 @@ typedef struct HParserBackendVTable_ {
   void (*free)(HParser* parser);
 
   void (*parse_start)(HSuspendedParser *s);
-    // parse_start should allocate backend_state.
+    // parse_start should allocate s->backend_state.
   void (*parse_chunk)(HSuspendedParser *s, HInputStream *input);
     // when parse_chunk leaves input.overrun unset, parse is done. else:
-    // parse_chunk MUST consume all input, integrating it into backend_state.
+    // parse_chunk MUST consume all input, integrating it into s->backend_state.
     // calling parse_chunk again after parse is done should have no effect.
   HParseResult *(*parse_finish)(HSuspendedParser *s);
-    // parse_finish must free backend_state.
+    // parse_finish must free s->backend_state.
 } HParserBackendVTable;
 
 
