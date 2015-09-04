@@ -296,7 +296,7 @@ static HLLkState *llk_parse_start_(HAllocator* mm__, const HParser* parser)
   return s;
 }
 
-// returns partial result or NULL
+// returns partial result or NULL (no parse)
 static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
                                        HInputStream* stream)
 {
@@ -316,12 +316,24 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
 
   // when we empty the stack, the parse is complete.
   while(!h_slist_empty(stack)) {
+    tok = NULL;
+
     // pop top of stack for inspection
     x = h_slist_pop(stack);
     assert(x != NULL);
 
     if(x != MARK && x->type == HCF_CHOICE) {
       // x is a nonterminal; apply the appropriate production and continue
+
+      // look up applicable production in parse table
+      const HCFSequence *p = h_llk_lookup(table, x, stream);
+      if(p == NULL)
+        goto no_parse;
+      if(p == H_NEED_INPUT)
+        goto need_input;
+
+      // an infinite loop case that shouldn't happen
+      assert(!p->items[0] || p->items[0] != x);
 
       // push stack frame
       h_slist_push(stack, seq);   // save current partial value
@@ -330,14 +342,6 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
 
       // open a fresh result sequence
       seq = h_carray_new(arena);
-
-      // look up applicable production in parse table
-      const HCFSequence *p = h_llk_lookup(table, x, stream);
-      if(p == NULL)
-        goto no_parse;
-
-      // an infinite loop case that shouldn't happen
-      assert(!p->items[0] || p->items[0] != x);
 
       // push production's rhs onto the stack (in reverse order)
       HCFChoice **s;
@@ -433,8 +437,9 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
  need_input:
   if(stream->last_chunk)
     goto no_parse;
-  h_arena_free(arena, tok); // no result, yet
-  h_slist_push(stack, x);   // try this symbol again next time
+  if(tok)
+    h_arena_free(arena, tok);   // no result, yet
+  h_slist_push(stack, x);       // try this symbol again next time
   return seq;
 }
 
