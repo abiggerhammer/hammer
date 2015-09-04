@@ -90,7 +90,8 @@
 #define g_check_parse_failed(parser, backend, input, inp_len) do {	\
     int skip = h_compile((HParser *)(parser), (HParserBackend)backend, NULL); \
     if(skip != 0) {	\
-      g_test_message("Backend not applicable, skipping test");	\
+      g_test_message("Compile failed");					\
+      g_test_fail();							\
       break;	\
     }	\
     const HParseResult *result = h_parse(parser, (const uint8_t*)input, inp_len); \
@@ -103,7 +104,8 @@
 #define g_check_parse_ok(parser, backend, input, inp_len) do {		\
     int skip = h_compile((HParser *)(parser), (HParserBackend) backend, NULL); \
     if(skip) {								\
-      g_test_message("Backend not applicable, skipping test");		\
+      g_test_message("Compile failed");					\
+      g_test_fail();							\
       break;								\
     }									\
     HParseResult *res = h_parse(parser, (const uint8_t*)input, inp_len); \
@@ -124,7 +126,8 @@
 #define g_check_parse_match(parser, backend, input, inp_len, result) do { \
     int skip = h_compile((HParser *)(parser), (HParserBackend) backend, NULL); \
     if(skip) {								\
-      g_test_message("Backend not applicable, skipping test");		\
+      g_test_message("Compile failed");					\
+      g_test_fail();							\
       break;								\
     }									\
     HParseResult *res = h_parse(parser, (const uint8_t*)input, inp_len); \
@@ -147,9 +150,15 @@
 
 #define g_check_parse_chunks_failed(parser, backend, chunk1, c1_len, chunk2, c2_len) do {	\
     int skip = h_compile((HParser *)(parser), (HParserBackend)backend, NULL); \
+    if(skip) {								\
+      g_test_message("Compile failed");					\
+      g_test_fail();							\
+      break;								\
+    }									\
     HSuspendedParser *s = h_parse_start(parser);			\
-    if(skip || !s) {							\
-      g_test_message("Backend not applicable, skipping test");		\
+    if(!s) {								\
+      g_test_message("Chunk-wise parsing not available");		\
+      g_test_fail();							\
       break;								\
     }									\
     h_parse_chunk(s, (const uint8_t*)chunk1, c1_len);			\
@@ -163,9 +172,15 @@
 
 #define g_check_parse_chunks_match(parser, backend, chunk1, c1_len, chunk2, c2_len, result) do { \
     int skip = h_compile((HParser *)(parser), (HParserBackend) backend, NULL); \
+    if(skip) {								\
+      g_test_message("Compile failed");					\
+      g_test_fail();							\
+      break;								\
+    }									\
     HSuspendedParser *s = h_parse_start(parser);			\
-    if(skip || !s) {							\
-      g_test_message("Backend not applicable, skipping test");		\
+    if(!s) {								\
+      g_test_message("Chunk-wise parsing not available");		\
+      g_test_fail();							\
       break;								\
     }									\
     h_parse_chunk(s, (const uint8_t*)chunk1, c1_len);			\
