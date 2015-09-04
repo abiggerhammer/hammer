@@ -462,16 +462,24 @@ static void test_iterative(gconstpointer backend) {
   g_check_parse_chunks_failed(p, be, "foo",3, "baz",3);
 
   p = h_choice(h_token((uint8_t*)"foobar", 6),
-               h_token((uint8_t*)"foopar", 6), NULL);
+               h_token((uint8_t*)"phupar", 6), NULL);
   g_check_parse_chunks_match(p, be, "foo",3, "bar",3, "<66.6f.6f.62.61.72>");
   g_check_parse_chunks_match(p, be, "foo",3, "barbaz",6, "<66.6f.6f.62.61.72>");
-  g_check_parse_chunks_match(p, be, "foo",3, "par",3, "<66.6f.6f.70.61.72>");
+  g_check_parse_chunks_match(p, be, "phu",3, "par",3, "<70.68.75.70.61.72>");
   g_check_parse_chunks_failed(p, be, "fou",3, "bar",3);
   g_check_parse_chunks_failed(p, be, "foo",3, "baz",3);
   g_check_parse_chunks_match(p, be, "foobar",6, "",0, "<66.6f.6f.62.61.72>");
   g_check_parse_chunks_match(p, be, "",0, "foobar",6, "<66.6f.6f.62.61.72>");
   g_check_parse_chunks_failed(p, be, "foo",3, "",0);
   g_check_parse_chunks_failed(p, be, "",0, "foo",3);
+
+  p = h_sequence(h_ch('f'), h_choice(h_token((uint8_t*)"oo", 2),
+                                     h_token((uint8_t*)"uu", 2), NULL), NULL);
+  g_check_parse_chunks_match(p, be, "f",1, "oo",2, "(u0x66 <6f.6f>)");
+  g_check_parse_chunks_match(p, be, "f",1, "uu",2, "(u0x66 <75.75>)");
+  g_check_parse_chunks_failed(p, be, "g",1, "oo",2);
+  g_check_parse_chunks_failed(p, be, "f",1, "ou",2);
+  g_check_parse_chunks_failed(p, be, "f",1, "uo",2);
 }
 
 static void test_ambiguous(gconstpointer backend) {
