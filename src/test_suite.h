@@ -155,6 +155,10 @@
       g_test_fail();							\
       break;								\
     }									\
+    g_check_parse_chunks_failed_(parser, chunk1, c1_len, chunk2, c2_len); \
+  } while(0)
+
+#define g_check_parse_chunks_failed_(parser, chunk1, c1_len, chunk2, c2_len) do {	\
     HSuspendedParser *s = h_parse_start(parser);			\
     if(!s) {								\
       g_test_message("Chunk-wise parsing not available");		\
@@ -177,6 +181,10 @@
       g_test_fail();							\
       break;								\
     }									\
+    g_check_parse_chunks_match_(parser, chunk1, c1_len, chunk2, c2_len, result); \
+  } while(0)
+
+#define g_check_parse_chunks_match_(parser, chunk1, c1_len, chunk2, c2_len, result) do { \
     HSuspendedParser *s = h_parse_start(parser);			\
     if(!s) {								\
       g_test_message("Chunk-wise parsing not available");		\

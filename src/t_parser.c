@@ -482,6 +482,27 @@ static void test_iterative(gconstpointer backend) {
   g_check_parse_chunks_failed(p, be, "f",1, "uo",2);
 }
 
+static void test_iterative_lookahead(gconstpointer backend) {
+  HParserBackend be = (HParserBackend)GPOINTER_TO_INT(backend);
+  HParser *p;
+
+  // needs 2 lookahead
+  p = h_sequence(h_ch('f'), h_choice(h_token((uint8_t*)"oo", 2),
+                                     h_token((uint8_t*)"ou", 2), NULL), NULL);
+  if(h_compile(p, be, (void *)2) != 0) {
+    g_test_message("Compile failed");
+    g_test_fail();
+    return;
+  }
+
+  // partial chunk consumed
+  g_check_parse_chunks_match_(p, "fo",2, "o",1, "(u0x66 <6f.6f>)");
+  g_check_parse_chunks_match_(p, "fo",2, "u",1, "(u0x66 <6f.75>)");
+  g_check_parse_chunks_failed_(p, "go",2, "o",1);
+  g_check_parse_chunks_failed_(p, "fa",2, "u",1);
+  g_check_parse_chunks_failed_(p, "fo",2, "b",1);
+}
+
 static void test_ambiguous(gconstpointer backend) {
   HParser *d_ = h_ch('d');
   HParser *p_ = h_ch('+');
@@ -731,6 +752,7 @@ void register_parser_tests(void) {
   //g_test_add_data_func("/core/parser/llk/leftrec", GINT_TO_POINTER(PB_LLk), test_leftrec);
   g_test_add_data_func("/core/parser/llk/rightrec", GINT_TO_POINTER(PB_LLk), test_rightrec);
   g_test_add_data_func("/core/parser/llk/iterative", GINT_TO_POINTER(PB_LLk), test_iterative);
+  g_test_add_data_func("/core/parser/llk/iterative/lookahead", GINT_TO_POINTER(PB_LLk), test_iterative_lookahead);
 
   g_test_add_data_func("/core/parser/regex/token", GINT_TO_POINTER(PB_REGULAR), test_token);
   g_test_add_data_func("/core/parser/regex/ch", GINT_TO_POINTER(PB_REGULAR), test_ch);
