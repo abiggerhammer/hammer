@@ -743,8 +743,8 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/regex/uint32", GINT_TO_POINTER(PB_REGULAR), test_uint32);
   g_test_add_data_func("/core/parser/regex/uint16", GINT_TO_POINTER(PB_REGULAR), test_uint16);
   g_test_add_data_func("/core/parser/regex/uint8", GINT_TO_POINTER(PB_REGULAR), test_uint8);
-  g_test_add_data_func("/core/parser/regex/int_range", GINT_TO_POINTER(PB_REGULAR), test_int_range);
 #if 0
+  g_test_add_data_func("/core/parser/regex/int_range", GINT_TO_POINTER(PB_REGULAR), test_int_range);
   g_test_add_data_func("/core/parser/regex/float64", GINT_TO_POINTER(PB_REGULAR), test_float64);
   g_test_add_data_func("/core/parser/regex/float32", GINT_TO_POINTER(PB_REGULAR), test_float32);
 #endif
