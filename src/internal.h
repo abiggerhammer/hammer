@@ -78,7 +78,7 @@ typedef struct HInputStream_ {
   char margin; // The number of bits on the end that is being read
 	       // towards that should be ignored.
   char endianness;
-  char overrun;
+  bool overrun;
 } HInputStream;
 
 typedef struct HSlistNode_ {
