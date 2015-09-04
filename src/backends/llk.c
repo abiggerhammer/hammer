@@ -298,7 +298,7 @@ static HLLkState *llk_parse_start_(HAllocator* mm__, const HParser* parser)
 
 // returns partial result or NULL
 static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
-                                       HInputStream* stream, bool last_chunk)
+                                       HInputStream* stream)
 {
   HParsedToken *tok = NULL;   // will hold result token
   HCFChoice *x = NULL;        // current symbol (from top of stack)
@@ -373,7 +373,7 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
       case HCF_END:
         if(!stream->overrun)
           goto no_parse;
-        if(!last_chunk)
+        if(!stream->last_chunk)
           goto need_input;
         h_arena_free(arena, tok);
         tok = NULL;
@@ -431,7 +431,7 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
   return NULL;
 
  need_input:
-  if(last_chunk)
+  if(stream->last_chunk)
     goto no_parse;
   h_arena_free(arena, tok); // no result, yet
   h_slist_push(stack, x);   // try this symbol again next time
@@ -456,7 +456,8 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 {
   HLLkState *s = llk_parse_start_(mm__, parser);
 
-  s->seq = llk_parse_chunk_(s, parser, stream, true /* last chunk */);
+  assert(stream->last_chunk);
+  s->seq = llk_parse_chunk_(s, parser, stream);
 
   return llk_parse_finish_(mm__, s);
 }
@@ -470,7 +471,7 @@ void h_llk_parse_chunk(HSuspendedParser *s, HInputStream *input)
 {
   HLLkState *state = s->backend_state;
 
-  state->seq = llk_parse_chunk_(state, s->parser, input, false);
+  state->seq = llk_parse_chunk_(state, s->parser, input);
 }
 
 HParseResult *h_llk_parse_finish(HSuspendedParser *s)
@@ -482,11 +483,12 @@ HParseResult *h_llk_parse_finish(HSuspendedParser *s)
     .overrun = 0,
     .endianness = s->endianness,
     .length = 0,
-    .input = NULL
+    .input = NULL,
+    .last_chunk = true
   };
 
   // signal end of input (no-op parse already done)
-  state->seq = llk_parse_chunk_(state, s->parser, &empty, true);
+  state->seq = llk_parse_chunk_(state, s->parser, &empty);
 
   return llk_parse_finish_(s->mm__, s->backend_state);
 }

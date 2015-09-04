@@ -79,6 +79,7 @@ typedef struct HInputStream_ {
 	       // towards that should be ignored.
   char endianness;
   bool overrun;
+  bool last_chunk;
 } HInputStream;
 
 typedef struct HSlistNode_ {

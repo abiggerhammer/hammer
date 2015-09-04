@@ -56,7 +56,8 @@ HParseResult* h_parse__m(HAllocator* mm__, const HParser* parser, const uint8_t*
     .overrun = 0,
     .endianness = DEFAULT_ENDIANNESS,
     .length = length,
-    .input = input
+    .input = input,
+    .last_chunk = true
   };
   
   return backends[parser->backend]->parse(mm__, parser, &input_stream);
@@ -132,7 +133,8 @@ bool h_parse_chunk(HSuspendedParser* s, const uint8_t* input, size_t length) {
     .overrun = 0,
     .endianness = s->endianness,
     .length = length,
-    .input = input
+    .input = input,
+    .last_chunk = false
   };
 
   // process chunk
