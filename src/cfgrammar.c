@@ -349,7 +349,7 @@ void *h_stringmap_get(const HStringMap *m, const uint8_t *str, size_t n, bool en
   return m->epsilon_branch;
 }
 
-// A NULL result means no parse. H_NEED_INPUT means lookahead is too short.
+// A NULL result means no parse. NEED_INPUT means lookahead is too short.
 void *h_stringmap_get_lookahead(const HStringMap *m, HInputStream lookahead)
 {
   while(m) {
@@ -368,7 +368,7 @@ void *h_stringmap_get_lookahead(const HStringMap *m, HInputStream lookahead)
         // XXX assumption of byte-wise grammar and input
         return m->end_branch;
       } else {
-        return H_NEED_INPUT;
+        return NEED_INPUT;
       }
     }
 

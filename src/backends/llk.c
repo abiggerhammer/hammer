@@ -276,8 +276,7 @@ typedef struct {
 // execute on their corresponding result.
 // also on the stack below the mark, we store the previously accumulated
 // value for the surrounding production.
-static int dummy;
-static void *MARK = &dummy;   // stack frame delimiter
+static void *MARK = (void *)-1; // stack frame delimiter
 
 static HLLkState *llk_parse_start_(HAllocator* mm__, const HParser* parser)
 {
@@ -329,7 +328,7 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
       const HCFSequence *p = h_llk_lookup(table, x, stream);
       if(p == NULL)
         goto no_parse;
-      if(p == H_NEED_INPUT)
+      if(p == NEED_INPUT)
         goto need_input;
 
       // an infinite loop case that shouldn't happen
