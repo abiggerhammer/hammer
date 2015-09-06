@@ -12,6 +12,7 @@ static const size_t DEFAULT_KMAX = 1;
  * maps lookahead strings to productions (HCFSequence).
  */
 typedef struct HLLkTable_ {
+  size_t     kmax;
   HHashTable *rows;
   HCFChoice  *start;    // start symbol
   HArena     *arena;
@@ -188,6 +189,7 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HStringMap *row,
  */
 static int fill_table(size_t kmax, HCFGrammar *g, HLLkTable *table)
 {
+  table->kmax = kmax;
   table->start = g->start;
 
   // iterate over g->nts
