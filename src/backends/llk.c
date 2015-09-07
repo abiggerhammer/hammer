@@ -266,6 +266,7 @@ typedef struct {
   HArena *tarena;       // tmp, deleted after parse
   HSlist *stack;
   HCountedArray *seq;   // accumulates current parse result
+  size_t index;         // input position in bytes
 
   uint8_t *buf;         // for lookahead across chunk boundaries
                         // allocated to size 2*kmax
@@ -297,6 +298,7 @@ static HLLkState *llk_parse_start_(HAllocator* mm__, const HParser* parser)
   s->tarena = h_new_arena(mm__, 0);
   s->stack  = h_slist_new(s->tarena);
   s->seq    = h_carray_new(s->arena);
+  s->index  = 0;
   s->buf    = h_arena_malloc(s->tarena, 2 * table->kmax);
 
   s->win.input  = s->buf;
@@ -348,10 +350,13 @@ static void save_win(size_t kmax, HLLkState *s, HInputStream *stream)
     //   (0                 kmax            )
     //    ... \_old_/\_new_/       ...
     //
+    s->index += len;  // position of the window shifts up
     len = s->win.length - s->win.index;
+    assert(len <= kmax);
     memmove(s->buf + kmax - len, s->buf + s->win.index, len);
   } else {
     // window not active? save stream to window.
+    s->index -= kmax; // window starts kmax bytes below next chunk
     memcpy(s->buf + kmax - len, stream->input + stream->index, len);
   }
 
@@ -362,25 +367,16 @@ static void save_win(size_t kmax, HLLkState *s, HInputStream *stream)
   s->win.length = kmax;
 }
 
-// helper: read from window until old chunk gone, then switch to stream
-static uint8_t consume_input(size_t kmax, HLLkState *s, HInputStream *stream)
-{
-  if(s->win.length > 0) {
-    uint8_t b = h_read_bits(&s->win, 8, false);
-    if(s->win.index >= kmax)  // old chunk consumed!
-      s->win.length = 0;      // disable the window
-    return b;
-  } else {
-    return h_read_bits(stream, 8, false);
-  }
-}
-
 // returns partial result or NULL (no parse)
 static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
-                                       HInputStream* stream)
+                                       HInputStream* chunk)
 {
   HParsedToken *tok = NULL;   // will hold result token
   HCFChoice *x = NULL;        // current symbol (from top of stack)
+  HInputStream *stream;
+
+  assert(chunk->index == 0);
+  assert(chunk->bit_offset == 0);
 
   const HLLkTable *table = parser->backend_data;
   assert(table != NULL);
@@ -389,12 +385,17 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
   HArena *tarena = s->tarena;
   HSlist *stack = s->stack;
   HCountedArray *seq = s->seq;
+  size_t kmax = table->kmax;
 
   if(!seq)
     return NULL;  // parse already failed
 
-  if(s->win.length > 0)
-    append_win(table->kmax, s, stream);
+  if(s->win.length > 0) {
+    append_win(kmax, s, chunk);
+    stream = &s->win;
+  } else {
+    stream = chunk;
+  }
 
   // when we empty the stack, the parse is complete.
   while(!h_slist_empty(stack)) {
@@ -408,12 +409,11 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
       // x is a nonterminal; apply the appropriate production and continue
 
       // look up applicable production in parse table
-      HInputStream *lookup_stream = s->win.length > 0 ? &s->win : stream;
-      const HCFSequence *p = h_llk_lookup(table, x, lookup_stream);
+      const HCFSequence *p = h_llk_lookup(table, x, stream);
       if(p == NULL)
         goto no_parse;
       if(p == NEED_INPUT) {
-        save_win(table->kmax, s, stream);
+        save_win(kmax, s, chunk);
         goto need_input;
       }
 
@@ -439,7 +439,7 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
 
     // the top of stack is such that there will be a result...
     tok = h_arena_malloc(arena, sizeof(HParsedToken));
-    tok->index = stream->index;
+    tok->index = s->index + stream->index;
     tok->bit_offset = stream->bit_offset;
     if(x == MARK) {
       // hit stack frame boundary...
@@ -456,7 +456,14 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
       // x is a terminal or simple charset; match against input
 
       // consume the input token
-      uint8_t input = consume_input(table->kmax, s, stream);
+      uint8_t input = h_read_bits(stream, 8, false);
+
+      // when old chunk consumed from window, switch to new chunk
+      if(s->win.length > 0 && s->win.index >= kmax) {
+        s->win.length = 0;  // disable the window
+        s->index += kmax;   // new chunk starts kmax bytes above the window
+        stream = chunk;
+      }
 
       switch(x->type) {
       case HCF_END:
@@ -512,11 +519,13 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
   // since we started with a single nonterminal on the stack, seq should
   // contain exactly the parse result.
   assert(seq->used == 1);
+  s->index += stream->index;
   return seq;
 
  no_parse:
   h_delete_arena(arena);
   s->arena = NULL;
+  s->index += stream->index;
   return NULL;
 
  need_input:
@@ -525,6 +534,7 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
   if(tok)
     h_arena_free(arena, tok);   // no result, yet
   h_slist_push(stack, x);       // try this symbol again next time
+  s->index += stream->index;
   return seq;
 }
 
@@ -535,6 +545,7 @@ static HParseResult *llk_parse_finish_(HAllocator *mm__, HLLkState *s)
   if(s->seq) {
     assert(s->seq->used == 1);
     res = make_result(s->arena, s->seq->elements[0]);
+    res->bit_length = s->index*8;
   }
 
   h_delete_arena(s->tarena);
