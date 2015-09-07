@@ -351,7 +351,9 @@ HParseResult *h_lrengine_result(HLREngine *engine)
     // on top of the stack is the start symbol's semantic value
     assert(!h_slist_empty(engine->stack));
     HParsedToken *tok = engine->stack->head->elem;
-    return make_result(engine->arena, tok);
+    HParseResult *res =  make_result(engine->arena, tok);
+    res->bit_length = engine->input.index * 8;
+    return res;
   } else {
     return NULL;
   }
