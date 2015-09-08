@@ -286,7 +286,7 @@ typedef struct {
 // execute on their corresponding result.
 // also on the stack below the mark, we store the previously accumulated
 // value for the surrounding production.
-static void *MARK = (void *)-1; // stack frame delimiter
+static void const * const MARK = &MARK; // stack frame delimiter
 
 static HLLkState *llk_parse_start_(HAllocator* mm__, const HParser* parser)
 {
@@ -421,9 +421,9 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
       assert(!p->items[0] || p->items[0] != x);
 
       // push stack frame
-      h_slist_push(stack, seq);   // save current partial value
-      h_slist_push(stack, x);     // save the nonterminal
-      h_slist_push(stack, MARK);  // frame delimiter
+      h_slist_push(stack, seq);           // save current partial value
+      h_slist_push(stack, x);             // save the nonterminal
+      h_slist_push(stack, (void *)MARK);  // frame delimiter
 
       // open a fresh result sequence
       seq = h_carray_new(arena);
