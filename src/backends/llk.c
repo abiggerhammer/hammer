@@ -266,7 +266,6 @@ typedef struct {
   HArena *tarena;       // tmp, deleted after parse
   HSlist *stack;
   HCountedArray *seq;   // accumulates current parse result
-  size_t index;         // input position in bytes
 
   uint8_t *buf;         // for lookahead across chunk boundaries
                         // allocated to size 2*kmax
@@ -298,7 +297,6 @@ static HLLkState *llk_parse_start_(HAllocator* mm__, const HParser* parser)
   s->tarena = h_new_arena(mm__, 0);
   s->stack  = h_slist_new(s->tarena);
   s->seq    = h_carray_new(s->arena);
-  s->index  = 0;
   s->buf    = h_arena_malloc(s->tarena, 2 * table->kmax);
 
   s->win.input  = s->buf;
@@ -350,13 +348,14 @@ static void save_win(size_t kmax, HLLkState *s, HInputStream *stream)
     //   (0                 kmax            )
     //    ... \_old_/\_new_/       ...
     //
-    s->index += len;  // position of the window shifts up
+    s->win.pos += len;  // position of the window shifts up
     len = s->win.length - s->win.index;
     assert(len <= kmax);
     memmove(s->buf + kmax - len, s->buf + s->win.index, len);
   } else {
     // window not active? save stream to window.
-    s->index -= kmax; // window starts kmax bytes below next chunk
+    // buffer starts kmax bytes below chunk boundary
+    s->win.pos = stream->pos - kmax;
     memcpy(s->buf + kmax - len, stream->input + stream->index, len);
   }
 
@@ -439,7 +438,7 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
 
     // the top of stack is such that there will be a result...
     tok = h_arena_malloc(arena, sizeof(HParsedToken));
-    tok->index = s->index + stream->index;
+    tok->index = stream->pos + stream->index;
     tok->bit_offset = stream->bit_offset;
     if(x == MARK) {
       // hit stack frame boundary...
@@ -461,7 +460,6 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
       // when old chunk consumed from window, switch to new chunk
       if(s->win.length > 0 && s->win.index >= kmax) {
         s->win.length = 0;  // disable the window
-        s->index += kmax;   // new chunk starts kmax bytes above the window
         stream = chunk;
       }
 
@@ -519,13 +517,11 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
   // since we started with a single nonterminal on the stack, seq should
   // contain exactly the parse result.
   assert(seq->used == 1);
-  s->index += stream->index;
   return seq;
 
  no_parse:
   h_delete_arena(arena);
   s->arena = NULL;
-  s->index += stream->index;
   return NULL;
 
  need_input:
@@ -534,7 +530,6 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
   if(tok)
     h_arena_free(arena, tok);   // no result, yet
   h_slist_push(stack, x);       // try this symbol again next time
-  s->index += stream->index;
   return seq;
 }
 
@@ -545,7 +540,6 @@ static HParseResult *llk_parse_finish_(HAllocator *mm__, HLLkState *s)
   if(s->seq) {
     assert(s->seq->used == 1);
     res = make_result(s->arena, s->seq->elements[0]);
-    res->bit_length = s->index*8;
   }
 
   h_delete_arena(s->tarena);
@@ -560,7 +554,11 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
   assert(stream->last_chunk);
   s->seq = llk_parse_chunk_(s, parser, stream);
 
-  return llk_parse_finish_(mm__, s);
+  HParseResult *res = llk_parse_finish_(mm__, s);
+  if(res)
+    res->bit_length = stream->index * 8 + stream->bit_offset;
+
+  return res;
 }
 
 void h_llk_parse_start(HSuspendedParser *s)
@@ -568,29 +566,17 @@ void h_llk_parse_start(HSuspendedParser *s)
   s->backend_state = llk_parse_start_(s->mm__, s->parser);
 }
 
-void h_llk_parse_chunk(HSuspendedParser *s, HInputStream *input)
+bool h_llk_parse_chunk(HSuspendedParser *s, HInputStream *input)
 {
   HLLkState *state = s->backend_state;
 
   state->seq = llk_parse_chunk_(state, s->parser, input);
+
+  return (state->seq == NULL || h_slist_empty(state->stack));
 }
 
 HParseResult *h_llk_parse_finish(HSuspendedParser *s)
 {
-  HLLkState *state = s->backend_state;
-  HInputStream empty = {
-    .index = 0,
-    .bit_offset = 0,
-    .overrun = 0,
-    .endianness = s->endianness,
-    .length = 0,
-    .input = NULL,
-    .last_chunk = true
-  };
-
-  // signal end of input (no-op parse already done)
-  state->seq = llk_parse_chunk_(state, s->parser, &empty);
-
   return llk_parse_finish_(s->mm__, s->backend_state);
 }
 

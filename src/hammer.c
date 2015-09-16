@@ -51,6 +51,7 @@ HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length
 HParseResult* h_parse__m(HAllocator* mm__, const HParser* parser, const uint8_t* input, size_t length) {
   // Set up a parse state...
   HInputStream input_stream = {
+    .pos = 0,
     .index = 0,
     .bit_offset = 0,
     .overrun = 0,
@@ -114,6 +115,9 @@ HSuspendedParser* h_parse_start__m(HAllocator* mm__, const HParser* parser) {
   s->mm__ = mm__;
   s->parser = parser;
   s->backend_state = NULL;
+  s->done = false;
+  s->pos = 0;
+  s->bit_offset = 0;
   s->endianness = DEFAULT_ENDIANNESS;
 
   // backend-specific initialization
@@ -126,8 +130,13 @@ HSuspendedParser* h_parse_start__m(HAllocator* mm__, const HParser* parser) {
 bool h_parse_chunk(HSuspendedParser* s, const uint8_t* input, size_t length) {
   assert(backends[s->parser->backend]->parse_chunk != NULL);
 
+  // no-op if parser is already done
+  if(s->done)
+    return true;
+
   // input 
   HInputStream input_stream = {
+    .pos = s->pos,
     .index = 0,
     .bit_offset = 0,
     .overrun = 0,
@@ -138,19 +147,43 @@ bool h_parse_chunk(HSuspendedParser* s, const uint8_t* input, size_t length) {
   };
 
   // process chunk
-  backends[s->parser->backend]->parse_chunk(s, &input_stream);
+  s->done = backends[s->parser->backend]->parse_chunk(s, &input_stream);
   s->endianness = input_stream.endianness;
+  s->pos += input_stream.index;
+  s->bit_offset = input_stream.bit_offset;
 
-  return !input_stream.overrun; // parser wants no more input? done.
+  return s->done;
 }
 
 HParseResult* h_parse_finish(HSuspendedParser* s) {
+  assert(backends[s->parser->backend]->parse_chunk != NULL);
   assert(backends[s->parser->backend]->parse_finish != NULL);
 
   HAllocator *mm__ = s->mm__;
 
+  // signal end of input if parser is not already done
+  if(!s->done) {
+    HInputStream empty = {
+      .pos = s->pos,
+      .index = 0,
+      .bit_offset = 0,
+      .overrun = 0,
+      .endianness = s->endianness,
+      .length = 0,
+      .input = NULL,
+      .last_chunk = true
+    };
+
+    s->done = backends[s->parser->backend]->parse_chunk(s, &empty);
+    assert(s->done);
+  }
+
+  // extract result
   HParseResult *r = backends[s->parser->backend]->parse_finish(s);
-    // NB: backend should have freed backend_state
+  if(r)
+    r->bit_length = s->pos * 8 + s->bit_offset;
+
+  // NB: backend should have freed backend_state
   h_free(s);
 
   return r;

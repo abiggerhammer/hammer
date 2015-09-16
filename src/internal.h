@@ -72,6 +72,7 @@ typedef struct HCFStack_ HCFStack;
 typedef struct HInputStream_ {
   // This should be considered to be a really big value type.
   const uint8_t *input;
+  size_t pos;  // position of this chunk in a multi-chunk stream
   size_t index;
   size_t length;
   char bit_offset;
@@ -215,8 +216,11 @@ struct HSuspendedParser_ {
   HAllocator *mm__;
   const HParser *parser;
   void *backend_state;
+  bool done;
 
-  // the only part of HInputStream that carries across chunks
+  // input stream state
+  size_t pos;
+  uint8_t bit_offset;
   uint8_t endianness;
 };
 
@@ -227,12 +231,13 @@ typedef struct HParserBackendVTable_ {
 
   void (*parse_start)(HSuspendedParser *s);
     // parse_start should allocate s->backend_state.
-  void (*parse_chunk)(HSuspendedParser *s, HInputStream *input);
-    // when parse_chunk leaves input.overrun unset, parse is done. else:
+  bool (*parse_chunk)(HSuspendedParser *s, HInputStream *input);
+    // if parser is done, return true. otherwise:
     // parse_chunk MUST consume all input, integrating it into s->backend_state.
-    // calling parse_chunk again after parse is done should have no effect.
+    // parse_chunk will not be called again after it reports done.
   HParseResult *(*parse_finish)(HSuspendedParser *s);
     // parse_finish must free s->backend_state.
+    // parse_finish will not be called before parse_chunk reports done.
 } HParserBackendVTable;
 
 
