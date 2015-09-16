@@ -267,6 +267,8 @@ static HParsedToken *consume_input(HLREngine *engine)
     v = h_arena_malloc(engine->arena, sizeof(HParsedToken));
     v->token_type = TT_UINT;
     v->uint = c;
+    v->index = engine->input.pos + engine->input.index - 1;
+    v->bit_offset = engine->input.bit_offset;
   }
 
   return v;
@@ -309,18 +311,28 @@ bool h_lrengine_step(HLREngine *engine, const HLRAction *action)
       value->index = v->index;
       value->bit_offset = v->bit_offset;
     } else {
-      // XXX how to get the position in this case?
+      // result position is current input position  XXX ?
+      value->index = engine->input.pos + engine->input.index;
+      value->bit_offset = engine->input.bit_offset;
     }
 
     // perform token reshape if indicated
-    if(symbol->reshape)
-      value = (HParsedToken *)symbol->reshape(make_result(arena, value), symbol->user_data);
+    if(symbol->reshape) {
+      v = symbol->reshape(make_result(arena, value), symbol->user_data);
+      if(v) {
+        v->index = value->index;
+        v->bit_offset = value->bit_offset;
+      } else {
+        h_arena_free(arena, value);
+      }
+      value = v;
+    }
 
     // call validation and semantic action, if present
     if(symbol->pred && !symbol->pred(make_result(tarena, value), symbol->user_data))
       return false;     // validation failed -> no parse; terminate
     if(symbol->action)
-      value = (HParsedToken *)symbol->action(make_result(arena, value), symbol->user_data);
+      value = symbol->action(make_result(arena, value), symbol->user_data);
 
     // this is LR, building a right-most derivation bottom-up, so no reduce can
     // follow a reduce. we can also assume no conflict follows for GLR if we
