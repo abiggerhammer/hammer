@@ -538,3 +538,35 @@ void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
   fputc('\n', f);
 #endif
 }
+
+HCFGrammar *h_pprint_lr_info(FILE *f, HParser *p)
+{
+  HAllocator *mm__ = &system_allocator;
+
+  fprintf(f, "\n==== G R A M M A R ====\n");
+  HCFGrammar *g = h_cfgrammar_(mm__, h_desugar_augmented(mm__, p));
+  if (g == NULL) {
+    fprintf(f, "h_cfgrammar failed\n");
+    return NULL;
+  }
+  h_pprint_grammar(f, g, 0);
+
+  fprintf(f, "\n==== D F A ====\n");
+  HLRDFA *dfa = h_lr0_dfa(g);
+  if (dfa) {
+    h_pprint_lrdfa(f, g, dfa, 0);
+  } else {
+    fprintf(f, "h_lalr_dfa failed\n");
+  }
+
+  fprintf(f, "\n==== L R ( 0 )  T A B L E ====\n");
+  HLRTable *table0 = h_lr0_table(g, dfa);
+  if (table0) {
+    h_pprint_lrtable(f, g, table0, 0);
+  } else {
+    fprintf(f, "h_lr0_table failed\n");
+  }
+  h_lrtable_free(table0);
+
+  return g;
+}

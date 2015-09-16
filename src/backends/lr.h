@@ -143,5 +143,6 @@ void h_pprint_lrdfa(FILE *f, const HCFGrammar *g,
                     const HLRDFA *dfa, unsigned int indent);
 void h_pprint_lrtable(FILE *f, const HCFGrammar *g, const HLRTable *table,
                       unsigned int indent);
+HCFGrammar *h_pprint_lr_info(FILE *f, HParser *p);
 
 #endif
