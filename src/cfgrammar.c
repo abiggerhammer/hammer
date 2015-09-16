@@ -677,7 +677,7 @@ static void stringset_extend(HCFGrammar *g, HStringMap *ret,
 }
 
 
-void h_pprint_char(FILE *f, char c)
+void h_pprint_char(FILE *f, uint8_t c)
 {
   switch(c) {
   case '"': fputs("\\\"", f); break;
@@ -690,12 +690,12 @@ void h_pprint_char(FILE *f, char c)
     if (isprint((int)c)) {
       fputc(c, f);
     } else {
-      fprintf(f, "\\x%.2X", c);
+      fprintf(f, "\\x%.2X", (unsigned int)c);
     }
   }
 }
 
-static void pprint_charset_char(FILE *f, char c)
+static void pprint_charset_char(FILE *f, uint8_t c)
 {
   switch(c) {
   case '"': fputc(c, f); break;

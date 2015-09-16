@@ -105,4 +105,4 @@ void h_pprint_stringset(FILE *file, const HStringMap *set, int indent);
 void h_pprint_stringmap(FILE *file, char sep,
                         void (*valprint)(FILE *f, void *env, void *val), void *env,
                         const HStringMap *map);
-void h_pprint_char(FILE *file, char c);
+void h_pprint_char(FILE *file, uint8_t c);
