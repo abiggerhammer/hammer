@@ -832,7 +832,7 @@ void register_parser_tests(void) {
   //g_test_add_data_func("/core/parser/llk/leftrec", GINT_TO_POINTER(PB_LLk), test_leftrec);
   g_test_add_data_func("/core/parser/llk/rightrec", GINT_TO_POINTER(PB_LLk), test_rightrec);
  g_test_add_data_func("/core/parser/llk/result_length", GINT_TO_POINTER(PB_LLk), test_result_length);
-  //XXX g_test_add_data_func("/core/parser/llk/token_position", GINT_TO_POINTER(PB_LLk), test_token_position);
+  //g_test_add_data_func("/core/parser/llk/token_position", GINT_TO_POINTER(PB_LLk), test_token_position);
   g_test_add_data_func("/core/parser/llk/iterative", GINT_TO_POINTER(PB_LLk), test_iterative);
   g_test_add_data_func("/core/parser/llk/iterative/lookahead", GINT_TO_POINTER(PB_LLk), test_iterative_lookahead);
   g_test_add_data_func("/core/parser/llk/iterative/result_length", GINT_TO_POINTER(PB_LLk), test_iterative_result_length);

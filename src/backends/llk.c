@@ -438,13 +438,12 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
 
     // the top of stack is such that there will be a result...
     tok = h_arena_malloc(arena, sizeof(HParsedToken));
-    tok->index = stream->pos + stream->index;
-    tok->bit_offset = stream->bit_offset;
     if(x == MARK) {
       // hit stack frame boundary...
       // wrap the accumulated parse result, this sequence is finished
       tok->token_type = TT_SEQUENCE;
       tok->seq = seq;
+      // XXX would have to set token pos but we've forgotten pos of seq
 
       // recover original nonterminal and result sequence
       x   = h_slist_pop(stack);
@@ -453,6 +452,9 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
     }
     else {
       // x is a terminal or simple charset; match against input
+
+      tok->index = stream->pos + stream->index;
+      tok->bit_offset = stream->bit_offset;
 
       // consume the input token
       uint8_t input = h_read_bits(stream, 8, false);
@@ -500,8 +502,16 @@ static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
     // 'tok' has been parsed; process it
 
     // perform token reshape if indicated
-    if(x->reshape)
-      tok = (HParsedToken *)x->reshape(make_result(arena, tok), x->user_data);
+    if(x->reshape) {
+      HParsedToken *t = x->reshape(make_result(arena, tok), x->user_data);
+      if(t) {
+        t->index = tok->index;
+        t->bit_offset = tok->bit_offset;
+      } else {
+        h_arena_free(arena, tok);
+      }
+      tok = t;
+    }
 
     // call validation and semantic action, if present
     if(x->pred && !x->pred(make_result(tarena, tok), x->user_data))
