@@ -199,20 +199,27 @@ bool h_lrtable_row_empty(const HLRTable *table, size_t i)
 
 /* LR driver */
 
-HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table,
-                          const HInputStream *stream)
+static
+HLREngine *h_lrengine_new_(HArena *arena, HArena *tarena, const HLRTable *table)
 {
   HLREngine *engine = h_arena_malloc(tarena, sizeof(HLREngine));
 
   engine->table = table;
   engine->state = 0;
   engine->stack = h_slist_new(tarena);
-  engine->input = *stream;
   engine->merged[0] = NULL;
   engine->merged[1] = NULL;
   engine->arena = arena;
   engine->tarena = tarena;
 
+  return engine;
+}
+
+HLREngine *h_lrengine_new(HArena *arena, HArena *tarena, const HLRTable *table,
+                          const HInputStream *stream)
+{
+  HLREngine *engine = h_lrengine_new_(arena, tarena, table);
+  engine->input = *stream;
   return engine;
 }
 
@@ -352,7 +359,7 @@ HParseResult *h_lrengine_result(HLREngine *engine)
     assert(!h_slist_empty(engine->stack));
     HParsedToken *tok = engine->stack->head->elem;
     HParseResult *res =  make_result(engine->arena, tok);
-    res->bit_length = engine->input.index * 8;
+    res->bit_length = (engine->input.pos + engine->input.index) * 8;
     return res;
   } else {
     return NULL;
@@ -379,7 +386,53 @@ HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* 
   return result;
 }
 
+void h_lr_parse_start(HSuspendedParser *s)
+{
+  HLRTable *table = s->parser->backend_data;
+  assert(table != NULL);
 
+  HArena *arena  = h_new_arena(s->mm__, 0); // will hold the results
+  HArena *tarena = h_new_arena(s->mm__, 0); // tmp, deleted after parse
+  HLREngine *engine = h_lrengine_new_(arena, tarena, table);
+
+  s->backend_state = engine;
+}
+
+bool h_lr_parse_chunk(HSuspendedParser* s, HInputStream *stream)
+{
+  HLREngine *engine = s->backend_state;
+  engine->input = *stream;
+
+  bool run = true;
+  while(run) {
+    // check input against table to determine which action to take
+    const HLRAction *action = h_lrengine_action(engine);
+    if(action == NEED_INPUT) {
+      // XXX assume lookahead 1
+      assert(engine->input.length - engine->input.index == 0);
+      break;
+    }
+
+    // execute action
+    run = h_lrengine_step(engine, action);
+    if(engine->input.overrun && !engine->input.last_chunk)
+      break;
+  }
+
+  *stream = engine->input;
+  return !run;  // done if engine no longer running
+}
+
+HParseResult *h_lr_parse_finish(HSuspendedParser *s)
+{
+  HLREngine *engine = s->backend_state;
+
+  HParseResult *result = h_lrengine_result(engine);
+  if(!result)
+    h_delete_arena(engine->arena);
+  h_delete_arena(engine->tarena);
+  return result;
+}
 
 /* Pretty-printers */
 

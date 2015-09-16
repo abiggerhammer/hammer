@@ -883,6 +883,9 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/lalr/leftrec-ne", GINT_TO_POINTER(PB_LALR), test_leftrec_ne);
   g_test_add_data_func("/core/parser/lalr/rightrec", GINT_TO_POINTER(PB_LALR), test_rightrec);
   g_test_add_data_func("/core/parser/lalr/result_length", GINT_TO_POINTER(PB_LALR), test_result_length);
+  g_test_add_data_func("/core/parser/lalr/iterative", GINT_TO_POINTER(PB_LALR), test_iterative);
+  g_test_add_data_func("/core/parser/lalr/iterative/lookahead", GINT_TO_POINTER(PB_LALR), test_iterative_lookahead);
+  g_test_add_data_func("/core/parser/lalr/iterative/result_length", GINT_TO_POINTER(PB_LALR), test_iterative_result_length);
 
   g_test_add_data_func("/core/parser/glr/token", GINT_TO_POINTER(PB_GLR), test_token);
   g_test_add_data_func("/core/parser/glr/ch", GINT_TO_POINTER(PB_GLR), test_ch);

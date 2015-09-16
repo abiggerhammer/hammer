@@ -346,7 +346,10 @@ void h_lalr_free(HParser *parser)
 HParserBackendVTable h__lalr_backend_vtable = {
   .compile = h_lalr_compile,
   .parse = h_lr_parse,
-  .free = h_lalr_free
+  .free = h_lalr_free,
+  .parse_start = h_lr_parse_start,
+  .parse_chunk = h_lr_parse_chunk,
+  .parse_finish = h_lr_parse_finish
 };
 
 

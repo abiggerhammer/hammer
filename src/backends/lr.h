@@ -134,6 +134,9 @@ const HLRAction *h_lrengine_action(const HLREngine *engine);
 bool h_lrengine_step(HLREngine *engine, const HLRAction *action);
 HParseResult *h_lrengine_result(HLREngine *engine);
 HParseResult *h_lr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream);
+void h_lr_parse_start(HSuspendedParser *s);
+bool h_lr_parse_chunk(HSuspendedParser* s, HInputStream *stream);
+HParseResult *h_lr_parse_finish(HSuspendedParser *s);
 HParseResult *h_glr_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream);
 
 void h_pprint_lritem(FILE *f, const HCFGrammar *g, const HLRItem *item);
