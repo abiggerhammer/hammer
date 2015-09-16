@@ -52,7 +52,7 @@ static void transform_productions(const HLRTable *table, HLREnhGrammar *eg,
   if (xAy->type != HCF_CHOICE) {
     return;
   }
-  // XXX CHARSET?
+  // NB: nothing to do on quasi-terminal CHARSET which carries no list of rhs's
 
   HArena *arena = eg->arena;
 
