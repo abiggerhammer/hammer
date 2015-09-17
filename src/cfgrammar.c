@@ -901,8 +901,8 @@ pprint_stringmap_elems(FILE *file, bool first, char *prefix, size_t n, char sep,
   if (map->epsilon_branch) {
     if (!first) {
       fputc(sep, file); 
-      first=false;
     }
+    first=false;
     if (n==0) {
       fputs("\"\"", file);
     } else {
@@ -920,8 +920,8 @@ pprint_stringmap_elems(FILE *file, bool first, char *prefix, size_t n, char sep,
   if (map->end_branch) {
     if (!first) {
       fputs(",\"", file); 
-      first=false;
     }
+    first=false;
     if (n>0) {
       fputs("\"\"", file);
     }
