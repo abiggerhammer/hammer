@@ -672,7 +672,7 @@ static void stringset_extend(HCFGrammar *g, HStringMap *ret,
 }
 
 
-void h_pprint_char(FILE *f, char c)
+void h_pprint_char(FILE *f, uint8_t c)
 {
   switch(c) {
   case '"': fputs("\\\"", f); break;
@@ -685,12 +685,12 @@ void h_pprint_char(FILE *f, char c)
     if (isprint((int)c)) {
       fputc(c, f);
     } else {
-      fprintf(f, "\\x%.2X", c);
+      fprintf(f, "\\x%.2X", (unsigned int)c);
     }
   }
 }
 
-static void pprint_charset_char(FILE *f, char c)
+static void pprint_charset_char(FILE *f, uint8_t c)
 {
   switch(c) {
   case '"': fputc(c, f); break;
@@ -896,8 +896,8 @@ pprint_stringmap_elems(FILE *file, bool first, char *prefix, size_t n, char sep,
   if (map->epsilon_branch) {
     if (!first) {
       fputc(sep, file); 
-      first=false;
     }
+    first=false;
     if (n==0) {
       fputs("\"\"", file);
     } else {
@@ -915,8 +915,8 @@ pprint_stringmap_elems(FILE *file, bool first, char *prefix, size_t n, char sep,
   if (map->end_branch) {
     if (!first) {
       fputs(",\"", file); 
-      first=false;
     }
+    first=false;
     if (n>0) {
       fputs("\"\"", file);
     }

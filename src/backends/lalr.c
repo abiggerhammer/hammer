@@ -52,7 +52,7 @@ static void transform_productions(const HLRTable *table, HLREnhGrammar *eg,
   if (xAy->type != HCF_CHOICE) {
     return;
   }
-  // XXX CHARSET?
+  // NB: nothing to do on quasi-terminal CHARSET which carries no list of rhs's
 
   HArena *arena = eg->arena;
 
@@ -286,14 +286,28 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
         HHashSet *lhss = h_hashtable_get(eg->corr, item->lhs);
         assert(lhss != NULL);
         H_FOREACH_KEY(lhss, HCFChoice *lhs)
-          assert(lhs->type == HCF_CHOICE);  // XXX could be CHARSET?
+          assert(lhs->type == HCF_CHOICE || lhs->type == HCF_CHARSET);
 
-	  for(HCFSequence **p=lhs->seq; *p; p++) {
-            HCFChoice **rhs = (*p)->items;
-            if(!match_production(eg, rhs, item->rhs, state)) {
-              continue;
-	    }
+          bool match = false;
+          if(lhs->type == HCF_CHOICE) {
+            for(HCFSequence **p=lhs->seq; *p; p++) {
+              HCFChoice **rhs = (*p)->items;
+              if(match_production(eg, rhs, item->rhs, state)) {
+                match = true;
+                break;
+              }
+            }
+          } else {  // HCF_CHARSET
+            assert(item->rhs[0] != NULL);
+            assert(item->rhs[1] == NULL);
+            assert(item->rhs[0]->type == HCF_CHAR);
+            HLRTransition *t = h_hashtable_get(eg->smap, lhs);
+            assert(t != NULL);
+            match = (t->to == state
+                     && charset_isset(lhs->charset, item->rhs[0]->chr));
+          }
 
+          if(match) {
             // the left-hand symbol's follow set is this production's
             // contribution to the lookahead
             const HStringMap *fs = h_follow(1, eg->grammar, lhs);
@@ -304,7 +318,8 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
             // for each lookahead symbol, put action into table cell
             if(terminals_put(table->tmap[state], fs, action) < 0)
               inadeq = true;
-	  } H_END_FOREACH // enhanced production
+          }
+        H_END_FOREACH // enhanced production
       H_END_FOREACH  // reducible item
 
       if(inadeq) {

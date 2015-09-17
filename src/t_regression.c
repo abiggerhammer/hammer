@@ -118,9 +118,33 @@ static void test_llk_zero_end(void) {
     g_check_parse_failed(aze, be, "a", 1);
 }
 
+static void test_lalr_charset_lhs(void) {
+    HParserBackend be = PB_LALR;
+
+    HParser *p = h_choice(h_ch('A'), h_uint8(), NULL);
+
+    // the above would fail to compile because of an unhandled case in trying
+    // to resolve a conflict where an item's left-hand-side was an HCF_CHARSET.
+
+    g_check_parse_match(p, be, "A",1, "u0x41");
+    g_check_parse_match(p, be, "B",1, "u0x42");
+}
+
+static void test_cfg_many_seq(void) {
+    HParser *p = h_many(h_sequence(h_ch('A'), h_ch('B'), NULL));
+
+    g_check_parse_match(p, PB_LLk,  "ABAB",4, "((u0x41 u0x42) (u0x41 u0x42))");
+    g_check_parse_match(p, PB_LALR, "ABAB",4, "((u0x41 u0x42) (u0x41 u0x42))");
+    g_check_parse_match(p, PB_GLR,  "ABAB",4, "((u0x41 u0x42) (u0x41 u0x42))");
+    // these would instead parse as (u0x41 u0x42 u0x41 u0x42) due to a faulty
+    // reshape on h_many.
+}
+
 void register_regression_tests(void) {
   g_test_add_func("/core/regression/bug118", test_bug118);
   g_test_add_func("/core/regression/seq_index_path", test_seq_index_path);
   g_test_add_func("/core/regression/read_bits_48", test_read_bits_48);
   g_test_add_func("/core/regression/llk_zero_end", test_llk_zero_end);
+  g_test_add_func("/core/regression/lalr_charset_lhs", test_lalr_charset_lhs);
+  g_test_add_func("/core/regression/cfg_many_seq", test_cfg_many_seq);
 }
