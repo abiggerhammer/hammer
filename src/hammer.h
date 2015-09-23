@@ -140,6 +140,8 @@ typedef struct HParser_ {
   HCFChoice *desugared; /* if the parser can be desugared, its desugared form */
 } HParser;
 
+typedef struct HSuspendedParser_ HSuspendedParser;
+
 /**
  * Type of an action to apply to an AST, used in the action() parser. 
  * It can be any (user-defined) function that takes a HParseResult*
@@ -264,6 +266,27 @@ typedef struct HBenchmarkResults_ {
  * piece of input (of known size).
  */
 HAMMER_FN_DECL(HParseResult*, h_parse, const HParser* parser, const uint8_t* input, size_t length);
+
+/**
+ * Initialize a parser for iteratively consuming an input stream in chunks.
+ * This is only supported by some backends.
+ *
+ * Result is NULL if not supported by the backend.
+ */
+HAMMER_FN_DECL(HSuspendedParser*, h_parse_start, const HParser* parser);
+
+/**
+ * Run a suspended parser (as returned by h_parse_start) on a chunk of input.
+ *
+ * Returns true if the parser is done (needs no more input).
+ */
+bool h_parse_chunk(HSuspendedParser* s, const uint8_t* input, size_t length);
+
+/**
+ * Finish an iterative parse. Signals the end of input to the backend and
+ * returns the parse result.
+ */
+HParseResult* h_parse_finish(HSuspendedParser* s);
 
 /**
  * Given a string, returns a parser that parses that string value. 

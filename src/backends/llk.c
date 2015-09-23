@@ -12,6 +12,7 @@ static const size_t DEFAULT_KMAX = 1;
  * maps lookahead strings to productions (HCFSequence).
  */
 typedef struct HLLkTable_ {
+  size_t     kmax;
   HHashTable *rows;
   HCFChoice  *start;    // start symbol
   HArena     *arena;
@@ -188,6 +189,7 @@ static int fill_table_row(size_t kmax, HCFGrammar *g, HStringMap *row,
  */
 static int fill_table(size_t kmax, HCFGrammar *g, HLLkTable *table)
 {
+  table->kmax = kmax;
   table->start = g->start;
 
   // iterate over g->nts
@@ -259,55 +261,171 @@ void h_llk_free(HParser *parser)
 
 /* LL(k) driver */
 
-HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
+typedef struct {
+  HArena *arena;        // will hold the results
+  HArena *tarena;       // tmp, deleted after parse
+  HSlist *stack;
+  HCountedArray *seq;   // accumulates current parse result
+
+  uint8_t *buf;         // for lookahead across chunk boundaries
+                        // allocated to size 2*kmax
+                        // new chunk starts at index kmax
+                        // ( 0  ... kmax ...  2*kmax-1 )
+                        //   \_old_/\______new_______/
+  HInputStream win;     // win.length is set to 0 when not in use
+} HLLkState;
+
+// in order to construct the parse tree, we delimit the symbol stack into
+// frames corresponding to production right-hand sides. since only left-most
+// derivations are produced this linearization is unique.
+// the 'mark' allocated below simply reserves a memory address to use as the
+// frame delimiter.
+// nonterminals, instead of being popped and forgotten, are put back onto the
+// stack below the mark to tell us which validations and semantic actions to
+// execute on their corresponding result.
+// also on the stack below the mark, we store the previously accumulated
+// value for the surrounding production.
+static void const * const MARK = &MARK; // stack frame delimiter
+
+static HLLkState *llk_parse_start_(HAllocator* mm__, const HParser* parser)
 {
   const HLLkTable *table = parser->backend_data;
   assert(table != NULL);
 
-  HArena *arena  = h_new_arena(mm__, 0);    // will hold the results
-  HArena *tarena = h_new_arena(mm__, 0);    // tmp, deleted after parse
-  HSlist *stack  = h_slist_new(tarena);
-  HCountedArray *seq = h_carray_new(arena); // accumulates current parse result
+  HLLkState *s = h_new(HLLkState, 1);
+  s->arena  = h_new_arena(mm__, 0);
+  s->tarena = h_new_arena(mm__, 0);
+  s->stack  = h_slist_new(s->tarena);
+  s->seq    = h_carray_new(s->arena);
+  s->buf    = h_arena_malloc(s->tarena, 2 * table->kmax);
 
-  // in order to construct the parse tree, we delimit the symbol stack into
-  // frames corresponding to production right-hand sides. since only left-most
-  // derivations are produced this linearization is unique.
-  // the 'mark' allocated below simply reserves a memory address to use as the
-  // frame delimiter.
-  // nonterminals, instead of being popped and forgotten, are put back onto the
-  // stack below the mark to tell us which validations and semantic actions to
-  // execute on their corresponding result.
-  // also on the stack below the mark, we store the previously accumulated
-  // value for the surrounding production.
-  void *mark = h_arena_malloc(tarena, 1);
+  s->win.input  = s->buf;
+  s->win.length = 0;      // unused
 
   // initialize with the start symbol on the stack.
-  h_slist_push(stack, table->start);
+  h_slist_push(s->stack, table->start);
+
+  return s;
+}
+
+// helper: add new input to the lookahead window
+static void append_win(size_t kmax, HLLkState *s, HInputStream *stream)
+{
+  assert(stream->bit_offset == 0);
+  assert(s->win.input == s->buf);
+  assert(s->win.length == kmax);
+  assert(s->win.index < kmax);
+
+  size_t n = stream->length - stream->index;  // bytes to copy
+  if(n > kmax)
+    n = kmax;
+
+  memcpy(s->buf + kmax, stream->input + stream->index, n);
+  s->win.length += n;
+}
+
+// helper: save old input to the lookahead window
+static void save_win(size_t kmax, HLLkState *s, HInputStream *stream)
+{
+  assert(stream->bit_offset == 0);
+
+  size_t len = stream->length - stream->index;
+  assert(len < kmax);
+
+  if(len == 0) {
+    // stream empty? nothing to do.
+    return;
+  } else if(s->win.length > 0) {
+    // window active? should contain all of stream.
+    assert(s->win.length == kmax + len);
+    assert(s->win.index <= kmax);
+
+    // shift contents down:
+    //
+    //   (0                 kmax            )
+    //         ...   \_old_/\_new_/   ...
+    //
+    //   (0                 kmax            )
+    //    ... \_old_/\_new_/       ...
+    //
+    s->win.pos += len;  // position of the window shifts up
+    len = s->win.length - s->win.index;
+    assert(len <= kmax);
+    memmove(s->buf + kmax - len, s->buf + s->win.index, len);
+  } else {
+    // window not active? save stream to window.
+    // buffer starts kmax bytes below chunk boundary
+    s->win.pos = stream->pos - kmax;
+    memcpy(s->buf + kmax - len, stream->input + stream->index, len);
+  }
+
+  // metadata
+  s->win = *stream;
+  s->win.input  = s->buf;
+  s->win.index  = kmax - len;
+  s->win.length = kmax;
+}
+
+// returns partial result or NULL (no parse)
+static HCountedArray *llk_parse_chunk_(HLLkState *s, const HParser* parser,
+                                       HInputStream* chunk)
+{
+  HParsedToken *tok = NULL;   // will hold result token
+  HCFChoice *x = NULL;        // current symbol (from top of stack)
+  HInputStream *stream;
+
+  assert(chunk->index == 0);
+  assert(chunk->bit_offset == 0);
+
+  const HLLkTable *table = parser->backend_data;
+  assert(table != NULL);
+
+  HArena *arena = s->arena;
+  HArena *tarena = s->tarena;
+  HSlist *stack = s->stack;
+  HCountedArray *seq = s->seq;
+  size_t kmax = table->kmax;
+
+  if(!seq)
+    return NULL;  // parse already failed
+
+  if(s->win.length > 0) {
+    append_win(kmax, s, chunk);
+    stream = &s->win;
+  } else {
+    stream = chunk;
+  }
 
   // when we empty the stack, the parse is complete.
   while(!h_slist_empty(stack)) {
+    tok = NULL;
+
     // pop top of stack for inspection
-    HCFChoice *x = h_slist_pop(stack);
+    x = h_slist_pop(stack);
     assert(x != NULL);
 
-    if(x != mark && x->type == HCF_CHOICE) {
+    if(x != MARK && x->type == HCF_CHOICE) {
       // x is a nonterminal; apply the appropriate production and continue
-
-      // push stack frame
-      h_slist_push(stack, seq);   // save current partial value
-      h_slist_push(stack, x);     // save the nonterminal
-      h_slist_push(stack, mark);  // frame delimiter
-
-      // open a fresh result sequence
-      seq = h_carray_new(arena);
 
       // look up applicable production in parse table
       const HCFSequence *p = h_llk_lookup(table, x, stream);
       if(p == NULL)
         goto no_parse;
+      if(p == NEED_INPUT) {
+        save_win(kmax, s, chunk);
+        goto need_input;
+      }
 
       // an infinite loop case that shouldn't happen
       assert(!p->items[0] || p->items[0] != x);
+
+      // push stack frame
+      h_slist_push(stack, seq);           // save current partial value
+      h_slist_push(stack, x);             // save the nonterminal
+      h_slist_push(stack, (void *)MARK);  // frame delimiter
+
+      // open a fresh result sequence
+      seq = h_carray_new(arena);
 
       // push production's rhs onto the stack (in reverse order)
       HCFChoice **s;
@@ -319,11 +437,10 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
     }
 
     // the top of stack is such that there will be a result...
-    HParsedToken *tok;  // will hold result token
     tok = h_arena_malloc(arena, sizeof(HParsedToken));
-    tok->index = stream->index;
+    tok->index = stream->pos + stream->index;
     tok->bit_offset = stream->bit_offset;
-    if(x == mark) {
+    if(x == MARK) {
       // hit stack frame boundary...
       // wrap the accumulated parse result, this sequence is finished
       tok->token_type = TT_SEQUENCE;
@@ -340,17 +457,25 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
       // consume the input token
       uint8_t input = h_read_bits(stream, 8, false);
 
+      // when old chunk consumed from window, switch to new chunk
+      if(s->win.length > 0 && s->win.index >= kmax) {
+        s->win.length = 0;  // disable the window
+        stream = chunk;
+      }
+
       switch(x->type) {
       case HCF_END:
         if(!stream->overrun)
           goto no_parse;
+        if(!stream->last_chunk)
+          goto need_input;
         h_arena_free(arena, tok);
         tok = NULL;
         break;
 
       case HCF_CHAR:
         if(stream->overrun)
-          goto no_parse;
+          goto need_input;
         if(input != x->chr)
           goto no_parse;
         tok->token_type = TT_UINT;
@@ -359,7 +484,7 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
 
       case HCF_CHARSET:
         if(stream->overrun)
-          goto no_parse;
+          goto need_input;
         if(!charset_isset(x->charset, input))
           goto no_parse;
         tok->token_type = TT_UINT;
@@ -388,24 +513,82 @@ HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream*
     h_carray_append(seq, tok);
   }
 
+  // success
   // since we started with a single nonterminal on the stack, seq should
   // contain exactly the parse result.
   assert(seq->used == 1);
-  h_delete_arena(tarena);
-  return make_result(arena, seq->elements[0]);
+  return seq;
 
  no_parse:
-  h_delete_arena(tarena);
   h_delete_arena(arena);
+  s->arena = NULL;
   return NULL;
+
+ need_input:
+  if(stream->last_chunk)
+    goto no_parse;
+  if(tok)
+    h_arena_free(arena, tok);   // no result, yet
+  h_slist_push(stack, x);       // try this symbol again next time
+  return seq;
 }
 
+static HParseResult *llk_parse_finish_(HAllocator *mm__, HLLkState *s)
+{
+  HParseResult *res = NULL;
+
+  if(s->seq) {
+    assert(s->seq->used == 1);
+    res = make_result(s->arena, s->seq->elements[0]);
+  }
+
+  h_delete_arena(s->tarena);
+  h_free(s);
+  return res;
+}
+
+HParseResult *h_llk_parse(HAllocator* mm__, const HParser* parser, HInputStream* stream)
+{
+  HLLkState *s = llk_parse_start_(mm__, parser);
+
+  assert(stream->last_chunk);
+  s->seq = llk_parse_chunk_(s, parser, stream);
+
+  HParseResult *res = llk_parse_finish_(mm__, s);
+  if(res)
+    res->bit_length = stream->index * 8 + stream->bit_offset;
+
+  return res;
+}
+
+void h_llk_parse_start(HSuspendedParser *s)
+{
+  s->backend_state = llk_parse_start_(s->mm__, s->parser);
+}
+
+bool h_llk_parse_chunk(HSuspendedParser *s, HInputStream *input)
+{
+  HLLkState *state = s->backend_state;
+
+  state->seq = llk_parse_chunk_(state, s->parser, input);
+
+  return (state->seq == NULL || h_slist_empty(state->stack));
+}
+
+HParseResult *h_llk_parse_finish(HSuspendedParser *s)
+{
+  return llk_parse_finish_(s->mm__, s->backend_state);
+}
 
 
 HParserBackendVTable h__llk_backend_vtable = {
   .compile = h_llk_compile,
   .parse = h_llk_parse,
-  .free = h_llk_free
+  .free = h_llk_free,
+
+  .parse_start = h_llk_parse_start,
+  .parse_chunk = h_llk_parse_chunk,
+  .parse_finish = h_llk_parse_finish
 };
 
 

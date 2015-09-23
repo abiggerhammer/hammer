@@ -43,6 +43,7 @@ typedef struct {
 
 
 
+#define DEFAULT_ENDIANNESS (BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN)
 
 HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length) {
   return h_parse__m(&system_allocator, parser, input, length);
@@ -50,12 +51,14 @@ HParseResult* h_parse(const HParser* parser, const uint8_t* input, size_t length
 HParseResult* h_parse__m(HAllocator* mm__, const HParser* parser, const uint8_t* input, size_t length) {
   // Set up a parse state...
   HInputStream input_stream = {
+    .pos = 0,
     .index = 0,
     .bit_offset = 0,
     .overrun = 0,
-    .endianness = BIT_BIG_ENDIAN | BYTE_BIG_ENDIAN,
+    .endianness = DEFAULT_ENDIANNESS,
     .length = length,
-    .input = input
+    .input = input,
+    .last_chunk = true
   };
   
   return backends[parser->backend]->parse(mm__, parser, &input_stream);
@@ -95,4 +98,93 @@ int h_compile__m(HAllocator* mm__, HParser* parser, HParserBackend backend, cons
   if (!ret)
     parser->backend = backend;
   return ret;
+}
+
+
+HSuspendedParser* h_parse_start(const HParser* parser) {
+  return h_parse_start__m(&system_allocator, parser);
+}
+HSuspendedParser* h_parse_start__m(HAllocator* mm__, const HParser* parser) {
+  if(!backends[parser->backend]->parse_start)
+    return NULL;
+
+  // allocate and init suspended state
+  HSuspendedParser *s = h_new(HSuspendedParser, 1);
+  if(!s)
+    return NULL;
+  s->mm__ = mm__;
+  s->parser = parser;
+  s->backend_state = NULL;
+  s->done = false;
+  s->pos = 0;
+  s->bit_offset = 0;
+  s->endianness = DEFAULT_ENDIANNESS;
+
+  // backend-specific initialization
+  // should allocate s->backend_state
+  backends[parser->backend]->parse_start(s);
+
+  return s;
+}
+
+bool h_parse_chunk(HSuspendedParser* s, const uint8_t* input, size_t length) {
+  assert(backends[s->parser->backend]->parse_chunk != NULL);
+
+  // no-op if parser is already done
+  if(s->done)
+    return true;
+
+  // input 
+  HInputStream input_stream = {
+    .pos = s->pos,
+    .index = 0,
+    .bit_offset = 0,
+    .overrun = 0,
+    .endianness = s->endianness,
+    .length = length,
+    .input = input,
+    .last_chunk = false
+  };
+
+  // process chunk
+  s->done = backends[s->parser->backend]->parse_chunk(s, &input_stream);
+  s->endianness = input_stream.endianness;
+  s->pos += input_stream.index;
+  s->bit_offset = input_stream.bit_offset;
+
+  return s->done;
+}
+
+HParseResult* h_parse_finish(HSuspendedParser* s) {
+  assert(backends[s->parser->backend]->parse_chunk != NULL);
+  assert(backends[s->parser->backend]->parse_finish != NULL);
+
+  HAllocator *mm__ = s->mm__;
+
+  // signal end of input if parser is not already done
+  if(!s->done) {
+    HInputStream empty = {
+      .pos = s->pos,
+      .index = 0,
+      .bit_offset = 0,
+      .overrun = 0,
+      .endianness = s->endianness,
+      .length = 0,
+      .input = NULL,
+      .last_chunk = true
+    };
+
+    s->done = backends[s->parser->backend]->parse_chunk(s, &empty);
+    assert(s->done);
+  }
+
+  // extract result
+  HParseResult *r = backends[s->parser->backend]->parse_finish(s);
+  if(r)
+    r->bit_length = s->pos * 8 + s->bit_offset;
+
+  // NB: backend should have freed backend_state
+  h_free(s);
+
+  return r;
 }
