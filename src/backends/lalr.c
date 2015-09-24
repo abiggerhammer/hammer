@@ -91,7 +91,7 @@ static HCFChoice *new_enhanced_symbol(HLREnhGrammar *eg, const HCFChoice *sym)
 
   HHashSet *cs = h_hashtable_get(eg->corr, sym);
   if (!cs) {
-    cs = h_hashset_new(arena, h_eq_symbol, h_hash_symbol);
+    cs = h_hashset_new(arena, h_eq_ptr, h_hash_ptr);
     h_hashtable_put(eg->corr, sym, cs);
   }
   h_hashset_put(cs, esym);
