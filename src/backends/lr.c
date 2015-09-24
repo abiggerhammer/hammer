@@ -163,7 +163,7 @@ HLRAction *h_reduce_action(HArena *arena, const HLRItem *item)
 }
 
 // adds 'new' to the branches of 'action'
-// returns a 'action' if it is already of type HLR_CONFLICT
+// returns 'action' if it is already of type HLR_CONFLICT
 // allocates a new HLRAction otherwise
 HLRAction *h_lr_conflict(HArena *arena, HLRAction *action, HLRAction *new)
 {
