@@ -121,13 +121,24 @@ static void test_llk_zero_end(void) {
 static void test_lalr_charset_lhs(void) {
     HParserBackend be = PB_LALR;
 
-    HParser *p = h_choice(h_ch('A'), h_uint8(), NULL);
+    HParser *p = h_many(h_choice(h_sequence(h_ch('A'), h_ch('B'), NULL),
+                                 h_in((uint8_t*)"AB",2), NULL));
 
-    // the above would fail to compile because of an unhandled case in trying
-    // to resolve a conflict where an item's left-hand-side was an HCF_CHARSET.
+    // the above would abort because of an unhandled case in trying to resolve
+    // a conflict where an item's left-hand-side was an HCF_CHARSET.
+    // however, the compile should fail - the conflict cannot be resolved.
 
-    g_check_parse_match(p, be, "A",1, "u0x41");
-    g_check_parse_match(p, be, "B",1, "u0x42");
+    if(h_compile(p, be, NULL) == 0) {
+        g_test_message("LALR compile didn't detect ambiguous grammar");
+
+        // it says it compiled it - well, then it should parse it!
+        // (this helps us see what it thinks it should be doing.)
+        g_check_parse_match(p, be, "AA",2, "(u0x41 u0x41)");
+        g_check_parse_match(p, be, "AB",2, "((u0x41 u0x42))");
+
+        g_test_fail();
+        return;
+    }
 }
 
 static void test_cfg_many_seq(void) {
