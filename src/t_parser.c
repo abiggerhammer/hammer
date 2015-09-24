@@ -1,6 +1,7 @@
 #include <glib.h>
 #include <string.h>
 #include "hammer.h"
+#include "glue.h"
 #include "internal.h"
 #include "test_suite.h"
 #include "parsers/parser_internal.h"
@@ -552,6 +553,34 @@ static void test_result_length(gconstpointer backend) {
   g_check_cmp_int64(r->bit_length, ==, 24);
 }
 
+static void test_token_position(gconstpointer backend) {
+  HParserBackend be = (HParserBackend)GPOINTER_TO_INT(backend);
+  HParser *p = h_sequence(h_token((uint8_t*)"foo",3),
+                          h_token((uint8_t*)"bar",3), NULL);
+
+  if(h_compile(p, be, NULL) != 0) {
+    g_test_message("Compile failed");
+    g_test_fail();
+    return;
+  }
+
+  HParseResult *r = h_parse(p, (uint8_t*)"foobar", 6);
+  if(!r) {
+    g_test_message("Parse failed");
+    g_test_fail();
+    return;
+  }
+
+  assert(r->ast != NULL);
+  HParsedToken *foo = H_INDEX_TOKEN(r->ast, 0);
+  HParsedToken *bar = H_INDEX_TOKEN(r->ast, 1);
+
+  g_check_cmp_uint64(foo->index, ==, 0);
+  g_check_cmp_uint64(foo->bit_offset, ==, 0);
+  g_check_cmp_uint64(bar->index, ==, 3);
+  g_check_cmp_uint64(bar->bit_offset, ==, 0);
+}
+
 static void test_ambiguous(gconstpointer backend) {
   HParser *d_ = h_ch('d');
   HParser *p_ = h_ch('+');
@@ -763,6 +792,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/packrat/permutation", GINT_TO_POINTER(PB_PACKRAT), test_permutation);
   g_test_add_data_func("/core/parser/packrat/bind", GINT_TO_POINTER(PB_PACKRAT), test_bind);
   g_test_add_data_func("/core/parser/packrat/result_length", GINT_TO_POINTER(PB_PACKRAT), test_result_length);
+  //g_test_add_data_func("/core/parser/packrat/token_position", GINT_TO_POINTER(PB_PACKRAT), test_token_position);
 
   g_test_add_data_func("/core/parser/llk/token", GINT_TO_POINTER(PB_LLk), test_token);
   g_test_add_data_func("/core/parser/llk/ch", GINT_TO_POINTER(PB_LLk), test_ch);
@@ -802,6 +832,7 @@ void register_parser_tests(void) {
   //g_test_add_data_func("/core/parser/llk/leftrec", GINT_TO_POINTER(PB_LLk), test_leftrec);
   g_test_add_data_func("/core/parser/llk/rightrec", GINT_TO_POINTER(PB_LLk), test_rightrec);
  g_test_add_data_func("/core/parser/llk/result_length", GINT_TO_POINTER(PB_LLk), test_result_length);
+  //g_test_add_data_func("/core/parser/llk/token_position", GINT_TO_POINTER(PB_LLk), test_token_position);
   g_test_add_data_func("/core/parser/llk/iterative", GINT_TO_POINTER(PB_LLk), test_iterative);
   g_test_add_data_func("/core/parser/llk/iterative/lookahead", GINT_TO_POINTER(PB_LLk), test_iterative_lookahead);
   g_test_add_data_func("/core/parser/llk/iterative/result_length", GINT_TO_POINTER(PB_LLk), test_iterative_result_length);
@@ -843,6 +874,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/regex/attr_bool", GINT_TO_POINTER(PB_REGULAR), test_attr_bool);
   g_test_add_data_func("/core/parser/regex/ignore", GINT_TO_POINTER(PB_REGULAR), test_ignore);
   g_test_add_data_func("/core/parser/regex/result_length", GINT_TO_POINTER(PB_REGULAR), test_result_length);
+  g_test_add_data_func("/core/parser/regex/token_position", GINT_TO_POINTER(PB_REGULAR), test_token_position);
 
   g_test_add_data_func("/core/parser/lalr/token", GINT_TO_POINTER(PB_LALR), test_token);
   g_test_add_data_func("/core/parser/lalr/ch", GINT_TO_POINTER(PB_LALR), test_ch);
@@ -883,6 +915,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/lalr/leftrec-ne", GINT_TO_POINTER(PB_LALR), test_leftrec_ne);
   g_test_add_data_func("/core/parser/lalr/rightrec", GINT_TO_POINTER(PB_LALR), test_rightrec);
   g_test_add_data_func("/core/parser/lalr/result_length", GINT_TO_POINTER(PB_LALR), test_result_length);
+  g_test_add_data_func("/core/parser/lalr/token_position", GINT_TO_POINTER(PB_LALR), test_token_position);
   g_test_add_data_func("/core/parser/lalr/iterative", GINT_TO_POINTER(PB_LALR), test_iterative);
   g_test_add_data_func("/core/parser/lalr/iterative/lookahead", GINT_TO_POINTER(PB_LALR), test_iterative_lookahead);
   g_test_add_data_func("/core/parser/lalr/iterative/result_length", GINT_TO_POINTER(PB_LALR), test_iterative_result_length);
@@ -927,4 +960,5 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/glr/rightrec", GINT_TO_POINTER(PB_GLR), test_rightrec);
   g_test_add_data_func("/core/parser/glr/ambiguous", GINT_TO_POINTER(PB_GLR), test_ambiguous);
   g_test_add_data_func("/core/parser/glr/result_length", GINT_TO_POINTER(PB_GLR), test_result_length);
+  g_test_add_data_func("/core/parser/glr/token_position", GINT_TO_POINTER(PB_GLR), test_token_position);
 }
