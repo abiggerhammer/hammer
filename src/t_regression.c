@@ -140,6 +140,28 @@ static void test_cfg_many_seq(void) {
     // reshape on h_many.
 }
 
+static uint8_t test_charset_bits__buf[256];
+static void *test_charset_bits__alloc(HAllocator *allocator, size_t size)
+{
+    g_check_cmp_uint64(size, ==, 256/8);
+    assert(size <= 256);
+    return test_charset_bits__buf;
+}
+static void test_charset_bits(void) {
+    // charset would allocate 256 bytes instead of 256 bits (= 32 bytes)
+
+    HAllocator alloc = {
+        .alloc = test_charset_bits__alloc,
+        .realloc = NULL,
+        .free = NULL,
+    };
+    test_charset_bits__buf[32] = 0xAB;
+    HCharset cs = new_charset(&alloc);
+    for(size_t i=0; i<32; i++)
+        g_check_cmp_uint32(test_charset_bits__buf[i], ==, 0);
+    g_check_cmp_uint32(test_charset_bits__buf[32], ==, 0xAB);
+}
+
 void register_regression_tests(void) {
   g_test_add_func("/core/regression/bug118", test_bug118);
   g_test_add_func("/core/regression/seq_index_path", test_seq_index_path);
@@ -147,4 +169,5 @@ void register_regression_tests(void) {
   g_test_add_func("/core/regression/llk_zero_end", test_llk_zero_end);
   g_test_add_func("/core/regression/lalr_charset_lhs", test_lalr_charset_lhs);
   g_test_add_func("/core/regression/cfg_many_seq", test_cfg_many_seq);
+  g_test_add_func("/core/regression/charset_bits", test_charset_bits);
 }
