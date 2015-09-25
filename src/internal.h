@@ -155,20 +155,20 @@ static inline void h_sarray_clear(HSArray *arr) {
 typedef unsigned int *HCharset;
 
 static inline HCharset new_charset(HAllocator* mm__) {
-  HCharset cs = h_new(unsigned int, 256 / sizeof(unsigned int));
-  memset(cs, 0, 256);
+  HCharset cs = h_new(unsigned int, 256 / (sizeof(unsigned int) * 8));
+  memset(cs, 0, 32);  // 32 bytes = 256 bits
   return cs;
 }
 
 static inline int charset_isset(HCharset cs, uint8_t pos) {
-  return !!(cs[pos / sizeof(*cs)] & (1 << (pos % sizeof(*cs))));
+  return !!(cs[pos / (sizeof(*cs)*8)] & (1 << (pos % (sizeof(*cs)*8))));
 }
 
 static inline void charset_set(HCharset cs, uint8_t pos, int val) {
-  cs[pos / sizeof(*cs)] =
+  cs[pos / (sizeof(*cs)*8)] =
     val
-    ? cs[pos / sizeof(*cs)] |  (1 << (pos % sizeof(*cs)))
-    : cs[pos / sizeof(*cs)] & ~(1 << (pos % sizeof(*cs)));
+    ? cs[pos / (sizeof(*cs)*8)] |  (1 << (pos % (sizeof(*cs)*8)))
+    : cs[pos / (sizeof(*cs)*8)] & ~(1 << (pos % (sizeof(*cs)*8)));
 }
 
 typedef unsigned int HHashValue;
