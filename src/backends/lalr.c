@@ -91,7 +91,7 @@ static HCFChoice *new_enhanced_symbol(HLREnhGrammar *eg, const HCFChoice *sym)
 
   HHashSet *cs = h_hashtable_get(eg->corr, sym);
   if (!cs) {
-    cs = h_hashset_new(arena, h_eq_symbol, h_hash_symbol);
+    cs = h_hashset_new(arena, h_eq_ptr, h_hash_ptr);
     h_hashtable_put(eg->corr, sym, cs);
   }
   h_hashset_put(cs, esym);
@@ -208,6 +208,46 @@ static bool match_production(HLREnhGrammar *eg, HCFChoice **p,
           && state == endstate);
 }
 
+// variant of match_production where the production lhs is a charset
+// [..x..] -> x
+static bool match_charset_production(const HLRTable *table, HLREnhGrammar *eg,
+                                     const HCFChoice *lhs, HCFChoice *rhs,
+                                     size_t endstate)
+{
+  assert(lhs->type == HCF_CHARSET);
+  assert(rhs->type == HCF_CHAR);
+
+  if(!charset_isset(lhs->charset, rhs->chr))
+    return false;
+
+  // determine the enhanced-grammar right-hand side and check end state
+  HLRTransition *t = h_hashtable_get(eg->smap, lhs);
+  assert(t != NULL);
+  return (follow_transition(table, t->from, rhs) == endstate);
+}
+
+// check wether any production for sym (enhanced-grammar) matches the given
+// (original-grammar) rhs and terminates in the given end state.
+static bool match_any_production(const HLRTable *table, HLREnhGrammar *eg,
+                                 const HCFChoice *sym, HCFChoice **rhs,
+                                 size_t endstate)
+{
+  assert(sym->type == HCF_CHOICE || sym->type == HCF_CHARSET);
+
+  if(sym->type == HCF_CHOICE) {
+    for(HCFSequence **p=sym->seq; *p; p++) {
+      if(match_production(eg, (*p)->items, rhs, endstate))
+        return true;
+    }
+  } else {  // HCF_CHARSET
+    assert(rhs[0] != NULL);
+    assert(rhs[1] == NULL);
+    return match_charset_production(table, eg, sym, rhs[0], endstate);
+  }
+
+  return false;
+}
+
 // desugar parser with a fresh start symbol
 // this guarantees that the start symbol will not occur in any productions
 HCFChoice *h_desugar_augmented(HAllocator *mm__, HParser *parser)
@@ -286,28 +326,7 @@ int h_lalr_compile(HAllocator* mm__, HParser* parser, const void* params)
         HHashSet *lhss = h_hashtable_get(eg->corr, item->lhs);
         assert(lhss != NULL);
         H_FOREACH_KEY(lhss, HCFChoice *lhs)
-          assert(lhs->type == HCF_CHOICE || lhs->type == HCF_CHARSET);
-
-          bool match = false;
-          if(lhs->type == HCF_CHOICE) {
-            for(HCFSequence **p=lhs->seq; *p; p++) {
-              HCFChoice **rhs = (*p)->items;
-              if(match_production(eg, rhs, item->rhs, state)) {
-                match = true;
-                break;
-              }
-            }
-          } else {  // HCF_CHARSET
-            assert(item->rhs[0] != NULL);
-            assert(item->rhs[1] == NULL);
-            assert(item->rhs[0]->type == HCF_CHAR);
-            HLRTransition *t = h_hashtable_get(eg->smap, lhs);
-            assert(t != NULL);
-            match = (t->to == state
-                     && charset_isset(lhs->charset, item->rhs[0]->chr));
-          }
-
-          if(match) {
+          if(match_any_production(table, eg, lhs, item->rhs, state)) {
             // the left-hand symbol's follow set is this production's
             // contribution to the lookahead
             const HStringMap *fs = h_follow(1, eg->grammar, lhs);

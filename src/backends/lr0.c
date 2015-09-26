@@ -30,9 +30,9 @@ static void expand_to_closure(HCFGrammar *g, HHashSet *items)
     HCFChoice *sym = item->rhs[item->mark]; // symbol after mark
 
     // if there is a non-terminal after the mark, follow it
+    // and add items corresponding to the productions of sym
     // NB: unlike LLk, we do consider HCF_CHARSET a non-terminal here
-    if(sym != NULL && (sym->type==HCF_CHOICE || sym->type==HCF_CHARSET)) {
-      // add items corresponding to the productions of sym
+    if(sym != NULL) {
       if(sym->type == HCF_CHOICE) {
         for(HCFSequence **p=sym->seq; *p; p++) {
           HLRItem *it = h_lritem_new(arena, sym, (*p)->items, 0);
@@ -41,7 +41,7 @@ static void expand_to_closure(HCFGrammar *g, HHashSet *items)
             h_slist_push(work, it);
           }
         }
-      } else {  // HCF_CHARSET
+      } else if(sym->type == HCF_CHARSET) {
         for(unsigned int i=0; i<256; i++) {
           if(charset_isset(sym->charset, i)) {
             // XXX allocate these single-character symbols statically somewhere
@@ -93,8 +93,8 @@ HLRDFA *h_lr0_dfa(HCFGrammar *g)
   //     compute closure
   //     if destination is a new state:
   //       add it to state set
-  //       add transition to it
   //       add it to the work list
+  //     add transition to it
 
   while(!h_slist_empty(work)) {
     size_t state_idx = (uintptr_t)h_slist_pop(work);
