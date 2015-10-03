@@ -91,9 +91,9 @@ else:
     env = opt
 
 if GetOption("coverage"):
-    env.Append(CFLAGS=["-fprofile-arcs", "-ftest-coverage"],
-               CXXFLAGS=["-fprofile-arcs", "-ftest-coverage"],
-               LDFLAGS=["-fprofile-arcs", "-ftest-coverage"],
+    env.Append(CFLAGS=["--coverage"],
+               CXXFLAGS=["--coverage"],
+               LDFLAGS=["--coverage"],
                LIBS=['gcov'])
 
 env["CC"] = os.getenv("CC") or env["CC"]
