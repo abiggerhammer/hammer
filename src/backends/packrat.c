@@ -186,6 +186,7 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
   if (!m) {
     // It doesn't exist, so create a dummy result to cache
     HLeftRec *base = a_new(HLeftRec, 1);
+    // But only cache it now if there's some chance it could grow; primitive parsers can't
     if (parser->vtable->higher) {
       base->seed = NULL; base->rule = parser; base->head = NULL;
       h_slist_push(state->lr_stack, base);
