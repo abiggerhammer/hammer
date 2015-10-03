@@ -91,7 +91,7 @@ matrix:
       language: cpp
       env: BINDINGS=cpp CC="clang --coverage"
 before_install:
-  - if [ "$CC" == "clang" ]; then export CC="clang --coverage"
+  - if [ "$CC" == "clang" ]; then export CC="clang --coverage"; fi
   - sudo apt-get update -qq
   - sudo apt-get install lcov
   - gem install coveralls-lcov
