@@ -13,7 +13,7 @@ matrix:
     - compiler: clang
       language: ruby
       rvm: ruby-1.9.3-p484
-      env: BINDINGS=ruby CC="clang --coverage"
+      env: BINDINGS=ruby CC=clang
     - compiler: gcc
       language: ruby
       rvm: ruby-2.0.0-p353
@@ -21,7 +21,7 @@ matrix:
     - compiler: clang
       language: ruby
       rvm: ruby-2.0.0-p353
-      env: BINDINGS=ruby CC="clang --coverage"
+      env: BINDINGS=ruby CC=clang
     - compiler: gcc
       language: ruby
       rvm: ruby-2.1.0
@@ -29,7 +29,7 @@ matrix:
     - compiler: clang
       language: ruby
       rvm: ruby-2.1.0
-      env: BINDINGS=ruby CC="clang --coverage"
+      env: BINDINGS=ruby CC=clang
     - compiler: gcc
       language: python
       python: "2.7"
@@ -37,7 +37,7 @@ matrix:
     - compiler: clang
       language: python
       python: "2.7"
-      env: BINDINGS=python CC="clang --coverage"
+      env: BINDINGS=python CC=clang
     - compiler: gcc
       language: perl
       perl: "5.18"
@@ -45,7 +45,7 @@ matrix:
     - compiler: clang
       language: perl
       perl: "5.18"
-      env: BINDINGS=perl CC="clang --coverage"
+      env: BINDINGS=perl CC=clang
     - compiler: gcc
       language: perl
       perl: "5.14"
@@ -53,7 +53,7 @@ matrix:
     - compiler: clang
       language: perl
       perl: "5.14"
-      env: BINDINGS=perl CC="clang --coverage"
+      env: BINDINGS=perl CC=clang
     - compiler: gcc
       language: perl
       perl: "5.10"
@@ -61,7 +61,7 @@ matrix:
     - compiler: clang
       language: perl
       perl: "5.10"
-      env: BINDINGS=perl CC="clang --coverage"
+      env: BINDINGS=perl CC=clang
     - compiler: gcc
       language: php
       php: "5.5"
@@ -69,7 +69,7 @@ matrix:
     - compiler: clang
       language: php
       php: "5.5"
-      env: BINDINGS=php CC="clang --coverage"
+      env: BINDINGS=php CC=clang
     - compiler: gcc
       language: php
       php: "5.4"
@@ -77,19 +77,19 @@ matrix:
     - compiler: clang
       language: php
       php: "5.4"
-      env: BINDINGS=php CC="clang --coverage"
+      env: BINDINGS=php CC=clang
     - compiler: gcc
       language: dotnet
       env: BINDINGS=dotnet
     - compiler: clang
       language: dotnet
-      env: BINDINGS=dotnet CC="clang --coverage"
+      env: BINDINGS=dotnet CC=clang
     - compiler: gcc
       language: cpp
       env: BINDINGS=cpp
     - compiler: gcc
       language: cpp
-      env: BINDINGS=cpp CC="clang --coverage"
+      env: BINDINGS=cpp CC=clang
 before_install:
   - if [ "$CC" == "clang" ]; then export CC="clang --coverage"; fi
   - sudo apt-get update -qq
