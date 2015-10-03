@@ -92,6 +92,8 @@ matrix:
       env: BINDINGS=cpp CC=clang
 before_install:
   - sudo apt-get update -qq
+  - sudo apt-get install lcov
+  - gem install coveralls-lcov
   - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; fi
   - if [ "$BINDINGS" == "perl" ]; then sudo add-apt-repository ppa:dns/irc -y; sudo apt-get update -qq; sudo apt-get install -qq swig=2.0.8-1irc1~12.04; fi
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
@@ -100,11 +102,13 @@ install: true
 before_script:
   - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
 script: 
-  - scons bindings=$BINDINGS test
+  - scons bindings=$BINDINGS test --coverage
+after_success:
+  - lcov --capture --directory build/opt/src --output-file coverage.info
+  - coveralls-lcov coverage.info
 notifications:
   irc: 
     channels: 
       - "irc.upstandinghackers.com#hammer"
     use_notice: true
     skip_join: true
-        
