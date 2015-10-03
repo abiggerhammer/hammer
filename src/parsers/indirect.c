@@ -31,6 +31,7 @@ static const HParserVtable indirect_vt = {
   .isValidCF = indirect_isValidCF,
   .desugar = desugar_indirect,
   .compile_to_rvm = h_not_regular,
+  .higher = true,
 };
 
 void h_bind_indirect__m(HAllocator *mm__, HParser* indirect, const HParser* inner) {

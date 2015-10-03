@@ -117,6 +117,7 @@ static const HParserVtable int_range_vt = {
   .isValidCF = h_true,
   .desugar = desugar_int_range,
   .compile_to_rvm = ir_ctrvm,
+  .higher = false,
 };
 
 HParser* h_int_range(const HParser *p, const int64_t lower, const int64_t upper) {

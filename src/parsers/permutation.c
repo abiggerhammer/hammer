@@ -104,6 +104,7 @@ static const HParserVtable permutation_vt = {
   .isValidCF = h_false,
   .desugar = NULL,
   .compile_to_rvm = h_not_regular,
+  .higher = true,
 };
 
 HParser* h_permutation(HParser* p, ...) {

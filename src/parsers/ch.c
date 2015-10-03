@@ -47,6 +47,7 @@ static const HParserVtable ch_vt = {
   .isValidCF = h_true,
   .desugar = desugar_ch,
   .compile_to_rvm = ch_ctrvm,
+  .higher = false,
 };
 
 HParser* h_ch(const uint8_t c) {

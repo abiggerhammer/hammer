@@ -3,7 +3,7 @@
 #include "../internal.h"
 #include "../parsers/parser_internal.h"
 
-// short-hand for creating cache values (regular case)
+// short-hand for creating lowlevel parse cache values (parse result case)
 static
 HParserCacheValue * cached_result(HParseState *state, HParseResult *result) {
   HParserCacheValue *ret = a_new(HParserCacheValue, 1);
@@ -13,7 +13,7 @@ HParserCacheValue * cached_result(HParseState *state, HParseResult *result) {
   return ret;
 }
 
-// short-hand for caching parse results (left recursion case)
+// short-hand for creating lowlevel parse cache values (left recursion case)
 static
 HParserCacheValue *cached_lr(HParseState *state, HLeftRec *lr) {
   HParserCacheValue *ret = a_new(HParserCacheValue, 1);
@@ -186,18 +186,22 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
   if (!m) {
     // It doesn't exist, so create a dummy result to cache
     HLeftRec *base = a_new(HLeftRec, 1);
-    base->seed = NULL; base->rule = parser; base->head = NULL;
-    h_slist_push(state->lr_stack, base);
-    // cache it
-    h_hashtable_put(state->cache, key, cached_lr(state, base));
-    // parse the input
+    if (parser->vtable->higher) {
+      base->seed = NULL; base->rule = parser; base->head = NULL;
+      h_slist_push(state->lr_stack, base);
+      // cache it
+      h_hashtable_put(state->cache, key, cached_lr(state, base));
+      // parse the input
+    }
     HParseResult *tmp_res = perform_lowlevel_parse(state, parser);
-    // the base variable has passed equality tests with the cache
-    h_slist_pop(state->lr_stack);
-    // update the cached value to our new position
-    HParserCacheValue *cached = h_hashtable_get(state->cache, key);
-    assert(cached != NULL);
-    cached->input_stream = state->input_stream;
+    if (parser->vtable->higher) {
+      // the base variable has passed equality tests with the cache
+      h_slist_pop(state->lr_stack);
+      // update the cached value to our new position
+      HParserCacheValue *cached = h_hashtable_get(state->cache, key);
+      assert(cached != NULL);
+      cached->input_stream = state->input_stream;
+    }
     // setupLR, used below, mutates the LR to have a head if appropriate, so we check to see if we have one
     if (NULL == base->head) {
       h_hashtable_put(state->cache, key, cached_result(state, tmp_res));

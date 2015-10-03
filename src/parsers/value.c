@@ -26,6 +26,7 @@ static const HParserVtable put_vt = {
   .isValidRegular = h_false,
   .isValidCF = h_false,
   .compile_to_rvm = h_not_regular,
+  .higher = true,
 };
 
 HParser* h_put_value(const HParser* p, const char* name) {
@@ -55,6 +56,7 @@ static const HParserVtable get_vt = {
   .isValidRegular = h_false,
   .isValidCF = h_false,
   .compile_to_rvm = h_not_regular,
+  .higher = true,
 };
 
 HParser* h_get_value(const char* name) {

@@ -199,6 +199,7 @@ static const HParserVtable many_vt = {
   .isValidCF = many_isValidCF,
   .desugar = desugar_many,
   .compile_to_rvm = many_ctrvm,
+  .higher = true,
 };
 
 HParser* h_many(const HParser* p) {

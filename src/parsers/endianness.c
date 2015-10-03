@@ -46,6 +46,7 @@ static const HParserVtable endianness_vt = {
     .isValidCF = h_false,
     .desugar = NULL,
     .compile_to_rvm = h_not_regular,
+    .higher = true,
 };
 
 HParser* h_with_endianness(char endianness, const HParser *p)

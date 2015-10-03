@@ -73,6 +73,7 @@ const HParserVtable token_vt = {
   .isValidCF = h_true,
   .desugar = desugar_token,
   .compile_to_rvm = token_ctrvm,
+  .higher = false,
 };
 
 HParser* h_token(const uint8_t *str, const size_t len) {

@@ -278,9 +278,9 @@ typedef struct HRecursionHead_ {
 /* A left recursion.
  *
  * Members:
- *   seed -
- *   rule -
- *   head -
+ *   seed - the HResult yielded by rule
+ *   rule - the HParser that produces seed
+ *   head - the 
  */
 typedef struct HLeftRec_ {
   HParseResult *seed;
@@ -419,6 +419,7 @@ struct HParserVtable_ {
   bool (*isValidCF)(void *env);
   bool (*compile_to_rvm)(HRVMProg *prog, void* env); // FIXME: forgot what the bool return value was supposed to mean.
   void (*desugar)(HAllocator *mm__, HCFStack *stk__, void *env);
+  bool higher; // false if primitive
 };
 
 bool h_false(void*);

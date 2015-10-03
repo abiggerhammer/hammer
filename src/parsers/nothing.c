@@ -22,6 +22,7 @@ static const HParserVtable nothing_vt = {
   .isValidCF = h_true,
   .desugar = desugar_nothing,
   .compile_to_rvm = nothing_ctrvm,
+  .higher = false,
 };
 
 HParser* h_nothing_p() {
