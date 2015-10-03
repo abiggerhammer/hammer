@@ -93,7 +93,8 @@ else:
 if GetOption("coverage"):
     env.Append(CFLAGS=["--coverage"],
                CXXFLAGS=["--coverage"],
-               LDFLAGS=["--coverage"])
+               LDFLAGS=["--coverage"],
+               LIBS=['gcov'])
 
 env["CC"] = os.getenv("CC") or env["CC"]
 env["CXX"] = os.getenv("CXX") or env["CXX"]
