@@ -7,7 +7,8 @@ dist_headers = [
     "allocator.h",
     "compiler_specifics.h",
     "glue.h",
-    "internal.h"
+    "internal.h",
+    "platform.h"
 ]
 
 parsers_headers = [
