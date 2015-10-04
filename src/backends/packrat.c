@@ -181,7 +181,10 @@ HParseResult* lr_answer(HParserCacheKey *k, HParseState *state, HLeftRec *growab
 HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
   HParserCacheKey *key = a_new(HParserCacheKey, 1);
   key->input_pos = state->input_stream; key->parser = parser;
-  HParserCacheValue *m = recall(key, state);
+  HParserCacheValue *m = NULL;
+  if (parser->vtable->higher) {
+    m = recall(key, state);
+  }
   // check to see if there is already a result for this object...
   if (!m) {
     // It doesn't exist, so create a dummy result to cache
