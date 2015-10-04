@@ -101,10 +101,10 @@ before_install:
 install: true
 before_script:
   - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
-script: 
-  - scons bindings=$BINDINGS test --variant=debug --coverage
+script:
+  - if [ "$BINDINGS" == "none" ]; then scons test --variant=debug --coverage; else scons bindings=$BINDINGS test; fi
 after_success:
-  - if [ "$CC" == "clang --coverage" ]; then llvm-cov gcov -o coverage.info build/debug/src/test_suite.gcda; else lcov --capture --directory build/debug/src --output-file coverage.info; fi
+  - if [ "$BINDINGS" == "none" ]; then if [ "$CC" == "clang" ]; then llvm-cov gcov -o coverage.info build/debug/src/test_suite.gcda; else lcov --capture --directory build/debug/src --output-file coverage.info; fi; fi
   - coveralls-lcov coverage.info
 notifications:
   irc: 
