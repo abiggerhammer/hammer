@@ -188,9 +188,10 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
   // check to see if there is already a result for this object...
   if (!m) {
     // It doesn't exist, so create a dummy result to cache
-    HLeftRec *base = a_new(HLeftRec, 1);
+    HLeftRec *base = NULL;
     // But only cache it now if there's some chance it could grow; primitive parsers can't
     if (parser->vtable->higher) {
+      base = a_new(HLeftRec, 1);
       base->seed = NULL; base->rule = parser; base->head = NULL;
       h_slist_push(state->lr_stack, base);
       // cache it
@@ -207,7 +208,7 @@ HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
       cached->input_stream = state->input_stream;
     }
     // setupLR, used below, mutates the LR to have a head if appropriate, so we check to see if we have one
-    if (NULL == base->head) {
+    if (!base || NULL == base->head) {
       h_hashtable_put(state->cache, key, cached_result(state, tmp_res));
       return tmp_res;
     } else {
