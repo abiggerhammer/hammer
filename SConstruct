@@ -90,14 +90,17 @@ if GetOption("variant") == 'debug':
 else:
     env = opt
 
+env["CC"] = os.getenv("CC") or env["CC"]
+env["CXX"] = os.getenv("CXX") or env["CXX"]
+
 if GetOption("coverage"):
     env.Append(CFLAGS=["--coverage"],
                CXXFLAGS=["--coverage"],
-               LDFLAGS=["--coverage"],
-               LIBS=['gcov'])
-
-env["CC"] = os.getenv("CC") or env["CC"]
-env["CXX"] = os.getenv("CXX") or env["CXX"]
+               LDFLAGS=["--coverage"])
+    if env["CC"] == "gcc":
+        env.Append(LIBS=['gcov'])
+    else:
+        env.ParseConfig('llvm-config --ldflags')
 
 if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",
