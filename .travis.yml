@@ -10,35 +10,43 @@ matrix:
   include:
     - compiler: gcc
       language: ruby
-      rvm: ruby-1.9.3-p484
+      rvm: ruby-1.9.3-p551
       env: BINDINGS=ruby
     - compiler: clang
       language: ruby
-      rvm: ruby-1.9.3-p484
+      rvm: ruby-1.9.3-p551
       env: BINDINGS=ruby CC=clang
     - compiler: gcc
       language: ruby
-      rvm: ruby-2.0.0-p353
+      rvm: ruby-2.0.0-p647
       env: BINDINGS=ruby
     - compiler: clang
       language: ruby
-      rvm: ruby-2.0.0-p353
+      rvm: ruby-2.0.0-p647
       env: BINDINGS=ruby CC=clang
     - compiler: gcc
       language: ruby
-      rvm: ruby-2.1.0
+      rvm: ruby-2.1.7
       env: BINDINGS=ruby
     - compiler: clang
       language: ruby
-      rvm: ruby-2.1.0
+      rvm: ruby-2.1.7
+      env: BINDINGS=ruby CC=clang
+    - compiler: gcc
+      language: ruby
+      rvm: ruby-2.2.3
+      env: BINDINGS=ruby
+    - compiler: clang
+      language: ruby
+      rvm: ruby-2.3.3
       env: BINDINGS=ruby CC=clang
     - compiler: gcc
       language: python
-      python: "2.7"
+      python: "2.7.10"
       env: BINDINGS=python
     - compiler: clang
       language: python
-      python: "2.7"
+      python: "2.7.10"
       env: BINDINGS=python CC=clang
     - compiler: gcc
       language: perl
@@ -94,12 +102,12 @@ matrix:
       env: BINDINGS=cpp CC=clang
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install lcov
+  - sudo apt-get install -y lcov
   - gem install coveralls-lcov
-  - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; fi
-  - if [ "$BINDINGS" == "perl" ]; then sudo add-apt-repository ppa:dns/irc -y; sudo apt-get update -qq; sudo apt-get install -qq swig=2.0.8-1irc1~12.04; fi
-  - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
-  - if [ "$BINDINGS" == "dotnet" ]; then sudo add-apt-repository ppa:directhex/monoxide -y; sudo apt-get update -qq; sudo apt-get install -qq mono-devel mono-mcs nunit nunit-console; mozroots --import --sync; fi
+  - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -yqq swig; fi
+  - if [ "$BINDINGS" == "perl" ]; then sudo add-apt-repository ppa:dns/irc -y; sudo apt-get update -qq; sudo apt-get install -yqq swig=2.0.8-1irc1~12.04; fi
+  - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -yqq python-dev; fi
+  - if [ "$BINDINGS" == "dotnet" ]; then sudo add-apt-repository ppa:directhex/monoxide -y; sudo apt-get update -qq; sudo apt-get install -yqq mono-devel mono-mcs nunit nunit-console; mozroots --import --sync; fi
 install: true
 before_script:
   - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
