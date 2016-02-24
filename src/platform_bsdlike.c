@@ -1,4 +1,3 @@
-#define _GNU_SOURCE // to obtain asprintf/vasprintf
 #include "platform.h"
 
 #include <stdio.h>
