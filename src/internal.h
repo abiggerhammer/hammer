@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <string.h>
+#include <llvm-c/Core.h>
 #include "hammer.h"
 #include "platform.h"
 
@@ -322,6 +323,7 @@ extern HParserBackendVTable h__packrat_backend_vtable;
 extern HParserBackendVTable h__llk_backend_vtable;
 extern HParserBackendVTable h__lalr_backend_vtable;
 extern HParserBackendVTable h__glr_backend_vtable;
+extern HParserBackendVTable h__llvm_backend_vtable;
 // }}}
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
@@ -419,6 +421,7 @@ struct HParserVtable_ {
   bool (*isValidCF)(void *env);
   bool (*compile_to_rvm)(HRVMProg *prog, void* env); // FIXME: forgot what the bool return value was supposed to mean.
   void (*desugar)(HAllocator *mm__, HCFStack *stk__, void *env);
+  bool (*llvm)(LLVMBuilderRef builder, LLVMModuleRef mod, void *env);
   bool higher; // false if primitive
 };
 

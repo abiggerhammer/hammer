@@ -46,7 +46,8 @@ typedef enum HParserBackend_ {
   PB_LLk,
   PB_LALR,
   PB_GLR,
-  PB_MAX = PB_GLR
+  PB_LLVM,
+  PB_MAX = PB_LLVM
 } HParserBackend;
 
 typedef enum HTokenType_ {
