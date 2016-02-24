@@ -1,3 +1,6 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE // to obtain asprintf/vasprintf
+#endif
 #include "platform.h"
 
 #include <stdio.h>
