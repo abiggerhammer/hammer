@@ -38,7 +38,7 @@ matrix:
       env: BINDINGS=ruby
     - compiler: clang
       language: ruby
-      rvm: ruby-2.3.3
+      rvm: ruby-2.2.3
       env: BINDINGS=ruby CC=clang
     - compiler: gcc
       language: python
