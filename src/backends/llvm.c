@@ -11,10 +11,6 @@ typedef struct HLLVMParser_ {
   LLVMBuilderRef builder;
 } HLLVMParser;
 
-int h_llvm_walk(const HParser* parser, LLVMBuilderRef builder, LLVMModuleRef mod) {
-  return 0;
-}
-
 void h_llvm_declare_common(LLVMModuleRef mod) {
   LLVMTypeRef readbits_pt[] = {
     LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HInputStream_"), 0),
@@ -40,22 +36,30 @@ void h_llvm_declare_common(LLVMModuleRef mod) {
 }
 
 int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
+  // Boilerplate to set up a translation unit, aka a module.
   const char* name = params ? (const char*)params : "parse";
   LLVMModuleRef mod = LLVMModuleCreateWithName(name);
   h_llvm_declare_common(mod);
-  // FIXME size_t isn't necessarily 32 bits everywhere
-  LLVMTypeRef param_types[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
-  LLVMTypeRef ret_type = LLVMFunctionType(LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParser_"), 0), param_types, 2, 0);
+  // Boilerplate to set up the parser function to add to the module. It takes an HInputStream* and
+  // returns an HParseResult.
+  LLVMTypeRef param_types[] = {
+    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HInputStream_"), 0),
+    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HArena_"), 0)
+  };
+  LLVMTypeRef ret_type = LLVMFunctionType(LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParseResult_"), 0), param_types, 2, 0);
   LLVMValueRef parse_func = LLVMAddFunction(mod, name, ret_type);
-  // function is now declared; time to define it
+  // Parse function is now declared; time to define it
   LLVMBasicBlockRef entry = LLVMAppendBasicBlock(parse_func, "entry");
   LLVMBuilderRef builder = LLVMCreateBuilder();
   LLVMPositionBuilderAtEnd(builder, entry);
-  if (0 == h_llvm_walk(parser, builder, mod)) {
+  // Translate the contents of the children of `parser` into their LLVM instruction equivalents
+  if (parser->vtable->llvm(builder, mod, parser->env)) {
+    // But first, verification
     char *error = NULL;
     LLVMVerifyModule(mod, LLVMAbortProcessAction, &error);
     LLVMDisposeMessage(error);
     error = NULL;
+    // OK, link that sonofabitch
     LLVMInitializeNativeTarget();
     LLVMLinkInMCJIT();
     LLVMExecutionEngineRef engine = NULL;
@@ -65,6 +69,7 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
       LLVMDisposeMessage(error);
       return -1;
     }
+    // Package up the pointers that comprise the module and stash it in the original HParser
     HLLVMParser *llvm_parser = h_new(HLLVMParser, 1);
     llvm_parser->mod = mod;
     llvm_parser->func = parse_func;
@@ -86,11 +91,8 @@ void h_llvm_free(HParser *parser) {
 
 HParseResult *h_llvm_parse(HAllocator* mm__, const HParser* parser, HInputStream *input_stream) {
   const HLLVMParser *llvm_parser = parser->backend_data;
-  LLVMGenericValueRef args[] = {
-    LLVMCreateGenericValueOfPointer((uint8_t*)input_stream->input),
-    LLVMCreateGenericValueOfInt(LLVMInt32Type(), input_stream->length, 0)
-  };
-  LLVMGenericValueRef ret = LLVMRunFunction(llvm_parser->engine, llvm_parser->func, 2, args);
+  LLVMGenericValueRef args[] = { LLVMCreateGenericValueOfPointer(input_stream) };
+  LLVMGenericValueRef ret = LLVMRunFunction(llvm_parser->engine, llvm_parser->func, 1, args);
   return (HParseResult*)LLVMGenericValueToPointer(ret);
 }
 

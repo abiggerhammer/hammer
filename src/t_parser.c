@@ -961,4 +961,6 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/glr/ambiguous", GINT_TO_POINTER(PB_GLR), test_ambiguous);
   g_test_add_data_func("/core/parser/glr/result_length", GINT_TO_POINTER(PB_GLR), test_result_length);
   g_test_add_data_func("/core/parser/glr/token_position", GINT_TO_POINTER(PB_GLR), test_token_position);
+
+  g_test_add_data_func("/core/parser/llvm/ch", GINT_TO_POINTER(PB_LLVM), test_ch);
 }

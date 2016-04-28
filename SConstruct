@@ -100,7 +100,7 @@ if GetOption("coverage"):
     if env["CC"] == "gcc":
         env.Append(LIBS=['gcov'])
     else:
-        env.ParseConfig('llvm-config --ldflags')
+        env.ParseConfig('llvm-config --cflags --ldflags --libs core executionengine mcjit analysis x86codegen x86info')
 
 if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",

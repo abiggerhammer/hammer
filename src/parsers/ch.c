@@ -45,32 +45,33 @@ static bool ch_ctrvm(HRVMProg *prog, void* env) {
 static bool ch_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
   uint8_t c_ = (uint8_t)(uintptr_t)(env);
   LLVMValueRef c = LLVMConstInt(LLVMInt8Type(), c_, 0);
-  LLVMTypeRef param_types[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-  LLVMTypeRef ret_type = LLVMFunctionType(LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParseResult_"), 0), param_types, 1, 0);
+  LLVMTypeRef param_types[] = {
+    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HInputStream_"), 0),
+    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HArena_"), 0)
+  };
+  LLVMTypeRef ret_type = LLVMFunctionType(LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParseResult_"), 0), param_types, 2, 0);
   LLVMValueRef ch = LLVMAddFunction(mod, "ch", ret_type);
+  // get the parameter array to use later with h_bits
+  LLVMValueRef params[3];
+  LLVMGetParams(ch, params);
+  params[1] = LLVMConstInt(LLVMInt32Type(), 8, 0);
+  params[2] = LLVMConstInt(LLVMInt8Type(), 0, 0);
+  LLVMValueRef arena = LLVMGetParam(ch, 1);
   LLVMBasicBlockRef entry = LLVMAppendBasicBlock(ch, "ch_entry");
   LLVMBasicBlockRef success = LLVMAppendBasicBlock(ch, "ch_success");
   LLVMBasicBlockRef fail = LLVMAppendBasicBlock(ch, "ch_fail");
   LLVMBasicBlockRef end = LLVMAppendBasicBlock(ch, "ch_end");
   LLVMPositionBuilderAtEnd(builder, entry);
   // %1 = alloca %struct.HParseResult_*, align 8
-  // FIXME declare struct types like LL_HParsedToken with LLVMStructType() in some other header
   LLVMValueRef ret = LLVMBuildAlloca(builder, LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParseResult_"), 0), "ret");
   // skip %2 through %c 'cause we have these from arguments
   // %r = alloca i8, align 1
   LLVMValueRef r = LLVMBuildAlloca(builder, LLVMInt8Type(), "r");
   // %tok = alloca %struct.HParsedToken_*, align 8
   LLVMValueRef tok = LLVMBuildAlloca(builder, LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParsedToken_"), 0), "tok");
-  // skip next instr through %7
-  // %8 = getelementptr inbounds %struct.HParseState_* %7, i32 0, i32 1
-  LLVMValueRef bounds1[] = {
-    LLVMConstInt(LLVMInt32Type(), 0, 0),
-    LLVMConstInt(LLVMInt32Type(), 1, 0),  
-  };
-  /* FIXME env is the wrong pointer to use here */
-  LLVMValueRef stream = LLVMBuildInBoundsGEP(builder, env, bounds1, 1, "stream");
+  // skip next instr through %8
   // %9 = call i64 @h_read_bits(%struct.HInputStream_* %8, i32 8, i8 signext 0)
-  LLVMValueRef bits = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_read_bits"), &stream, 1, "h_read_bits");
+  LLVMValueRef bits = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_read_bits"), params, 1, "h_read_bits");
   // %10 = trunc i64 %9 to i8
   LLVMValueRef tmp = LLVMBuildTrunc(builder, bits, LLVMInt8Type(), "");
   // store i8 %10, i8* %r, align 1
@@ -86,44 +87,39 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
 
   // ; <label>:16 - success case
   LLVMPositionBuilderAtEnd(builder, success);
-  // %17 = load %struct.HParseState_** %3, align 8
-  // %18 = getelementptr inbounds %struct.HParseState_* %17, i32 0, i32 2
-  LLVMValueRef bounds2[] = {
-    LLVMConstInt(LLVMInt32Type(), 0, 0),
-    LLVMConstInt(LLVMInt32Type(), 2, 0),  
-  };
-  /* FIXME env is not the right pointer to use here */
-  LLVMValueRef arena = LLVMBuildInBoundsGEP(builder, env, bounds2, 2, "arena");
+  // skip %17-%19 because we have the arena as an argument
+  LLVMValueRef tok_size = LLVMConstInt(LLVMInt32Type(), sizeof(HParsedToken), 0);
+  LLVMValueRef amalloc_args[] = { arena, tok_size };
   // %20 = call noalias i8* @h_arena_malloc(%struct.HArena_* %19, i64 48)
-  LLVMValueRef amalloc = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_arena_malloc"), &arena, 2, "h_arena_malloc");
+  LLVMValueRef amalloc = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_arena_malloc"), amalloc_args, 2, "h_arena_malloc");
   // %21 = bitcast i8* %20 to %struct.HParsedToken_*
   LLVMValueRef cast1 = LLVMBuildBitCast(builder, amalloc, LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParsedToken_"), 0), "");
   // store %struct.HParsedToken_* %21, %struct.HParsedToken_** %tok, align 8
   LLVMBuildStore(builder, cast1, tok);
   // %22 = load %struct.HParsedToken_** %tok, align 8
   // %23 = getelementptr inbounds %struct.HParsedToken_* %22, i32 0, i32 0
-  LLVMValueRef bounds3[] = {
+  LLVMValueRef bounds1[] = {
     LLVMConstInt(LLVMInt32Type(), 0, 0),
     LLVMConstInt(LLVMInt32Type(), 0, 0)
   };
-  LLVMValueRef toktype = LLVMBuildInBoundsGEP(builder, tok, bounds3, 0, "token_type");
+  LLVMValueRef toktype = LLVMBuildInBoundsGEP(builder, tok, bounds1, 0, "token_type");
   // store i32 8, i32* %23, align 4
   LLVMBuildStore(builder, LLVMConstInt(LLVMInt32Type(), 8, 0), toktype);
   // %24 = load i8* %r, align 1
   // %25 = zext i8 %24 to i64
   // %26 = load %struct.HParsedToken_** %tok, align 8
   // %27 = getelementptr inbounds %struct.HParsedToken_* %26, i32 0, i32 1
-  LLVMValueRef uint = LLVMBuildInBoundsGEP(builder, tok, bounds1, 1, "uint");
+  LLVMValueRef bounds2[] = {
+    LLVMConstInt(LLVMInt32Type(), 0, 0),
+    LLVMConstInt(LLVMInt32Type(), 0, 1)
+  };
+  LLVMValueRef uint = LLVMBuildInBoundsGEP(builder, tok, bounds2, 1, "uint");
   // %28 = bitcast %union.anon* %27 to i64*
   LLVMValueRef cast2 = LLVMBuildBitCast(builder, uint, LLVMInt64Type(), "result");
   // we already have the arena and the token, so skip to %33
-  // %29 = load %struct.HParseState_** %3, align 8
-  // %30 = getelementptr inbounds %struct.HParseState_* %29, i32 0, i32 2
-  // %31 = load %struct.HArena_** %30, align 8
-  // %32 = load %struct.HParsedToken_** %tok, align 8
   // %33 = call %struct.HParseResult_* @make_result(%struct.HArena_* %31, %struct.HParsedToken_* %32)
-  LLVMValueRef args[] = { arena, tok };
-  LLVMValueRef mr = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "make_result"), args, 2, "make_result");
+  LLVMValueRef result_args[] = { arena, tok };
+  LLVMValueRef mr = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "make_result"), result_args, 2, "make_result");
   // store %struct.HParseResult_* %33, %struct.HParseResult_** %1
   LLVMBuildStore(builder, mr, ret);
   // br label %35
