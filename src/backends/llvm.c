@@ -49,9 +49,7 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
   LLVMTypeRef ret_type = LLVMFunctionType(LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParseResult_"), 0), param_types, 2, 0);
   LLVMValueRef parse_func = LLVMAddFunction(mod, name, ret_type);
   // Parse function is now declared; time to define it
-  LLVMBasicBlockRef entry = LLVMAppendBasicBlock(parse_func, "entry");
   LLVMBuilderRef builder = LLVMCreateBuilder();
-  LLVMPositionBuilderAtEnd(builder, entry);
   // Translate the contents of the children of `parser` into their LLVM instruction equivalents
   if (parser->vtable->llvm(builder, mod, parser->env)) {
     // But first, verification
