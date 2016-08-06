@@ -49,13 +49,13 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
     LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HInputStream_"), 0),
     LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HArena_"), 0)
   };
-  LLVMTypeRef ret_type = LLVMFunctionType(LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParseResult_"), 0), param_types, 2, 0);
+  LLVMTypeRef ret_type = LLVMFunctionType(LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParseResult_*"), 0), param_types, 2, 0);
   LLVMValueRef ch = LLVMAddFunction(mod, "ch", ret_type);
   // get the parameter array to use later with h_bits
-  LLVMValueRef params[3];
-  LLVMGetParams(ch, params);
-  params[1] = LLVMConstInt(LLVMInt32Type(), 8, 0);
-  params[2] = LLVMConstInt(LLVMInt8Type(), 0, 0);
+  LLVMValueRef bits_args[3];
+  LLVMGetParams(ch, bits_args);
+  bits_args[1] = LLVMConstInt(LLVMInt32Type(), 8, 0);
+  bits_args[2] = LLVMConstInt(LLVMInt8Type(), 0, 0);
   LLVMValueRef arena = LLVMGetParam(ch, 1);
   LLVMBasicBlockRef entry = LLVMAppendBasicBlock(ch, "ch_entry");
   LLVMBasicBlockRef success = LLVMAppendBasicBlock(ch, "ch_success");
@@ -63,19 +63,15 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
   LLVMBasicBlockRef end = LLVMAppendBasicBlock(ch, "ch_end");
   LLVMPositionBuilderAtEnd(builder, entry);
   // %1 = alloca %struct.HParseResult_*, align 8
-  LLVMValueRef ret = LLVMBuildAlloca(builder, LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParseResult_"), 0), "ret");
-  // skip %2 through %c 'cause we have these from arguments
-  // %r = alloca i8, align 1
-  LLVMValueRef r = LLVMBuildAlloca(builder, LLVMInt8Type(), "r");
+  LLVMValueRef ret = LLVMBuildAlloca(builder, LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParseResult_*"), 0), "ret");
+  // skip %2 through %c because we have these from arguments, and %r because we'll get it later
   // %tok = alloca %struct.HParsedToken_*, align 8
-  LLVMValueRef tok = LLVMBuildAlloca(builder, LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParsedToken_"), 0), "tok");
+  LLVMValueRef tok = LLVMBuildAlloca(builder, LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParsedToken_*"), 0), "tok");
   // skip next instr through %8
   // %9 = call i64 @h_read_bits(%struct.HInputStream_* %8, i32 8, i8 signext 0)
-  LLVMValueRef bits = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_read_bits"), params, 1, "h_read_bits");
+  LLVMValueRef bits = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_read_bits"), bits_args, 3, "h_read_bits");
   // %10 = trunc i64 %9 to i8
-  LLVMValueRef tmp = LLVMBuildTrunc(builder, bits, LLVMInt8Type(), "");
-  // store i8 %10, i8* %r, align 1
-  LLVMBuildStore(builder, bits, r);
+  LLVMValueRef r = LLVMBuildTrunc(builder, bits, LLVMInt8Type(), "");
   // %11 = load i8* %c
   // %12 = zext i8 %11 to i32
   // %13 = load i8* %r, align 1
@@ -109,13 +105,16 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
   // %25 = zext i8 %24 to i64
   // %26 = load %struct.HParsedToken_** %tok, align 8
   // %27 = getelementptr inbounds %struct.HParsedToken_* %26, i32 0, i32 1
-  LLVMValueRef bounds2[] = {
-    LLVMConstInt(LLVMInt32Type(), 0, 0),
-    LLVMConstInt(LLVMInt32Type(), 0, 1)
-  };
-  LLVMValueRef uint = LLVMBuildInBoundsGEP(builder, tok, bounds2, 1, "uint");
+  /* LLVMValueRef bounds2[] = { */
+  /*   LLVMConstInt(LLVMInt32Type(), 0, 0), */
+  /*   LLVMConstInt(LLVMInt32Type(), 0, 1) */
+  /* }; */
+  /* LLVMValueRef uint = LLVMBuildInBoundsGEP(builder, tok, bounds2, 1, "uint"); */
   // %28 = bitcast %union.anon* %27 to i64*
-  LLVMValueRef cast2 = LLVMBuildBitCast(builder, uint, LLVMInt64Type(), "result");
+  //LLVMValueRef cast2 = LLVMBuildBitCast(builder, uint, LLVMInt64Type(), "result");
+  LLVMValueRef uint = LLVMConstInt(LLVMInt32Type(), TT_UINT, 0);
+  LLVMBuildInsertValue(builder, tok, uint, 0, 0);
+  LLVMBuildInsertValue(builder, tok, r, 1, 0);
   // we already have the arena and the token, so skip to %33
   // %33 = call %struct.HParseResult_* @make_result(%struct.HArena_* %31, %struct.HParsedToken_* %32)
   LLVMValueRef result_args[] = { arena, tok };
