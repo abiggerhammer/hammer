@@ -13,7 +13,7 @@ typedef struct HLLVMParser_ {
 
 void h_llvm_declare_common(LLVMModuleRef mod) {
   LLVMTypeRef readbits_pt[] = {
-    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HInputStream_"), 0),
+    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%%struct.HInputStream_"), 0),
     LLVMInt32Type(),
     LLVMInt8Type()
   };
@@ -21,17 +21,19 @@ void h_llvm_declare_common(LLVMModuleRef mod) {
   LLVMAddFunction(mod, "h_read_bits", readbits_ret);
 
   LLVMTypeRef amalloc_pt[] = {
-    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HArena_"), 0),
+    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%%struct.HArena_"), 0),
     LLVMInt32Type()
   };
   LLVMTypeRef amalloc_ret = LLVMFunctionType(LLVMPointerType(LLVMVoidType(), 0), amalloc_pt, 2, 0);
+  char* dump = LLVMPrintModuleToString(mod);
+  fprintf(stderr, dump);
   LLVMAddFunction(mod, "h_arena_malloc", amalloc_ret);
 
   LLVMTypeRef makeresult_pt[] = {
-    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HArena_"), 0),
-    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParsedToken_"), 0)
+    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%%struct.HArena_"), 0),
+    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%%struct.HParsedToken_"), 0)
   };
-  LLVMTypeRef makeresult_ret = LLVMFunctionType(LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%struct.HParseResult_"), 0), makeresult_pt, 2, 0);
+  LLVMTypeRef makeresult_ret = LLVMFunctionType(LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "%%struct.HParseResult_"), 0), makeresult_pt, 2, 0);
   LLVMAddFunction(mod, "make_result", makeresult_ret);
 }
 
