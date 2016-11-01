@@ -116,7 +116,7 @@ static inline bool append_buf_c(struct result_buf *buf, char v) {
 }
 
 /** append a formatted string to the result buffer */
-static inline bool append_buf_formatted(struct result_buf *buf, char* format, ...)
+static inline bool append_buf_formatted(struct result_buf *buf, const char* format, ...)
 {
   char* tmpbuf;
   int len;

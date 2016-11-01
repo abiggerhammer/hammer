@@ -178,7 +178,7 @@ typedef HParser* (*HContinuation)(HAllocator *mm__, const HParsedToken *x, void 
 typedef struct HParserTestcase_ {
   unsigned char* input;
   size_t length;
-  char* output_unambiguous;
+  const char* output_unambiguous;
 } HParserTestcase;
 
 #ifdef SWIG

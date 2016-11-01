@@ -1,5 +1,8 @@
 #include <llvm-c/Analysis.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include <llvm-c/Core.h>
+#pragma GCC diagnostic pop
 #include <llvm-c/ExecutionEngine.h>
 #include "../internal.h"
 #include "../parsers/parser_internal.h"
@@ -26,7 +29,7 @@ void h_llvm_declare_common(LLVMModuleRef mod) {
   };
   LLVMTypeRef amalloc_ret = LLVMFunctionType(LLVMPointerType(LLVMVoidType(), 0), amalloc_pt, 2, 0);
   char* dump = LLVMPrintModuleToString(mod);
-  fprintf(stderr, dump);
+  fprintf(stderr, "%s", dump);
   LLVMAddFunction(mod, "h_arena_malloc", amalloc_ret);
 
   LLVMTypeRef makeresult_pt[] = {

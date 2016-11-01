@@ -1,6 +1,9 @@
 #include <stdint.h>
 #include <assert.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include <llvm-c/Core.h>
+#pragma GCC diagnostic pop
 #include "parser_internal.h"
 
 static HParseResult* parse_ch(void* env, HParseState *state) {

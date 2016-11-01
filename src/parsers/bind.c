@@ -21,7 +21,10 @@ static void *aa_alloc(HAllocator *allocator, size_t size)
 
 static void *aa_realloc(HAllocator *allocator, void *ptr, size_t size)
 {
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wunused-variable"
     HArena *arena = ((ArenaAllocator *)allocator)->arena;
+  #pragma GCC diagnostic pop
     assert(((void)"XXX need realloc for arena allocator", 0));
     return NULL;
 }

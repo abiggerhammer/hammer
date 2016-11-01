@@ -25,7 +25,10 @@
 #include <stdint.h>
 #include <assert.h>
 #include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include <llvm-c/Core.h>
+#pragma GCC diagnostic pop
 #include "hammer.h"
 #include "platform.h"
 

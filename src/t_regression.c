@@ -167,7 +167,10 @@ static void test_charset_bits(void) {
         .free = NULL,
     };
     test_charset_bits__buf[32] = 0xAB;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"    
     HCharset cs = new_charset(&alloc);
+#pragma GCC diagnostic pop    
     for(size_t i=0; i<32; i++)
         g_check_cmp_uint32(test_charset_bits__buf[i], ==, 0);
     g_check_cmp_uint32(test_charset_bits__buf[32], ==, 0xAB);
