@@ -116,14 +116,7 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
     char* dump = LLVMPrintModuleToString(mod);
     fprintf(stderr, "\n\n%s\n\n", dump);
     // Package up the pointers that comprise the module and stash it in the original HParser
-    HLLVMParser *llvm_parser;
-    if (!(parser->backend_data)) {
-      llvm_parser = h_new(HLLVMParser, 1);
-      parser->backend_data = llvm_parser;
-    } else {
-      llvm_parser = parser->backend_data;
-      memset(llvm_parser, 0, sizeof(*llvm_parser));
-    }
+    HLLVMParser *llvm_parser = h_new(HLLVMParser, 1);
     llvm_parser->mod = mod;
     llvm_parser->func = parse_func;
     llvm_parser->engine = engine;
