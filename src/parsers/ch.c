@@ -61,14 +61,10 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod
   // Set up basic blocks: entry, success and failure branches, then exit
   LLVMBasicBlockRef entry = LLVMAppendBasicBlock(func, "ch_entry");
   LLVMBasicBlockRef success = LLVMAppendBasicBlock(func, "ch_success");
-  LLVMBasicBlockRef fail = LLVMAppendBasicBlock(func, "ch_fail");
   LLVMBasicBlockRef end = LLVMAppendBasicBlock(func, "ch_end");
 
   // Basic block: entry
   LLVMPositionBuilderAtEnd(builder, entry);
-  // Allocate stack space for our return value
-  // %ret = alloca %struct.HParseResult_*, align 8
-  LLVMValueRef ret = LLVMBuildAlloca(builder, llvm_parseresultptr, "ret");
 
   // Call to h_read_bits()
   // %read_bits = call i64 @h_read_bits(%struct.HInputStream_* %8, i32 8, i8 signext 0)
@@ -84,7 +80,7 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod
 
   // Branch so success or failure basic block, as appropriate
   // br i1 %"c == r", label %ch_success, label %ch_fail
-  LLVMBuildCondBr(builder, icmp, success, fail);
+  LLVMBuildCondBr(builder, icmp, success, end);
 
   // Basic block: success
   LLVMPositionBuilderAtEnd(builder, success);
@@ -126,23 +122,22 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod
   LLVMValueRef result_args[] = { arena, tok };
   LLVMValueRef mr = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "make_result"), result_args, 2, "make_result");
 
-  // Store for return
-  // store %struct.HParseResult_.3* %make_result, %struct.HParseResult_.3** %ret
-  LLVMBuildStore(builder, mr, ret);
   // br label %ch_end
   LLVMBuildBr(builder, end);
   
-  // Basic block: failure
-  LLVMPositionBuilderAtEnd(builder, fail);
-  // store %struct.HParseResult_.3* null, %struct.HParseResult_.3** %ret
-  LLVMBuildStore(builder, LLVMConstNull(llvm_parseresultptr), ret);
-  // br label %ch_end
-  LLVMBuildBr(builder, end);
-
   // Basic block: end
   LLVMPositionBuilderAtEnd(builder, end);
-  // %rv = load %struct.HParseResult_.3*, %struct.HParseResult_.3** %ret
-  LLVMValueRef rv = LLVMBuildLoad(builder, ret, "rv");
+  // %rv = phi %struct.HParseResult_.3* [ %make_result, %ch_success ], [ null, %ch_entry ]
+  LLVMValueRef rv = LLVMBuildPhi(builder, llvm_parseresultptr, "rv");
+  LLVMBasicBlockRef rv_phi_incoming_blocks[] = {
+    success,
+    entry
+    };
+  LLVMValueRef rv_phi_incoming_values[] = {
+    mr,
+    LLVMConstNull(llvm_parseresultptr)
+    };
+  LLVMAddIncoming(rv, rv_phi_incoming_values, rv_phi_incoming_blocks, 2);
   // ret %struct.HParseResult_.3* %rv
   LLVMBuildRet(builder, rv);
   return true;
