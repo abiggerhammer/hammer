@@ -424,7 +424,7 @@ struct HParserVtable_ {
   bool (*isValidCF)(void *env);
   bool (*compile_to_rvm)(HRVMProg *prog, void* env); // FIXME: forgot what the bool return value was supposed to mean.
   void (*desugar)(HAllocator *mm__, HCFStack *stk__, void *env);
-  bool (*llvm)(LLVMBuilderRef builder, LLVMModuleRef mod, void *env);
+  bool (*llvm)(LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod, void *env);
   bool higher; // false if primitive
 };
 

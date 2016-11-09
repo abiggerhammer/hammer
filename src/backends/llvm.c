@@ -6,7 +6,6 @@
 #include <llvm-c/ExecutionEngine.h>
 #include "../internal.h"
 #include "../llvm.h"
-#include "../parsers/parser_internal.h"
 
 typedef struct HLLVMParser_ {
   LLVMModuleRef mod;
@@ -15,8 +14,29 @@ typedef struct HLLVMParser_ {
   LLVMBuilderRef builder;
 } HLLVMParser;
 
+HParseResult* make_result(HArena *arena, HParsedToken *tok) {
+  HParseResult *ret = h_arena_malloc(arena, sizeof(HParseResult));
+  ret->ast = tok;
+  ret->arena = arena;
+  ret->bit_length = 0; // This way it gets overridden in h_do_parse
+  return ret;
+}
+
 void h_llvm_declare_common(LLVMModuleRef mod) {
-  llvm_inputstream = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HInputStream_"), 0);
+  llvm_inputstream = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HInputStream_");
+  LLVMTypeRef llvm_inputstream_struct_types[] = {
+    LLVMPointerType(LLVMInt8Type(), 0),
+    LLVMInt64Type(),
+    LLVMInt64Type(),
+    LLVMInt64Type(),
+    LLVMInt8Type(),
+    LLVMInt8Type(),
+    LLVMInt8Type(),
+    LLVMInt8Type(),
+    LLVMInt8Type()
+  };
+  LLVMStructSetBody(llvm_inputstream, llvm_inputstream_struct_types, 9, 0);
+  llvm_inputstreamptr = LLVMPointerType(llvm_inputstream, 0);
   llvm_arena = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HArena_");
   llvm_arenaptr = LLVMPointerType(llvm_arena, 0);
   llvm_parsedtoken = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParsedToken_");
@@ -38,7 +58,7 @@ void h_llvm_declare_common(LLVMModuleRef mod) {
   LLVMStructSetBody(llvm_parseresult, llvm_parseresult_struct_types, 3, 0);
   llvm_parseresultptr = LLVMPointerType(llvm_parseresult, 0);
   LLVMTypeRef readbits_pt[] = {
-    llvm_inputstream,
+    llvm_inputstreamptr,
     LLVMInt32Type(),
     LLVMInt8Type()
   };
@@ -46,20 +66,18 @@ void h_llvm_declare_common(LLVMModuleRef mod) {
   LLVMAddFunction(mod, "h_read_bits", readbits_ret);
 
   LLVMTypeRef amalloc_pt[] = {
-    llvm_arena,
+    llvm_arenaptr,
     LLVMInt32Type()
   };
   LLVMTypeRef amalloc_ret = LLVMFunctionType(LLVMPointerType(LLVMVoidType(), 0), amalloc_pt, 2, 0);
   LLVMAddFunction(mod, "h_arena_malloc", amalloc_ret);
 
   LLVMTypeRef makeresult_pt[] = {
-    llvm_arena,
+    llvm_arenaptr,
     llvm_parsedtokenptr
   };
   LLVMTypeRef makeresult_ret = LLVMFunctionType(llvm_parseresultptr, makeresult_pt, 2, 0);
   LLVMAddFunction(mod, "make_result", makeresult_ret);
-  char* dump = LLVMPrintModuleToString(mod);
-  fprintf(stderr, "\n\n%s\n\n", dump);
 }
 
 int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
@@ -70,23 +88,24 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
   // Boilerplate to set up the parser function to add to the module. It takes an HInputStream* and
   // returns an HParseResult.
   LLVMTypeRef param_types[] = {
-    llvm_inputstream,
-    llvm_arena
+    llvm_inputstreamptr,
+    llvm_arenaptr
   };
   LLVMTypeRef ret_type = LLVMFunctionType(llvm_parseresultptr, param_types, 2, 0);
   LLVMValueRef parse_func = LLVMAddFunction(mod, name, ret_type);
-  // Parse function is now declared; time to define itt
+  // Parse function is now declared; time to define it
   LLVMBuilderRef builder = LLVMCreateBuilder();
   // Translate the contents of the children of `parser` into their LLVM instruction equivalents
-  if (parser->vtable->llvm(builder, mod, parser->env)) {
+  if (parser->vtable->llvm(builder, parse_func, mod, parser->env)) {
     // But first, verification
     char *error = NULL;
     LLVMVerifyModule(mod, LLVMAbortProcessAction, &error);
     LLVMDisposeMessage(error);
     error = NULL;
     // OK, link that sonofabitch
-    LLVMInitializeNativeTarget();
     LLVMLinkInMCJIT();
+    LLVMInitializeNativeTarget();
+    LLVMInitializeNativeAsmPrinter();
     LLVMExecutionEngineRef engine = NULL;
     LLVMCreateExecutionEngineForModule(&engine, mod, &error);
     if (error) {
@@ -94,6 +113,8 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
       LLVMDisposeMessage(error);
       return -1;
     }
+    char* dump = LLVMPrintModuleToString(mod);
+    fprintf(stderr, "\n\n%s\n\n", dump);
     // Package up the pointers that comprise the module and stash it in the original HParser
     HLLVMParser *llvm_parser = h_new(HLLVMParser, 1);
     llvm_parser->mod = mod;
@@ -116,9 +137,33 @@ void h_llvm_free(HParser *parser) {
 
 HParseResult *h_llvm_parse(HAllocator* mm__, const HParser* parser, HInputStream *input_stream) {
   const HLLVMParser *llvm_parser = parser->backend_data;
-  LLVMGenericValueRef args[] = { LLVMCreateGenericValueOfPointer(input_stream) };
-  LLVMGenericValueRef ret = LLVMRunFunction(llvm_parser->engine, llvm_parser->func, 1, args);
-  return (HParseResult*)LLVMGenericValueToPointer(ret);
+  HArena *arena = h_new_arena(mm__, 0);
+  LLVMGenericValueRef args[] = {
+    LLVMCreateGenericValueOfPointer(input_stream),
+    LLVMCreateGenericValueOfPointer(arena)
+  };
+  LLVMGenericValueRef res = LLVMRunFunction(llvm_parser->engine, llvm_parser->func, 2, args);
+  HParseResult *ret = (HParseResult*)LLVMGenericValueToPointer(res);
+  if (ret) {
+    ret->arena = arena;
+    if (!input_stream->overrun) {
+      size_t bit_length = h_input_stream_pos(input_stream);
+      if (ret->bit_length == 0) {
+	ret->bit_length = bit_length;
+      }
+      if (ret->ast && ret->ast->bit_length != 0) {
+	((HParsedToken*)(ret->ast))->bit_length = bit_length;
+      }
+    } else {
+      ret->bit_length = 0;
+    }
+  } else {
+    ret = NULL;
+  }
+  if (input_stream->overrun) {
+    return NULL; // overrun is always failure.
+  }
+  return ret;
 }
 
 HParserBackendVTable h__llvm_backend_vtable = {
