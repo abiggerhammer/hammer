@@ -138,12 +138,22 @@ void h_llvm_free(HParser *parser) {
 HParseResult *h_llvm_parse(HAllocator* mm__, const HParser* parser, HInputStream *input_stream) {
   const HLLVMParser *llvm_parser = parser->backend_data;
   HArena *arena = h_new_arena(mm__, 0);
-  LLVMGenericValueRef args[] = {
-    LLVMCreateGenericValueOfPointer(input_stream),
-    LLVMCreateGenericValueOfPointer(arena)
-  };
-  LLVMGenericValueRef res = LLVMRunFunction(llvm_parser->engine, llvm_parser->func, 2, args);
-  HParseResult *ret = (HParseResult*)LLVMGenericValueToPointer(res);
+
+  // LLVMRunFunction only supports certain signatures for dumb reasons; it's this hack with
+  // memcpy and function pointers, or writing a shim in LLVM IR.
+  //
+  // LLVMGenericValueRef args[] = {
+  //   LLVMCreateGenericValueOfPointer(input_stream),
+  //   LLVMCreateGenericValueOfPointer(arena)
+  // };
+  // LLVMGenericValueRef res = LLVMRunFunction(llvm_parser->engine, llvm_parser->func, 2, args);
+  // HParseResult *ret = (HParseResult*)LLVMGenericValueToPointer(res);
+
+  void *parse_func_ptr_v;
+  HParseResult * (*parse_func_ptr)(HInputStream *input_stream, HArena *arena);
+  parse_func_ptr_v = LLVMGetPointerToGlobal(llvm_parser->engine, llvm_parser->func);
+  memcpy(&parse_func_ptr, &parse_func_ptr_v, sizeof(parse_func_ptr));
+  HParseResult *ret = parse_func_ptr(input_stream, arena);
   if (ret) {
     ret->arena = arena;
     if (!input_stream->overrun) {
