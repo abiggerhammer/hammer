@@ -110,6 +110,11 @@ testenv.ParseConfig('pkg-config --cflags --libs glib-2.0')
 testenv_llvm_config_version = subprocess.Popen('%s --version' % env["LLVM_CONFIG"], \
                                                shell=True, \
                                                stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
+
+if LooseVersion(testenv_llvm_config_version[0]) < LooseVersion("3.6"):
+   print "This LLVM version %s is too old" % testenv_llvm_config_version
+   Exit(1)
+
 if LooseVersion(testenv_llvm_config_version[0]) < LooseVersion("3.9") and \
    LooseVersion(testenv_llvm_config_version[0]) >= LooseVersion("3.5"):
     testenv_llvm_system_libs_flag = "--system-libs"
