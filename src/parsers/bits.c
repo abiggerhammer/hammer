@@ -4,6 +4,7 @@
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
 #include "parser_internal.h"
+#include "../llvm.h"
 
 struct bits_env {
   uint8_t length;
@@ -25,7 +26,7 @@ static bool bits_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
   /*   %result = alloca %struct.HParsedToken_*, align 8 */
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wunused-variable"
-  LLVMValueRef result = LLVMBuildAlloca(builder, LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParsedToken_"), 0), "result");
+  LLVMValueRef result = LLVMBuildAlloca(builder, llvm_parsedtoken, "result");
   #pragma GCC diagnostic pop
   /*   store i8* %env, i8** %1, align 8 */
   /*   store %struct.HParseState_* %state, %struct.HParseState_** %2, align 8 */

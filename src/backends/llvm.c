@@ -5,6 +5,7 @@
 #pragma GCC diagnostic pop
 #include <llvm-c/ExecutionEngine.h>
 #include "../internal.h"
+#include "../llvm.h"
 #include "../parsers/parser_internal.h"
 
 typedef struct HLLVMParser_ {
@@ -15,13 +16,12 @@ typedef struct HLLVMParser_ {
 } HLLVMParser;
 
 void h_llvm_declare_common(LLVMModuleRef mod) {
-  LLVMTypeRef inputstream = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HInputStream_"), 0);
-  LLVMTypeRef arena = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HArena_"), 0);
-  LLVMTypeRef parsedtoken = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParsedToken_"), 0);
-  LLVMTypeRef parseresult = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParseResult_"), 0);
-  
+  llvm_inputstream = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HInputStream_"), 0);
+  llvm_arena = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HArena_"), 0);
+  llvm_parsedtoken = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParsedToken_"), 0);
+  llvm_parseresult = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParseResult_"), 0);
   LLVMTypeRef readbits_pt[] = {
-    inputstream,
+    llvm_inputstream,
     LLVMInt32Type(),
     LLVMInt8Type()
   };
@@ -29,17 +29,17 @@ void h_llvm_declare_common(LLVMModuleRef mod) {
   LLVMAddFunction(mod, "h_read_bits", readbits_ret);
 
   LLVMTypeRef amalloc_pt[] = {
-    arena,
+    llvm_arena,
     LLVMInt32Type()
   };
   LLVMTypeRef amalloc_ret = LLVMFunctionType(LLVMPointerType(LLVMVoidType(), 0), amalloc_pt, 2, 0);
   LLVMAddFunction(mod, "h_arena_malloc", amalloc_ret);
 
   LLVMTypeRef makeresult_pt[] = {
-    arena,
-    parsedtoken
+    llvm_arena,
+    llvm_parsedtoken
   };
-  LLVMTypeRef makeresult_ret = LLVMFunctionType(parseresult, makeresult_pt, 2, 0);
+  LLVMTypeRef makeresult_ret = LLVMFunctionType(llvm_parseresult, makeresult_pt, 2, 0);
   LLVMAddFunction(mod, "make_result", makeresult_ret);
   char* dump = LLVMPrintModuleToString(mod);
   fprintf(stderr, "\n\n%s\n\n", dump);
@@ -53,10 +53,10 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
   // Boilerplate to set up the parser function to add to the module. It takes an HInputStream* and
   // returns an HParseResult.
   LLVMTypeRef param_types[] = {
-    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HInputStream_"), 0),
-    LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HArena_"), 0)
+    llvm_inputstream,
+    llvm_arena
   };
-  LLVMTypeRef ret_type = LLVMFunctionType(LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParseResult_"), 0), param_types, 2, 0);
+  LLVMTypeRef ret_type = LLVMFunctionType(llvm_parseresult, param_types, 2, 0);
   LLVMValueRef parse_func = LLVMAddFunction(mod, name, ret_type);
   // Parse function is now declared; time to define itt
   LLVMBuilderRef builder = LLVMCreateBuilder();
