@@ -6,6 +6,7 @@
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
 
-LLVMTypeRef llvm_inputstream, llvm_arena, llvm_parsedtoken, llvm_parseresult;
+LLVMTypeRef llvm_inputstream, llvm_arena, llvm_arenaptr, llvm_parsedtoken, llvm_parsedtokenptr;
+LLVMTypeRef llvm_parseresult, llvm_parseresultptr;
 
 #endif // #ifndef HAMMER_LLVM__H

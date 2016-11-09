@@ -53,7 +53,7 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
     llvm_inputstream,
     llvm_arena
   };
-  LLVMTypeRef ret_type = LLVMFunctionType(llvm_parseresult, param_types, 2, 0);
+  LLVMTypeRef ret_type = LLVMFunctionType(llvm_parseresultptr, param_types, 2, 0);
   LLVMValueRef ch = LLVMAddFunction(mod, "ch", ret_type);
   // get the parameter array to use later with h_bits
   LLVMValueRef bits_args[3];
@@ -67,10 +67,10 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
   LLVMBasicBlockRef end = LLVMAppendBasicBlock(ch, "ch_end");
   LLVMPositionBuilderAtEnd(builder, entry);
   // %1 = alloca %struct.HParseResult_*, align 8
-  LLVMValueRef ret = LLVMBuildAlloca(builder, llvm_parseresult, "ret");
+  LLVMValueRef ret = LLVMBuildAlloca(builder, llvm_parseresultptr, "ret");
   // skip %2 through %c because we have these from arguments, and %r because we'll get it later
   // %tok = alloca %struct.HParsedToken_*, align 8
-  LLVMValueRef tok = LLVMBuildAlloca(builder, llvm_parsedtoken, "tok");
+  // LLVMValueRef tok = LLVMBuildAlloca(builder, llvm_parsedtokenptr, "tok");
   // skip next instr through %8
   // %9 = call i64 @h_read_bits(%struct.HInputStream_* %8, i32 8, i8 signext 0)
   LLVMValueRef bits = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_read_bits"), bits_args, 3, "h_read_bits");
@@ -93,9 +93,11 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
   // %20 = call noalias i8* @h_arena_malloc(%struct.HArena_* %19, i64 48)
   LLVMValueRef amalloc = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_arena_malloc"), amalloc_args, 2, "h_arena_malloc");
   // %21 = bitcast i8* %20 to %struct.HParsedToken_*
-  LLVMValueRef cast1 = LLVMBuildBitCast(builder, amalloc, llvm_parsedtoken, "");
+  LLVMValueRef tok = LLVMBuildBitCast(builder, amalloc, llvm_parsedtokenptr, "");
+
   // store %struct.HParsedToken_* %21, %struct.HParsedToken_** %tok, align 8
-  LLVMBuildStore(builder, cast1, tok);
+  // LLVMBuildStore(builder, cast1, tok);
+
   // %22 = load %struct.HParsedToken_** %tok, align 8
   // %23 = getelementptr inbounds %struct.HParsedToken_* %22, i32 0, i32 0
   LLVMValueRef bounds1[] = {
@@ -123,23 +125,24 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
   // %33 = call %struct.HParseResult_* @make_result(%struct.HArena_* %31, %struct.HParsedToken_* %32)
   LLVMValueRef result_args[] = { arena, tok };
   LLVMValueRef mr = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "make_result"), result_args, 2, "make_result");
-  // store %struct.HParseResult_* %33, %struct.HParseResult_** %1
+  // store %struct.HParseResult_* %33, %struct.HParseResult_** %ret
   LLVMBuildStore(builder, mr, ret);
   // br label %35
   LLVMBuildBr(builder, end);
   
   // ; <label>:34 - failure case
   LLVMPositionBuilderAtEnd(builder, fail);
-  // store %struct.HParseResult* null, %struct.HParseResult_** %1
-  LLVMBuildStore(builder, LLVMConstNull(llvm_parseresult), ret);
+  // store %struct.HParseResult* null, %struct.HParseResult_** %ret
+  LLVMBuildStore(builder, LLVMConstNull(llvm_parseresultptr), ret);
   // br label %35
   LLVMBuildBr(builder, end);
 
   // ; <label>:35
   LLVMPositionBuilderAtEnd(builder, end);
-  // %36 = load %struct.HParseResult_** %1
-  // ret %struct.HParseResult_* %36
-  LLVMBuildRet(builder, ret);
+  // %rv = load %struct.HParseResult_** %ret
+  LLVMValueRef rv = LLVMBuildLoad(builder, ret, "rv");
+  // ret %struct.HParseResult_* %rv
+  LLVMBuildRet(builder, rv);
   return true;
 }
 

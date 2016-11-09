@@ -17,9 +17,26 @@ typedef struct HLLVMParser_ {
 
 void h_llvm_declare_common(LLVMModuleRef mod) {
   llvm_inputstream = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HInputStream_"), 0);
-  llvm_arena = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HArena_"), 0);
-  llvm_parsedtoken = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParsedToken_"), 0);
-  llvm_parseresult = LLVMPointerType(LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParseResult_"), 0);
+  llvm_arena = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HArena_");
+  llvm_arenaptr = LLVMPointerType(llvm_arena, 0);
+  llvm_parsedtoken = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParsedToken_");
+  LLVMTypeRef llvm_parsedtoken_struct_types[] = {
+    LLVMInt32Type(), // actually an enum value
+    LLVMInt64Type(), // actually this is a union; the largest thing in it is 64 bits
+    LLVMInt64Type(), // FIXME sizeof(size_t) will be 32 bits on 32-bit platforms
+    LLVMInt64Type(), // FIXME ditto
+    LLVMInt8Type()
+  };
+  LLVMStructSetBody(llvm_parsedtoken, llvm_parsedtoken_struct_types, 5, 0);
+  llvm_parsedtokenptr = LLVMPointerType(llvm_parsedtoken, 0);
+  llvm_parseresult = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParseResult_");
+  LLVMTypeRef llvm_parseresult_struct_types[] = {
+    llvm_parsedtokenptr,
+    LLVMInt64Type(),
+    llvm_arenaptr
+  };
+  LLVMStructSetBody(llvm_parseresult, llvm_parseresult_struct_types, 3, 0);
+  llvm_parseresultptr = LLVMPointerType(llvm_parseresult, 0);
   LLVMTypeRef readbits_pt[] = {
     llvm_inputstream,
     LLVMInt32Type(),
@@ -37,9 +54,9 @@ void h_llvm_declare_common(LLVMModuleRef mod) {
 
   LLVMTypeRef makeresult_pt[] = {
     llvm_arena,
-    llvm_parsedtoken
+    llvm_parsedtokenptr
   };
-  LLVMTypeRef makeresult_ret = LLVMFunctionType(llvm_parseresult, makeresult_pt, 2, 0);
+  LLVMTypeRef makeresult_ret = LLVMFunctionType(llvm_parseresultptr, makeresult_pt, 2, 0);
   LLVMAddFunction(mod, "make_result", makeresult_ret);
   char* dump = LLVMPrintModuleToString(mod);
   fprintf(stderr, "\n\n%s\n\n", dump);
@@ -56,7 +73,7 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
     llvm_inputstream,
     llvm_arena
   };
-  LLVMTypeRef ret_type = LLVMFunctionType(llvm_parseresult, param_types, 2, 0);
+  LLVMTypeRef ret_type = LLVMFunctionType(llvm_parseresultptr, param_types, 2, 0);
   LLVMValueRef parse_func = LLVMAddFunction(mod, name, ret_type);
   // Parse function is now declared; time to define itt
   LLVMBuilderRef builder = LLVMCreateBuilder();
