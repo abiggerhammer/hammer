@@ -1,5 +1,8 @@
 # -*- python -*-
 import os.path
+from distutils.version import LooseVersion
+import subprocess
+
 Import('env testruns')
 
 dist_headers = [
@@ -90,8 +93,16 @@ env.Install("$pkgconfigpath", "../../../libhammer.pc")
 testenv = env.Clone()
 testenv.Append(LIBS=['hammer'], LIBPATH=['.'])
 testenv.ParseConfig('pkg-config --cflags --libs glib-2.0')
-testenv.ParseConfig('%s --cflags --ldflags --libs core executionengine mcjit analysis x86codegen x86info' % \
-                    env["LLVM_CONFIG"])
+testenv_llvm_config_version = subprocess.Popen('%s --version' % env["LLVM_CONFIG"], \
+                                               shell=True, \
+                                               stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
+if LooseVersion(testenv_llvm_config_version[0]) < LooseVersion("3.9"):
+    testenv_llvm_system_libs_flag = "--system-libs"
+else:
+    testenv_llvm_system_libs_flag = ""
+
+testenv.ParseConfig('%s --cflags --ldflags --libs %s core executionengine mcjit analysis x86codegen x86info' % \
+                    (env["LLVM_CONFIG"], testenv_llvm_system_libs_flag))
 testenv.Append(LIBS=['stdc++'], LIBPATH=['.'])
 ctestexec = testenv.Program('test_suite', ctests + ['test_suite.c'], LINKFLAGS="--coverage" if testenv.GetOption("coverage") else None)
 ctest = Alias('testc', [ctestexec], "".join(["env LD_LIBRARY_PATH=", os.path.dirname(ctestexec[0].path), " ", ctestexec[0].path]))
