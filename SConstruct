@@ -41,7 +41,7 @@ if 'DESTDIR' in env:
         print >>sys.stderr, "--!!-- you want; files will be installed in"
         print >>sys.stderr, "--!!--    %s" % (calcInstallPath("$prefix"),)
 
-
+env['LLVM_CONFIG'] = "llvm-config"
 env['libpath'] = calcInstallPath("$prefix", "lib")
 env['incpath'] = calcInstallPath("$prefix", "include", "hammer")
 env['parsersincpath'] = calcInstallPath("$prefix", "include", "hammer", "parsers")
@@ -80,7 +80,7 @@ AddOption("--in-place",
 
 
 dbg = env.Clone(VARIANT='debug')
-dbg.Append(CCFLAGS=['-g'])
+dbg.MergeFlags("-g -O0")
 
 opt = env.Clone(VARIANT='opt')
 opt.Append(CCFLAGS=["-O3"])
@@ -92,6 +92,7 @@ else:
 
 env["CC"] = os.getenv("CC") or env["CC"]
 env["CXX"] = os.getenv("CXX") or env["CXX"]
+env["LLVM_CONFIG"] = os.getenv("LLVM_CONFIG") or env["LLVM_CONFIG"]
 
 if GetOption("coverage"):
     env.Append(CFLAGS=["--coverage"],
@@ -100,7 +101,8 @@ if GetOption("coverage"):
     if env["CC"] == "gcc":
         env.Append(LIBS=['gcov'])
     else:
-        env.ParseConfig('llvm-config --cflags --ldflags --libs core executionengine mcjit analysis x86codegen x86info')
+        env.ParseConfig('%s --cflags --ldflags --libs core executionengine mcjit analysis x86codegen x86info' % \
+                        env["LLVM_CONFIG"])
 
 if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",
