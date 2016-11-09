@@ -116,7 +116,14 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
     char* dump = LLVMPrintModuleToString(mod);
     fprintf(stderr, "\n\n%s\n\n", dump);
     // Package up the pointers that comprise the module and stash it in the original HParser
-    HLLVMParser *llvm_parser = h_new(HLLVMParser, 1);
+    HLLVMParser *llvm_parser;
+    if (!(parser->backend_data)) {
+      llvm_parser = h_new(HLLVMParser, 1);
+      parser->backend_data = llvm_parser;
+    } else {
+      llvm_parser = parser->backend_data;
+      memset(llvm_parser, 0, sizeof(*llvm_parser));
+    }
     llvm_parser->mod = mod;
     llvm_parser->func = parse_func;
     llvm_parser->engine = engine;
@@ -130,9 +137,19 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
 
 void h_llvm_free(HParser *parser) {
   HLLVMParser *llvm_parser = parser->backend_data;
-  LLVMDisposeBuilder(llvm_parser->builder);
+  LLVMModuleRef mod_out;
+  char *err_out;
+
+  llvm_parser->func = NULL;
+  LLVMRemoveModule(llvm_parser->engine, llvm_parser->mod, &mod_out, &err_out);
   LLVMDisposeExecutionEngine(llvm_parser->engine);
+  llvm_parser->engine = NULL;
+
+  LLVMDisposeBuilder(llvm_parser->builder);
+  llvm_parser->builder = NULL;
+
   LLVMDisposeModule(llvm_parser->mod);
+  llvm_parser->mod = NULL;
 }
 
 HParseResult *h_llvm_parse(HAllocator* mm__, const HParser* parser, HInputStream *input_stream) {
