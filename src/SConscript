@@ -1,6 +1,7 @@
 # -*- python -*-
 import os.path
 from distutils.version import LooseVersion
+import re
 import subprocess
 
 Import('env testruns')
@@ -79,7 +80,20 @@ ctests = ['t_benchmark.c',
           't_misc.c',
 	  't_regression.c']
 
-env.ParseConfig('%s --cflags --ldflags' % env["LLVM_CONFIG"])
+# llvm-config 'helpfully' supplies -g and -O flags; educate it with this
+# custom ParseConfig function arg
+
+def llvm_config_sanitize(env, cmd, unique=1):
+    # cmd is output from llvm-config
+    flags = cmd.split()
+    # match -g or -O flags
+    p = re.compile("^-[gO].*$")
+    filtered_flags = [flag for flag in flags if not p.match(flag)]
+    filtered_cmd = ' '.join(filtered_flags)
+    # print "llvm_config_sanitize: \"%s\" => \"%s\"" % (cmd, filtered_cmd)
+    env.MergeFlags(filtered_cmd, unique)
+
+env.ParseConfig('%s --cflags --ldflags' % env["LLVM_CONFIG"], function=llvm_config_sanitize)
 libhammer_shared = env.SharedLibrary('hammer', parsers + backends + misc_hammer_parts)
 libhammer_static = env.StaticLibrary('hammer', parsers + backends + misc_hammer_parts)
 Default(libhammer_shared, libhammer_static)
@@ -102,7 +116,7 @@ else:
     testenv_llvm_system_libs_flag = ""
 
 testenv.ParseConfig('%s --cflags --ldflags --libs %s core executionengine mcjit analysis x86codegen x86info' % \
-                    (env["LLVM_CONFIG"], testenv_llvm_system_libs_flag))
+                    (env["LLVM_CONFIG"], testenv_llvm_system_libs_flag), function=llvm_config_sanitize)
 testenv.Append(LIBS=['stdc++'], LIBPATH=['.'])
 ctestexec = testenv.Program('test_suite', ctests + ['test_suite.c'], LINKFLAGS="--coverage" if testenv.GetOption("coverage") else None)
 ctest = Alias('testc', [ctestexec], "".join(["env LD_LIBRARY_PATH=", os.path.dirname(ctestexec[0].path), " ", ctestexec[0].path]))

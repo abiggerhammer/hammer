@@ -80,7 +80,7 @@ AddOption("--in-place",
 
 
 dbg = env.Clone(VARIANT='debug')
-dbg.Append(CCFLAGS=['-g'])
+dbg.MergeFlags("-g -O0")
 
 opt = env.Clone(VARIANT='opt')
 opt.Append(CCFLAGS=["-O3"])
