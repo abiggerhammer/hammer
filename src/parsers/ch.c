@@ -116,8 +116,8 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMModuleRef mod, void* env) {
   // %28 = bitcast %union.anon* %27 to i64*
   //LLVMValueRef cast2 = LLVMBuildBitCast(builder, uint, LLVMInt64Type(), "result");
   LLVMValueRef uint = LLVMConstInt(LLVMInt32Type(), TT_UINT, 0);
-  LLVMBuildInsertValue(builder, tok, uint, 0, 0);
-  LLVMBuildInsertValue(builder, tok, r, 1, 0);
+  LLVMBuildInsertValue(builder, tok, uint, 0, "uint");
+  LLVMBuildInsertValue(builder, tok, r, 1, "r");
   // we already have the arena and the token, so skip to %33
   // %33 = call %struct.HParseResult_* @make_result(%struct.HArena_* %31, %struct.HParsedToken_* %32)
   LLVMValueRef result_args[] = { arena, tok };
