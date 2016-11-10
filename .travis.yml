@@ -10,27 +10,19 @@ matrix:
   include:
     - compiler: gcc
       language: ruby
-#     rvm: ruby-1.9.3-p484
+      rvm: ruby-2.2.5
       env: BINDINGS=ruby
     - compiler: clang
       language: ruby
-#     rvm: ruby-1.9.3-p484
+      rvm: ruby-2.2.5
       env: BINDINGS=ruby CC=clang
     - compiler: gcc
       language: ruby
-#     rvm: ruby-2.0.0-p353
+      rvm: ruby-2.3.1
       env: BINDINGS=ruby
     - compiler: clang
       language: ruby
-#     rvm: ruby-2.0.0-p353
-      env: BINDINGS=ruby CC=clang
-    - compiler: gcc
-      language: ruby
-#     rvm: ruby-2.1.0
-      env: BINDINGS=ruby
-    - compiler: clang
-      language: ruby
-#     rvm: ruby-2.1.0
+      rvm: ruby-2.3.1
       env: BINDINGS=ruby CC=clang
     - compiler: gcc
       language: python
