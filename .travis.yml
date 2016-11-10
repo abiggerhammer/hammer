@@ -5,8 +5,10 @@ compiler:
   - gcc
   - clang
 env:
-  - BINDINGS=none
-  - LLVM_CONFIG=llvm-config-3.8
+  global:
+    - LLVM_CONFIG=llvm-config-3.8
+  matrix:
+    - BINDINGS=none
 matrix:
   include:
     - compiler: gcc
