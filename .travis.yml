@@ -11,79 +11,79 @@ matrix:
     - compiler: gcc
       language: ruby
       rvm: ruby-2.2.5
-      env: BINDINGS=ruby
+      env: BINDINGS=ruby LLVM_CONFIG=llvm-config-3.8
     - compiler: clang
       language: ruby
       rvm: ruby-2.2.5
-      env: BINDINGS=ruby CC=clang
+      env: BINDINGS=ruby CC=clang LLVM_CONFIG=llvm-config-3.8
     - compiler: gcc
       language: ruby
       rvm: ruby-2.3.1
-      env: BINDINGS=ruby
+      env: BINDINGS=ruby LLVM_CONFIG=llvm-config-3.8
     - compiler: clang
       language: ruby
       rvm: ruby-2.3.1
-      env: BINDINGS=ruby CC=clang
+      env: BINDINGS=ruby CC=clang LLVM_CONFIG=llvm-config-3.8
     - compiler: gcc
       language: python
       python: "2.7"
-      env: BINDINGS=python
+      env: BINDINGS=python LLVM_CONFIG=llvm-config-3.8
     - compiler: clang
       language: python
       python: "2.7"
-      env: BINDINGS=python CC=clang
+      env: BINDINGS=python CC=clang LLVM_CONFIG=llvm-config-3.8
     - compiler: gcc
       language: perl
       perl: "5.18"
-      env: BINDINGS=perl
+      env: BINDINGS=perl LLVM_CONFIG=llvm-config-3.8
     - compiler: clang
       language: perl
       perl: "5.18"
-      env: BINDINGS=perl CC=clang
+      env: BINDINGS=perl CC=clang LLVM_CONFIG=llvm-config-3.8
     - compiler: gcc
       language: perl
       perl: "5.14"
-      env: BINDINGS=perl
+      env: BINDINGS=perl LLVM_CONFIG=llvm-config-3.8
     - compiler: clang
       language: perl
       perl: "5.14"
-      env: BINDINGS=perl CC=clang
+      env: BINDINGS=perl CC=clang LLVM_CONFIG=llvm-config-3.8
     - compiler: gcc
       language: perl
       perl: "5.10"
-      env: BINDINGS=perl
+      env: BINDINGS=perl LLVM_CONFIG=llvm-config-3.8
     - compiler: clang
       language: perl
       perl: "5.10"
-      env: BINDINGS=perl CC=clang
+      env: BINDINGS=perl CC=clang LLVM_CONFIG=llvm-config-3.8
     - compiler: gcc
       language: php
       php: "5.5"
-      env: BINDINGS=php
+      env: BINDINGS=php LLVM_CONFIG=llvm-config-3.8
     - compiler: clang
       language: php
       php: "5.5"
-      env: BINDINGS=php CC=clang
+      env: BINDINGS=php CC=clang LLVM_CONFIG=llvm-config-3.8
     - compiler: gcc
       language: php
       php: "5.4"
-      env: BINDINGS=php
+      env: BINDINGS=php LLVM_CONFIG=llvm-config-3.8
     - compiler: clang
       language: php
       php: "5.4"
-      env: BINDINGS=php CC=clang
+      env: BINDINGS=php CC=clang LLVM_CONFIG=llvm-config-3.8
     - compiler: gcc
       language: dotnet
-      env: BINDINGS=dotnet
+      env: BINDINGS=dotnet LLVM_CONFIG=llvm-config-3.8
     - compiler: clang
       language: dotnet
-      env: BINDINGS=dotnet CC=clang
+      env: BINDINGS=dotnet CC=clang LLVM_CONFIG=llvm-config-3.8
     - compiler: gcc
       language: cpp
-      env: BINDINGS=cpp
+      env: BINDINGS=cpp LLVM_CONFIG=llvm-config-3.8
     - compiler: gcc
       language: cpp
-      env: BINDINGS=cpp CC=clang
+      env: BINDINGS=cpp CC=clang LLVM_CONFIG=llvm-config-3.8
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install lcov
