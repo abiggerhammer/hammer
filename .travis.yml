@@ -3,7 +3,7 @@ sudo: required
 language: c
 compiler:
   - gcc
-  - clang -v
+  - clang
 env:
   global:
     - LLVM_CONFIG=llvm-config-3.8
