@@ -80,10 +80,10 @@ AddOption("--in-place",
 
 
 dbg = env.Clone(VARIANT='debug')
-dbg.MergeFlags("-v -g -O0")
+dbg.MergeFlags("-g -O0")
 
 opt = env.Clone(VARIANT='opt')
-opt.Append(CCFLAGS=["-v -O3"])
+opt.Append(CCFLAGS=["-O3"])
 
 if GetOption("variant") == 'debug':
     env = dbg
