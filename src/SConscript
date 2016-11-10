@@ -124,7 +124,7 @@ else:
 testenv.ParseConfig('%s --cflags --ldflags --libs %s core executionengine mcjit analysis x86codegen x86info' % \
                     (env["LLVM_CONFIG"], testenv_llvm_system_libs_flag), function=llvm_config_sanitize)
 testenv.Append(LIBS=['stdc++'], LIBPATH=['.'])
-ctestexec = testenv.Program('test_suite', ctests + ['test_suite.c'], LINKFLAGS="--coverage" if testenv.GetOption("coverage") else None)
+ctestexec = testenv.Program('test_suite', ctests + ['test_suite.c'], LINKFLAGS="-v --coverage" if testenv.GetOption("coverage") else None)
 ctest = Alias('testc', [ctestexec], "".join(["env LD_LIBRARY_PATH=", os.path.dirname(ctestexec[0].path), " ", ctestexec[0].path]))
 AlwaysBuild(ctest)
 testruns.append(ctest)
