@@ -96,9 +96,9 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install lcov
   - gem install coveralls-lcov
-#  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-#  - sudo apt-get update -qq
-#  - sudo apt-get install gcc-5
+  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+  - sudo apt-get update -qq
+  - sudo apt-get install gcc-5
   - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; fi
   - if [ "$BINDINGS" == "perl" ]; then sudo add-apt-repository ppa:dns/irc -y; sudo apt-get update -qq; sudo apt-get install -qq swig=2.0.8-1irc1~12.04; fi
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
