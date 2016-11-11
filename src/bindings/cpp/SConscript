@@ -6,7 +6,7 @@ cppenv = env.Clone()
 cppenv.Append(CPPPATH=[".", "vendor/gtest-1.7.0/fused-src", "../.."],
               LIBS=["hammer"],
               LIBPATH=["../../"])
-cppenv.MergeFlags("-Wno-missing-field-initializers -DGTEST_HAS_PTHREAD=0")
+cppenv.MergeFlags("-std=c++11 -Wno-missing-field-initializers -DGTEST_HAS_PTHREAD=0")
 
 
 gtest = cppenv.Object("vendor/gtest-1.7.0/fused-src/gtest/gtest-all.cc")
