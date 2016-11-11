@@ -24,3 +24,4 @@ build/
 *.os
 *.pyc
 *.ll
+libhammer.pc
