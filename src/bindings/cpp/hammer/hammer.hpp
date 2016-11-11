@@ -93,7 +93,7 @@ namespace hammer {
   static inline Parser Token(const uint8_t *buf, size_t len) {
     return Parser(h_token(buf, len));
   }
-  static inline Parser Ch(char ch) {
+  static inline Parser Ch(unsigned char ch) {
     return Parser(h_ch(ch));
   }
   static inline Parser ChRange(uint8_t lower, uint8_t upper) {
