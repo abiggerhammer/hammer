@@ -1,10 +1,11 @@
 prefix=${prefix}
 exec_prefix=${prefix}
 includedir=${prefix}/include
-libdir=${exec_prefix}/lib
+libdir=${libdir}
 
 Name: libhammer
 Description: The Hammer parsing library
 Version: 0.9.0
 Cflags: -I${includedir}
 Libs: -L${libdir} -lhammer
+Libs.private: ${llvm_libdir_flags} ${llvm_lib_flags}
