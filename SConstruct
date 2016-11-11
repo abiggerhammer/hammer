@@ -190,6 +190,29 @@ class LLVMConfigSanitizer:
         env.MergeFlags(filtered_cmd, unique)
 llvm_config_sanitizer = LLVMConfigSanitizer()
 
+# LLVM defines, which the python bindings need
+try:
+    llvm_config_cflags = subprocess.Popen('%s --cflags' % env["LLVM_CONFIG"], \
+                                          shell=True, \
+                                          stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
+    flags = llvm_config_cflags[0].split()
+    # get just the -D ones
+    p = re.compile("^-D(.*)$")
+    llvm_defines = [p.match(flag).group(1) for flag in flags if p.match(flag)]
+except:
+    print "%s failed. Make sure you have LLVM and clang installed." % env["LLVM_CONFIG"]
+    Exit(1)
+
+# Get the llvm includedir, which the python bindings need
+try:
+    llvm_config_includes = subprocess.Popen('%s --includedir' % env["LLVM_CONFIG"], \
+                                            shell=True, \
+                                            stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
+    llvm_includes = llvm_config_includes[0].splitlines()
+except:
+    print "%s failed. Make sure you have LLVM and clang installed." % env["LLVM_CONFIG"]
+    Exit(1)
+
 # This goes here so we already know all the LLVM crap
 # Make a fresh environment to parse the config into, to read out just LLVM stuff
 llvm_dummy_env = Environment()
@@ -229,6 +252,8 @@ Export('targets')
 Export('llvm_computed_shared_lib_name')
 Export('llvm_config_sanitizer')
 Export('llvm_config_version')
+Export('llvm_defines')
+Export('llvm_includes')
 Export('llvm_linkage_type_flag')
 Export('llvm_required_components')
 Export('llvm_system_libs_flag')
