@@ -356,7 +356,7 @@ namespace {
     EXPECT_TRUE(ParsesTo(p, "aaa", "(u0x61 (u0x61 (u0x61)))"));
   }
 
-};
+}
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
