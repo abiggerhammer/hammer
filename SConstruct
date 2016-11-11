@@ -11,6 +11,8 @@ import subprocess
 vars = Variables(None, ARGUMENTS)
 vars.Add(PathVariable('DESTDIR', "Root directory to install in (useful for packaging scripts)", None, PathVariable.PathIsDirCreate))
 vars.Add(PathVariable('prefix', "Where to install in the FHS", "/usr/local", PathVariable.PathAccept))
+vars.Add(PathVariable('libdir', "Where to install libraries", None, PathVariable.PathAccept))
+vars.Add(PathVariable('includedir', "Where to install headers", None, PathVariable.PathAccept))
 vars.Add(ListVariable('bindings', 'Language bindings to build', 'none', ['cpp', 'dotnet', 'perl', 'php', 'python', 'ruby']))
 
 tools = ['default', 'scanreplace']
@@ -45,12 +47,20 @@ if 'DESTDIR' in env:
         print >>sys.stderr, "--!!--    %s" % (calcInstallPath("$prefix"),)
 
 env['LLVM_CONFIG'] = "llvm-config"
-env['libpath'] = calcInstallPath("$prefix", "lib")
-env['incpath'] = calcInstallPath("$prefix", "include", "hammer")
-env['parsersincpath'] = calcInstallPath("$prefix", "include", "hammer", "parsers")
-env['backendsincpath'] = calcInstallPath("$prefix", "include", "hammer", "backends")
-env['pkgconfigpath'] = calcInstallPath("$prefix", "lib", "pkgconfig")
-env.ScanReplace('libhammer.pc.in')
+if 'includedir' in env:
+    env['incpath'] = calcInstallPath("$includedir", "hammer")
+else:
+    env['includedir'] = os.path.abspath(os.path.join(*map(env.subst, ["$prefix", "include"])))
+    env['incpath'] = calcInstallPath("$prefix", "include", "hammer")
+if 'libdir' in env:
+    env['libpath'] = calcInstallPath("$libdir")
+    env['pkgconfigpath'] = calcInstallPath("$libdir", "pkgconfig")
+else:
+    env['libpath'] = calcInstallPath("$prefix", "lib")
+    env['pkgconfigpath'] = calcInstallPath("$prefix", "lib", "pkgconfig")
+    env['libdir'] = os.path.abspath(os.path.join(*map(env.subst, ["$prefix", "lib"])))
+env['parsersincpath'] = calcInstallPath("$includedir", "hammer", "parsers")
+env['backendsincpath'] = calcInstallPath("$includedir", "hammer", "backends")
 
 env.MergeFlags("-std=gnu11 -Wno-unused-parameter -Wno-attributes -Wno-unused-variable -Wall -Wextra -Werror")
 
@@ -116,14 +126,6 @@ env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 #rootpath = env['ROOTPATH'] = os.path.abspath('.')
 #env.Append(CPPPATH=os.path.join('#', "hammer"))
 
-testruns = []
-
-targets = ["$libpath",
-           "$incpath",
-           "$parsersincpath",
-           "$backendsincpath",
-           "$pkgconfigpath"]
-
 # Set up LLVM config stuff to export
 
 # some llvm versions are old and will not work; some require --system-libs
@@ -187,6 +189,38 @@ class LLVMConfigSanitizer:
         # print "llvm_config_sanitize: \"%s\" => \"%s\"" % (cmd, filtered_cmd)
         env.MergeFlags(filtered_cmd, unique)
 llvm_config_sanitizer = LLVMConfigSanitizer()
+
+# This goes here so we already know all the LLVM crap
+# Make a fresh environment to parse the config into, to read out just LLVM stuff
+llvm_dummy_env = Environment()
+# Get LLVM stuff into LIBS/LDFLAGS
+llvm_dummy_env.ParseConfig('%s --ldflags %s %s %s' % \
+                           (env["LLVM_CONFIG"], llvm_system_libs_flag, llvm_linkage_type_flag, \
+                            llvm_required_components), \
+                           function=llvm_config_sanitizer.sanitize)
+# Get the right -l lines in
+if llvm_use_shared:
+    if llvm_use_computed_shared_lib_name:
+        llvm_dummy_env.Append(LIBS=[llvm_computed_shared_lib_name, ])
+    else:
+        llvm_dummy_env.ParseConfig('%s %s --libs %s' % \
+                                   (env["LLVM_CONFIG"], llvm_linkage_type_flag, llvm_required_components), \
+                                   function=llvm_config_sanitizer.sanitize)
+llvm_dummy_env.Append(LIBS=['stdc++', ], )
+
+env['llvm_libdir_flags'] = llvm_dummy_env.subst('$_LIBDIRFLAGS')
+env['llvm_lib_flags'] = llvm_dummy_env.subst('$_LIBFLAGS')
+pkgconfig = env.ScanReplace('libhammer.pc.in')
+Default(pkgconfig)
+env.Install("$pkgconfigpath", pkgconfig)
+
+testruns = []
+
+targets = ["$libpath",
+           "$incpath",
+           "$parsersincpath",
+           "$backendsincpath",
+           "$pkgconfigpath"]
 
 Export('env')
 Export('testruns')
