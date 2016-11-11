@@ -120,7 +120,6 @@ env.Install("$libpath", [libhammer_static, libhammer_shared])
 env.Install("$incpath", dist_headers)
 env.Install("$parsersincpath", parsers_headers)
 env.Install("$backendsincpath", backends_headers)
-env.Install("$pkgconfigpath", "../../../libhammer.pc")
 
 testenv = env.Clone()
 testenv.Append(LIBS=['hammer'], LIBPATH=['.'])
