@@ -3,6 +3,9 @@ import os
 import os.path
 import platform
 import sys
+from distutils.version import LooseVersion
+import re
+import subprocess
 
 
 vars = Variables(None, ARGUMENTS)
@@ -121,9 +124,82 @@ targets = ["$libpath",
            "$backendsincpath",
            "$pkgconfigpath"]
 
+# Set up LLVM config stuff to export
+
+# some llvm versions are old and will not work; some require --system-libs
+# with llvm-config, and some will break if given it
+llvm_config_version = subprocess.Popen('%s --version' % env["LLVM_CONFIG"], \
+                                       shell=True, \
+                                       stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
+if LooseVersion(llvm_config_version[0]) < LooseVersion("3.6"):
+   print "This LLVM version %s is too old" % llvm_config_version
+   Exit(1)
+
+if LooseVersion(llvm_config_version[0]) < LooseVersion("3.9") and \
+   LooseVersion(llvm_config_version[0]) >= LooseVersion("3.5"):
+    llvm_system_libs_flag = "--system-libs"
+else:
+    llvm_system_libs_flag = ""
+
+# Only keep one copy of this
+llvm_required_components = "core executionengine mcjit analysis x86codegen x86info"
+# Stubbing this out so we can implement static-only mode if needed later
+llvm_use_shared = True
+# Can we ask for shared/static from llvm-config?
+if LooseVersion(llvm_config_version[0]) < LooseVersion("3.9"):
+    # Nope
+    llvm_linkage_type_flag = ""
+    llvm_use_computed_shared_lib_name = True
+else:
+    # Woo, they finally fixed the dumb
+    llvm_use_computed_shared_lib_name = False
+    if llvm_use_shared:
+        llvm_linkage_type_flag = "--link-shared"
+    else:
+        llvm_linkage_type_flag = "--link-static"
+
+if llvm_use_computed_shared_lib_name:
+    # Okay, pull out the major and minor version numbers (barf barf)
+    p = re.compile("^(\d+)\.(\d+).*$")
+    m = p.match(llvm_config_version[0])
+    if m:
+        llvm_computed_shared_lib_name = "LLVM-%d.%d" % ((int)(m.group(1)), (int)(m.group(2)))
+    else:
+        print "Couldn't compute shared library name from LLVM version '%s', but needed to" % \
+            llvm_config_version[0]
+        Exit(1)
+else:
+    # We won't be needing it
+    llvm_computed_shared_lib_name = None
+
+# llvm-config 'helpfully' supplies -g and -O flags; educate it with this
+# custom ParseConfig function arg; make it a class with a method so we can
+# pass it around with scons export/import
+
+class LLVMConfigSanitizer:
+    def sanitize(self, env, cmd, unique=1):
+        # cmd is output from llvm-config
+        flags = cmd.split()
+        # match -g or -O flags
+        p = re.compile("^-[gO].*$")
+        filtered_flags = [flag for flag in flags if not p.match(flag)]
+        filtered_cmd = ' '.join(filtered_flags)
+        # print "llvm_config_sanitize: \"%s\" => \"%s\"" % (cmd, filtered_cmd)
+        env.MergeFlags(filtered_cmd, unique)
+llvm_config_sanitizer = LLVMConfigSanitizer()
+
 Export('env')
 Export('testruns')
 Export('targets')
+# LLVM-related flags
+Export('llvm_computed_shared_lib_name')
+Export('llvm_config_sanitizer')
+Export('llvm_config_version')
+Export('llvm_linkage_type_flag')
+Export('llvm_required_components')
+Export('llvm_system_libs_flag')
+Export('llvm_use_computed_shared_lib_name')
+Export('llvm_use_shared')
 
 if not GetOption("in_place"):
     env['BUILD_BASE'] = 'build/$VARIANT'
