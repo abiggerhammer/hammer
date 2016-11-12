@@ -85,42 +85,9 @@ static bool ch_llvm(LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod
   // Basic block: success
   LLVMPositionBuilderAtEnd(builder, success);
 
-  // Set up call to h_arena_malloc() for a new HParsedToken
-  LLVMValueRef tok_size = LLVMConstInt(LLVMInt32Type(), sizeof(HParsedToken), 0);
-  LLVMValueRef amalloc_args[] = { arena, tok_size };
-  // %h_arena_malloc = call void* @h_arena_malloc(%struct.HArena_.1* %1, i32 48)
-  LLVMValueRef amalloc = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_arena_malloc"), amalloc_args, 2, "h_arena_malloc");
-  // %3 = bitcast void* %h_arena_malloc to %struct.HParsedToken_.2*
-  LLVMValueRef tok = LLVMBuildBitCast(builder, amalloc, llvm_parsedtokenptr, "");
-
-  // tok->token_type = TT_UINT;
-  //
-  // %token_type = getelementptr inbounds %struct.HParsedToken_.2, %struct.HParsedToken_.2* %3, i32 0, i32 0
-  LLVMValueRef toktype = LLVMBuildStructGEP(builder, tok, 0, "token_type");
-  // store i32 8, i32* %token_type
-  LLVMBuildStore(builder, LLVMConstInt(LLVMInt32Type(), 8, 0), toktype);
-
-  // tok->uint = r;
-  //
-  // %token_data = getelementptr inbounds %struct.HParsedToken_.2, %struct.HParsedToken_.2* %3, i32 0, i32 1
-  LLVMValueRef tokdata = LLVMBuildStructGEP(builder, tok, 1, "token_data");
-  // %r = zext i8 %2 to i64
-  // store i64 %r, i64* %token_data
-  LLVMBuildStore(builder, LLVMBuildZExt(builder, r, LLVMInt64Type(), "r"), tokdata);
-  // %t_index = getelementptr inbounds %struct.HParsedToken_.2, %struct.HParsedToken_.2* %3, i32 0, i32 2
-  LLVMValueRef tokindex = LLVMBuildStructGEP(builder, tok, 2, "t_index");
-  // %s_index = getelementptr inbounds %struct.HInputStream_.0, %struct.HInputStream_.0* %0, i32 0, i32 2
-  LLVMValueRef streamindex = LLVMBuildStructGEP(builder, stream, 2, "s_index");
-  // %4 = load i64, i64* %s_index
-  // store i64 %4, i64* %t_index
-  LLVMBuildStore(builder, LLVMBuildLoad(builder, streamindex, ""), tokindex);
-  LLVMValueRef tokbitlen = LLVMBuildStructGEP(builder, tok, 3, "bit_length");
-  LLVMBuildStore(builder, LLVMConstInt(LLVMInt64Type(), 8, 0), tokbitlen);
-
-  // Now call make_result()
-  // %make_result = call %struct.HParseResult_.3* @make_result(%struct.HArena_.1* %1, %struct.HParsedToken_.2* %3)
-  LLVMValueRef result_args[] = { arena, tok };
-  LLVMValueRef mr = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "make_result"), result_args, 2, "make_result");
+  /* Make a token */
+  LLVMValueRef mr;
+  h_llvm_make_tt_suint(mod, builder, stream, arena, r, &mr);
 
   // br label %ch_end
   LLVMBuildBr(builder, end);

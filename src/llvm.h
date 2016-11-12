@@ -9,4 +9,8 @@
 LLVMTypeRef llvm_inputstream, llvm_inputstreamptr, llvm_arena, llvm_arenaptr;
 LLVMTypeRef llvm_parsedtoken, llvm_parsedtokenptr, llvm_parseresult, llvm_parseresultptr;
 
+void h_llvm_make_tt_suint(LLVMModuleRef mod, LLVMBuilderRef builder,
+                          LLVMValueRef stream, LLVMValueRef arena, 
+                          LLVMValueRef r, LLVMValueRef *mr_out);
+
 #endif // #ifndef HAMMER_LLVM__H
