@@ -146,6 +146,53 @@ void h_llvm_free(HParser *parser) {
 }
 
 /*
+ * Construct LLVM IR to decide if a runtime value is a member of a compile-time
+ * character set, and branch depending on the result.
+ *
+ * Parameters:
+ *  - mod [in]: an LLVMModuleRef
+ *  - func [in]: an LLVMValueRef to the function to add the new basic blocks
+ *  - builder [in]: an LLVMBuilderRef, positioned appropriately
+ *  - r [in]: an LLVMValueRef to the value to test
+ *  - cs [in]: the HCharset to test membership in
+ *  - yes [in]: the basic block to branch to if r is in cs
+ *  - no [in]: the basic block to branch to if r is not in cs
+ */
+
+void h_llvm_make_charset_membership_test(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+                                         LLVMValueRef r, HCharset cs,
+                                         LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
+  /*
+   * A charset is a 256-element bit array, 32 bytes long in total.  Ours is
+   * static at compile time, so we can try to construct minimal LLVM IR for
+   * this particular charset.  In particular, we should handle cases like
+   * only one or two bits being set, or a long consecutive range, efficiently.
+   *
+   * In LLVM IR, we can test propositions like r == x, r <= x, r >= x and their
+   * negations efficiently, so the challenge here is to turn a character map
+   * into a minimal set of such propositions.
+   *
+   * TODO: actually do this; right now for the sake of a first pass we're just
+   * testing r == x for every x in cs.
+   */
+
+  for (int i = 0; i < 256; ++i) {
+    if (charset_isset(cs, i)) {
+      char bbname[16];
+      uint8_t c = (uint8_t)i;
+      snprintf(bbname, 16, "cs_memb_%02x", c);
+      LLVMValueRef icmp = LLVMBuildICmp(builder, LLVMIntEQ,
+          LLVMConstInt(LLVMInt8Type(), c, 0), r, "c == r");
+      LLVMBasicBlockRef bb = LLVMAppendBasicBlock(func, bbname);
+      LLVMBuildCondBr(builder, icmp, yes, bb);
+      LLVMPositionBuilderAtEnd(builder, bb);
+    }
+  }
+
+  LLVMBuildBr(builder, no);
+}
+
+/*
  * Construct LLVM IR to allocate a token of type TT_SINT or TT_UINT
  *
  * Parameters:
