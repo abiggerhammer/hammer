@@ -1,7 +1,12 @@
 #include <assert.h>
 #include <string.h>
 #include "../internal.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#include <llvm-c/Core.h>
+#pragma GCC diagnostic pop
 #include "parser_internal.h"
+#include "../llvm.h"
 
 static HParseResult* parse_charset(void *env, HParseState *state) {
   uint8_t in = h_read_bits(&state->input_stream, 8, false);
@@ -70,12 +75,82 @@ static bool cs_ctrvm(HRVMProg *prog, void *env) {
   return true;
 }
 
+static bool cs_llvm(LLVMBuilderRef builder, LLVMValueRef func,
+                    LLVMModuleRef mod, void* env) {
+  /*
+   * LLVM to build a function to parse a charset; the args are a stream and an
+   * arena.
+   */
+
+  LLVMValueRef stream = LLVMGetFirstParam(func);
+  stream = LLVMBuildBitCast(builder, stream, llvm_inputstreamptr, "stream");
+  LLVMValueRef arena = LLVMGetLastParam(func);
+
+  /* Set up our basic blocks */
+  LLVMBasicBlockRef entry = LLVMAppendBasicBlock(func, "cs_entry");
+  LLVMBasicBlockRef success = LLVMAppendBasicBlock(func, "cs_success");
+  LLVMBasicBlockRef fail = LLVMAppendBasicBlock(func, "cs_fail");
+  LLVMBasicBlockRef end = LLVMAppendBasicBlock(func, "cs_end");
+
+  /* Basic block: entry */
+  LLVMPositionBuilderAtEnd(builder, entry);
+  /* First we read the char */
+  LLVMValueRef bits_args[3];
+  bits_args[0] = stream;
+  bits_args[1] = LLVMConstInt(LLVMInt32Type(), 8, 0);
+  bits_args[2] = LLVMConstInt(LLVMInt8Type(), 0, 0);
+  LLVMValueRef bits = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_read_bits"), bits_args, 3, "read_bits");
+  LLVMValueRef r = LLVMBuildTrunc(builder, bits, LLVMInt8Type(), ""); // TODO Necessary? (same question in ch_llvm())
+
+  /* We have a char, need to check if it's in the charset */
+  HCharset cs = (HCharset)env;
+  /* Branch to either success or end, conditional on whether r is in cs */
+  h_llvm_make_charset_membership_test(mod, func, builder, r, cs, success, fail);
+
+  /* Basic block: success */
+  LLVMPositionBuilderAtEnd(builder, success);
+
+  LLVMValueRef mr;
+  h_llvm_make_tt_suint(mod, builder, stream, arena, r, &mr);
+
+  /* br label %ch_end */
+  LLVMBuildBr(builder, end);
+
+  /* Basic block: fail */
+  LLVMPositionBuilderAtEnd(builder, fail);
+  /*
+   * We just branch straight to end; this exists so that the phi node in 
+   * end knows where all the incoming edges are from, rather than needing
+   * some basic block constructed in h_llvm_make_charset_membership_test()
+   */
+  LLVMBuildBr(builder, end);
+
+  /* Basic block: end */
+  LLVMPositionBuilderAtEnd(builder, end);
+  // %rv = phi %struct.HParseResult_.3* [ %make_result, %ch_success ], [ null, %ch_entry ]
+  LLVMValueRef rv = LLVMBuildPhi(builder, llvm_parseresultptr, "rv");
+  LLVMBasicBlockRef rv_phi_incoming_blocks[] = {
+    success,
+    fail
+  };
+  LLVMValueRef rv_phi_incoming_values[] = {
+    mr,
+    LLVMConstNull(llvm_parseresultptr)
+  };
+  LLVMAddIncoming(rv, rv_phi_incoming_values, rv_phi_incoming_blocks, 2);
+  // ret %struct.HParseResult_.3* %rv
+  LLVMBuildRet(builder, rv);
+
+  return true;
+}
+
 static const HParserVtable charset_vt = {
   .parse = parse_charset,
   .isValidRegular = h_true,
   .isValidCF = h_true,
   .desugar = desugar_charset,
   .compile_to_rvm = cs_ctrvm,
+  .llvm = cs_llvm,
   .higher = false,
 };
 
