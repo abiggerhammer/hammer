@@ -46,7 +46,7 @@ static bool ch_ctrvm(HRVMProg *prog, void* env) {
   return true;
 }
 
-static bool ch_llvm(LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod, void* env) {
+static bool ch_llvm(HAllocator *mm__, LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod, void* env) {
   // Build a new LLVM function to parse a character
 
   // Set up params for calls to h_read_bits() and h_arena_malloc()
