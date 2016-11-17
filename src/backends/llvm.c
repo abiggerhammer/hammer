@@ -282,11 +282,15 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
     /* >= 0 is a flag we have a complement we may need to free later */
     estimated_complement_cost = -1;
     if (allow_complement) {
+      HCharset child_cs;
+
       /* Complement the charset within the range */
       memset(&complement_cep, 0, sizeof(complement_cep));
       complement_cep.cs = copy_charset(mm__, cs);
-      charset_complement(complement_cep.cs);
       charset_restrict_to_range(complement_cep.cs, idx_start, idx_end);
+      child_cs = copy_charset(mm__, complement_cep.cs);
+      charset_complement(child_cs);
+      charset_restrict_to_range(child_cs, idx_start, idx_end);
       complement_cep.idx_start = idx_start;
       complement_cep.idx_end = idx_end;
       complement_cep.split_point = 0;
@@ -299,9 +303,10 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
        * allow_complement = 0 so we never stack two complements
        */
       complement_cep.cost = 1 +
-        h_llvm_build_charset_exec_plan_impl(mm__, complement_cep.cs, &complement_cep,
+        h_llvm_build_charset_exec_plan_impl(mm__, child_cs, &complement_cep,
             complement_cep.children[0], 0, NULL);
       estimated_complement_cost = complement_cep.cost;
+      h_free(child_cs);
     }
 
     /* Should we just terminate search below a certain scan cost perhaps? */
