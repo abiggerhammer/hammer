@@ -75,7 +75,7 @@ static bool cs_ctrvm(HRVMProg *prog, void *env) {
   return true;
 }
 
-static bool cs_llvm(LLVMBuilderRef builder, LLVMValueRef func,
+static bool cs_llvm(HAllocator *mm__, LLVMBuilderRef builder, LLVMValueRef func,
                     LLVMModuleRef mod, void* env) {
   /*
    * LLVM to build a function to parse a charset; the args are a stream and an
