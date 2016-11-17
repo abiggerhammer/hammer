@@ -159,7 +159,8 @@ void h_llvm_free(HParser *parser) {
  *  - no [in]: the basic block to branch to if r is not in cs
  */
 
-void h_llvm_make_charset_membership_test(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+void h_llvm_make_charset_membership_test(HAllocator* mm__,
+                                         LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
                                          LLVMValueRef r, HCharset cs,
                                          LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
   /*

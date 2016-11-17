@@ -105,7 +105,7 @@ static bool cs_llvm(HAllocator *mm__, LLVMBuilderRef builder, LLVMValueRef func,
   /* We have a char, need to check if it's in the charset */
   HCharset cs = (HCharset)env;
   /* Branch to either success or end, conditional on whether r is in cs */
-  h_llvm_make_charset_membership_test(mod, func, builder, r, cs, success, fail);
+  h_llvm_make_charset_membership_test(mm__, mod, func, builder, r, cs, success, fail);
 
   /* Basic block: success */
   LLVMPositionBuilderAtEnd(builder, success);

@@ -9,7 +9,8 @@
 LLVMTypeRef llvm_inputstream, llvm_inputstreamptr, llvm_arena, llvm_arenaptr;
 LLVMTypeRef llvm_parsedtoken, llvm_parsedtokenptr, llvm_parseresult, llvm_parseresultptr;
 
-void h_llvm_make_charset_membership_test(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+void h_llvm_make_charset_membership_test(HAllocator* mm__,
+                                         LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
                                          LLVMValueRef r, HCharset cs,
                                          LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
 void h_llvm_make_tt_suint(LLVMModuleRef mod, LLVMBuilderRef builder,
