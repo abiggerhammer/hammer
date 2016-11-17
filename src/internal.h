@@ -24,6 +24,7 @@
 #define HAMMER_INTERNAL__H
 #include <stdint.h>
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -156,23 +157,87 @@ static inline void h_sarray_clear(HSArray *arr) {
 
 // }}}
 
-typedef unsigned int *HCharset;
+typedef unsigned int HCharsetWord;
+#define CHARSET_WHOLE_WORD_MASK UINT_MAX
 
-static inline HCharset new_charset(HAllocator* mm__) {
-  HCharset cs = h_new(unsigned int, 256 / (sizeof(unsigned int) * 8));
-  memset(cs, 0, 32);  // 32 bytes = 256 bits
+typedef HCharsetWord *HCharset;
+
+#define CHARSET_BITS_PER_WORD (sizeof(HCharsetWord) * 8)
+#define CHARSET_WORDS (256 / CHARSET_BITS_PER_WORD)
+#define CHARSET_SIZE (CHARSET_WORDS * sizeof(HCharsetWord))
+#define CHARSET_BIT_IDX_TO_WORD(idx) \
+  (((unsigned int)(idx)) / CHARSET_BITS_PER_WORD)
+#define CHARSET_BIT_IDX_TO_BIT_IN_WORD(idx) \
+  (((unsigned int)(idx)) % CHARSET_BITS_PER_WORD)
+#define CHART_WORD_AND_BIT_TO_BIT_IDX(word,bit) \
+    ((uint8_t)(CHARSET_BITS_PER_WORD * ((unsigned int)(word)) + \
+      ((unsigned int)(bit))))
+#define CHARSET_BIT_POS_IN_WORD_MASK(bit) \
+  ((((HCharsetWord)(1)) << (bit)) & CHARSET_WHOLE_WORD_MASK)
+/* Mask for all bits below a position */
+#define CHARSET_BIT_MASK_UP_TO_POS(bit) \
+  ((CHARSET_BIT_POS_IN_WORD_MASK((bit)) - 1) & CHARSET_WHOLE_WORD_MASK)
+/* Mask off all bits above and including a position */
+#define CHARSET_BIT_MASK_FROM_POS(bit) \
+  ((~CHARSET_BIT_MASK_UP_TO_POS((bit))) & CHARSET_WHOLE_WORD_MASK)
+
+static inline HCharset copy_charset(HAllocator *mm__, HCharset in) {
+  HCharset cs = h_new(unsigned int, CHARSET_SIZE);
+  memcpy(cs, in, CHARSET_SIZE);
   return cs;
 }
 
+static inline HCharset new_charset(HAllocator* mm__) {
+  HCharset cs = h_new(unsigned int, CHARSET_SIZE);
+  memset(cs, 0, CHARSET_SIZE);
+  return cs;
+}
+
+static inline void charset_complement(HCharset cs) {
+  for (unsigned int i = 0; i < CHARSET_WORDS; ++i) cs[i] = ~(cs[i]);
+}
+
 static inline int charset_isset(HCharset cs, uint8_t pos) {
-  return !!(cs[pos / (sizeof(*cs)*8)] & (1 << (pos % (sizeof(*cs)*8))));
+  return !!(cs[CHARSET_BIT_IDX_TO_WORD(pos)] & CHARSET_BIT_POS_IN_WORD_MASK(pos));
+}
+
+static inline void charset_restrict_to_range(HCharset cs, uint8_t idx_start, uint8_t idx_end) {
+  HCharsetWord mask;
+
+  if (idx_end < idx_start) {
+    /* Range is empty, clear the charset */
+    memset(cs, 0, CHARSET_SIZE);
+  } else {
+    /* Clear below, if any */
+    if (CHARSET_BIT_IDX_TO_WORD(idx_start) > 0) {
+      memset(cs, 0, CHARSET_BIT_IDX_TO_WORD(idx_start) * sizeof(HCharsetWord));
+    }
+    /* Note this partial start/ending word code still works if they are the same word */
+    /* Mask partial starting word, if any */
+    if (CHARSET_BIT_IDX_TO_BIT_IN_WORD(idx_start) != 0) {
+      mask = CHARSET_BIT_MASK_FROM_POS(CHARSET_BIT_IDX_TO_BIT_IN_WORD(idx_start));
+      cs[CHARSET_BIT_IDX_TO_WORD(idx_start)] &= mask;
+    }
+    /* Mask partial ending word, if any */
+    if (CHARSET_BIT_IDX_TO_BIT_IN_WORD(idx_end) != CHARSET_BITS_PER_WORD - 1) {
+      mask = CHARSET_BIT_MASK_UP_TO_POS(CHARSET_BIT_IDX_TO_BIT_IN_WORD(idx_end));
+      mask |= CHARSET_BIT_POS_IN_WORD_MASK(CHARSET_BIT_IDX_TO_BIT_IN_WORD(idx_end));
+      cs[CHARSET_BIT_IDX_TO_WORD(idx_end)] &= mask;
+    }
+    /* Clear above, if any */
+    if (CHARSET_BIT_IDX_TO_WORD(idx_end) + 1 < CHARSET_WORDS) {
+      memset(cs + CHARSET_BIT_IDX_TO_WORD(idx_end) + 1, 0,
+             (CHARSET_WORDS - (CHARSET_BIT_IDX_TO_WORD(idx_end) + 1)) *
+             sizeof(HCharsetWord));
+    }
+  }
 }
 
 static inline void charset_set(HCharset cs, uint8_t pos, int val) {
-  cs[pos / (sizeof(*cs)*8)] =
+  cs[CHARSET_BIT_IDX_TO_WORD(pos)] =
     val
-    ? cs[pos / (sizeof(*cs)*8)] |  (1 << (pos % (sizeof(*cs)*8)))
-    : cs[pos / (sizeof(*cs)*8)] & ~(1 << (pos % (sizeof(*cs)*8)));
+    ? cs[CHARSET_BIT_IDX_TO_WORD(pos)] |  CHARSET_BIT_POS_IN_WORD_MASK(pos)
+    : cs[CHARSET_BIT_IDX_TO_WORD(pos)] & ~CHARSET_BIT_POS_IN_WORD_MASK(pos);
 }
 
 typedef unsigned int HHashValue;
@@ -424,7 +489,7 @@ struct HParserVtable_ {
   bool (*isValidCF)(void *env);
   bool (*compile_to_rvm)(HRVMProg *prog, void* env); // FIXME: forgot what the bool return value was supposed to mean.
   void (*desugar)(HAllocator *mm__, HCFStack *stk__, void *env);
-  bool (*llvm)(LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod, void *env);
+  bool (*llvm)(HAllocator *mm__, LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod, void *env);
   bool higher; // false if primitive
 };
 
