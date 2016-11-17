@@ -96,7 +96,7 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
   // Parse function is now declared; time to define it
   LLVMBuilderRef builder = LLVMCreateBuilder();
   // Translate the contents of the children of `parser` into their LLVM instruction equivalents
-  if (parser->vtable->llvm(builder, parse_func, mod, parser->env)) {
+  if (parser->vtable->llvm(mm__, builder, parse_func, mod, parser->env)) {
     // But first, verification
     char *error = NULL;
     LLVMVerifyModule(mod, LLVMAbortProcessAction, &error);
