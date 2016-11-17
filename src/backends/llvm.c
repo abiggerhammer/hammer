@@ -145,6 +145,378 @@ void h_llvm_free(HParser *parser) {
   llvm_parser->mod = NULL;
 }
 
+typedef enum {
+  /*
+   * Accept action; this entire range is in the charset.  This action type
+   * has no children and terminates handling the input character.
+   */
+  CHARSET_ACTION_ACCEPT,
+  /*
+   * Scan action; test input char against each set character in the charset.
+   * This action type has no children and terminates handling the input
+   * character.
+   */
+  CHARSET_ACTION_SCAN,
+  /*
+   * Complement action; invert the sense of the charset.  This action type
+   * has one child node, with the bounds unchanged and the portion of the
+   * charset within the bounds complemented.
+   */
+  CHARSET_ACTION_COMPLEMENT,
+  /*
+   * Split action; check whether the input char is above or below a split
+   * point, and branch into one of two children depending.
+   */
+  CHARSET_ACTION_SPLIT
+} llvm_charset_exec_plan_action_t;
+
+typedef struct llvm_charset_exec_plan_s llvm_charset_exec_plan_t;
+struct llvm_charset_exec_plan_s {
+  /*
+   * The charset at this node, with transforms such as range restriction
+   * or complementation applied.
+   */
+  HCharset cs;
+  /*
+   * Char values for the range of this node, and the split point if this
+   * is CHARSET_ACTION_SPLIT
+   */
+  uint8_t idx_start, idx_end, split_point;
+  /* Action to take at this node */
+  llvm_charset_exec_plan_action_t action;
+  /* Estimated cost metric */
+  int cost;
+  /* Children, if any (zero, one or two depending on action) */
+  llvm_charset_exec_plan_t *children[2];
+};
+
+/* Forward prototypes for charset llvm stuff */
+static void h_llvm_free_charset_exec_plan(HAllocator* mm__,
+                                          llvm_charset_exec_plan_t *cep);
+
+/*
+ * Check if this charset is eligible for CHARSET_ACTION_ACCEPT on a range
+ */
+
+static int h_llvm_charset_eligible_for_accept(HCharset cs, uint8_t idx_start, uint8_t idx_end) {
+  int eligible = 1, i;
+
+  for (i = idx_start; i <= idx_end; ++i) {
+    if (!(charset_isset(cs, (uint8_t)i))) {
+      eligible = 0;
+      break;
+    }
+  }
+
+  return eligible;
+}
+
+/*
+ * Estimate cost of CHARSET_ACTION_SCAN for this charset (~proportional to number of set chars, min 1)
+ */
+
+static int h_llvm_charset_estimate_scan_cost(HCharset cs, uint8_t idx_start, uint8_t idx_end) {
+  int i, cost;
+
+  cost = 1;
+  for (i = idx_start; i <= idx_end; ++i) {
+    if (charset_isset(cs, (uint8_t)i)) ++cost;
+  }
+
+  return cost;
+}
+
+/*
+ * Given a charset, optionally its parent containing range restrictions, and
+ * an allow_complement parameter, search for the best exec plan and write it
+ * to another (skeletal) charset which will receive an action and range.  If
+ * the action is CHARSET_ACTION_SPLIT, also output a split point.  Return a
+ * cost estimate.
+ */
+
+static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
+    llvm_charset_exec_plan_t *parent, llvm_charset_exec_plan_t *cep,
+    int allow_complement, uint8_t *split_point) {
+  int eligible_for_accept, best_cost;
+  int estimated_complement_cost, estimated_scan_cost, estimated_split_cost;
+  uint8_t idx_start, idx_end;
+  HCharset complement;
+  llvm_charset_exec_plan_t complement_cep;
+  llvm_charset_exec_plan_action_t chosen_action;
+
+  /* Check args */
+  if (!(mm__ && cep)) return -1;
+
+  /*
+   * The index bounds come from either the parent or maximal bounds by
+   * default.
+   */
+  if (parent) {
+    idx_start = parent->idx_start;
+    idx_end = parent->idx_end;
+  } else {
+    idx_start = 0;
+    idx_end = UINT8_MAX;
+  }
+
+  eligible_for_accept = h_llvm_charset_eligible_for_accept(cs, idx_start, idx_end);
+  if (eligible_for_accept) {
+    /* if we can use CHARSET_ACTION_ACCEPT, always do so */
+    cep->cs = copy_charset(mm__, cs);
+    charset_restrict_to_range(cep->cs, idx_start, idx_end);
+    cep->idx_start = idx_start;
+    cep->idx_end = idx_end;
+    cep->split_point = 0;
+    cep->cost = 1;
+    cep->action = CHARSET_ACTION_ACCEPT;
+    cep->children[0] = NULL;
+    cep->children[1] = NULL;
+
+    return cep->cost;
+  } else {
+    /*
+     * Estimate cost for CHARSET_ACTION_SCAN, and for the tree below
+     * CHARSET_ACTION_COMPLEMENT if we are eligible to use it.
+     */
+    estimated_scan_cost = h_llvm_charset_estimate_scan_cost(cs, idx_start, idx_end);
+    /* >= 0 is a flag we have a complement we may need to free later */
+    estimated_complement_cost = -1;
+    if (allow_complement) {
+      /* Complement the charset within the range */
+      memset(&complement_cep, 0, sizeof(complement_cep));
+      complement_cep.cs = copy_charset(mm__, cs);
+      charset_complement(complement_cep.cs);
+      charset_restrict_to_range(complement_cep.cs, idx_start, idx_end);
+      complement_cep.idx_start = idx_start;
+      complement_cep.idx_end = idx_end;
+      complement_cep.split_point = 0;
+      complement_cep.action = CHARSET_ACTION_COMPLEMENT;
+      complement_cep.children[0] = h_new(llvm_charset_exec_plan_t, 1);
+      memset(complement_cep.children[0], 0, sizeof(llvm_charset_exec_plan_t));
+      complement_cep.children[1] = NULL;
+      /*
+       * Find the child; the complement itself has cost 1; we set
+       * allow_complement = 0 so we never stack two complements
+       */
+      complement_cep.cost = 1 +
+        h_llvm_build_charset_exec_plan_impl(mm__, complement_cep.cs, &complement_cep,
+            complement_cep.children[0], 0, NULL);
+      estimated_complement_cost = complement_cep.cost;
+    }
+
+    /* Should we just terminate search below a certain scan cost perhaps? */
+
+    estimated_split_cost = -1;
+    /* TODO splits */
+
+    /* Pick the action type with the lowest cost */
+    best_cost = -1;
+    if (estimated_scan_cost >= 0 &&
+        (best_cost < 0 || estimated_scan_cost < best_cost)) {
+      chosen_action = CHARSET_ACTION_SCAN;
+      best_cost = estimated_scan_cost;
+    }
+
+    if (allow_complement && estimated_complement_cost >= 0 &&
+        (best_cost < 0 || estimated_complement_cost < best_cost)) {
+      chosen_action = CHARSET_ACTION_COMPLEMENT;
+      best_cost = estimated_complement_cost;
+    }
+
+    if (estimated_split_cost >= 0 &&
+        (best_cost < 0 || estimated_split_cost < best_cost)) {
+      chosen_action = CHARSET_ACTION_SPLIT;
+      best_cost = estimated_split_cost;
+    }
+
+    /* Fill out cep based on the chosen action */
+    switch (chosen_action) {
+      case CHARSET_ACTION_SCAN:
+        /* Set up a scan */
+        cep->cs = copy_charset(mm__, cs);
+        charset_restrict_to_range(cep->cs, idx_start, idx_end);
+        cep->idx_start = idx_start;
+        cep->idx_end = idx_end;
+        cep->split_point = 0;
+        cep->action = CHARSET_ACTION_SCAN;
+        cep->cost = estimated_scan_cost;
+        cep->children[0] = NULL;
+        cep->children[1] = NULL;
+        break;
+      case CHARSET_ACTION_COMPLEMENT:
+        /*
+         * We have a CEP filled out we can just copy over; be sure to set
+         * estimated_complement_cost = -1 so we know not to free it on the
+         * way out.
+         */
+        memcpy(cep, &complement_cep, sizeof(complement_cep));
+        memset(&complement_cep, 0, sizeof(complement_cep));
+        estimated_complement_cost = -1;
+        break;
+      case CHARSET_ACTION_SPLIT:
+        /* Not yet supported (TODO) */
+        best_cost = -1;
+        memset(cep, 0, sizeof(*cep));
+        if (split_point) *split_point = 0;
+        break;
+      default:
+        /* Not supported */
+        best_cost = -1;
+        memset(cep, 0, sizeof(*cep));
+        break;
+    }
+  }
+
+  if (estimated_complement_cost >= 0) {
+    /* We have a complement_cep we ended up not using; free its child */
+    h_llvm_free_charset_exec_plan(mm__, complement_cep.children[0]);
+    memset(&complement_cep, 0, sizeof(complement_cep));
+    estimated_complement_cost = -1;
+  }
+
+  return best_cost;
+}
+
+/*
+ * Build a charset exec plan for a charset
+ */
+
+static llvm_charset_exec_plan_t * h_llvm_build_charset_exec_plan(
+    HAllocator* mm__, HCharset cs) {
+  llvm_charset_exec_plan_t *cep = NULL;
+  int best_cost;
+
+  cep = h_new(llvm_charset_exec_plan_t, 1);
+  best_cost = h_llvm_build_charset_exec_plan_impl(mm__, cs, NULL, cep, 1, NULL);
+
+  if (best_cost < 0) {
+    /* h_llvm_build_charset_exec_plan_impl() failed */
+    h_free(cep);
+    cep = NULL;
+  }
+
+  return cep;
+}
+
+/*
+ * Consistency-check a charset exec plan
+ */
+
+static bool h_llvm_check_charset_exec_plan(llvm_charset_exec_plan_t *cep) {
+  bool consistent = false;
+  uint8_t i;
+
+  if (cep) {
+    /* Check that we have a charset */
+    if (!(cep->cs)) goto done;
+    /* Check that the range makes sense */
+    if (cep->idx_start > cep->idx_end) goto done;
+    /* Check that the charset is empty outside the range */
+    for (i = 0; i < cep->idx_start; ++i) {
+      /* Failed check */
+      if (charset_isset(cep->cs, i)) goto done;
+      /* Prevent wraparound */
+      if (i == UINT8_MAX) break;
+    }
+
+    if (cep->idx_end < UINT8_MAX) {
+      /* We break at the end */
+      for (i = cep->idx_end + 1; ; ++i) {
+        /* Failed check */
+        if (charset_isset(cep->cs, i)) goto done;
+        /* Prevent wraparound */
+        if (i == UINT8_MAX) break;
+      }
+    }
+
+    /* Minimum cost estimate is 1 */
+    if (cep->cost < 1) goto done;
+
+    /* No split point unlesswe're CHARSET_ACTION_SPLIT */
+    if (cep->action != CHARSET_ACTION_SPLIT && cep->split_point != 0) goto done;
+
+    /* Action type dependent part */
+    switch (cep->action) {
+      case CHARSET_ACTION_ACCEPT:
+      case CHARSET_ACTION_SCAN:
+        /* These are always okay and have no children */
+        if (cep->children[0] || cep->children[1]) goto done;
+        consistent = true;
+        break;
+      case CHARSET_ACTION_COMPLEMENT:
+        /* This has one child, which should have the same range */
+        if (cep->children[1]) goto done;
+        if (cep->children[0]) {
+          if (cep->children[0]->idx_start == cep->idx_start &&
+              cep->children[0]->idx_end == cep->idx_end) {
+            /* The cost cannot be lower than the child */
+            if (cep->cost < cep->children[0]->cost) goto done;
+            /* Okay, we're consistent if the child node is */
+            consistent = h_llvm_check_charset_exec_plan(cep->children[0]);
+          }
+        }
+        break;
+      case CHARSET_ACTION_SPLIT:
+        /* This has two children, which should split the range */
+        if (cep->children[0] && cep->children[1]) {
+          if (cep->children[0]->idx_start == cep->idx_start &&
+              cep->children[0]->idx_end + 1 == cep->children[1]->idx_start &&
+              cep->children[1]->idx_end == cep->idx_end) {
+            /* The split point must match the children */
+            if (cep->split_point != cep->children[0]->idx_end) goto done;
+            /*
+             * The cost must be in the range defined by the children, + 1 for
+             * the comparison at most
+             */
+            int child_min_cost = (cep->children[0]->cost < cep->children[1]->cost) ?
+              cep->children[0]->cost : cep->children[1]->cost;
+            int child_max_cost = (cep->children[0]->cost > cep->children[1]->cost) ?
+              cep->children[0]->cost : cep->children[1]->cost;
+            if ((cep->cost < child_min_cost) || (cep->cost > child_max_cost + 1)) goto done;
+            /* Okay, we're consistent if both children are */
+            consistent = h_llvm_check_charset_exec_plan(cep->children[0]) &&
+                         h_llvm_check_charset_exec_plan(cep->children[1]);
+          }
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+ done:
+  return consistent;
+}
+
+/*
+ * Free a charset exec plan using the supplied allocator
+ */
+
+static void h_llvm_free_charset_exec_plan(HAllocator* mm__,
+                                          llvm_charset_exec_plan_t *cep) {
+  int n_children, i;
+
+  if (cep) {
+    n_children = 0;
+    switch (cep->action) {
+      case CHARSET_ACTION_COMPLEMENT:
+        n_children = 1;
+        break;
+      case CHARSET_ACTION_SPLIT:
+        n_children = 2;
+        break;
+      default:
+        break;
+    }
+
+    for (i = 0; i < n_children; ++i) {
+      h_llvm_free_charset_exec_plan(mm__, cep->children[i]);
+    }
+    h_free(cep->cs);
+    h_free(cep);
+  }
+}
+
 /*
  * Construct LLVM IR to decide if a runtime value is a member of a compile-time
  * character set, and branch depending on the result.
@@ -176,6 +548,19 @@ void h_llvm_make_charset_membership_test(HAllocator* mm__,
    * TODO: actually do this; right now for the sake of a first pass we're just
    * testing r == x for every x in cs.
    */
+
+  /* Try building a charset exec plan */
+  llvm_charset_exec_plan_t *cep = h_llvm_build_charset_exec_plan(mm__, cs);
+  if (cep) {
+    /* For now just check it and free it */
+    bool ok = h_llvm_check_charset_exec_plan(cep);
+    if (ok) fprintf(stderr, "cep %p passes consistency check\n", (void *)cep);
+    else fprintf(stderr, "cep %p fails consistency check\n", (void *)cep);
+    h_llvm_free_charset_exec_plan(mm__, cep);
+    cep = NULL;
+  } else {
+    fprintf(stderr, "got null from h_llvm_build_charset_exec_plan()\n");
+  }
 
   for (int i = 0; i < 256; ++i) {
     if (charset_isset(cs, i)) {
