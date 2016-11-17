@@ -21,10 +21,16 @@ static void test_ch(gconstpointer backend) {
 }
 
 static void test_ch_range(gconstpointer backend) {
-  const HParser *range_ = h_ch_range('a', 'c');
+  const HParser *range_1 = h_ch_range('a', 'c');
+  const HParser *range_2 = h_ch_range('a', 'z');
+  const HParser *range_3 = h_ch_range('A', 'z');
 
-  g_check_parse_match(range_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
-  g_check_parse_failed(range_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
+  g_check_parse_match(range_1, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_failed(range_1, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
+  g_check_parse_match(range_2, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_failed(range_2, (HParserBackend)GPOINTER_TO_INT(backend), "C", 1);
+  g_check_parse_match(range_3, (HParserBackend)GPOINTER_TO_INT(backend), "B", 1, "u0x42");
+  g_check_parse_failed(range_3, (HParserBackend)GPOINTER_TO_INT(backend), "2", 1);
 }
 
 //@MARK_START
@@ -964,4 +970,6 @@ void register_parser_tests(void) {
 
   g_test_add_data_func("/core/parser/llvm/ch", GINT_TO_POINTER(PB_LLVM), test_ch);
   g_test_add_data_func("/core/parser/llvm/ch_range", GINT_TO_POINTER(PB_LLVM), test_ch_range);
+  g_test_add_data_func("/core/parser/llvm/in", GINT_TO_POINTER(PB_LLVM), test_in);
+  g_test_add_data_func("/core/parser/llvm/not_in", GINT_TO_POINTER(PB_LLVM), test_not_in);
 }
