@@ -182,13 +182,13 @@ typedef HCharsetWord *HCharset;
   ((~CHARSET_BIT_MASK_UP_TO_POS((bit))) & CHARSET_WHOLE_WORD_MASK)
 
 static inline HCharset copy_charset(HAllocator *mm__, HCharset in) {
-  HCharset cs = h_new(unsigned int, CHARSET_SIZE);
+  HCharset cs = h_new(HCharsetWord, CHARSET_WORDS);
   memcpy(cs, in, CHARSET_SIZE);
   return cs;
 }
 
 static inline HCharset new_charset(HAllocator* mm__) {
-  HCharset cs = h_new(unsigned int, CHARSET_SIZE);
+  HCharset cs = h_new(HCharsetWord, CHARSET_WORDS);
   memset(cs, 0, CHARSET_SIZE);
   return cs;
 }
