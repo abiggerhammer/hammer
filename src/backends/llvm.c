@@ -518,6 +518,148 @@ static void h_llvm_free_charset_exec_plan(HAllocator* mm__,
 }
 
 /*
+ * Pretty-print a charset exec plan to stdout
+ */
+
+static void h_llvm_pretty_print_charset_exec_plan_impl(HAllocator *mm__, llvm_charset_exec_plan_t *cep,
+                                                       const char *pfx_on_action_line, const char *pfx,
+                                                       int depth) {
+  const char *action_string = NULL, *pfx_incr = NULL;
+  const char *pfx_incr_child_action = NULL, *pfx_incr_last_child = NULL;
+  char *next_pfx = NULL, *next_pfx_child_action_line = NULL, *next_pfx_last_child = NULL;
+  int n_children = 0, i, j, next_pfx_len;
+  uint8_t ch;
+
+  if (!cep) {
+    action_string = "NULL";
+  } else {
+    switch (cep->action) {
+      case CHARSET_ACTION_ACCEPT:
+        action_string = "CHARSET_ACTION_ACCEPT";
+        break;
+      case CHARSET_ACTION_SCAN:
+        action_string = "CHARSET_ACTION_SCAN";
+        break;
+      case CHARSET_ACTION_COMPLEMENT:
+        action_string = "CHARSET_ACTION_COMPLEMENT";
+        n_children = 1;
+        break;
+      case CHARSET_ACTION_SPLIT:
+        action_string = "CHARSET_ACTION_SPLIT";
+        n_children = 2;
+        break;
+      default:
+        action_string = "UNKNOWN";
+        break;
+    }
+  }
+
+  if (n_children > 0) {
+    pfx_incr = " | ";
+  } else {
+    pfx_incr = "   ";
+  }
+
+
+  if (depth > 0 || strlen(pfx_on_action_line) > 0) {
+    printf("%s-%s\n", pfx_on_action_line, action_string);
+    pfx_incr = (n_children > 0) ? " | " : "   ";
+    pfx_incr_child_action = " +-";
+    pfx_incr_last_child = "   ";
+  } else {
+    printf("%s\n", action_string);
+    pfx_incr = (n_children > 0) ? "| " : "  ";
+    pfx_incr_child_action = "+-";
+    pfx_incr_last_child = "  ";
+  }
+
+  /*
+   * Now do the charset, 8 lines of 32 bits with spaces in between to
+   * fit [] range markers and | split point marker.
+   */
+  int open = 0, close = 0, split = 0;
+  for (ch = 0, i = 0; i < 8; ++i) {
+    /* Special case: [ should go before first char on line */
+    if (ch == cep->idx_start) {
+      printf("%s%s [", pfx, pfx_incr);
+    } else {
+      printf("%s%s  ", pfx, pfx_incr);
+    }
+    for (j = 0; j < 32; ++j, ++ch) {
+      open = close = split = 0;
+      /* Figure out markers, avoid wraparound */
+      if (cep->idx_start != 0 && ch + 1 == cep->idx_start && j > 0) {
+        /* There should be a [ right after this char */
+        open = 1;
+      } else if (ch == cep->idx_end) {
+        /* There should be a ] right after this char */
+        close = 1;
+      } else if (ch == cep->split_point &&
+                 cep->action == CHARSET_ACTION_SPLIT) {
+        /* There should be a | right after this char */
+        split = 1;
+      }
+
+      if (charset_isset(cep->cs, ch)) printf("X");
+      else printf(".");
+
+      if (open) printf("[");
+      else if (close) printf("]");
+      else if (split) printf("|");
+      else printf(" ");
+    }
+    printf("\n");
+  }
+
+  if (cep->action == CHARSET_ACTION_SPLIT) {
+    printf("%s%s idx_start = %u, split_point = %u, idx_end = %u\n",
+           pfx, pfx_incr, cep->idx_start, cep->split_point, cep->idx_end);
+  } else {
+    printf("%s%s idx_start = %u, idx_end = %u\n",
+           pfx, pfx_incr, cep->idx_start, cep->idx_end);
+  }
+
+  printf("%s%s cost = %d\n", pfx, pfx_incr, cep->cost);
+
+  if (n_children > 0) {
+    if (n_children > 1) {
+      next_pfx_len = strlen(pfx) + strlen(pfx_incr) + 1;
+      next_pfx = h_new(char, next_pfx_len);
+      snprintf(next_pfx, next_pfx_len, "%s%s", pfx, pfx_incr);
+    } else {
+      /* Won't be needed */
+      next_pfx = NULL;
+    }
+    next_pfx_len = strlen(pfx) + strlen(pfx_incr_child_action) + 1;
+    next_pfx_child_action_line = h_new(char, next_pfx_len);
+    snprintf(next_pfx_child_action_line, next_pfx_len,
+             "%s%s", pfx, pfx_incr_child_action);
+    next_pfx_len = strlen(pfx) + strlen(pfx_incr_last_child) + 1;
+    next_pfx_last_child = h_new(char, next_pfx_len);
+    snprintf(next_pfx_last_child, next_pfx_len,
+             "%s%s", pfx, pfx_incr_last_child);
+
+    for (i = 0; i < n_children; ++i) {
+      /* Space things out */
+      printf("%s%s\n", pfx, pfx_incr);
+      h_llvm_pretty_print_charset_exec_plan_impl(mm__, cep->children[i],
+          next_pfx_child_action_line, (i + 1 == n_children) ? next_pfx_last_child : next_pfx,
+          depth + 1);
+    }
+
+    if (next_pfx) h_free(next_pfx);
+    h_free(next_pfx_last_child);
+    h_free(next_pfx_child_action_line);
+  }
+}
+
+static void h_llvm_pretty_print_charset_exec_plan(HAllocator *mm__, llvm_charset_exec_plan_t *cep) {
+  /* Start at depth 0, and always emit an initial newline */
+  printf("\n");
+  h_llvm_pretty_print_charset_exec_plan_impl(mm__, cep, "", "", 0);
+}
+
+/*
  * Construct LLVM IR to decide if a runtime value is a member of a compile-time
  * character set, and branch depending on the result.
  *
@@ -556,6 +698,7 @@ void h_llvm_make_charset_membership_test(HAllocator* mm__,
     bool ok = h_llvm_check_charset_exec_plan(cep);
     if (ok) fprintf(stderr, "cep %p passes consistency check\n", (void *)cep);
     else fprintf(stderr, "cep %p fails consistency check\n", (void *)cep);
+    h_llvm_pretty_print_charset_exec_plan(mm__, cep);
     h_llvm_free_charset_exec_plan(mm__, cep);
     cep = NULL;
   } else {
