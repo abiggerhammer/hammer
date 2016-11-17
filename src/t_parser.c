@@ -24,6 +24,7 @@ static void test_ch_range(gconstpointer backend) {
   const HParser *range_1 = h_ch_range('a', 'c');
   const HParser *range_2 = h_ch_range('a', 'z');
   const HParser *range_3 = h_ch_range('A', 'z');
+  const HParser *range_all = h_ch_range(0, 255);
 
   g_check_parse_match(range_1, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
   g_check_parse_failed(range_1, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
@@ -31,6 +32,8 @@ static void test_ch_range(gconstpointer backend) {
   g_check_parse_failed(range_2, (HParserBackend)GPOINTER_TO_INT(backend), "C", 1);
   g_check_parse_match(range_3, (HParserBackend)GPOINTER_TO_INT(backend), "B", 1, "u0x42");
   g_check_parse_failed(range_3, (HParserBackend)GPOINTER_TO_INT(backend), "2", 1);
+  /* range_all never fails anything */
+  g_check_parse_match(range_all, (HParserBackend)GPOINTER_TO_INT(backend), "B", 1, "u0x42");
 }
 
 //@MARK_START
