@@ -22,7 +22,9 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
   return make_result(state->arena, result);
 }
 
-static bool bits_llvm(LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod, void* env) {
+static bool bits_llvm(HAllocator *mm__,
+                      LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod,
+                      void* env) {
   /*   %result = alloca %struct.HParsedToken_*, align 8 */
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wunused-variable"
