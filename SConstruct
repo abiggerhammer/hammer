@@ -134,7 +134,7 @@ llvm_config_version = subprocess.Popen('%s --version' % env["LLVM_CONFIG"], \
                                        shell=True, \
                                        stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate()
 if LooseVersion(llvm_config_version[0]) < LooseVersion("3.6"):
-   print "This LLVM version %s is too old" % llvm_config_version
+   print "This LLVM version %s is too old" % llvm_config_version[0].strip()
    Exit(1)
 
 if LooseVersion(llvm_config_version[0]) < LooseVersion("3.9") and \
