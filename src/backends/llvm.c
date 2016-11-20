@@ -158,6 +158,11 @@ typedef enum {
    */
   CHARSET_ACTION_SCAN,
   /*
+   * Bitmap action; test input char against a bitmap in the IR at fixed
+   * cost.
+   */
+  CHARSET_ACTION_BITMAP,
+  /*
    * Complement action; invert the sense of the charset.  This action type
    * has one child node, with the bounds unchanged and the portion of the
    * charset within the bounds complemented.
@@ -191,6 +196,12 @@ struct llvm_charset_exec_plan_s {
 };
 
 /* Forward prototypes for charset llvm stuff */
+static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
+    llvm_charset_exec_plan_t *parent, llvm_charset_exec_plan_t *cep,
+    int allow_complement, uint8_t *split_point);
+static llvm_charset_exec_plan_t * h_llvm_build_charset_exec_plan_impl_alloc(
+    HAllocator* mm__, llvm_charset_exec_plan_t *parent, HCharset cs,
+    uint8_t idx_start, uint8_t idx_end, int allow_complement);
 static void h_llvm_free_charset_exec_plan(HAllocator* mm__,
                                           llvm_charset_exec_plan_t *cep);
 
@@ -227,6 +238,164 @@ static int h_llvm_charset_estimate_scan_cost(HCharset cs, uint8_t idx_start, uin
 }
 
 /*
+ * Given a skeletal CHARSET_ACTION_SPLIT node from h_llvm_build_charset_exec_plan_impl(),
+ * binary search for the best split point we can find and return the cost metric.
+ * Unfortunately the search space is quite large, so we're going to use some silly
+ * heuristics here such as looking for the longest run of present or absent chars at
+ * one end of a charset, and proposing it as a split, or just trying the midpoint.
+ * It may be possible to do better.
+ */
+
+static int h_llvm_find_best_split(HAllocator* mm__, llvm_charset_exec_plan_t *split) {
+  int rv, best_end_run, isset, i, contiguous;
+  uint8_t best_end_run_split, midpoint;
+  llvm_charset_exec_plan_t *best_left, *best_right, *left, *right;
+  int best_cost, cost;
+
+  /* Sanity-check: we should be a split with a range at least two indices long */
+  if (!split || split->action != CHARSET_ACTION_SPLIT) return -1;
+  if (split->idx_end <= split->idx_start) return -1;
+
+  /* Find the longest end run; split a run of length 1 at the left end as a
+   * fallback, since there's always a run of length 1 at each end. */
+  best_end_run = 1;
+  best_end_run_split = split->idx_start;
+  contiguous = 0;
+  /* Try the low end */
+  i = 0;
+  while (i <= split->idx_end - split->idx_start &&
+         (charset_isset(split->cs, split->idx_start + i) ==
+          charset_isset(split->cs, split->idx_start))) ++i;
+  if (i <= split->idx_end - split->idx_start) {
+    /* This run has length i */
+    if (i > best_end_run) {
+      best_end_run = i;
+      /*
+       * -1 since split points are last index of left child, and i
+       * is first index that wasn't in the run
+       */
+      best_end_run_split = split->idx_start + i - 1;
+    }
+
+    /* Now the same thing from the high end */
+    i = 0;
+    while (i <= split->idx_end - split->idx_start &&
+           (charset_isset(split->cs, split->idx_end - i) ==
+            charset_isset(split->cs, split->idx_end))) ++i;
+    if (i <= split->idx_end - split->idx_start && i > best_end_run) {
+      best_end_run = i;
+      best_end_run_split = split->idx_end - i;
+    }
+  } else {
+    /* Wow, contiguous - any split will turn out well - just use the midpoint */
+    contiguous = 1;
+  }
+
+  /* Initialize, start trying things */
+  best_left = best_right = left = right = NULL;
+  rv = -1;
+
+  /* Try a midpoint split */
+  midpoint = split->idx_start + (split->idx_end - split->idx_start) / 2;
+  left = h_llvm_build_charset_exec_plan_impl_alloc(mm__, split, split->cs,
+      split->idx_start, midpoint, 1);
+  right = h_llvm_build_charset_exec_plan_impl_alloc(mm__, split, split->cs,
+      midpoint + 1, split->idx_end, 1);
+  if (left && right) {
+    /* Cost of the split == 1 + max(left->cost, right->cost) */
+    cost = left->cost;
+    if (right->cost > cost) cost = right->cost;
+    ++cost;
+    /* We haven't tried the end-run one yet, so always accept this */
+    best_left = left;
+    best_right = right;
+    best_cost = cost;
+    left = right = NULL;
+  } else goto err;
+
+  /*
+   * Try an end-run split; if we decided we had a contiguous run earlier,
+   * all are equally good, so don't bother and just use the midpoint
+   */
+
+  if (!contiguous) {
+    /*
+     * Sanity-check the indices; error out if the scanner gave us
+     * something silly
+     */
+    if (best_end_run_split < split->idx_start ||
+        best_end_run_split >= split->idx_end) goto err;
+    left = h_llvm_build_charset_exec_plan_impl_alloc(mm__, split, split->cs,
+        split->idx_start, best_end_run_split, 1);
+    right = h_llvm_build_charset_exec_plan_impl_alloc(mm__, split, split->cs,
+       best_end_run_split + 1, split->idx_end, 1);
+    if (left && right) {
+      /* Cost of the split == 1 + max(left->cost, right->cost) */
+      cost = left->cost;
+      if (right->cost > cost) cost = right->cost;
+      ++cost;
+      /* Check if against what we already have */
+      if (cost < best_cost) {
+        if (best_left) h_llvm_free_charset_exec_plan(mm__, best_left);
+        if (best_right) h_llvm_free_charset_exec_plan(mm__, best_right);
+        best_left = left;
+        best_right = right;
+        best_cost = cost;
+        left = right = NULL;
+      }
+    } else goto err;
+  }
+
+  /* Set up the split node with our best results */
+  split->cost = best_cost;
+  split->children[0] = best_left;
+  split->children[1] = best_right;
+  split->split_point = best_left->idx_end;
+  best_left = best_right = NULL;
+  rv = split->cost;
+
+ err:
+  /* Error/cleanup case */
+  if (left) h_llvm_free_charset_exec_plan(mm__, left);
+  if (right) h_llvm_free_charset_exec_plan(mm__, right);
+  if (best_left) h_llvm_free_charset_exec_plan(mm__, best_left);
+  if (best_right) h_llvm_free_charset_exec_plan(mm__, best_right);
+
+  return rv;
+}
+
+/*
+ * Setup call to h_llvm_build_charset_exec_plan_impl(), while allocating a new
+ * llvm_charset_exec_plan_t.
+ */
+static llvm_charset_exec_plan_t * h_llvm_build_charset_exec_plan_impl_alloc(
+    HAllocator* mm__, llvm_charset_exec_plan_t *parent, HCharset cs,
+    uint8_t idx_start, uint8_t idx_end, int allow_complement) {
+  int cost;
+  llvm_charset_exec_plan_t *cep;
+
+  if (!mm__) return NULL;
+  if (!cs) return NULL;
+  if (idx_start > idx_end) return NULL;
+
+  cep = h_new(llvm_charset_exec_plan_t, 1);
+  memset(cep, 0, sizeof(*cep));
+  cep->cs = copy_charset(mm__, cs);
+  cep->idx_start = idx_start;
+  cep->idx_end = idx_end;
+  charset_restrict_to_range(cep->cs, idx_start, idx_end);
+  cost = h_llvm_build_charset_exec_plan_impl(mm__, cep->cs, parent, cep,
+      allow_complement, NULL);
+  if (cost >= 0) cep->cost = cost;
+  else {
+    h_llvm_free_charset_exec_plan(mm__, cep);
+    cep = NULL;
+  }
+
+  return cep;
+}
+
+/*
  * Given a charset, optionally its parent containing range restrictions, and
  * an allow_complement parameter, search for the best exec plan and write it
  * to another (skeletal) charset which will receive an action and range.  If
@@ -239,9 +408,10 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
     int allow_complement, uint8_t *split_point) {
   int eligible_for_accept, best_cost;
   int estimated_complement_cost, estimated_scan_cost, estimated_split_cost;
+  int estimated_bitmap_cost;
   uint8_t idx_start, idx_end;
   HCharset complement;
-  llvm_charset_exec_plan_t complement_cep;
+  llvm_charset_exec_plan_t complement_cep, split_cep;
   llvm_charset_exec_plan_action_t chosen_action;
 
   /* Check args */
@@ -249,9 +419,17 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
 
   /*
    * The index bounds come from either the parent or maximal bounds by
-   * default.
+   * default.  Exception is the case that we are a child of a split, in
+   * which case h_llvm_find_best_split() should have set bounds in cep.
    */
-  if (parent) {
+  if (parent && parent->action == CHARSET_ACTION_SPLIT &&
+      ((cep->idx_start == parent->idx_start &&
+        cep->idx_end < parent->idx_end) ||
+       (cep->idx_start > parent->idx_start &&
+        cep->idx_end == parent->idx_end))) {
+    idx_start = cep->idx_start;
+    idx_end = cep->idx_end;
+  } else if (parent) {
     idx_start = parent->idx_start;
     idx_end = parent->idx_end;
   } else {
@@ -267,7 +445,8 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
     cep->idx_start = idx_start;
     cep->idx_end = idx_end;
     cep->split_point = 0;
-    cep->cost = 1;
+    /* Acceptance (or rejection, under a complement) is free */
+    cep->cost = 0;
     cep->action = CHARSET_ACTION_ACCEPT;
     cep->children[0] = NULL;
     cep->children[1] = NULL;
@@ -279,6 +458,11 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
      * CHARSET_ACTION_COMPLEMENT if we are eligible to use it.
      */
     estimated_scan_cost = h_llvm_charset_estimate_scan_cost(cs, idx_start, idx_end);
+    /*
+     * We can always use CHARSET_ACTION_BITMAP; this constant controls how
+     * strongly we prefer it over the compare-and-branch approach.
+     */
+    estimated_bitmap_cost = 6;
     /* >= 0 is a flag we have a complement we may need to free later */
     estimated_complement_cost = -1;
     if (allow_complement) {
@@ -299,20 +483,28 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
       memset(complement_cep.children[0], 0, sizeof(llvm_charset_exec_plan_t));
       complement_cep.children[1] = NULL;
       /*
-       * Find the child; the complement itself has cost 1; we set
-       * allow_complement = 0 so we never stack two complements
+       * Find the child; the complement has cost 0 since it just swizzles success
+       * and fail output basic blocks; it's important we test for complement last
+       * below then, so we break ties in favor of not stacking complements up.  We
+       * set allow_complement = 0 so we never stack two complements.
        */
-      complement_cep.cost = 1 +
-        h_llvm_build_charset_exec_plan_impl(mm__, child_cs, &complement_cep,
-            complement_cep.children[0], 0, NULL);
+      complement_cep.cost = h_llvm_build_charset_exec_plan_impl(mm__, child_cs, &complement_cep,
+          complement_cep.children[0], 0, NULL);
       estimated_complement_cost = complement_cep.cost;
       h_free(child_cs);
     }
 
-    /* Should we just terminate search below a certain scan cost perhaps? */
-
-    estimated_split_cost = -1;
-    /* TODO splits */
+    /* Set up split node */
+    split_cep.cs = copy_charset(mm__, cs);
+    charset_restrict_to_range(split_cep.cs, idx_start, idx_end);
+    split_cep.idx_start = idx_start;
+    split_cep.idx_end = idx_end;
+    split_cep.split_point = 0;
+    split_cep.action = CHARSET_ACTION_SPLIT;
+    split_cep.cost = -1;
+    split_cep.children[0] = NULL;
+    split_cep.children[1] = NULL;
+    estimated_split_cost = h_llvm_find_best_split(mm__, &split_cep);
 
     /* Pick the action type with the lowest cost */
     best_cost = -1;
@@ -322,16 +514,22 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
       best_cost = estimated_scan_cost;
     }
 
-    if (allow_complement && estimated_complement_cost >= 0 &&
-        (best_cost < 0 || estimated_complement_cost < best_cost)) {
-      chosen_action = CHARSET_ACTION_COMPLEMENT;
-      best_cost = estimated_complement_cost;
+    if (estimated_bitmap_cost >= 0 &&
+        (best_cost < 0 || estimated_bitmap_cost < best_cost)) {
+      chosen_action = CHARSET_ACTION_BITMAP;
+      best_cost = estimated_bitmap_cost;
     }
 
     if (estimated_split_cost >= 0 &&
         (best_cost < 0 || estimated_split_cost < best_cost)) {
       chosen_action = CHARSET_ACTION_SPLIT;
       best_cost = estimated_split_cost;
+    }
+
+    if (allow_complement && estimated_complement_cost >= 0 &&
+        (best_cost < 0 || estimated_complement_cost < best_cost)) {
+      chosen_action = CHARSET_ACTION_COMPLEMENT;
+      best_cost = estimated_complement_cost;
     }
 
     /* Fill out cep based on the chosen action */
@@ -348,6 +546,18 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
         cep->children[0] = NULL;
         cep->children[1] = NULL;
         break;
+      case CHARSET_ACTION_BITMAP:
+        /* Set up a bitmap */
+        cep->cs = copy_charset(mm__, cs);
+        charset_restrict_to_range(cep->cs, idx_start, idx_end);
+        cep->idx_start = idx_start;
+        cep->idx_end = idx_end;
+        cep->split_point = 0;
+        cep->action = CHARSET_ACTION_BITMAP;
+        cep->cost = estimated_bitmap_cost;
+        cep->children[0] = NULL;
+        cep->children[1] = NULL;
+        break;
       case CHARSET_ACTION_COMPLEMENT:
         /*
          * We have a CEP filled out we can just copy over; be sure to set
@@ -359,10 +569,14 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
         estimated_complement_cost = -1;
         break;
       case CHARSET_ACTION_SPLIT:
-        /* Not yet supported (TODO) */
-        best_cost = -1;
-        memset(cep, 0, sizeof(*cep));
-        if (split_point) *split_point = 0;
+        /*
+         * We have a CEP filled out we can just copy over; be sure to set
+         * estimated_split_cost = -1 so we know not to free it on the way
+         * out.
+         */
+        memcpy(cep, &split_cep, sizeof(split_cep));
+        memset(&split_cep, 0, sizeof(split_cep));
+        estimated_split_cost = -1;
         break;
       default:
         /* Not supported */
@@ -372,11 +586,29 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
     }
   }
 
+  /* Free temporary CEPs if needed */
+
   if (estimated_complement_cost >= 0) {
-    /* We have a complement_cep we ended up not using; free its child */
+    /*
+     * We have a complement_cep we ended up not using; free its child and
+     * charset
+     */
     h_llvm_free_charset_exec_plan(mm__, complement_cep.children[0]);
+    h_free(complement_cep.cs);
     memset(&complement_cep, 0, sizeof(complement_cep));
     estimated_complement_cost = -1;
+  }
+
+  if (estimated_split_cost >= 0) {
+    /*
+     * We have a split_cep we ended up not using; free its children and
+     * charset.
+     */
+    h_llvm_free_charset_exec_plan(mm__, split_cep.children[0]);
+    h_llvm_free_charset_exec_plan(mm__, split_cep.children[1]);
+    h_free(split_cep.cs);
+    memset(&split_cep, 0, sizeof(split_cep));
+    estimated_split_cost = -1;
   }
 
   return best_cost;
@@ -444,6 +676,7 @@ static bool h_llvm_check_charset_exec_plan(llvm_charset_exec_plan_t *cep) {
     switch (cep->action) {
       case CHARSET_ACTION_ACCEPT:
       case CHARSET_ACTION_SCAN:
+      case CHARSET_ACTION_BITMAP:
         /* These are always okay and have no children */
         if (cep->children[0] || cep->children[1]) goto done;
         consistent = true;
@@ -544,6 +777,9 @@ static void h_llvm_pretty_print_charset_exec_plan_impl(HAllocator *mm__, llvm_ch
         break;
       case CHARSET_ACTION_SCAN:
         action_string = "CHARSET_ACTION_SCAN";
+        break;
+      case CHARSET_ACTION_BITMAP:
+        action_string = "CHARSET_ACTION_BITMAP";
         break;
       case CHARSET_ACTION_COMPLEMENT:
         action_string = "CHARSET_ACTION_COMPLEMENT";
