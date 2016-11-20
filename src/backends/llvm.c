@@ -380,11 +380,15 @@ static llvm_charset_exec_plan_t * h_llvm_build_charset_exec_plan_impl_alloc(
 
   cep = h_new(llvm_charset_exec_plan_t, 1);
   memset(cep, 0, sizeof(*cep));
-  cep->cs = copy_charset(mm__, cs);
+  cep->cs = NULL;
+  /*
+   * Initializing these is important; if the parent is CHARSET_ACTION_SPLIT,
+   * these are how h_llvm_build_charset_exec_plan_impl() knows the range for
+   * the child it's constructing.
+   */
   cep->idx_start = idx_start;
   cep->idx_end = idx_end;
-  charset_restrict_to_range(cep->cs, idx_start, idx_end);
-  cost = h_llvm_build_charset_exec_plan_impl(mm__, cep->cs, parent, cep,
+  cost = h_llvm_build_charset_exec_plan_impl(mm__, cs, parent, cep,
       allow_complement, NULL);
   if (cost >= 0) cep->cost = cost;
   else {
