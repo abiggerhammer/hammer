@@ -198,7 +198,8 @@ static inline void charset_complement(HCharset cs) {
 }
 
 static inline int charset_isset(HCharset cs, uint8_t pos) {
-  return !!(cs[CHARSET_BIT_IDX_TO_WORD(pos)] & CHARSET_BIT_POS_IN_WORD_MASK(pos));
+  return !!(cs[CHARSET_BIT_IDX_TO_WORD(pos)] &
+      CHARSET_BIT_POS_IN_WORD_MASK(CHARSET_BIT_IDX_TO_BIT_IN_WORD(pos)));
 }
 
 static inline void charset_restrict_to_range(HCharset cs, uint8_t idx_start, uint8_t idx_end) {
@@ -236,8 +237,10 @@ static inline void charset_restrict_to_range(HCharset cs, uint8_t idx_start, uin
 static inline void charset_set(HCharset cs, uint8_t pos, int val) {
   cs[CHARSET_BIT_IDX_TO_WORD(pos)] =
     val
-    ? cs[CHARSET_BIT_IDX_TO_WORD(pos)] |  CHARSET_BIT_POS_IN_WORD_MASK(pos)
-    : cs[CHARSET_BIT_IDX_TO_WORD(pos)] & ~CHARSET_BIT_POS_IN_WORD_MASK(pos);
+    ? cs[CHARSET_BIT_IDX_TO_WORD(pos)] |  CHARSET_BIT_POS_IN_WORD_MASK(
+        CHARSET_BIT_IDX_TO_BIT_IN_WORD(pos))
+    : cs[CHARSET_BIT_IDX_TO_WORD(pos)] & ~CHARSET_BIT_POS_IN_WORD_MASK(
+        CHARSET_BIT_IDX_TO_BIT_IN_WORD(pos));
 }
 
 typedef unsigned int HHashValue;
