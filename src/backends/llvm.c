@@ -666,8 +666,8 @@ static bool h_llvm_check_charset_exec_plan(llvm_charset_exec_plan_t *cep) {
       }
     }
 
-    /* Minimum cost estimate is 1 */
-    if (cep->cost < 1) goto done;
+    /* Minimum cost estimate is 0; complements and accepts can be free */
+    if (cep->cost < 0) goto done;
 
     /* No split point unlesswe're CHARSET_ACTION_SPLIT */
     if (cep->action != CHARSET_ACTION_SPLIT && cep->split_point != 0) goto done;
