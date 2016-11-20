@@ -128,8 +128,11 @@ if GetOption("coverage"):
     if env["CC"] == "gcc":
         env.Append(LIBS=['gcov'])
     else:
-        env.ParseConfig('%s --cflags --ldflags --libs core executionengine mcjit analysis x86codegen x86info' % \
-                        env["LLVM_CONFIG"])
+        # XXX Why do need this with --coverage when we're doing it anyway?
+        if GetOption("use_llvm"):
+            env.ParseConfig('%s --cflags --ldflags --libs core executionengine mcjit analysis x86codegen x86info' % \
+                            env["LLVM_CONFIG"])
+
 
 if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",
