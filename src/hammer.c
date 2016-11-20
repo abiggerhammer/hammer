@@ -31,7 +31,23 @@ static HParserBackendVTable *backends[PB_MAX + 1] = {
   &h__llk_backend_vtable,
   &h__lalr_backend_vtable,
   &h__glr_backend_vtable,
+  /*
+   * Brittleness warning!
+   *
+   * We're using an enum as an index into this array (don't blame me...)
+   * so it's important that this array have the same size and order as
+   * the corresponding enum values in HParserBackend of src/hammer.h.
+   * Since callers use those enums as numeric constants to select a
+   * backend, dropping/reordering them breaks binary compatibility.
+   * If anyone adds any more optional backends in the future, don't
+   * #ifdef out those enum values in hammer.h, and do provide the
+   * 'missing' stub backend as an alternative here.
+   */
+#ifdef HAMMER_LLVM_BACKEND
   &h__llvm_backend_vtable,
+#else
+  &h__missing_backend_vtable,
+#endif
 };
 
 

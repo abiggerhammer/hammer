@@ -1,5 +1,9 @@
+#ifdef HAMMER_LLVM_BACKEND
+
 #ifndef HAMMER_LLVM__H
 #define HAMMER_LLVM__H
+
+#include "../../internal.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -18,3 +22,5 @@ void h_llvm_make_tt_suint(LLVMModuleRef mod, LLVMBuilderRef builder,
                           LLVMValueRef r, LLVMValueRef *mr_out);
 
 #endif // #ifndef HAMMER_LLVM__H
+
+#endif /* defined(HAMMER_LLVM_BACKEND) */

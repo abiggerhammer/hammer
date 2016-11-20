@@ -1,10 +1,12 @@
 #include <assert.h>
+#ifdef HAMMER_LLVM_BACKEND
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
-#include "parser_internal.h"
 #include "../backends/llvm/llvm.h"
+#endif
+#include "parser_internal.h"
 
 struct bits_env {
   uint8_t length;
@@ -21,6 +23,8 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
     result->uint = h_read_bits(&state->input_stream, env_->length, false);
   return make_result(state->arena, result);
 }
+
+#ifdef HAMMER_LLVM_BACKEND
 
 static bool bits_llvm(HAllocator *mm__,
                       LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod,
@@ -93,6 +97,8 @@ static bool bits_llvm(HAllocator *mm__,
   /*   ret %struct.HParseResult_* %49 */
   return true;
 }
+
+#endif
 
 static HParsedToken *reshape_bits(const HParseResult *p, void* signedp_p) {
   // signedp == NULL iff unsigned
@@ -179,7 +185,9 @@ static const HParserVtable bits_vt = {
   .isValidCF = h_true,
   .desugar = desugar_bits,
   .compile_to_rvm = bits_ctrvm,
+#ifdef HAMMER_LLVM_BACKEND
   .llvm = bits_llvm,
+#endif
   .higher = false,
 };
 

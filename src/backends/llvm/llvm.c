@@ -1,3 +1,5 @@
+#ifdef HAMMER_LLVM_BACKEND
+
 #include <llvm-c/Analysis.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -1111,3 +1113,5 @@ HParserBackendVTable h__llvm_backend_vtable = {
   .parse = h_llvm_parse,
   .free = h_llvm_free
 };
+
+#endif /* defined(HAMMER_LLVM_BACKEND) */

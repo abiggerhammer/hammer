@@ -119,6 +119,7 @@ if GetOption("use_llvm"):
     # Overridable default path to llvm-config
     env['LLVM_CONFIG'] = "llvm-config"
     env["LLVM_CONFIG"] = os.getenv("LLVM_CONFIG") or env["LLVM_CONFIG"]
+    env.MergeFlags("-DHAMMER_LLVM_BACKEND")
 
 if GetOption("coverage"):
     env.Append(CFLAGS=["--coverage"],

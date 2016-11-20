@@ -1,11 +1,13 @@
 #include <stdint.h>
 #include <assert.h>
+#ifdef HAMMER_LLVM_BACKEND
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
-#include "parser_internal.h"
 #include "../backends/llvm/llvm.h"
+#endif
+#include "parser_internal.h"
 
 static HParseResult* parse_ch(void* env, HParseState *state) {
   uint8_t c = (uint8_t)(uintptr_t)(env);
@@ -45,6 +47,8 @@ static bool ch_ctrvm(HRVMProg *prog, void* env) {
   h_rvm_insert_insn(prog, RVM_ACTION, h_rvm_create_action(prog, h_svm_action_ch, env));
   return true;
 }
+
+#ifdef HAMMER_LLVM_BACKEND
 
 static bool ch_llvm(HAllocator *mm__, LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod, void* env) {
   // Build a new LLVM function to parse a character
@@ -110,13 +114,17 @@ static bool ch_llvm(HAllocator *mm__, LLVMBuilderRef builder, LLVMValueRef func,
   return true;
 }
 
+#endif /* defined(HAMMER_LLVM_BACKEND) */
+
 static const HParserVtable ch_vt = {
   .parse = parse_ch,
   .isValidRegular = h_true,
   .isValidCF = h_true,
   .desugar = desugar_ch,
   .compile_to_rvm = ch_ctrvm,
+#ifdef HAMMER_LLVM_BACKEND
   .llvm = ch_llvm,
+#endif
   .higher = false,
 };
 

@@ -32,6 +32,7 @@ parsers_headers = [
 backends_headers = [
     "backends/regex.h",
     "backends/contextfree.h"
+    "backends/missing.h"
 ]
 
 parsers = ['parsers/%s.c'%s for s in
@@ -65,7 +66,7 @@ parsers = ['parsers/%s.c'%s for s in
             'value']]
 
 backends = ['backends/%s.c' % s for s in
-            ['packrat', 'llk', 'regex', 'glr', 'lalr', 'lr', 'lr0']]
+            ['packrat', 'llk', 'regex', 'glr', 'lalr', 'lr', 'lr0', "missing"]]
 
 # Add LLVM backend if enabled
 if GetOption("use_llvm"):

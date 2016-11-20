@@ -26,10 +26,12 @@
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
+#ifdef HAMMER_LLVM_BACKEND
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
+#endif
 #include "hammer.h"
 #include "platform.h"
 
@@ -394,7 +396,10 @@ extern HParserBackendVTable h__packrat_backend_vtable;
 extern HParserBackendVTable h__llk_backend_vtable;
 extern HParserBackendVTable h__lalr_backend_vtable;
 extern HParserBackendVTable h__glr_backend_vtable;
+extern HParserBackendVTable h__missing_backend_vtable;
+#ifdef HAMMER_LLVM_BACKEND
 extern HParserBackendVTable h__llvm_backend_vtable;
+#endif
 // }}}
 
 // TODO(thequux): Set symbol visibility for these functions so that they aren't exported.
@@ -492,7 +497,9 @@ struct HParserVtable_ {
   bool (*isValidCF)(void *env);
   bool (*compile_to_rvm)(HRVMProg *prog, void* env); // FIXME: forgot what the bool return value was supposed to mean.
   void (*desugar)(HAllocator *mm__, HCFStack *stk__, void *env);
+#ifdef HAMMER_LLVM_BACKEND
   bool (*llvm)(HAllocator *mm__, LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod, void *env);
+#endif
   bool higher; // false if primitive
 };
 
