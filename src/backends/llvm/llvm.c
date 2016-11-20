@@ -4,8 +4,8 @@
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
 #include <llvm-c/ExecutionEngine.h>
-#include "../internal.h"
-#include "../llvm.h"
+#include "../../internal.h"
+#include "../../llvm.h"
 
 typedef struct HLLVMParser_ {
   LLVMModuleRef mod;
