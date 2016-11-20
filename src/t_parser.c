@@ -222,17 +222,70 @@ static void test_action(gconstpointer backend) {
 
 static void test_in(gconstpointer backend) {
   uint8_t options[3] = { 'a', 'b', 'c' };
+  uint8_t odds[128];
+  uint8_t _1_mod_4[64];
+  uint8_t scattered[3] = { 'A', 'b', 'z' };
+  int i;
+
   const HParser *in_ = h_in(options, 3);
   g_check_parse_match(in_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
   g_check_parse_failed(in_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
 
+  for (i = 0; i < 128; ++i) odds[i] = (uint8_t)(2*i + 1);
+  const HParser *odds_ = h_in(odds, 128);
+  g_check_parse_match(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "c", 1, "u0x63");
+  g_check_parse_match(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "E", 1, "u0x45");
+  g_check_parse_failed(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
+  g_check_parse_failed(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "F", 1);
+
+  for (i = 0; i < 64; ++i) _1_mod_4[i] = (uint8_t)(4*i + 1);
+  const HParser *_1_mod_4_ = h_in(_1_mod_4, 64);
+  g_check_parse_match(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
+  g_check_parse_match(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "E", 1, "u0x45");
+  g_check_parse_failed(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
+  g_check_parse_failed(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "c", 1);
+  g_check_parse_failed(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "F", 1);
+
+  const HParser *scattered_ = h_in(scattered, 3);
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "A", 1, "u0x41");
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "z", 1, "u0x7a");
+  g_check_parse_failed(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "y", 1);
+  g_check_parse_failed(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "F", 1);
 }
 
 static void test_not_in(gconstpointer backend) {
   uint8_t options[3] = { 'a', 'b', 'c' };
+  uint8_t odds[128];
+  uint8_t _1_mod_4[64];
+  uint8_t scattered[3] = { 'A', 'b', 'z' };
+  int i;
+
   const HParser *not_in_ = h_not_in(options, 3);
   g_check_parse_match(not_in_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "u0x64");
   g_check_parse_failed(not_in_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1);
+
+  for (i = 0; i < 128; ++i) odds[i] = (uint8_t)(2*i + 1);
+  const HParser *odds_ = h_not_in(odds, 128);
+  g_check_parse_match(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "u0x64");
+  g_check_parse_match(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "F", 1, "u0x46");
+  g_check_parse_failed(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "c", 1);
+  g_check_parse_failed(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "E", 1);
+
+  for (i = 0; i < 64; ++i) _1_mod_4[i] = (uint8_t)(4*i + 1);
+  const HParser *_1_mod_4_ = h_not_in(_1_mod_4, 64);
+  g_check_parse_match(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_match(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "F", 1, "u0x46");
+  g_check_parse_failed(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "e", 1);
+  g_check_parse_failed(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "A", 1);
+
+  const HParser *scattered_ = h_not_in(scattered, 3);
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "B", 1, "u0x42");
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "y", 1, "u0x79");
+  g_check_parse_failed(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "A", 1);
+  g_check_parse_failed(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1);
+  g_check_parse_failed(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "z", 1);
 
 }
 
