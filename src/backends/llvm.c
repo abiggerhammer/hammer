@@ -504,6 +504,7 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
     split_cep.cost = -1;
     split_cep.children[0] = NULL;
     split_cep.children[1] = NULL;
+    /* h_llvm_find_best_split() sets split_cep.cost */
     estimated_split_cost = h_llvm_find_best_split(mm__, &split_cep);
 
     /* Pick the action type with the lowest cost */
