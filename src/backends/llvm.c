@@ -247,7 +247,7 @@ static int h_llvm_charset_estimate_scan_cost(HCharset cs, uint8_t idx_start, uin
  */
 
 static int h_llvm_find_best_split(HAllocator* mm__, llvm_charset_exec_plan_t *split) {
-  int rv, best_end_run, isset, i, contiguous;
+  int rv, best_end_run, i, contiguous;
   uint8_t best_end_run_split, midpoint;
   llvm_charset_exec_plan_t *best_left, *best_right, *left, *right;
   int best_cost, cost;
@@ -414,7 +414,6 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
   int estimated_complement_cost, estimated_scan_cost, estimated_split_cost;
   int estimated_bitmap_cost;
   uint8_t idx_start, idx_end;
-  HCharset complement;
   llvm_charset_exec_plan_t complement_cep, split_cep;
   llvm_charset_exec_plan_action_t chosen_action;
 
