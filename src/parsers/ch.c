@@ -5,7 +5,7 @@
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
 #include "parser_internal.h"
-#include "../llvm.h"
+#include "../backends/llvm/llvm.h"
 
 static HParseResult* parse_ch(void* env, HParseState *state) {
   uint8_t c = (uint8_t)(uintptr_t)(env);

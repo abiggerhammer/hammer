@@ -4,7 +4,7 @@
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
 #include "parser_internal.h"
-#include "../llvm.h"
+#include "../backends/llvm/llvm.h"
 
 struct bits_env {
   uint8_t length;

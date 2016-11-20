@@ -6,7 +6,7 @@
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
 #include "parser_internal.h"
-#include "../llvm.h"
+#include "../backends/llvm/llvm.h"
 
 static HParseResult* parse_charset(void *env, HParseState *state) {
   uint8_t in = h_read_bits(&state->input_stream, 8, false);
