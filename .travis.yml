@@ -9,6 +9,8 @@ env:
     - LLVM_CONFIG=llvm-config-3.8
   matrix:
     - BINDINGS=none
+    - LLVM_BACKEND=0
+    - LLVM_BACKEND=1
 matrix:
   include:
     - compiler: gcc
@@ -101,7 +103,7 @@ install: true
 before_script:
   - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
 script:
-  - if [ "$BINDINGS" == "none" ]; then scons test --variant=debug --coverage; else scons bindings=$BINDINGS test; fi
+  - if [ "$BINDINGS" == "none" ]; then if [ "$LLVM_BACKEND" == "1" ]; then LLVM_FLAG="--enable-llvm-backend"; else LLVM_FLAG="--disable-llvm-backend"; fi; scons test --variant=debug $LLVM_FLAG --coverage; else scons $LLVM_FLAG bindings=$BINDINGS test; fi
 after_success:
   - if [ "$BINDINGS" == "none" ]; then if [ "$CC" == "clang" ]; then llvm-cov gcov -o coverage.info build/debug/src/test_suite.gcda; else lcov --capture --directory build/debug/src --output-file coverage.info; fi; fi
   - coveralls-lcov coverage.info
