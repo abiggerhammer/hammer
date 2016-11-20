@@ -15,9 +15,9 @@ matrix:
     - compiler: gcc
       language: ruby
       rvm: ruby-2.2.5
-      env:
-       - BINDINGS=ruby LLVM_BACKEND=0
-       - BINDINGS=ruby LLVM_BACKEND=1
+      matrix:
+       - env: BINDINGS=ruby LLVM_BACKEND=0
+       - env: BINDINGS=ruby LLVM_BACKEND=1
     - compiler: clang
       language: ruby
       rvm: ruby-2.2.5
