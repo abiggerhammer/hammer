@@ -829,7 +829,7 @@ static void h_llvm_pretty_print_charset_exec_plan_impl(HAllocator *mm__, llvm_ch
     for (j = 0; j < 32; ++j, ++ch) {
       open = close = split = 0;
       /* Figure out markers, avoid wraparound */
-      if (cep->idx_start != 0 && ch + 1 == cep->idx_start && j > 0) {
+      if (cep->idx_start != 0 && ch + 1 == cep->idx_start) {
         /* There should be a [ right after this char */
         open = 1;
       } else if (ch == cep->idx_end) {
