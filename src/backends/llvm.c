@@ -494,18 +494,26 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
       h_free(child_cs);
     }
 
-    /* Set up split node */
-    split_cep.cs = copy_charset(mm__, cs);
-    charset_restrict_to_range(split_cep.cs, idx_start, idx_end);
-    split_cep.idx_start = idx_start;
-    split_cep.idx_end = idx_end;
-    split_cep.split_point = 0;
-    split_cep.action = CHARSET_ACTION_SPLIT;
-    split_cep.cost = -1;
-    split_cep.children[0] = NULL;
-    split_cep.children[1] = NULL;
-    /* h_llvm_find_best_split() sets split_cep.cost */
-    estimated_split_cost = h_llvm_find_best_split(mm__, &split_cep);
+    /* Set up split node if it makes sense */
+    if (idx_start < idx_end) {
+      split_cep.cs = copy_charset(mm__, cs);
+      charset_restrict_to_range(split_cep.cs, idx_start, idx_end);
+      split_cep.idx_start = idx_start;
+      split_cep.idx_end = idx_end;
+      split_cep.split_point = 0;
+      split_cep.action = CHARSET_ACTION_SPLIT;
+      split_cep.cost = -1;
+      split_cep.children[0] = NULL;
+      split_cep.children[1] = NULL;
+      /* h_llvm_find_best_split() sets split_cep.cost */
+      estimated_split_cost = h_llvm_find_best_split(mm__, &split_cep);
+      if (estimated_split_cost < 0) {
+        /* This shouldn't happen, but make sure we free the charset */
+        h_free(split_cep.cs);
+      }
+    } else {
+      estimated_split_cost = -1;
+    }
 
     /* Pick the action type with the lowest cost */
     best_cost = -1;
