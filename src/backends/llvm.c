@@ -191,6 +191,8 @@ struct llvm_charset_exec_plan_s {
   llvm_charset_exec_plan_action_t action;
   /* Estimated cost metric */
   int cost;
+  /* Depth in exec plan */
+  int depth;
   /* Children, if any (zero, one or two depending on action) */
   llvm_charset_exec_plan_t *children[2];
 };
@@ -410,7 +412,7 @@ static llvm_charset_exec_plan_t * h_llvm_build_charset_exec_plan_impl_alloc(
 static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
     llvm_charset_exec_plan_t *parent, llvm_charset_exec_plan_t *cep,
     int allow_complement, uint8_t *split_point) {
-  int eligible_for_accept, best_cost;
+  int eligible_for_accept, best_cost, depth;
   int estimated_complement_cost, estimated_scan_cost, estimated_split_cost;
   int estimated_bitmap_cost;
   uint8_t idx_start, idx_end;
@@ -440,6 +442,10 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
     idx_end = UINT8_MAX;
   }
 
+  /* Get the depth in the exec plan */
+  if (parent) depth = parent->depth + 1;
+  else depth = 0;
+
   eligible_for_accept = h_llvm_charset_eligible_for_accept(cs, idx_start, idx_end);
   if (eligible_for_accept) {
     /* if we can use CHARSET_ACTION_ACCEPT, always do so */
@@ -450,6 +456,7 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
     cep->split_point = 0;
     /* Acceptance (or rejection, under a complement) is free */
     cep->cost = 0;
+    cep->depth = depth;
     cep->action = CHARSET_ACTION_ACCEPT;
     cep->children[0] = NULL;
     cep->children[1] = NULL;
@@ -481,6 +488,7 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
       complement_cep.idx_start = idx_start;
       complement_cep.idx_end = idx_end;
       complement_cep.split_point = 0;
+      complement_cep.depth = depth;
       complement_cep.action = CHARSET_ACTION_COMPLEMENT;
       complement_cep.children[0] = h_new(llvm_charset_exec_plan_t, 1);
       memset(complement_cep.children[0], 0, sizeof(llvm_charset_exec_plan_t));
@@ -497,8 +505,11 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
       h_free(child_cs);
     }
 
-    /* Set up split node if it makes sense */
-    if (idx_start < idx_end) {
+    /*
+     * Set up split node if it makes sense; the depth cutoff here limits the
+     * cost of the search for complex charsets.
+     */
+    if (idx_start < idx_end && depth < 5) {
       split_cep.cs = copy_charset(mm__, cs);
       charset_restrict_to_range(split_cep.cs, idx_start, idx_end);
       split_cep.idx_start = idx_start;
@@ -506,6 +517,7 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
       split_cep.split_point = 0;
       split_cep.action = CHARSET_ACTION_SPLIT;
       split_cep.cost = -1;
+      split_cep.depth = depth;
       split_cep.children[0] = NULL;
       split_cep.children[1] = NULL;
       /* h_llvm_find_best_split() sets split_cep.cost */
@@ -555,6 +567,7 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
         cep->split_point = 0;
         cep->action = CHARSET_ACTION_SCAN;
         cep->cost = estimated_scan_cost;
+        cep->depth = depth;
         cep->children[0] = NULL;
         cep->children[1] = NULL;
         break;
@@ -567,6 +580,7 @@ static int h_llvm_build_charset_exec_plan_impl(HAllocator* mm__, HCharset cs,
         cep->split_point = 0;
         cep->action = CHARSET_ACTION_BITMAP;
         cep->cost = estimated_bitmap_cost;
+        cep->depth = depth;
         cep->children[0] = NULL;
         cep->children[1] = NULL;
         break;
@@ -872,7 +886,7 @@ static void h_llvm_pretty_print_charset_exec_plan_impl(HAllocator *mm__, llvm_ch
            pfx, pfx_incr, cep->idx_start, cep->idx_end);
   }
 
-  printf("%s%s cost = %d\n", pfx, pfx_incr, cep->cost);
+  printf("%s%s cost = %d, depth = %d\n", pfx, pfx_incr, cep->cost, cep->depth);
 
   if (n_children > 0) {
     if (n_children > 1) {
