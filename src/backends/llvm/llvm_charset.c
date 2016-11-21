@@ -1087,11 +1087,12 @@ bool h_llvm_make_charset_membership_test(HAllocator* mm__,
    *
    * How common is it for this to occur multiple times in a parser with the
    * same charset?  If so, we will end up emitting code which differs only in
-   * its yes and no output basic blocks each time.  Does LLVM IR have an
-   * equivalent of MIPS jr?  Is there a significant performance penalty vs.
-   * LLVMBuildBr()?  If yes and no respectively, we should consider memoizing
-   * by charset using it and building a wrapper around it that just varies
-   * the output blocks to reduce emitted code size.
+   * its yes and no output basic blocks each time.  Is there a significant
+   * performance penalty for LLVMBuildIndirectBr() vs. LLVMBuildBr()?  If no,
+   * we should consider memoizing by charset using it and building a wrapper
+   * around it that just varies the output blocks to reduce emitted code size.
+   *
+   *
    */
 
   /* Create input block */
