@@ -796,6 +796,20 @@ static void h_llvm_pretty_print_charset_exec_plan(HAllocator *mm__, llvm_charset
   h_llvm_pretty_print_charset_exec_plan_impl(mm__, cep, "", "", 0);
 }
 
+/* Forward declares for IR-emission functions */
+static bool h_llvm_build_ir_for_scan(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+                                     HCharset cs, uint8_t idx_start, uint8_t idx_end,
+                                     LLVMValueRef r,
+                                     LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
+static bool h_llvm_build_ir_for_split(HAllocator *mm__,
+                                      LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+                                      llvm_charset_exec_plan_t *cep, LLVMValueRef r,
+                                      LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
+static bool h_llvm_cep_to_ir(HAllocator* mm__,
+                             LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+                             LLVMValueRef r, llvm_charset_exec_plan_t *cep,
+                             LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
+
 /*
  * Build IR for a CHARSET_ACTION_SCAN
  */
@@ -832,6 +846,53 @@ static bool h_llvm_build_ir_for_scan(LLVMModuleRef mod, LLVMValueRef func, LLVMB
 }
 
 /*
+ * Build IR for a CHARSET_ACTION_SPLIT
+ */
+
+static bool h_llvm_build_ir_for_split(HAllocator *mm__,
+                                      LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+                                      llvm_charset_exec_plan_t *cep, LLVMValueRef r,
+                                      LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
+  char name[18];
+  bool left_ok, right_ok;
+
+  /* Split validation */
+  if (!cep) return false;
+  if (cep->action != CHARSET_ACTION_SPLIT) return false;
+  if (cep->idx_start >= cep->idx_end) return false;
+  if (cep->split_point < cep->idx_start) return false;
+  if (cep->split_point >= cep->idx_end) return false;
+  if (!(cep->children[0] && cep->children[1])) return false;
+  if (cep->idx_start != cep->children[0]->idx_start) return false;
+  if (cep->split_point != cep->children[0]->idx_end) return false;
+  if (cep->split_point + 1 != cep->children[1]->idx_start) return false;
+  if (cep->idx_end != cep->children[1]->idx_end) return false;
+
+  /*
+   * Compare the value against the split point, and branch to the left
+   * child if <=, right child if >.
+   */
+  snprintf(name, 18, "cs_split_left_%02X", cep->split_point);
+  LLVMBasicBlockRef left = LLVMAppendBasicBlock(func, name);
+  snprintf(name, 18, "cs_split_right_%02X", cep->split_point);
+  LLVMBasicBlockRef right = LLVMAppendBasicBlock(func, name);
+  LLVMPositionBuilderAtEnd(builder, in);
+  snprintf(name, 18, "r <= %02X", cep->split_point);
+  LLVMValueRef icmp = LLVMBuildICmp(builder, LLVMIntULE,
+      r, LLVMConstInt(LLVMInt8Type(), cep->split_point, 0), name);
+  LLVMBuildCondBr(builder, icmp, left, right);
+
+  /*
+   * Now build the subtrees starting from each of the output basic blocks
+   * of the comparison.
+   */
+  left_ok = h_llvm_cep_to_ir(mm__, mod, func, builder, r, cep->children[0], left, yes, no);
+  right_ok = h_llvm_cep_to_ir(mm__, mod, func, builder, r, cep->children[1], right, yes, no);
+
+  return left_ok && right_ok;
+}
+
+/*
  * Turn an llvm_charset_exec_plan_t into IR
  */
 
@@ -852,6 +913,7 @@ static bool h_llvm_cep_to_ir(HAllocator* mm__,
       /* Easy case; just unconditionally branch to the yes output */
       LLVMPositionBuilderAtEnd(builder, in);
       LLVMBuildBr(builder, yes);
+      rv = true;
       break;
     case CHARSET_ACTION_BITMAP:
 #ifdef HAMMER_LLVM_CHARSET_DEBUG
@@ -866,12 +928,7 @@ static bool h_llvm_cep_to_ir(HAllocator* mm__,
       rv = h_llvm_cep_to_ir(mm__, mod, func, builder, r, cep->children[0], in, no, yes);
       break;
     case CHARSET_ACTION_SPLIT:
-#ifdef HAMMER_LLVM_CHARSET_DEBUG
-      fprintf(stderr,
-              "CHARSET_ACTION_SPLIT not yet implemented (cep %p)\n",
-              (void *)cep);
-#endif /* defined(HAMMER_LLVM_CHARSET_DEBUG) */
-      rv = false;
+      rv = h_llvm_build_ir_for_split(mm__, mod, func, builder, cep, r, in, yes, no);
       break;
     default:
       /* Unknown action type */
