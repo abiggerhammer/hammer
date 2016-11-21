@@ -170,8 +170,7 @@ before_install:
   - gem install coveralls-lcov
   - if [ "$CC" == "gcc" ]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y; sudo apt-get update -qq; sudo apt-get install gcc-5; fi
   - sudo apt-get install llvm-3.8 llvm-3.8-dev clang-3.8
-  - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; fi
-  - if [ "$BINDINGS" == "perl" ]; then sudo apt-get install -t trusty-backports swig3.0; fi
+  - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; sudo apt-get install -t trusty-backports swig3.0; fi
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
   - if [ "$BINDINGS" == "dotnet" ]; then sudo apt-get install -qq mono-devel mono-mcs nunit nunit-console; fi
 install: true
