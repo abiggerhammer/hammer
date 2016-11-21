@@ -797,6 +797,10 @@ static void h_llvm_pretty_print_charset_exec_plan(HAllocator *mm__, llvm_charset
 }
 
 /* Forward declares for IR-emission functions */
+static bool h_llvm_build_ir_for_bitmap(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+                                       HCharset cs, uint8_t idx_start, uint8_t idx_end,
+                                       LLVMValueRef r,
+                                       LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
 static bool h_llvm_build_ir_for_scan(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
                                      HCharset cs, uint8_t idx_start, uint8_t idx_end,
                                      LLVMValueRef r,
@@ -809,6 +813,87 @@ static bool h_llvm_cep_to_ir(HAllocator* mm__,
                              LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
                              LLVMValueRef r, llvm_charset_exec_plan_t *cep,
                              LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
+
+/*
+ * Build IR for a CHARSET_ACTION_BITMAP
+ */
+
+static bool h_llvm_build_ir_for_bitmap(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+                                       HCharset cs, uint8_t idx_start, uint8_t idx_end,
+                                       LLVMValueRef r,
+                                       LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
+  int i, j;
+  uint32_t bitmap_entry;
+
+  if (!cs) return false;
+  if (idx_start > idx_end) return false;
+
+  /*
+   * Embed a 8x32 bitmap in the IR, turn the input value into an index by
+   * right-shifting 5 bits, load the relevant bitmap byte, then derive a mask
+   * from the low-order 5 bits of the input value.  & the mask with the bitmap
+   * byte, and compare.  If non-zero, accept, otherwise reject.
+   */
+  LLVMPositionBuilderAtEnd(builder, in);
+
+  /* Construct the bitmap */
+  LLVMValueRef bitmap_entries[8];
+  for (i = 0; i < 8; ++i) {
+    bitmap_entry = 0x0;
+    /*
+     * Bit order; LSB is lowest-numbered char index 32*i, MSB is 32*i + 31.
+     * and then the mask we need is just 1 << (r & 0x1f).
+     */
+    for (j = 0; j < 32; ++j) {
+      /* Set the bit if necessary */
+      if (charset_isset(cs, (uint8_t)(32*i + j))) {
+        bitmap_entry |= ((uint32_t)(0x1) << j);
+      }
+    }
+
+    /* Make an LLVMValueRef for it */
+    bitmap_entries[i] = LLVMConstInt(LLVMInt32Type(), bitmap_entry, 0);
+  }
+  /* Now make an array out of them */
+  LLVMValueRef bitmap_initializer = LLVMConstArray(LLVMInt32Type(), bitmap_entries, 8);
+  /* ...and we need a global variable to stick it in to GEP it */
+  LLVMValueRef bitmap = LLVMAddGlobal(mod, LLVMTypeOf(bitmap_initializer), "bitmap");
+  LLVMSetInitializer(bitmap, bitmap_initializer);
+
+  /* Compute the index into the bitmap */
+  LLVMValueRef word_index = LLVMBuildLShr(builder, r,
+      LLVMConstInt(LLVMInt8Type(), 5, 0), "word_index");
+
+  /* Get a pointer to that word in the bitmap */
+  LLVMValueRef gep_indices[2];
+  gep_indices[0] = LLVMConstInt(LLVMInt32Type(), 0, 0);
+  gep_indices[1] = word_index;
+  LLVMValueRef bitmap_word_p =
+    LLVMBuildInBoundsGEP(builder, bitmap, gep_indices, 2, "bitmap_word_p");
+  LLVMValueRef bitmap_word =
+    LLVMBuildLoad(builder, bitmap_word_p, "bitmap_word");
+  /*
+   * Extract the low-order 5 bits of r, and expand to a 32-bit int for the
+   * mask
+   */
+  LLVMValueRef bit_index = LLVMBuildAnd(builder, r,
+      LLVMConstInt(LLVMInt8Type(), 0x1f, 0), "bit_index");
+  LLVMValueRef bit_index_zext = LLVMBuildZExt(builder, bit_index,
+      LLVMInt32Type(), "bit_index_zext");
+  /* Compute mask */
+  LLVMValueRef mask = LLVMBuildShl(builder, LLVMConstInt(LLVMInt32Type(), 1, 0),
+      bit_index_zext, "mask");
+  /* AND the mask with the bitmap word */
+  LLVMValueRef masked_bitmap_word = LLVMBuildAnd(builder, bitmap_word, mask,
+      "masked_bitmap_word");
+  /* Compare it to zero */
+  LLVMValueRef bitmap_icmp = LLVMBuildICmp(builder, LLVMIntNE,
+      masked_bitmap_word, LLVMConstInt(LLVMInt32Type(), 0, 0), "bitmap_icmp");
+  /* If not zero, the char is in the set */
+  LLVMBuildCondBr(builder, bitmap_icmp, yes, no);
+
+  return true;
+}
 
 /*
  * Build IR for a CHARSET_ACTION_SCAN
@@ -916,12 +1001,8 @@ static bool h_llvm_cep_to_ir(HAllocator* mm__,
       rv = true;
       break;
     case CHARSET_ACTION_BITMAP:
-#ifdef HAMMER_LLVM_CHARSET_DEBUG
-      fprintf(stderr,
-              "CHARSET_ACTION_BITMAP not yet implemented (cep %p)\n",
-              (void *)cep);
-#endif /* defined(HAMMER_LLVM_CHARSET_DEBUG) */
-      rv = false;
+      rv = h_llvm_build_ir_for_bitmap(mod, func, builder,
+          cep->cs, cep->idx_start, cep->idx_end, r, in, yes, no);
       break;
     case CHARSET_ACTION_COMPLEMENT:
       /* This is trivial; just swap the 'yes' and 'no' outputs and build the child */
