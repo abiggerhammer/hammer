@@ -805,12 +805,10 @@ static bool h_llvm_build_ir_for_scan(LLVMModuleRef mod, LLVMValueRef func, LLVMB
                                      HCharset cs, uint8_t idx_start, uint8_t idx_end,
                                      LLVMValueRef r,
                                      LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
-static bool h_llvm_build_ir_for_split(HAllocator *mm__,
-                                      LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_build_ir_for_split(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
                                       llvm_charset_exec_plan_t *cep, LLVMValueRef r,
                                       LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
-static bool h_llvm_cep_to_ir(HAllocator* mm__,
-                             LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_cep_to_ir(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
                              LLVMValueRef r, llvm_charset_exec_plan_t *cep,
                              LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
 
@@ -934,8 +932,7 @@ static bool h_llvm_build_ir_for_scan(LLVMModuleRef mod, LLVMValueRef func, LLVMB
  * Build IR for a CHARSET_ACTION_SPLIT
  */
 
-static bool h_llvm_build_ir_for_split(HAllocator *mm__,
-                                      LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_build_ir_for_split(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
                                       llvm_charset_exec_plan_t *cep, LLVMValueRef r,
                                       LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
   char name[18];
@@ -971,8 +968,8 @@ static bool h_llvm_build_ir_for_split(HAllocator *mm__,
    * Now build the subtrees starting from each of the output basic blocks
    * of the comparison.
    */
-  left_ok = h_llvm_cep_to_ir(mm__, mod, func, builder, r, cep->children[0], left, yes, no);
-  right_ok = h_llvm_cep_to_ir(mm__, mod, func, builder, r, cep->children[1], right, yes, no);
+  left_ok = h_llvm_cep_to_ir(mod, func, builder, r, cep->children[0], left, yes, no);
+  right_ok = h_llvm_cep_to_ir(mod, func, builder, r, cep->children[1], right, yes, no);
 
   return left_ok && right_ok;
 }
@@ -981,8 +978,7 @@ static bool h_llvm_build_ir_for_split(HAllocator *mm__,
  * Turn an llvm_charset_exec_plan_t into IR
  */
 
-static bool h_llvm_cep_to_ir(HAllocator* mm__,
-                             LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_cep_to_ir(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
                              LLVMValueRef r, llvm_charset_exec_plan_t *cep,
                              LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
   bool rv;
@@ -1006,10 +1002,10 @@ static bool h_llvm_cep_to_ir(HAllocator* mm__,
       break;
     case CHARSET_ACTION_COMPLEMENT:
       /* This is trivial; just swap the 'yes' and 'no' outputs and build the child */
-      rv = h_llvm_cep_to_ir(mm__, mod, func, builder, r, cep->children[0], in, no, yes);
+      rv = h_llvm_cep_to_ir(mod, func, builder, r, cep->children[0], in, no, yes);
       break;
     case CHARSET_ACTION_SPLIT:
-      rv = h_llvm_build_ir_for_split(mm__, mod, func, builder, cep, r, in, yes, no);
+      rv = h_llvm_build_ir_for_split(mod, func, builder, cep, r, in, yes, no);
       break;
     default:
       /* Unknown action type */
@@ -1103,7 +1099,7 @@ bool h_llvm_make_charset_membership_test(HAllocator* mm__,
    */
   LLVMBuildBr(builder, start);
 
-  rv = h_llvm_cep_to_ir(mm__, mod, func, builder, r, cep, start, yes, no);
+  rv = h_llvm_cep_to_ir(mod, func, builder, r, cep, start, yes, no);
 
   h_llvm_free_charset_exec_plan(mm__, cep);
   cep = NULL;
