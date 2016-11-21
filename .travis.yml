@@ -11,14 +11,14 @@ env:
     - BINDINGS=none LLVM_BACKEND=0
     - BINDINGS=none LLVM_BACKEND=1
 matrix:
+  env:
+    - LLVM_BACKEND=0
+    - LLVM_BACKEND=1
   include:
     - compiler: gcc
       language: ruby
       rvm: ruby-2.2.5
-      env:
-        matrix:
-         - BINDINGS=ruby LLVM_BACKEND=0
-         - BINDINGS=ruby LLVM_BACKEND=1
+      env: BINDINGS=ruby
     - compiler: clang
       language: ruby
       rvm: ruby-2.2.5
