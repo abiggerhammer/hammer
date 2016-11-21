@@ -9,6 +9,12 @@
 #include "../../internal.h"
 #include "llvm.h"
 
+/*
+ * Set this #define to enable some debug logging and internal consistency
+ * checking.
+ */
+#define HAMMER_LLVM_CHARSET_DEBUG
+
 typedef enum {
   /*
    * Accept action; this entire range is in the charset.  This action type
@@ -791,52 +797,23 @@ static void h_llvm_pretty_print_charset_exec_plan(HAllocator *mm__, llvm_charset
 }
 
 /*
- * Construct LLVM IR to decide if a runtime value is a member of a compile-time
- * character set, and branch depending on the result.
- *
- * Parameters:
- *  - mod [in]: an LLVMModuleRef
- *  - func [in]: an LLVMValueRef to the function to add the new basic blocks
- *  - builder [in]: an LLVMBuilderRef, positioned appropriately
- *  - r [in]: an LLVMValueRef to the value to test
- *  - cs [in]: the HCharset to test membership in
- *  - yes [in]: the basic block to branch to if r is in cs
- *  - no [in]: the basic block to branch to if r is not in cs
+ * Build IR for a CHARSET_ACTION_SCAN
  */
 
-void h_llvm_make_charset_membership_test(HAllocator* mm__,
-                                         LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
-                                         LLVMValueRef r, HCharset cs,
-                                         LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
+static bool h_llvm_build_ir_for_scan(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+                                     HCharset cs, uint8_t idx_start, uint8_t idx_end,
+                                     LLVMValueRef r,
+                                     LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
+  if (!cs) return false;
+  if (idx_start > idx_end) return false;
+
   /*
-   * A charset is a 256-element bit array, 32 bytes long in total.  Ours is
-   * static at compile time, so we can try to construct minimal LLVM IR for
-   * this particular charset.  In particular, we should handle cases like
-   * only one or two bits being set, or a long consecutive range, efficiently.
-   *
-   * In LLVM IR, we can test propositions like r == x, r <= x, r >= x and their
-   * negations efficiently, so the challenge here is to turn a character map
-   * into a minimal set of such propositions.
-   *
-   * TODO: actually do this; right now for the sake of a first pass we're just
-   * testing r == x for every x in cs.
+   * Scan the range of indices, and for each thing in the charset,
+   * compare and conditional branch.
    */
+  LLVMPositionBuilderAtEnd(builder, in);
 
-  /* Try building a charset exec plan */
-  llvm_charset_exec_plan_t *cep = h_llvm_build_charset_exec_plan(mm__, cs);
-  if (cep) {
-    /* For now just check it and free it */
-    bool ok = h_llvm_check_charset_exec_plan(cep);
-    if (ok) fprintf(stderr, "cep %p passes consistency check\n", (void *)cep);
-    else fprintf(stderr, "cep %p fails consistency check\n", (void *)cep);
-    h_llvm_pretty_print_charset_exec_plan(mm__, cep);
-    h_llvm_free_charset_exec_plan(mm__, cep);
-    cep = NULL;
-  } else {
-    fprintf(stderr, "got null from h_llvm_build_charset_exec_plan()\n");
-  }
-
-  for (int i = 0; i < 256; ++i) {
+  for (int i = idx_start; i <= idx_end; ++i) {
     if (charset_isset(cs, i)) {
       char bbname[16];
       uint8_t c = (uint8_t)i;
@@ -850,6 +827,137 @@ void h_llvm_make_charset_membership_test(HAllocator* mm__,
   }
 
   LLVMBuildBr(builder, no);
+
+  return true;
+}
+
+/*
+ * Turn an llvm_charset_exec_plan_t into IR
+ */
+
+static bool h_llvm_cep_to_ir(HAllocator* mm__,
+                             LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+                             LLVMValueRef r, llvm_charset_exec_plan_t *cep,
+                             LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
+  bool rv;
+
+  if (!cep) return false;
+
+  switch (cep->action) {
+    case CHARSET_ACTION_SCAN:
+      rv = h_llvm_build_ir_for_scan(mod, func, builder,
+          cep->cs, cep->idx_start, cep->idx_end, r, in, yes, no);
+      break;
+    case CHARSET_ACTION_ACCEPT:
+      /* Easy case; just unconditionally branch to the yes output */
+      LLVMPositionBuilderAtEnd(builder, in);
+      LLVMBuildBr(builder, yes);
+      break;
+    case CHARSET_ACTION_BITMAP:
+#ifdef HAMMER_LLVM_CHARSET_DEBUG
+      fprintf(stderr,
+              "CHARSET_ACTION_BITMAP not yet implemented (cep %p)\n",
+              (void *)cep);
+#endif /* defined(HAMMER_LLVM_CHARSET_DEBUG) */
+      rv = false;
+      break;
+    case CHARSET_ACTION_COMPLEMENT:
+      /* This is trivial; just swap the 'yes' and 'no' outputs and build the child */
+      rv = h_llvm_cep_to_ir(mm__, mod, func, builder, r, cep->children[0], in, no, yes);
+      break;
+    case CHARSET_ACTION_SPLIT:
+#ifdef HAMMER_LLVM_CHARSET_DEBUG
+      fprintf(stderr,
+              "CHARSET_ACTION_SPLIT not yet implemented (cep %p)\n",
+              (void *)cep);
+#endif /* defined(HAMMER_LLVM_CHARSET_DEBUG) */
+      rv = false;
+      break;
+    default:
+      /* Unknown action type */
+#ifdef HAMMER_LLVM_CHARSET_DEBUG
+      fprintf(stderr,
+              "cep %p has unknown action type\n",
+              (void *)cep);
+#endif /* defined(HAMMER_LLVM_CHARSET_DEBUG) */
+      rv = false;
+      break;
+  }
+
+  return rv;
+}
+
+/*
+ * Construct LLVM IR to decide if a runtime value is a member of a compile-time
+ * character set, and branch depending on the result.
+ *
+ * Parameters:
+ *  - mod [in]: an LLVMModuleRef
+ *  - func [in]: an LLVMValueRef to the function to add the new basic blocks
+ *  - builder [in]: an LLVMBuilderRef, positioned appropriately
+ *  - r [in]: an LLVMValueRef to the value to test
+ *  - cs [in]: the HCharset to test membership in
+ *  - yes [in]: the basic block to branch to if r is in cs
+ *  - no [in]: the basic block to branch to if r is not in cs
+ *
+ * Returns: true on success, false on failure
+ */
+
+bool h_llvm_make_charset_membership_test(HAllocator* mm__,
+                                         LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+                                         LLVMValueRef r, HCharset cs,
+                                         LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
+  /*
+   * A charset is a 256-element bit array, 32 bytes long in total.  Ours is
+   * static at compile time, so we can try to construct minimal LLVM IR for
+   * this particular charset.  In particular, we should handle cases like
+   * only one or two bits being set, or a long consecutive range, efficiently.
+   *
+   * In LLVM IR, we can test propositions like r == x, r <= x, r >= x and their
+   * negations efficiently, so the challenge here is to turn a character map
+   * into a minimal set of such propositions.
+   *
+   * We achieve this by building a tree of actions to minimize a cost metric,
+   * and then transforming the tree into IR.
+   */
+
+  bool rv;
+
+  /* Try building a charset exec plan */
+  llvm_charset_exec_plan_t *cep = h_llvm_build_charset_exec_plan(mm__, cs);
+  if (!cep) {
+    fprintf(stderr, "got null from h_llvm_build_charset_exec_plan()\n");
+    return false;
+  }
+
+#ifdef HAMMER_LLVM_CHARSET_DEBUG
+  bool ok = h_llvm_check_charset_exec_plan(cep);
+  if (ok) fprintf(stderr, "cep %p passes consistency check\n", (void *)cep);
+  else fprintf(stderr, "cep %p fails consistency check\n", (void *)cep);
+  h_llvm_pretty_print_charset_exec_plan(mm__, cep);
+  if (!ok) {
+    fprintf(stderr, "h_llvm_make_charset_membership_test() error-exiting "
+            "because consistency check failed\n");
+    h_llvm_free_charset_exec_plan(mm__, cep);
+    cep = NULL;
+    return false;
+  }
+#endif /* defined(HAMMER_LLVM_CHARSET_DEBUG) */
+
+  /* Create input block */
+  LLVMBasicBlockRef start = LLVMAppendBasicBlock(func, "cs_start");
+  /*
+   * Make unconditional branch into input block from wherever our caller
+   * had us positioned.
+   */
+  LLVMBuildBr(builder, start);
+
+  rv = h_llvm_cep_to_ir(mm__, mod, func, builder, r, cep, start, yes, no);
+
+  h_llvm_free_charset_exec_plan(mm__, cep);
+  cep = NULL;
+
+  return rv;
 }
 
 #endif /* defined(HAMMER_LLVM_BACKEND) */
