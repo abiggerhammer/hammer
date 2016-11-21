@@ -46,19 +46,19 @@ matrix:
       env: BINDINGS=ruby CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: python
-      python: "2.7"
+      python: "2.7.10"
       env: BINDINGS=python LLVM_BACKEND=0
     - compiler: gcc
       language: python
-      python: "2.7"
+      python: "2.7.10"
       env: BINDINGS=python LLVM_BACKEND=1
     - compiler: clang
       language: python
-      python: "2.7"
+      python: "2.7.10"
       env: BINDINGS=python CC=clang LLVM_BACKEND=0
     - compiler: clang
       language: python
-      python: "2.7"
+      python: "2.7.10"
       env: BINDINGS=python CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: perl
@@ -158,15 +158,15 @@ matrix:
     - compiler: gcc
       language: cpp
       env: BINDINGS=cpp LLVM_BACKEND=1
-    - compiler: gcc
+    - compiler: clang
       language: cpp
       env: BINDINGS=cpp CC=clang LLVM_BACKEND=0
-    - compiler: gcc
+    - compiler: clang
       language: cpp
       env: BINDINGS=cpp CC=clang LLVM_BACKEND=1
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install lcov
+  - sudo apt-get install -y lcov
   - gem install coveralls-lcov
   - if [ "$CC" == "gcc" ]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y; sudo apt-get update -qq; sudo apt-get install gcc-5; fi
   - sudo apt-get install llvm-3.8 llvm-3.8-dev clang-3.8

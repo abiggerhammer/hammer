@@ -19,7 +19,7 @@ else:
     inc_list = None
 
 swig_opt_list = '-DHAMMER_INTERNAL__NO_STDARG_H -I../../'
-arg_list = 'python ' + os.path.join(pydir, 'setup.py') + ' build_ext --inplace '
+arg_list = 'python ' + os.path.join(pydir, 'setup.py') + ' build_ext --swig=swig3.0 --inplace '
 if inc_list:
     arg_list = arg_list + inc_list
     swig_opt_list = swig_opt_list + ' ' + inc_list
