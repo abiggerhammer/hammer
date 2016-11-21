@@ -61,7 +61,7 @@ else:
 env['parsersincpath'] = calcInstallPath("$includedir", "hammer", "parsers")
 env['backendsincpath'] = calcInstallPath("$includedir", "hammer", "backends")
 
-env.MergeFlags("-std=gnu11 -Wno-unused-parameter -Wno-attributes -Wno-unused-variable -Wall -Wextra -Werror")
+env.MergeFlags("-std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -Wno-unused-variable")
 
 if env['PLATFORM'] == 'darwin':
     env.Append(SHLINKFLAGS = '-install_name ' + env["libpath"] + '/${TARGET.file}')
