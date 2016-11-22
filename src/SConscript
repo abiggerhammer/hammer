@@ -70,7 +70,7 @@ backends = ['backends/%s.c' % s for s in
 
 # Add LLVM backend if enabled
 if GetOption("use_llvm"):
-    llvm_backend_files = ['llvm.c', 'llvm_charset.c']
+    llvm_backend_files = ['llvm.c', 'llvm_charset.c', 'llvm_suint.c']
     backends = backends + ['backends/llvm/%s' % s for s in llvm_backend_files]
 
 misc_hammer_parts = [
