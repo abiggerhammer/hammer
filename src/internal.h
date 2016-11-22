@@ -491,6 +491,10 @@ struct HCFSequence_ {
   HCFChoice **items; // last one is NULL
 };
 
+#ifdef HAMMER_LLVM_BACKEND
+typedef struct HLLVMParserCompileContext_ HLLVMParserCompileContext;
+#endif
+
 struct HParserVtable_ {
   HParseResult* (*parse)(void *env, HParseState *state);
   bool (*isValidRegular)(void *env);
@@ -498,7 +502,7 @@ struct HParserVtable_ {
   bool (*compile_to_rvm)(HRVMProg *prog, void* env); // FIXME: forgot what the bool return value was supposed to mean.
   void (*desugar)(HAllocator *mm__, HCFStack *stk__, void *env);
 #ifdef HAMMER_LLVM_BACKEND
-  bool (*llvm)(HAllocator *mm__, LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod, void *env);
+  bool (*llvm)(HLLVMParserCompileContext *ctxt, void *env);
 #endif
   bool higher; // false if primitive
 };

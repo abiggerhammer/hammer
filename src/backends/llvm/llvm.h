@@ -10,15 +10,33 @@
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
 
-LLVMTypeRef llvm_inputstream, llvm_inputstreamptr, llvm_arena, llvm_arenaptr;
-LLVMTypeRef llvm_parsedtoken, llvm_parsedtokenptr, llvm_parseresult, llvm_parseresultptr;
+/* The typedef is in internal.h */
 
-bool h_llvm_make_charset_membership_test(HAllocator* mm__,
-                                         LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+struct HLLVMParserCompileContext_ {
+  /* Allocator */
+  HAllocator* mm__;
+  /* Module/function/builder */
+  LLVMModuleRef mod;
+  LLVMValueRef func;
+  LLVMBuilderRef builder;
+  /* Typerefs */
+  LLVMTypeRef llvm_inputstream;
+  LLVMTypeRef llvm_inputstreamptr;
+  LLVMTypeRef llvm_arena;
+  LLVMTypeRef llvm_arenaptr;
+  LLVMTypeRef llvm_parsedtoken;
+  LLVMTypeRef llvm_parsedtokenptr;
+  LLVMTypeRef llvm_parseresult;
+  LLVMTypeRef llvm_parseresultptr;
+  /* Set up in function preamble */
+  LLVMValueRef stream;
+  LLVMValueRef arena;
+};
+
+bool h_llvm_make_charset_membership_test(HLLVMParserCompileContext *ctxt,
                                          LLVMValueRef r, HCharset cs,
                                          LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
-void h_llvm_make_tt_suint(LLVMModuleRef mod, LLVMBuilderRef builder,
-                          LLVMValueRef stream, LLVMValueRef arena, 
+void h_llvm_make_tt_suint(HLLVMParserCompileContext *ctxt,
                           LLVMValueRef r, LLVMValueRef *mr_out);
 
 #endif // #ifndef HAMMER_LLVM__H

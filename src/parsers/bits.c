@@ -26,13 +26,13 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
 
 #ifdef HAMMER_LLVM_BACKEND
 
-static bool bits_llvm(HAllocator *mm__,
-                      LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod,
-                      void* env) {
+static bool bits_llvm(HLLVMParserCompileContext *ctxt, void* env) {
+  if (!ctxt) return false;
+
   /*   %result = alloca %struct.HParsedToken_*, align 8 */
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wunused-variable"
-  LLVMValueRef result = LLVMBuildAlloca(builder, llvm_parsedtoken, "result");
+  LLVMValueRef result = LLVMBuildAlloca(ctxt->builder, ctxt->llvm_parsedtoken, "result");
   #pragma GCC diagnostic pop
   /*   store i8* %env, i8** %1, align 8 */
   /*   store %struct.HParseState_* %state, %struct.HParseState_** %2, align 8 */

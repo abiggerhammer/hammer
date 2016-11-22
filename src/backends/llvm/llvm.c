@@ -14,6 +14,7 @@ typedef struct HLLVMParser_ {
   LLVMValueRef func;
   LLVMExecutionEngineRef engine;
   LLVMBuilderRef builder;
+  HLLVMParserCompileContext *compile_ctxt;
 } HLLVMParser;
 
 HParseResult* make_result(HArena *arena, HParsedToken *tok) {
@@ -24,8 +25,8 @@ HParseResult* make_result(HArena *arena, HParsedToken *tok) {
   return ret;
 }
 
-void h_llvm_declare_common(LLVMModuleRef mod) {
-  llvm_inputstream = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HInputStream_");
+void h_llvm_declare_common(HLLVMParserCompileContext *ctxt) {
+  ctxt->llvm_inputstream = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HInputStream_");
   LLVMTypeRef llvm_inputstream_struct_types[] = {
     LLVMPointerType(LLVMInt8Type(), 0),
     LLVMInt64Type(),
@@ -37,11 +38,11 @@ void h_llvm_declare_common(LLVMModuleRef mod) {
     LLVMInt8Type(),
     LLVMInt8Type()
   };
-  LLVMStructSetBody(llvm_inputstream, llvm_inputstream_struct_types, 9, 0);
-  llvm_inputstreamptr = LLVMPointerType(llvm_inputstream, 0);
-  llvm_arena = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HArena_");
-  llvm_arenaptr = LLVMPointerType(llvm_arena, 0);
-  llvm_parsedtoken = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParsedToken_");
+  LLVMStructSetBody(ctxt->llvm_inputstream, llvm_inputstream_struct_types, 9, 0);
+  ctxt->llvm_inputstreamptr = LLVMPointerType(ctxt->llvm_inputstream, 0);
+  ctxt->llvm_arena = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HArena_");
+  ctxt->llvm_arenaptr = LLVMPointerType(ctxt->llvm_arena, 0);
+  ctxt->llvm_parsedtoken = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParsedToken_");
   LLVMTypeRef llvm_parsedtoken_struct_types[] = {
     LLVMInt32Type(), // actually an enum value
     LLVMInt64Type(), // actually this is a union; the largest thing in it is 64 bits
@@ -49,59 +50,83 @@ void h_llvm_declare_common(LLVMModuleRef mod) {
     LLVMInt64Type(), // FIXME ditto
     LLVMInt8Type()
   };
-  LLVMStructSetBody(llvm_parsedtoken, llvm_parsedtoken_struct_types, 5, 0);
-  llvm_parsedtokenptr = LLVMPointerType(llvm_parsedtoken, 0);
-  llvm_parseresult = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParseResult_");
+  LLVMStructSetBody(ctxt->llvm_parsedtoken, llvm_parsedtoken_struct_types, 5, 0);
+  ctxt->llvm_parsedtokenptr = LLVMPointerType(ctxt->llvm_parsedtoken, 0);
+  ctxt->llvm_parseresult = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParseResult_");
   LLVMTypeRef llvm_parseresult_struct_types[] = {
-    llvm_parsedtokenptr,
+    ctxt->llvm_parsedtokenptr,
     LLVMInt64Type(),
-    llvm_arenaptr
+    ctxt->llvm_arenaptr
   };
-  LLVMStructSetBody(llvm_parseresult, llvm_parseresult_struct_types, 3, 0);
-  llvm_parseresultptr = LLVMPointerType(llvm_parseresult, 0);
+  LLVMStructSetBody(ctxt->llvm_parseresult, llvm_parseresult_struct_types, 3, 0);
+  ctxt->llvm_parseresultptr = LLVMPointerType(ctxt->llvm_parseresult, 0);
   LLVMTypeRef readbits_pt[] = {
-    llvm_inputstreamptr,
+    ctxt->llvm_inputstreamptr,
     LLVMInt32Type(),
     LLVMInt8Type()
   };
   LLVMTypeRef readbits_ret = LLVMFunctionType(LLVMInt64Type(), readbits_pt, 3, 0);
-  LLVMAddFunction(mod, "h_read_bits", readbits_ret);
+  LLVMAddFunction(ctxt->mod, "h_read_bits", readbits_ret);
 
   LLVMTypeRef amalloc_pt[] = {
-    llvm_arenaptr,
+    ctxt->llvm_arenaptr,
     LLVMInt32Type()
   };
   LLVMTypeRef amalloc_ret = LLVMFunctionType(LLVMPointerType(LLVMVoidType(), 0), amalloc_pt, 2, 0);
-  LLVMAddFunction(mod, "h_arena_malloc", amalloc_ret);
+  LLVMAddFunction(ctxt->mod, "h_arena_malloc", amalloc_ret);
 
   LLVMTypeRef makeresult_pt[] = {
-    llvm_arenaptr,
-    llvm_parsedtokenptr
+    ctxt->llvm_arenaptr,
+    ctxt->llvm_parsedtokenptr
   };
-  LLVMTypeRef makeresult_ret = LLVMFunctionType(llvm_parseresultptr, makeresult_pt, 2, 0);
-  LLVMAddFunction(mod, "make_result", makeresult_ret);
+  LLVMTypeRef makeresult_ret = LLVMFunctionType(ctxt->llvm_parseresultptr, makeresult_pt, 2, 0);
+  LLVMAddFunction(ctxt->mod, "make_result", makeresult_ret);
 }
 
 int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
+  HLLVMParserCompileContext *ctxt;
   // Boilerplate to set up a translation unit, aka a module.
   const char* name = params ? (const char*)params : "parse";
-  LLVMModuleRef mod = LLVMModuleCreateWithName(name);
-  h_llvm_declare_common(mod);
+
+  /* Build a parser compilation context */
+  ctxt = h_new(HLLVMParserCompileContext, 1);
+  memset(ctxt, 0, sizeof(*ctxt));
+  ctxt->mm__ = mm__;
+  ctxt->mod = LLVMModuleCreateWithName(name);
+  h_llvm_declare_common(ctxt);
+
   // Boilerplate to set up the parser function to add to the module. It takes an HInputStream* and
   // returns an HParseResult.
   LLVMTypeRef param_types[] = {
-    llvm_inputstreamptr,
-    llvm_arenaptr
+    ctxt->llvm_inputstreamptr,
+    ctxt->llvm_arenaptr
   };
-  LLVMTypeRef ret_type = LLVMFunctionType(llvm_parseresultptr, param_types, 2, 0);
-  LLVMValueRef parse_func = LLVMAddFunction(mod, name, ret_type);
+  LLVMTypeRef ret_type = LLVMFunctionType(ctxt->llvm_parseresultptr, param_types, 2, 0);
+  ctxt->func = LLVMAddFunction(ctxt->mod, name, ret_type);
+
   // Parse function is now declared; time to define it
-  LLVMBuilderRef builder = LLVMCreateBuilder();
+  ctxt->builder = LLVMCreateBuilder();
+  LLVMBasicBlockRef preamble = LLVMAppendBasicBlock(ctxt->func, "preamble");
+  LLVMPositionBuilderAtEnd(ctxt->builder, preamble);
+
+  /*
+   * First thing it needs to do is get its stream and arena args and stick
+   * value refs in the context.
+   *
+   * XXX do we always need arena?  Can we make a dummy valueref the generated
+   * IR refers to, and then fill in arena if we need it after we know whether
+   * we need it?  Similar concerns apply to setting up storage needed for, e.g.
+   * memoizing charsets.
+   */
+  ctxt->stream = LLVMBuildBitCast(ctxt->builder, LLVMGetFirstParam(ctxt->func),
+      ctxt->llvm_inputstreamptr, "stream");
+  ctxt->arena = LLVMGetLastParam(ctxt->func);
+
   // Translate the contents of the children of `parser` into their LLVM instruction equivalents
-  if (parser->vtable->llvm(mm__, builder, parse_func, mod, parser->env)) {
+  if (parser->vtable->llvm(ctxt, parser->env)) {
     // But first, verification
     char *error = NULL;
-    LLVMVerifyModule(mod, LLVMAbortProcessAction, &error);
+    LLVMVerifyModule(ctxt->mod, LLVMAbortProcessAction, &error);
     LLVMDisposeMessage(error);
     error = NULL;
     // OK, link that sonofabitch
@@ -109,20 +134,21 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
     LLVMInitializeNativeTarget();
     LLVMInitializeNativeAsmPrinter();
     LLVMExecutionEngineRef engine = NULL;
-    LLVMCreateExecutionEngineForModule(&engine, mod, &error);
+    LLVMCreateExecutionEngineForModule(&engine, ctxt->mod, &error);
     if (error) {
       fprintf(stderr, "error: %s\n", error);
       LLVMDisposeMessage(error);
       return -1;
     }
-    char* dump = LLVMPrintModuleToString(mod);
+    char* dump = LLVMPrintModuleToString(ctxt->mod);
     fprintf(stderr, "\n\n%s\n\n", dump);
     // Package up the pointers that comprise the module and stash it in the original HParser
     HLLVMParser *llvm_parser = h_new(HLLVMParser, 1);
-    llvm_parser->mod = mod;
-    llvm_parser->func = parse_func;
+    llvm_parser->mod = ctxt->mod;
+    llvm_parser->func = ctxt->func;
     llvm_parser->engine = engine;
-    llvm_parser->builder = builder;
+    llvm_parser->builder = ctxt->builder;
+    llvm_parser->compile_ctxt = ctxt;
     parser->backend_data = llvm_parser;
     return 0;
   } else {
@@ -131,9 +157,15 @@ int h_llvm_compile(HAllocator* mm__, HParser* parser, const void* params) {
 }
 
 void h_llvm_free(HParser *parser) {
+  HAllocator *mm__;
   HLLVMParser *llvm_parser = parser->backend_data;
   LLVMModuleRef mod_out;
   char *err_out;
+
+  mm__ = llvm_parser->compile_ctxt->mm__;
+  h_free(llvm_parser->compile_ctxt);
+  llvm_parser->compile_ctxt = NULL;
+  mm__ = NULL;
 
   llvm_parser->func = NULL;
   LLVMRemoveModule(llvm_parser->engine, llvm_parser->mod, &mod_out, &err_out);
@@ -161,17 +193,17 @@ void h_llvm_free(HParser *parser) {
  * TODO actually support TT_SINT, inputs other than 8 bit
  */
 
-void h_llvm_make_tt_suint(LLVMModuleRef mod, LLVMBuilderRef builder,
-                          LLVMValueRef stream, LLVMValueRef arena,
+void h_llvm_make_tt_suint(HLLVMParserCompileContext *ctxt,
                           LLVMValueRef r, LLVMValueRef *mr_out) {
   /* Set up call to h_arena_malloc() for a new HParsedToken */
   LLVMValueRef tok_size = LLVMConstInt(LLVMInt32Type(), sizeof(HParsedToken), 0);
-  LLVMValueRef amalloc_args[] = { arena, tok_size };
+  LLVMValueRef amalloc_args[] = { ctxt->arena, tok_size };
   /* %h_arena_malloc = call void* @h_arena_malloc(%struct.HArena_.1* %1, i32 48) */
-  LLVMValueRef amalloc = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_arena_malloc"),
+  LLVMValueRef amalloc = LLVMBuildCall(ctxt->builder,
+      LLVMGetNamedFunction(ctxt->mod, "h_arena_malloc"),
       amalloc_args, 2, "h_arena_malloc");
   /* %tok = bitcast void* %h_arena_malloc to %struct.HParsedToken_.2* */
-  LLVMValueRef tok = LLVMBuildBitCast(builder, amalloc, llvm_parsedtokenptr, "tok");
+  LLVMValueRef tok = LLVMBuildBitCast(ctxt->builder, amalloc, ctxt->llvm_parsedtokenptr, "tok");
 
   /*
    * tok->token_type = TT_UINT;
@@ -180,45 +212,46 @@ void h_llvm_make_tt_suint(LLVMModuleRef mod, LLVMBuilderRef builder,
    *
    * TODO if we handle TT_SINT too, adjust here and the zero-ext below
    */
-  LLVMValueRef toktype = LLVMBuildStructGEP(builder, tok, 0, "token_type");
+  LLVMValueRef toktype = LLVMBuildStructGEP(ctxt->builder, tok, 0, "token_type");
   /* store i32 8, i32* %token_type */
-  LLVMBuildStore(builder, LLVMConstInt(LLVMInt32Type(), 8, 0), toktype);
+  LLVMBuildStore(ctxt->builder, LLVMConstInt(LLVMInt32Type(), 8, 0), toktype);
 
   /*
    * tok->uint = r;
    *
    * %token_data = getelementptr inbounds %struct.HParsedToken_.2, %struct.HParsedToken_.2* %3, i32 0, i32 1
    */
-  LLVMValueRef tokdata = LLVMBuildStructGEP(builder, tok, 1, "token_data");
+  LLVMValueRef tokdata = LLVMBuildStructGEP(ctxt->builder, tok, 1, "token_data");
   /*
    * TODO
    *
    * This is where we'll need to adjust to handle other types (sign vs. zero extend, omit extend if
    * r is 64-bit already
    */
-  LLVMBuildStore(builder, LLVMBuildZExt(builder, r, LLVMInt64Type(), "r"), tokdata);
+  LLVMBuildStore(ctxt->builder, LLVMBuildZExt(ctxt->builder, r, LLVMInt64Type(), "r"), tokdata);
   /*
    * Store the index from the stream into the token
    */
   /* %t_index = getelementptr inbounds %struct.HParsedToken_.2, %struct.HParsedToken_.2* %3, i32 0, i32 2 */
-  LLVMValueRef tokindex = LLVMBuildStructGEP(builder, tok, 2, "t_index");
+  LLVMValueRef tokindex = LLVMBuildStructGEP(ctxt->builder, tok, 2, "t_index");
   /* %s_index = getelementptr inbounds %struct.HInputStream_.0, %struct.HInputStream_.0* %0, i32 0, i32 2 */
-  LLVMValueRef streamindex = LLVMBuildStructGEP(builder, stream, 2, "s_index");
+  LLVMValueRef streamindex = LLVMBuildStructGEP(ctxt->builder, ctxt->stream, 2, "s_index");
   /* %4 = load i64, i64* %s_index */
   /* store i64 %4, i64* %t_index */
-  LLVMBuildStore(builder, LLVMBuildLoad(builder, streamindex, ""), tokindex);
+  LLVMBuildStore(ctxt->builder, LLVMBuildLoad(ctxt->builder, streamindex, ""), tokindex);
   /* Store the bit length into the token */
-  LLVMValueRef tokbitlen = LLVMBuildStructGEP(builder, tok, 3, "bit_length");
+  LLVMValueRef tokbitlen = LLVMBuildStructGEP(ctxt->builder, tok, 3, "bit_length");
   /* TODO handle multiple bit lengths */
-  LLVMBuildStore(builder, LLVMConstInt(LLVMInt64Type(), 8, 0), tokbitlen);
+  LLVMBuildStore(ctxt->builder, LLVMConstInt(LLVMInt64Type(), 8, 0), tokbitlen);
 
   /*
    * Now call make_result()
    *
    * %make_result = call %struct.HParseResult_.3* @make_result(%struct.HArena_.1* %1, %struct.HParsedToken_.2* %3)
    */
-  LLVMValueRef result_args[] = { arena, tok };
-  LLVMValueRef mr = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "make_result"),
+  LLVMValueRef result_args[] = { ctxt->arena, tok };
+  LLVMValueRef mr = LLVMBuildCall(ctxt->builder,
+      LLVMGetNamedFunction(ctxt->mod, "make_result"),
       result_args, 2, "make_result");
 
   *mr_out = mr;

@@ -797,18 +797,18 @@ static void h_llvm_pretty_print_charset_exec_plan(HAllocator *mm__, llvm_charset
 }
 
 /* Forward declares for IR-emission functions */
-static bool h_llvm_build_ir_for_bitmap(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_build_ir_for_bitmap(HLLVMParserCompileContext *ctxt,
                                        HCharset cs, uint8_t idx_start, uint8_t idx_end,
                                        LLVMValueRef r,
                                        LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
-static bool h_llvm_build_ir_for_scan(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_build_ir_for_scan(HLLVMParserCompileContext *ctxt,
                                      HCharset cs, uint8_t idx_start, uint8_t idx_end,
                                      LLVMValueRef r,
                                      LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
-static bool h_llvm_build_ir_for_split(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_build_ir_for_split(HLLVMParserCompileContext *ctxt,
                                       llvm_charset_exec_plan_t *cep, LLVMValueRef r,
                                       LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
-static bool h_llvm_cep_to_ir(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_cep_to_ir(HLLVMParserCompileContext *ctxt,
                              LLVMValueRef r, llvm_charset_exec_plan_t *cep,
                              LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
 
@@ -816,7 +816,7 @@ static bool h_llvm_cep_to_ir(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRe
  * Build IR for a CHARSET_ACTION_BITMAP
  */
 
-static bool h_llvm_build_ir_for_bitmap(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_build_ir_for_bitmap(HLLVMParserCompileContext *ctxt,
                                        HCharset cs, uint8_t idx_start, uint8_t idx_end,
                                        LLVMValueRef r,
                                        LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
@@ -824,6 +824,7 @@ static bool h_llvm_build_ir_for_bitmap(LLVMModuleRef mod, LLVMValueRef func, LLV
   uint32_t bitmap_entry;
 
   if (!cs) return false;
+  if (!ctxt) return false;
   if (idx_start > idx_end) return false;
 
   /*
@@ -832,7 +833,7 @@ static bool h_llvm_build_ir_for_bitmap(LLVMModuleRef mod, LLVMValueRef func, LLV
    * from the low-order 5 bits of the input value.  & the mask with the bitmap
    * byte, and compare.  If non-zero, accept, otherwise reject.
    */
-  LLVMPositionBuilderAtEnd(builder, in);
+  LLVMPositionBuilderAtEnd(ctxt->builder, in);
 
   /* Construct the bitmap */
   LLVMValueRef bitmap_entries[8];
@@ -855,11 +856,11 @@ static bool h_llvm_build_ir_for_bitmap(LLVMModuleRef mod, LLVMValueRef func, LLV
   /* Now make an array out of them */
   LLVMValueRef bitmap_initializer = LLVMConstArray(LLVMInt32Type(), bitmap_entries, 8);
   /* ...and we need a global variable to stick it in to GEP it */
-  LLVMValueRef bitmap = LLVMAddGlobal(mod, LLVMTypeOf(bitmap_initializer), "bitmap");
+  LLVMValueRef bitmap = LLVMAddGlobal(ctxt->mod, LLVMTypeOf(bitmap_initializer), "bitmap");
   LLVMSetInitializer(bitmap, bitmap_initializer);
 
   /* Compute the index into the bitmap */
-  LLVMValueRef word_index = LLVMBuildLShr(builder, r,
+  LLVMValueRef word_index = LLVMBuildLShr(ctxt->builder, r,
       LLVMConstInt(LLVMInt8Type(), 5, 0), "word_index");
 
   /* Get a pointer to that word in the bitmap */
@@ -867,28 +868,28 @@ static bool h_llvm_build_ir_for_bitmap(LLVMModuleRef mod, LLVMValueRef func, LLV
   gep_indices[0] = LLVMConstInt(LLVMInt32Type(), 0, 0);
   gep_indices[1] = word_index;
   LLVMValueRef bitmap_word_p =
-    LLVMBuildInBoundsGEP(builder, bitmap, gep_indices, 2, "bitmap_word_p");
+    LLVMBuildInBoundsGEP(ctxt->builder, bitmap, gep_indices, 2, "bitmap_word_p");
   LLVMValueRef bitmap_word =
-    LLVMBuildLoad(builder, bitmap_word_p, "bitmap_word");
+    LLVMBuildLoad(ctxt->builder, bitmap_word_p, "bitmap_word");
   /*
    * Extract the low-order 5 bits of r, and expand to a 32-bit int for the
    * mask
    */
-  LLVMValueRef bit_index = LLVMBuildAnd(builder, r,
+  LLVMValueRef bit_index = LLVMBuildAnd(ctxt->builder, r,
       LLVMConstInt(LLVMInt8Type(), 0x1f, 0), "bit_index");
-  LLVMValueRef bit_index_zext = LLVMBuildZExt(builder, bit_index,
+  LLVMValueRef bit_index_zext = LLVMBuildZExt(ctxt->builder, bit_index,
       LLVMInt32Type(), "bit_index_zext");
   /* Compute mask */
-  LLVMValueRef mask = LLVMBuildShl(builder, LLVMConstInt(LLVMInt32Type(), 1, 0),
+  LLVMValueRef mask = LLVMBuildShl(ctxt->builder, LLVMConstInt(LLVMInt32Type(), 1, 0),
       bit_index_zext, "mask");
   /* AND the mask with the bitmap word */
-  LLVMValueRef masked_bitmap_word = LLVMBuildAnd(builder, bitmap_word, mask,
+  LLVMValueRef masked_bitmap_word = LLVMBuildAnd(ctxt->builder, bitmap_word, mask,
       "masked_bitmap_word");
   /* Compare it to zero */
-  LLVMValueRef bitmap_icmp = LLVMBuildICmp(builder, LLVMIntNE,
+  LLVMValueRef bitmap_icmp = LLVMBuildICmp(ctxt->builder, LLVMIntNE,
       masked_bitmap_word, LLVMConstInt(LLVMInt32Type(), 0, 0), "bitmap_icmp");
   /* If not zero, the char is in the set */
-  LLVMBuildCondBr(builder, bitmap_icmp, yes, no);
+  LLVMBuildCondBr(ctxt->builder, bitmap_icmp, yes, no);
 
   return true;
 }
@@ -897,33 +898,34 @@ static bool h_llvm_build_ir_for_bitmap(LLVMModuleRef mod, LLVMValueRef func, LLV
  * Build IR for a CHARSET_ACTION_SCAN
  */
 
-static bool h_llvm_build_ir_for_scan(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_build_ir_for_scan(HLLVMParserCompileContext *ctxt,
                                      HCharset cs, uint8_t idx_start, uint8_t idx_end,
                                      LLVMValueRef r,
                                      LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
   if (!cs) return false;
+  if (!ctxt) return false;
   if (idx_start > idx_end) return false;
 
   /*
    * Scan the range of indices, and for each thing in the charset,
    * compare and conditional branch.
    */
-  LLVMPositionBuilderAtEnd(builder, in);
+  LLVMPositionBuilderAtEnd(ctxt->builder, in);
 
   for (int i = idx_start; i <= idx_end; ++i) {
     if (charset_isset(cs, i)) {
       char bbname[16];
       uint8_t c = (uint8_t)i;
       snprintf(bbname, 16, "cs_memb_%02x", c);
-      LLVMValueRef icmp = LLVMBuildICmp(builder, LLVMIntEQ,
+      LLVMValueRef icmp = LLVMBuildICmp(ctxt->builder, LLVMIntEQ,
           LLVMConstInt(LLVMInt8Type(), c, 0), r, "c == r");
-      LLVMBasicBlockRef bb = LLVMAppendBasicBlock(func, bbname);
-      LLVMBuildCondBr(builder, icmp, yes, bb);
-      LLVMPositionBuilderAtEnd(builder, bb);
+      LLVMBasicBlockRef bb = LLVMAppendBasicBlock(ctxt->func, bbname);
+      LLVMBuildCondBr(ctxt->builder, icmp, yes, bb);
+      LLVMPositionBuilderAtEnd(ctxt->builder, bb);
     }
   }
 
-  LLVMBuildBr(builder, no);
+  LLVMBuildBr(ctxt->builder, no);
 
   return true;
 }
@@ -932,13 +934,14 @@ static bool h_llvm_build_ir_for_scan(LLVMModuleRef mod, LLVMValueRef func, LLVMB
  * Build IR for a CHARSET_ACTION_SPLIT
  */
 
-static bool h_llvm_build_ir_for_split(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_build_ir_for_split(HLLVMParserCompileContext *ctxt,
                                       llvm_charset_exec_plan_t *cep, LLVMValueRef r,
                                       LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
   char name[18];
   bool left_ok, right_ok;
 
   /* Split validation */
+  if (!ctxt) return false;
   if (!cep) return false;
   if (cep->action != CHARSET_ACTION_SPLIT) return false;
   if (cep->idx_start >= cep->idx_end) return false;
@@ -955,21 +958,21 @@ static bool h_llvm_build_ir_for_split(LLVMModuleRef mod, LLVMValueRef func, LLVM
    * child if <=, right child if >.
    */
   snprintf(name, 18, "cs_split_left_%02X", cep->split_point);
-  LLVMBasicBlockRef left = LLVMAppendBasicBlock(func, name);
+  LLVMBasicBlockRef left = LLVMAppendBasicBlock(ctxt->func, name);
   snprintf(name, 18, "cs_split_right_%02X", cep->split_point);
-  LLVMBasicBlockRef right = LLVMAppendBasicBlock(func, name);
-  LLVMPositionBuilderAtEnd(builder, in);
+  LLVMBasicBlockRef right = LLVMAppendBasicBlock(ctxt->func, name);
+  LLVMPositionBuilderAtEnd(ctxt->builder, in);
   snprintf(name, 18, "r <= %02X", cep->split_point);
-  LLVMValueRef icmp = LLVMBuildICmp(builder, LLVMIntULE,
+  LLVMValueRef icmp = LLVMBuildICmp(ctxt->builder, LLVMIntULE,
       r, LLVMConstInt(LLVMInt8Type(), cep->split_point, 0), name);
-  LLVMBuildCondBr(builder, icmp, left, right);
+  LLVMBuildCondBr(ctxt->builder, icmp, left, right);
 
   /*
    * Now build the subtrees starting from each of the output basic blocks
    * of the comparison.
    */
-  left_ok = h_llvm_cep_to_ir(mod, func, builder, r, cep->children[0], left, yes, no);
-  right_ok = h_llvm_cep_to_ir(mod, func, builder, r, cep->children[1], right, yes, no);
+  left_ok = h_llvm_cep_to_ir(ctxt, r, cep->children[0], left, yes, no);
+  right_ok = h_llvm_cep_to_ir(ctxt, r, cep->children[1], right, yes, no);
 
   return left_ok && right_ok;
 }
@@ -978,34 +981,35 @@ static bool h_llvm_build_ir_for_split(LLVMModuleRef mod, LLVMValueRef func, LLVM
  * Turn an llvm_charset_exec_plan_t into IR
  */
 
-static bool h_llvm_cep_to_ir(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+static bool h_llvm_cep_to_ir(HLLVMParserCompileContext *ctxt,
                              LLVMValueRef r, llvm_charset_exec_plan_t *cep,
                              LLVMBasicBlockRef in, LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
   bool rv;
 
+  if (!ctxt) return false;
   if (!cep) return false;
 
   switch (cep->action) {
     case CHARSET_ACTION_SCAN:
-      rv = h_llvm_build_ir_for_scan(mod, func, builder,
-          cep->cs, cep->idx_start, cep->idx_end, r, in, yes, no);
+      rv = h_llvm_build_ir_for_scan(ctxt, cep->cs,
+          cep->idx_start, cep->idx_end, r, in, yes, no);
       break;
     case CHARSET_ACTION_ACCEPT:
       /* Easy case; just unconditionally branch to the yes output */
-      LLVMPositionBuilderAtEnd(builder, in);
-      LLVMBuildBr(builder, yes);
+      LLVMPositionBuilderAtEnd(ctxt->builder, in);
+      LLVMBuildBr(ctxt->builder, yes);
       rv = true;
       break;
     case CHARSET_ACTION_BITMAP:
-      rv = h_llvm_build_ir_for_bitmap(mod, func, builder,
-          cep->cs, cep->idx_start, cep->idx_end, r, in, yes, no);
+      rv = h_llvm_build_ir_for_bitmap(ctxt, cep->cs,
+          cep->idx_start, cep->idx_end, r, in, yes, no);
       break;
     case CHARSET_ACTION_COMPLEMENT:
       /* This is trivial; just swap the 'yes' and 'no' outputs and build the child */
-      rv = h_llvm_cep_to_ir(mod, func, builder, r, cep->children[0], in, no, yes);
+      rv = h_llvm_cep_to_ir(ctxt, r, cep->children[0], in, no, yes);
       break;
     case CHARSET_ACTION_SPLIT:
-      rv = h_llvm_build_ir_for_split(mod, func, builder, cep, r, in, yes, no);
+      rv = h_llvm_build_ir_for_split(ctxt, cep, r, in, yes, no);
       break;
     default:
       /* Unknown action type */
@@ -1037,8 +1041,7 @@ static bool h_llvm_cep_to_ir(LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRe
  * Returns: true on success, false on failure
  */
 
-bool h_llvm_make_charset_membership_test(HAllocator* mm__,
-                                         LLVMModuleRef mod, LLVMValueRef func, LLVMBuilderRef builder,
+bool h_llvm_make_charset_membership_test(HLLVMParserCompileContext *ctxt,
                                          LLVMValueRef r, HCharset cs,
                                          LLVMBasicBlockRef yes, LLVMBasicBlockRef no) {
   /*
@@ -1055,7 +1058,11 @@ bool h_llvm_make_charset_membership_test(HAllocator* mm__,
    * and then transforming the tree into IR.
    */
 
+  HAllocator *mm__;
   bool rv;
+
+  if (!ctxt) return false;
+  mm__ = ctxt->mm__;
 
   /* Try building a charset exec plan */
   llvm_charset_exec_plan_t *cep = h_llvm_build_charset_exec_plan(mm__, cs);
@@ -1092,14 +1099,14 @@ bool h_llvm_make_charset_membership_test(HAllocator* mm__,
    */
 
   /* Create input block */
-  LLVMBasicBlockRef start = LLVMAppendBasicBlock(func, "cs_start");
+  LLVMBasicBlockRef start = LLVMAppendBasicBlock(ctxt->func, "cs_start");
   /*
    * Make unconditional branch into input block from wherever our caller
    * had us positioned.
    */
-  LLVMBuildBr(builder, start);
+  LLVMBuildBr(ctxt->builder, start);
 
-  rv = h_llvm_cep_to_ir(mod, func, builder, r, cep, start, yes, no);
+  rv = h_llvm_cep_to_ir(ctxt, r, cep, start, yes, no);
 
   h_llvm_free_charset_exec_plan(mm__, cep);
   cep = NULL;
