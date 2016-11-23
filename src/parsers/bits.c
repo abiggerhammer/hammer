@@ -27,74 +27,38 @@ static HParseResult* parse_bits(void* env, HParseState *state) {
 #ifdef HAMMER_LLVM_BACKEND
 
 static bool bits_llvm(HLLVMParserCompileContext *ctxt, void* env) {
+  /* Emit LLVM IR to parse ((struct bits_env *)env)->length bits */
+
   if (!ctxt) return false;
 
-  /*   %result = alloca %struct.HParsedToken_*, align 8 */
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wunused-variable"
-  LLVMValueRef result = LLVMBuildAlloca(ctxt->builder, ctxt->llvm_parsedtoken, "result");
-  #pragma GCC diagnostic pop
-  /*   store i8* %env, i8** %1, align 8 */
-  /*   store %struct.HParseState_* %state, %struct.HParseState_** %2, align 8 */
-  /*   %3 = load i8** %1, align 8 */
-  /*   %4 = bitcast i8* %3 to %struct.bits_env* */
-  /*   store %struct.bits_env* %4, %struct.bits_env** %env, align 8 */
-  /*   %5 = load %struct.HParseState_** %2, align 8 */
-  /*   %6 = getelementptr inbounds %struct.HParseState_* %5, i32 0, i32 2 */
-  /*   %7 = load %struct.HArena_** %6, align 8 */
-  /*   %8 = call noalias i8* @h_arena_malloc(%struct.HArena_* %7, i64 48) */
-  /*   %9 = bitcast i8* %8 to %struct.HParsedToken_* */
-  /*   store %struct.HParsedToken_* %9, %struct.HParsedToken_** %result, align 8 */
-  /*   %10 = load %struct.bits_env** %env_, align 8 */
-  /*   %11 = getelementptr inbounds %struct.bits_env* %10, i32 0, i32 1 */
-  /*   %12 = load i8* %11, align 1 */
-  /*   %13 = zext i8 %12 to i32 */
-  /*   %14 = icmp ne i32 %13, 0 */
-  /*   %15 = select i1 %14, i32 4, i32 8 */
-  /*   %16 = load %struct.HParsedToken_** %result, align 8 */
-  /*   %17 = getelementptr inbounds %struct.HParsedToken_* %16, i32 0, i32 0 */
-  /*   store i32 %15, i32* %17, align 4 */
-  /*   %18 = load %struct.bits_env** %env_, align 8 */
-  /*   %19 = getelementptr inbounds %struct.bits_env* %18, i32 0, i32 1 */
-  /*   %20 = load i8* %19, align 1 */
-  /*   %21 = icmp ne i8 %20, 0 */
-  /*   br i1 %21, label %22, label %33 */
+  struct bits_env *env_ = env;
+  /* Error out on unsupported length */
+  if (env_->length > 64 || env_->length == 0) return false;
+  /* Set up params for call to h_read_bits */
+  LLVMValueRef bits_args[3];
+  bits_args[0] = ctxt->stream;
+  bits_args[1] = LLVMConstInt(LLVMInt32Type(), env_->length, 0);
+  bits_args[2] = LLVMConstInt(LLVMInt8Type(), env_->signedp ? 1 : 0, 0);
 
-  /* ; <label>:22                                      ; preds = %0 */
-  /*   %23 = load %struct.HParseState_** %2, align 8 */
-  /*   %24 = getelementptr inbounds %struct.HParseState_* %23, i32 0, i32 1 */
-  /*   %25 = load %struct.bits_env** %env_, align 8 */
-  /*   %26 = getelementptr inbounds %struct.bits_env* %25, i32 0, i32 0 */
-  /*   %27 = load i8* %26, align 1 */
-  /*   %28 = zext i8 %27 to i32 */
-  /*   %29 = call i64 @h_read_bits(%struct.HInputStream_* %24, i32 %28, i8 signext 1) */
-  /*   %30 = load %struct.HParsedToken_** %result, align 8 */
-  /*   %31 = getelementptr inbounds %struct.HParsedToken_* %30, i32 0, i32 1 */
-  /*   %32 = bitcast %union.anon* %31 to i64* */
-  /*   store i64 %29, i64* %32, align 8 */
-  /*   br label %44 */
+  /* Set up basic blocks: entry, success and failure branches, then exit */
+  LLVMBasicBlockRef bits_bb = LLVMAppendBasicBlock(ctxt->func, "bits");
 
-  /* ; <label>:33                                      ; preds = %0 */
-  /*   %34 = load %struct.HParseState_** %2, align 8 */
-  /*   %35 = getelementptr inbounds %struct.HParseState_* %34, i32 0, i32 1 */
-  /*   %36 = load %struct.bits_env** %env_, align 8 */
-  /*   %37 = getelementptr inbounds %struct.bits_env* %36, i32 0, i32 0 */
-  /*   %38 = load i8* %37, align 1 */
-  /*   %39 = zext i8 %38 to i32 */
-  /*   %40 = call i64 @h_read_bits(%struct.HInputStream_* %35, i32 %39, i8 signext 0) */
-  /*   %41 = load %struct.HParsedToken_** %result, align 8 */
-  /*   %42 = getelementptr inbounds %struct.HParsedToken_* %41, i32 0, i32 1 */
-  /*   %43 = bitcast %union.anon* %42 to i64* */
-  /*   store i64 %40, i64* %43, align 8 */
-  /*   br label %44 */
-  
-  /* ; <label>:44                                      ; preds = %33, %22 */
-  /*   %45 = load %struct.HParseState_** %2, align 8 */
-  /*   %46 = getelementptr inbounds %struct.HParseState_* %45, i32 0, i32 2 */
-  /*   %47 = load %struct.HArena_** %46, align 8 */
-  /*   %48 = load %struct.HParsedToken_** %result, align 8 */
-  /*   %49 = call %struct.HParseResult_* @make_result(%struct.HArena_* %47, %struct.HParsedToken_* %48) */
-  /*   ret %struct.HParseResult_* %49 */
+  /* Basic block: entry */
+  LLVMBuildBr(ctxt->builder, bits_bb);
+  LLVMPositionBuilderAtEnd(ctxt->builder, bits_bb);
+
+  /* Call to h_read_bits() */
+  // %read_bits = call i64 @h_read_bits(%struct.HInputStream_* %8, i32 env_->length, i8 signext env_->signedp)
+  LLVMValueRef bits = LLVMBuildCall(ctxt->builder,
+      LLVMGetNamedFunction(ctxt->mod, "h_read_bits"), bits_args, 3, "read_bits");
+
+  /* Make an HParseResult out of it */
+  LLVMValueRef mr;
+  h_llvm_make_tt_suint(ctxt, env_->length, env_->signedp, bits, &mr);
+
+  /* Return mr */
+  LLVMBuildRet(ctxt->builder, mr);
+
   return true;
 }
 
