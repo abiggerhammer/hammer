@@ -37,6 +37,7 @@ bool h_llvm_make_charset_membership_test(HLLVMParserCompileContext *ctxt,
                                          LLVMValueRef r, HCharset cs,
                                          LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
 void h_llvm_make_tt_suint(HLLVMParserCompileContext *ctxt,
+                          uint8_t length, uint8_t signedp,
                           LLVMValueRef r, LLVMValueRef *mr_out);
 
 #endif // #ifndef HAMMER_LLVM__H

@@ -24,6 +24,7 @@
  */
 
 void h_llvm_make_tt_suint(HLLVMParserCompileContext *ctxt,
+                          uint8_t length, uint8_t signedp,
                           LLVMValueRef r, LLVMValueRef *mr_out) {
   /* Set up call to h_arena_malloc() for a new HParsedToken */
   LLVMValueRef tok_size = LLVMConstInt(LLVMInt32Type(), sizeof(HParsedToken), 0);
@@ -36,29 +37,36 @@ void h_llvm_make_tt_suint(HLLVMParserCompileContext *ctxt,
   LLVMValueRef tok = LLVMBuildBitCast(ctxt->builder, amalloc, ctxt->llvm_parsedtokenptr, "tok");
 
   /*
-   * tok->token_type = TT_UINT;
+   * tok->token_type = signedp ? TT_SINT : TT_UINT;
    *
    * %token_type = getelementptr inbounds %struct.HParsedToken_.2, %struct.HParsedToken_.2* %3, i32 0, i32 0
-   *
-   * TODO if we handle TT_SINT too, adjust here and the zero-ext below
    */
   LLVMValueRef toktype = LLVMBuildStructGEP(ctxt->builder, tok, 0, "token_type");
   /* store i32 8, i32* %token_type */
-  LLVMBuildStore(ctxt->builder, LLVMConstInt(LLVMInt32Type(), 8, 0), toktype);
+  LLVMBuildStore(ctxt->builder, LLVMConstInt(LLVMInt32Type(),
+        signedp ? TT_SINT : TT_UINT, 0), toktype);
 
   /*
+   * tok->sint = r;
+   * or
    * tok->uint = r;
    *
    * %token_data = getelementptr inbounds %struct.HParsedToken_.2, %struct.HParsedToken_.2* %3, i32 0, i32 1
    */
   LLVMValueRef tokdata = LLVMBuildStructGEP(ctxt->builder, tok, 1, "token_data");
   /*
-   * TODO
-   *
-   * This is where we'll need to adjust to handle other types (sign vs. zero extend, omit extend if
-   * r is 64-bit already
+   * the token_data field is a union, but either an int64_t or a uint64_t in the
+   * cases we can be called for.
    */
-  LLVMBuildStore(ctxt->builder, LLVMBuildZExt(ctxt->builder, r, LLVMInt64Type(), "r"), tokdata);
+  if (length < 64) {
+    /* Extend needed */
+    LLVMValueRef r_ext;
+    if (signedp) r_ext = LLVMBuildSExt(ctxt->builder, r, LLVMInt64Type(), "r_sext");
+    else r_ext = LLVMBuildZExt(ctxt->builder, r, LLVMInt64Type(), "r_zext");
+    LLVMBuildStore(ctxt->builder, r_ext, tokdata);
+  } else {
+    LLVMBuildStore(ctxt->builder, r, tokdata);
+  }
   /*
    * Store the index from the stream into the token
    */
@@ -71,8 +79,7 @@ void h_llvm_make_tt_suint(HLLVMParserCompileContext *ctxt,
   LLVMBuildStore(ctxt->builder, LLVMBuildLoad(ctxt->builder, streamindex, ""), tokindex);
   /* Store the bit length into the token */
   LLVMValueRef tokbitlen = LLVMBuildStructGEP(ctxt->builder, tok, 3, "bit_length");
-  /* TODO handle multiple bit lengths */
-  LLVMBuildStore(ctxt->builder, LLVMConstInt(LLVMInt64Type(), 8, 0), tokbitlen);
+  LLVMBuildStore(ctxt->builder, LLVMConstInt(LLVMInt64Type(), length, 0), tokbitlen);
 
   /*
    * Now call make_result()

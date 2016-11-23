@@ -116,7 +116,7 @@ static bool cs_llvm(HLLVMParserCompileContext *ctxt, void* env) {
   LLVMPositionBuilderAtEnd(ctxt->builder, success);
 
   LLVMValueRef mr;
-  h_llvm_make_tt_suint(ctxt, r, &mr);
+  h_llvm_make_tt_suint(ctxt, 8, 0, r, &mr);
 
   /* br label %ch_end */
   LLVMBuildBr(ctxt->builder, end);
