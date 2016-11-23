@@ -1,20 +1,34 @@
 # -*- python -*-
 import os, os.path
 Import('env libhammer_shared testruns targets')
-Import('llvm_defines')
-Import('llvm_includes')
+# LLVM-related flags
+if GetOption("use_llvm"):
+    Import('llvm_defines')
+    Import('llvm_includes')
 
 pythonenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
 
 swig = pythonenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
 setup = ['setup.py']
 pydir = os.path.join(env['BUILD_BASE'], 'src/bindings/python')
-define_list = ','.join(llvm_defines)
-inc_list = ' '.join(['-I' + e for e in llvm_includes])
-swig_opt_list = '-DHAMMER_INTERNAL__NO_STDARG_H -I../../ ' + inc_list
-libhammer_python = pythonenv.Command(['hammer.py', 'hammer_wrap.c'], [swig, setup], \
-    'python ' + os.path.join(pydir, 'setup.py') + ' build_ext --inplace ' + inc_list + \
-    ' --define=\"' + define_list + '\" --swig-opts=\"' + swig_opt_list + '\"')
+if GetOption("use_llvm"):
+    define_list = ','.join(llvm_defines + ['HAMMER_LLVM_BACKEND'])
+    inc_list = ' '.join(['-I' + e for e in llvm_includes])
+else:
+    define_list = None
+    inc_list = None
+
+swig_opt_list = '-DHAMMER_INTERNAL__NO_STDARG_H -I../../'
+arg_list = 'python ' + os.path.join(pydir, 'setup.py') + ' build_ext --swig=swig3.0 --inplace '
+if inc_list:
+    arg_list = arg_list + inc_list
+    swig_opt_list = swig_opt_list + ' ' + inc_list
+if define_list:
+    arg_list = arg_list + ' --define=\"' + define_list + '\"'
+arg_list = arg_list + ' --swig-opts=\"' + swig_opt_list + '\"'
+
+libhammer_python = pythonenv.Command(['hammer.py', 'hammer_wrap.c'], [swig, setup], arg_list)
+
 Default(libhammer_python)
 
 pytestenv = pythonenv.Clone()

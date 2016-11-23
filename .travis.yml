@@ -8,100 +8,176 @@ env:
   global:
     - LLVM_CONFIG=llvm-config-3.8
   matrix:
-    - BINDINGS=none
+    - BINDINGS=none LLVM_BACKEND=0
+    - BINDINGS=none LLVM_BACKEND=1
 matrix:
   include:
     - compiler: gcc
       language: ruby
       rvm: ruby-2.2.5
-      env: BINDINGS=ruby
+      env: BINDINGS=ruby LLVM_BACKEND=0
+    - compiler: gcc
+      language: ruby
+      rvm: ruby-2.2.5
+      env: BINDINGS=ruby LLVM_BACKEND=1
     - compiler: clang
       language: ruby
       rvm: ruby-2.2.5
-      env: BINDINGS=ruby CC=clang
+      env: BINDINGS=ruby CC=clang LLVM_BACKEND=0
+    - compiler: clang
+      language: ruby
+      rvm: ruby-2.2.5
+      env: BINDINGS=ruby CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: ruby
       rvm: ruby-2.3.1
-      env: BINDINGS=ruby
+      env: BINDINGS=ruby LLVM_BACKEND=0
+    - compiler: gcc
+      language: ruby
+      rvm: ruby-2.3.1
+      env: BINDINGS=ruby LLVM_BACKEND=1
     - compiler: clang
       language: ruby
       rvm: ruby-2.3.1
-      env: BINDINGS=ruby CC=clang
+      env: BINDINGS=ruby CC=clang LLVM_BACKEND=0
+    - compiler: clang
+      language: ruby
+      rvm: ruby-2.3.1
+      env: BINDINGS=ruby CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: python
-      python: "2.7"
-      env: BINDINGS=python
+      python: "2.7.10"
+      env: BINDINGS=python LLVM_BACKEND=0
+    - compiler: gcc
+      language: python
+      python: "2.7.10"
+      env: BINDINGS=python LLVM_BACKEND=1
     - compiler: clang
       language: python
-      python: "2.7"
-      env: BINDINGS=python CC=clang
+      python: "2.7.10"
+      env: BINDINGS=python CC=clang LLVM_BACKEND=0
+    - compiler: clang
+      language: python
+      python: "2.7.10"
+      env: BINDINGS=python CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: perl
       perl: "5.18"
-      env: BINDINGS=perl
+      env: BINDINGS=perl LLVM_BACKEND=0
+    - compiler: gcc
+      language: perl
+      perl: "5.18"
+      env: BINDINGS=perl LLVM_BACKEND=1
     - compiler: clang
       language: perl
       perl: "5.18"
-      env: BINDINGS=perl CC=clang
+      env: BINDINGS=perl CC=clang LLVM_BACKEND=0
+    - compiler: clang
+      language: perl
+      perl: "5.18"
+      env: BINDINGS=perl CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: perl
       perl: "5.14"
-      env: BINDINGS=perl
+      env: BINDINGS=perl LLVM_BACKEND=0
+    - compiler: gcc
+      language: perl
+      perl: "5.14"
+      env: BINDINGS=perl LLVM_BACKEND=1
     - compiler: clang
       language: perl
       perl: "5.14"
-      env: BINDINGS=perl CC=clang
+      env: BINDINGS=perl CC=clang LLVM_BACKEND=0
+    - compiler: clang
+      language: perl
+      perl: "5.14"
+      env: BINDINGS=perl CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: perl
       perl: "5.10"
-      env: BINDINGS=perl
+      env: BINDINGS=perl LLVM_BACKEND=0
+    - compiler: gcc
+      language: perl
+      perl: "5.10"
+      env: BINDINGS=perl LLVM_BACKEND=1
     - compiler: clang
       language: perl
       perl: "5.10"
-      env: BINDINGS=perl CC=clang
+      env: BINDINGS=perl CC=clang LLVM_BACKEND=0
+    - compiler: clang
+      language: perl
+      perl: "5.10"
+      env: BINDINGS=perl CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: php
       php: "5.5"
-      env: BINDINGS=php
+      env: BINDINGS=php LLVM_BACKEND=0
+    - compiler: gcc
+      language: php
+      php: "5.5"
+      env: BINDINGS=php LLVM_BACKEND=1
     - compiler: clang
       language: php
       php: "5.5"
-      env: BINDINGS=php CC=clang
+      env: BINDINGS=php CC=clang LLVM_BACKEND=0
+    - compiler: clang
+      language: php
+      php: "5.5"
+      env: BINDINGS=php CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: php
       php: "5.4"
-      env: BINDINGS=php
+      env: BINDINGS=php LLVM_BACKEND=0
+    - compiler: gcc
+      language: php
+      php: "5.4"
+      env: BINDINGS=php LLVM_BACKEND=1
     - compiler: clang
       language: php
       php: "5.4"
-      env: BINDINGS=php CC=clang
+      env: BINDINGS=php CC=clang LLVM_BACKEND=0
+    - compiler: clang
+      language: php
+      php: "5.4"
+      env: BINDINGS=php CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: dotnet
-      env: BINDINGS=dotnet
+      env: BINDINGS=dotnet LLVM_BACKEND=0
+    - compiler: gcc
+      language: dotnet
+      env: BINDINGS=dotnet LLVM_BACKEND=1
     - compiler: clang
       language: dotnet
-      env: BINDINGS=dotnet CC=clang
+      env: BINDINGS=dotnet CC=clang LLVM_BACKEND=0
+    - compiler: clang
+      language: dotnet
+      env: BINDINGS=dotnet CC=clang LLVM_BACKEND=1
     - compiler: gcc
       language: cpp
-      env: BINDINGS=cpp
+      env: BINDINGS=cpp LLVM_BACKEND=0
     - compiler: gcc
       language: cpp
-      env: BINDINGS=cpp CC=clang
+      env: BINDINGS=cpp LLVM_BACKEND=1
+    - compiler: clang
+      language: cpp
+      env: BINDINGS=cpp CC=clang LLVM_BACKEND=0
+    - compiler: clang
+      language: cpp
+      env: BINDINGS=cpp CC=clang LLVM_BACKEND=1
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install lcov
+  - sudo apt-get install -y lcov
   - gem install coveralls-lcov
   - if [ "$CC" == "gcc" ]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y; sudo apt-get update -qq; sudo apt-get install gcc-5; fi
   - sudo apt-get install llvm-3.8 llvm-3.8-dev clang-3.8
-  - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; fi
-  - if [ "$BINDINGS" == "perl" ]; then sudo apt-get install -t trusty-backports swig3.0; fi
+  - if [ "$BINDINGS" != "none" ]; then sudo apt-get install -qq swig; sudo apt-get install -t trusty-backports swig3.0; fi
   - if [ "$BINDINGS" == "python" ]; then sudo apt-get install -qq python-dev; fi
   - if [ "$BINDINGS" == "dotnet" ]; then sudo apt-get install -qq mono-devel mono-mcs nunit nunit-console; fi
 install: true
 before_script:
   - if [ "$BINDINGS" == "php" ]; then phpenv config-add src/bindings/php/hammer.ini; fi
 script:
-  - if [ "$BINDINGS" == "none" ]; then scons test --variant=debug --coverage; else scons bindings=$BINDINGS test; fi
+  - if [ "$BINDINGS" == "none" ]; then if [ "$LLVM_BACKEND" == "1" ]; then LLVM_FLAG="--enable-llvm-backend"; else LLVM_FLAG="--disable-llvm-backend"; fi; scons test --variant=debug $LLVM_FLAG --coverage; else scons $LLVM_FLAG bindings=$BINDINGS test; fi
 after_success:
   - if [ "$BINDINGS" == "none" ]; then if [ "$CC" == "clang" ]; then llvm-cov gcov -o coverage.info build/debug/src/test_suite.gcda; else lcov --capture --directory build/debug/src --output-file coverage.info; fi; fi
   - coveralls-lcov coverage.info

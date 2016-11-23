@@ -25,3 +25,4 @@ build/
 *.pyc
 *.ll
 libhammer.pc
+TestResult.xml

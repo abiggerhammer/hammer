@@ -20,7 +20,7 @@ if 'PERL5LIB' in os.environ:
 
 swig = ['hammer.i']
 
-hammer_wrap = perlenv.Command(['hammer_wrap.c', 'hammer.pm'], swig, "swig $SWIGFLAGS $SOURCE")
+hammer_wrap = perlenv.Command(['hammer_wrap.c', 'hammer.pm'], swig, "swig3.0 $SWIGFLAGS $SOURCE")
 makefile = perlenv.Command(['Makefile'], ['Makefile.PL'], "perl $SOURCE CC=" + perlenv['ENV']['CC'])
 
 targetdir = os.path.dirname(str(hammer_wrap[0].path))

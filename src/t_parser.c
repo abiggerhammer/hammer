@@ -21,10 +21,19 @@ static void test_ch(gconstpointer backend) {
 }
 
 static void test_ch_range(gconstpointer backend) {
-  const HParser *range_ = h_ch_range('a', 'c');
+  const HParser *range_1 = h_ch_range('a', 'c');
+  const HParser *range_2 = h_ch_range('a', 'z');
+  const HParser *range_3 = h_ch_range('A', 'z');
+  const HParser *range_all = h_ch_range(0, 255);
 
-  g_check_parse_match(range_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
-  g_check_parse_failed(range_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
+  g_check_parse_match(range_1, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_failed(range_1, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
+  g_check_parse_match(range_2, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_failed(range_2, (HParserBackend)GPOINTER_TO_INT(backend), "C", 1);
+  g_check_parse_match(range_3, (HParserBackend)GPOINTER_TO_INT(backend), "B", 1, "u0x42");
+  g_check_parse_failed(range_3, (HParserBackend)GPOINTER_TO_INT(backend), "2", 1);
+  /* range_all never fails anything */
+  g_check_parse_match(range_all, (HParserBackend)GPOINTER_TO_INT(backend), "B", 1, "u0x42");
 }
 
 //@MARK_START
@@ -213,17 +222,70 @@ static void test_action(gconstpointer backend) {
 
 static void test_in(gconstpointer backend) {
   uint8_t options[3] = { 'a', 'b', 'c' };
+  uint8_t odds[128];
+  uint8_t _1_mod_4[64];
+  uint8_t scattered[3] = { 'A', 'b', 'z' };
+  int i;
+
   const HParser *in_ = h_in(options, 3);
   g_check_parse_match(in_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
   g_check_parse_failed(in_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
 
+  for (i = 0; i < 128; ++i) odds[i] = (uint8_t)(2*i + 1);
+  const HParser *odds_ = h_in(odds, 128);
+  g_check_parse_match(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "c", 1, "u0x63");
+  g_check_parse_match(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "E", 1, "u0x45");
+  g_check_parse_failed(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
+  g_check_parse_failed(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "F", 1);
+
+  for (i = 0; i < 64; ++i) _1_mod_4[i] = (uint8_t)(4*i + 1);
+  const HParser *_1_mod_4_ = h_in(_1_mod_4, 64);
+  g_check_parse_match(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
+  g_check_parse_match(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "E", 1, "u0x45");
+  g_check_parse_failed(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
+  g_check_parse_failed(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "c", 1);
+  g_check_parse_failed(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "F", 1);
+
+  const HParser *scattered_ = h_in(scattered, 3);
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "A", 1, "u0x41");
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "z", 1, "u0x7a");
+  g_check_parse_failed(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "y", 1);
+  g_check_parse_failed(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "F", 1);
 }
 
 static void test_not_in(gconstpointer backend) {
   uint8_t options[3] = { 'a', 'b', 'c' };
+  uint8_t odds[128];
+  uint8_t _1_mod_4[64];
+  uint8_t scattered[3] = { 'A', 'b', 'z' };
+  int i;
+
   const HParser *not_in_ = h_not_in(options, 3);
   g_check_parse_match(not_in_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "u0x64");
   g_check_parse_failed(not_in_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1);
+
+  for (i = 0; i < 128; ++i) odds[i] = (uint8_t)(2*i + 1);
+  const HParser *odds_ = h_not_in(odds, 128);
+  g_check_parse_match(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1, "u0x64");
+  g_check_parse_match(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "F", 1, "u0x46");
+  g_check_parse_failed(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "c", 1);
+  g_check_parse_failed(odds_, (HParserBackend)GPOINTER_TO_INT(backend), "E", 1);
+
+  for (i = 0; i < 64; ++i) _1_mod_4[i] = (uint8_t)(4*i + 1);
+  const HParser *_1_mod_4_ = h_not_in(_1_mod_4, 64);
+  g_check_parse_match(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
+  g_check_parse_match(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "F", 1, "u0x46");
+  g_check_parse_failed(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "e", 1);
+  g_check_parse_failed(_1_mod_4_, (HParserBackend)GPOINTER_TO_INT(backend), "A", 1);
+
+  const HParser *scattered_ = h_not_in(scattered, 3);
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "B", 1, "u0x42");
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "a", 1, "u0x61");
+  g_check_parse_match(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "y", 1, "u0x79");
+  g_check_parse_failed(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "A", 1);
+  g_check_parse_failed(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1);
+  g_check_parse_failed(scattered_, (HParserBackend)GPOINTER_TO_INT(backend), "z", 1);
 
 }
 
@@ -962,6 +1024,18 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/glr/result_length", GINT_TO_POINTER(PB_GLR), test_result_length);
   g_test_add_data_func("/core/parser/glr/token_position", GINT_TO_POINTER(PB_GLR), test_token_position);
 
+#ifdef HAMMER_LLVM_BACKEND
   g_test_add_data_func("/core/parser/llvm/ch", GINT_TO_POINTER(PB_LLVM), test_ch);
   g_test_add_data_func("/core/parser/llvm/ch_range", GINT_TO_POINTER(PB_LLVM), test_ch_range);
+  g_test_add_data_func("/core/parser/llvm/int64", GINT_TO_POINTER(PB_LLVM), test_int64);
+  g_test_add_data_func("/core/parser/llvm/int32", GINT_TO_POINTER(PB_LLVM), test_int32);
+  g_test_add_data_func("/core/parser/llvm/int16", GINT_TO_POINTER(PB_LLVM), test_int16);
+  g_test_add_data_func("/core/parser/llvm/int8", GINT_TO_POINTER(PB_LLVM), test_int8);
+  g_test_add_data_func("/core/parser/llvm/uint64", GINT_TO_POINTER(PB_LLVM), test_uint64);
+  g_test_add_data_func("/core/parser/llvm/uint32", GINT_TO_POINTER(PB_LLVM), test_uint32);
+  g_test_add_data_func("/core/parser/llvm/uint16", GINT_TO_POINTER(PB_LLVM), test_uint16);
+  g_test_add_data_func("/core/parser/llvm/uint8", GINT_TO_POINTER(PB_LLVM), test_uint8);
+  g_test_add_data_func("/core/parser/llvm/in", GINT_TO_POINTER(PB_LLVM), test_in);
+  g_test_add_data_func("/core/parser/llvm/not_in", GINT_TO_POINTER(PB_LLVM), test_not_in);
+#endif /* defined(HAMMER_LLVM_BACKEND) */
 }

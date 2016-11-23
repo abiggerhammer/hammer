@@ -1,11 +1,13 @@
 #include <stdint.h>
 #include <assert.h>
+#ifdef HAMMER_LLVM_BACKEND
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include <llvm-c/Core.h>
 #pragma GCC diagnostic pop
+#include "../backends/llvm/llvm.h"
+#endif
 #include "parser_internal.h"
-#include "../llvm.h"
 
 static HParseResult* parse_ch(void* env, HParseState *state) {
   uint8_t c = (uint8_t)(uintptr_t)(env);
@@ -46,69 +48,73 @@ static bool ch_ctrvm(HRVMProg *prog, void* env) {
   return true;
 }
 
-static bool ch_llvm(LLVMBuilderRef builder, LLVMValueRef func, LLVMModuleRef mod, void* env) {
+#ifdef HAMMER_LLVM_BACKEND
+
+static bool ch_llvm(HLLVMParserCompileContext *ctxt, void* env) {
   // Build a new LLVM function to parse a character
 
   // Set up params for calls to h_read_bits() and h_arena_malloc()
   LLVMValueRef bits_args[3];
-  LLVMValueRef stream = LLVMGetFirstParam(func);
-  stream = LLVMBuildBitCast(builder, stream, llvm_inputstreamptr, "stream");
-  bits_args[0] = stream;
+  bits_args[0] = ctxt->stream;
   bits_args[1] = LLVMConstInt(LLVMInt32Type(), 8, 0);
   bits_args[2] = LLVMConstInt(LLVMInt8Type(), 0, 0);
-  LLVMValueRef arena = LLVMGetLastParam(func);
 
   // Set up basic blocks: entry, success and failure branches, then exit
-  LLVMBasicBlockRef entry = LLVMAppendBasicBlock(func, "ch_entry");
-  LLVMBasicBlockRef success = LLVMAppendBasicBlock(func, "ch_success");
-  LLVMBasicBlockRef end = LLVMAppendBasicBlock(func, "ch_end");
+  LLVMBasicBlockRef entry = LLVMAppendBasicBlock(ctxt->func, "ch_entry");
+  LLVMBasicBlockRef success = LLVMAppendBasicBlock(ctxt->func, "ch_success");
+  LLVMBasicBlockRef end = LLVMAppendBasicBlock(ctxt->func, "ch_end");
 
   // Basic block: entry
-  LLVMPositionBuilderAtEnd(builder, entry);
+  LLVMBuildBr(ctxt->builder, entry);
+  LLVMPositionBuilderAtEnd(ctxt->builder, entry);
 
   // Call to h_read_bits()
   // %read_bits = call i64 @h_read_bits(%struct.HInputStream_* %8, i32 8, i8 signext 0)
-  LLVMValueRef bits = LLVMBuildCall(builder, LLVMGetNamedFunction(mod, "h_read_bits"), bits_args, 3, "read_bits");
+  LLVMValueRef bits = LLVMBuildCall(ctxt->builder,
+      LLVMGetNamedFunction(ctxt->mod, "h_read_bits"), bits_args, 3, "read_bits");
   // %2 = trunc i64 %read_bits to i8
-  LLVMValueRef r = LLVMBuildTrunc(builder, bits, LLVMInt8Type(), ""); // do we actually need this?
+  LLVMValueRef r = LLVMBuildTrunc(ctxt->builder,
+      bits, LLVMInt8Type(), ""); // do we actually need this?
 
   // Check if h_read_bits succeeded
   // %"c == r" = icmp eq i8 -94, %2 ; the -94 comes from c_
   uint8_t c_ = (uint8_t)(uintptr_t)(env);
   LLVMValueRef c = LLVMConstInt(LLVMInt8Type(), c_, 0);
-  LLVMValueRef icmp = LLVMBuildICmp(builder, LLVMIntEQ, c, r, "c == r");
+  LLVMValueRef icmp = LLVMBuildICmp(ctxt->builder, LLVMIntEQ, c, r, "c == r");
 
   // Branch so success or failure basic block, as appropriate
   // br i1 %"c == r", label %ch_success, label %ch_fail
-  LLVMBuildCondBr(builder, icmp, success, end);
+  LLVMBuildCondBr(ctxt->builder, icmp, success, end);
 
   // Basic block: success
-  LLVMPositionBuilderAtEnd(builder, success);
+  LLVMPositionBuilderAtEnd(ctxt->builder, success);
 
   /* Make a token */
   LLVMValueRef mr;
-  h_llvm_make_tt_suint(mod, builder, stream, arena, r, &mr);
+  h_llvm_make_tt_suint(ctxt, 8, 0, r, &mr);
 
   // br label %ch_end
-  LLVMBuildBr(builder, end);
+  LLVMBuildBr(ctxt->builder, end);
   
   // Basic block: end
-  LLVMPositionBuilderAtEnd(builder, end);
+  LLVMPositionBuilderAtEnd(ctxt->builder, end);
   // %rv = phi %struct.HParseResult_.3* [ %make_result, %ch_success ], [ null, %ch_entry ]
-  LLVMValueRef rv = LLVMBuildPhi(builder, llvm_parseresultptr, "rv");
+  LLVMValueRef rv = LLVMBuildPhi(ctxt->builder, ctxt->llvm_parseresultptr, "rv");
   LLVMBasicBlockRef rv_phi_incoming_blocks[] = {
     success,
     entry
     };
   LLVMValueRef rv_phi_incoming_values[] = {
     mr,
-    LLVMConstNull(llvm_parseresultptr)
+    LLVMConstNull(ctxt->llvm_parseresultptr)
     };
   LLVMAddIncoming(rv, rv_phi_incoming_values, rv_phi_incoming_blocks, 2);
   // ret %struct.HParseResult_.3* %rv
-  LLVMBuildRet(builder, rv);
+  LLVMBuildRet(ctxt->builder, rv);
   return true;
 }
+
+#endif /* defined(HAMMER_LLVM_BACKEND) */
 
 static const HParserVtable ch_vt = {
   .parse = parse_ch,
@@ -116,7 +122,9 @@ static const HParserVtable ch_vt = {
   .isValidCF = h_true,
   .desugar = desugar_ch,
   .compile_to_rvm = ch_ctrvm,
+#ifdef HAMMER_LLVM_BACKEND
   .llvm = ch_llvm,
+#endif
   .higher = false,
 };
 

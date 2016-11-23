@@ -6,14 +6,15 @@ import subprocess
 
 Import('env testruns')
 # LLVM-related flags
-Import('llvm_computed_shared_lib_name')
-Import('llvm_config_sanitizer')
-Import('llvm_config_version')
-Import('llvm_linkage_type_flag')
-Import('llvm_required_components')
-Import('llvm_system_libs_flag')
-Import('llvm_use_computed_shared_lib_name')
-Import('llvm_use_shared')
+if GetOption("use_llvm"):
+    Import('llvm_computed_shared_lib_name')
+    Import('llvm_config_sanitizer')
+    Import('llvm_config_version')
+    Import('llvm_linkage_type_flag')
+    Import('llvm_required_components')
+    Import('llvm_system_libs_flag')
+    Import('llvm_use_computed_shared_lib_name')
+    Import('llvm_use_shared')
 
 dist_headers = [
     "hammer.h",
@@ -31,6 +32,7 @@ parsers_headers = [
 backends_headers = [
     "backends/regex.h",
     "backends/contextfree.h"
+    "backends/missing.h"
 ]
 
 parsers = ['parsers/%s.c'%s for s in
@@ -61,10 +63,15 @@ parsers = ['parsers/%s.c'%s for s in
             'unimplemented',
             'whitespace',
             'xor',
-            'value']] 
+            'value']]
 
 backends = ['backends/%s.c' % s for s in
-            ['packrat', 'llk', 'regex', 'glr', 'lalr', 'lr', 'lr0', 'llvm']]
+            ['packrat', 'llk', 'regex', 'glr', 'lalr', 'lr', 'lr0', "missing"]]
+
+# Add LLVM backend if enabled
+if GetOption("use_llvm"):
+    llvm_backend_files = ['llvm.c', 'llvm_charset.c', 'llvm_suint.c']
+    backends = backends + ['backends/llvm/%s' % s for s in llvm_backend_files]
 
 misc_hammer_parts = [
     'allocator.c',
@@ -89,29 +96,33 @@ ctests = ['t_benchmark.c',
           't_misc.c',
 	  't_regression.c']
 
-env.ParseConfig('%s --cflags --ldflags' % env["LLVM_CONFIG"], function=llvm_config_sanitizer.sanitize)
+if GetOption("use_llvm"):
+    env.ParseConfig('%s --cflags --ldflags' % env["LLVM_CONFIG"], function=llvm_config_sanitizer.sanitize)
 libhammer_static = env.StaticLibrary('hammer', parsers + backends + misc_hammer_parts)
 
 # Use a cloned env for the shared library so we can have library dependencies
 shared_env = env.Clone()
-# Get LLVM stuff into LIBS/LDFLAGS
-shared_env.ParseConfig('%s --ldflags %s %s %s' % \
-                       (env["LLVM_CONFIG"], llvm_system_libs_flag, llvm_linkage_type_flag, llvm_required_components), \
-                       function=llvm_config_sanitizer.sanitize)
-# Get the right -l lines in
-if llvm_use_shared:
-    if llvm_use_computed_shared_lib_name:
-        shared_env.Append(LIBS=[llvm_computed_shared_lib_name, ])
+if GetOption("use_llvm"):
+    # Get LLVM stuff into LIBS/LDFLAGS
+    shared_env.ParseConfig('%s --ldflags %s %s %s' % \
+                           (env["LLVM_CONFIG"], llvm_system_libs_flag, \
+                            llvm_linkage_type_flag, llvm_required_components), \
+                           function=llvm_config_sanitizer.sanitize)
+    # Get the right -l lines in
+    if llvm_use_shared:
+        if llvm_use_computed_shared_lib_name:
+            shared_env.Append(LIBS=[llvm_computed_shared_lib_name, ])
+        else:
+            shared_env.ParseConfig('%s %s --libs %s' % \
+                                   (env["LLVM_CONFIG"], llvm_linkage_type_flag, llvm_required_components), \
+                                   function=llvm_config_sanitizer.sanitize)
     else:
+        # Just grab the statics regardless of version
         shared_env.ParseConfig('%s %s --libs %s' % \
                                (env["LLVM_CONFIG"], llvm_linkage_type_flag, llvm_required_components), \
                                function=llvm_config_sanitizer.sanitize)
-else:
-    # Just grab the statics regardless of version
-    shared_env.ParseConfig('%s %s --libs %s' % \
-                           (env["LLVM_CONFIG"], llvm_linkage_type_flag, llvm_required_components), \
-                           function=llvm_config_sanitizer.sanitize)
-shared_env.Append(LIBS=['stdc++', ], LIBPATH=['.'])
+    shared_env.Append(LIBS=['stdc++', ], LIBPATH=['.'])
+
 libhammer_shared = shared_env.SharedLibrary('hammer', parsers + backends + misc_hammer_parts)
 
 Default(libhammer_shared, libhammer_static)
@@ -124,24 +135,27 @@ env.Install("$backendsincpath", backends_headers)
 testenv = env.Clone()
 testenv.Append(LIBS=['hammer'], LIBPATH=['.'])
 testenv.ParseConfig('pkg-config --cflags --libs glib-2.0')
-# Get LLVM stuff into LIBS/LDFLAGS
-testenv.ParseConfig('%s --ldflags %s %s %s' % \
-                    (env["LLVM_CONFIG"], llvm_system_libs_flag, llvm_linkage_type_flag, llvm_required_components), \
-                    function=llvm_config_sanitizer.sanitize)
-# Get the right -l lines in
-if llvm_use_shared:
-    if llvm_use_computed_shared_lib_name:
-        testenv.Append(LIBS=[llvm_computed_shared_lib_name, ])
+if GetOption("use_llvm"):
+    # Get LLVM stuff into LIBS/LDFLAGS
+    testenv.ParseConfig('%s --ldflags %s %s %s' % \
+                        (env["LLVM_CONFIG"], llvm_system_libs_flag, \
+                         llvm_linkage_type_flag, llvm_required_components), \
+                        function=llvm_config_sanitizer.sanitize)
+    # Get the right -l lines in
+    if llvm_use_shared:
+        if llvm_use_computed_shared_lib_name:
+            testenv.Append(LIBS=[llvm_computed_shared_lib_name, ])
+        else:
+            testenv.ParseConfig('%s %s --libs %s' % \
+                                (env["LLVM_CONFIG"], llvm_linkage_type_flag, llvm_required_components), \
+                                function=llvm_config_sanitizer.sanitize)
     else:
+        # Just grab the statics regardless of version
         testenv.ParseConfig('%s %s --libs %s' % \
                             (env["LLVM_CONFIG"], llvm_linkage_type_flag, llvm_required_components), \
                             function=llvm_config_sanitizer.sanitize)
-else:
-    # Just grab the statics regardless of version
-    testenv.ParseConfig('%s %s --libs %s' % \
-                        (env["LLVM_CONFIG"], llvm_linkage_type_flag, llvm_required_components), \
-                        function=llvm_config_sanitizer.sanitize)
-testenv.Append(LIBS=['stdc++'], LIBPATH=['.'])
+    testenv.Append(LIBS=['stdc++'], LIBPATH=['.'])
+
 ctestexec = testenv.Program('test_suite', ctests + ['test_suite.c'], LINKFLAGS="--coverage" if testenv.GetOption("coverage") else None)
 ctest = Alias('testc', [ctestexec], "".join(["env LD_LIBRARY_PATH=", os.path.dirname(ctestexec[0].path), " ", ctestexec[0].path]))
 AlwaysBuild(ctest)

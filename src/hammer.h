@@ -46,6 +46,10 @@ typedef enum HParserBackend_ {
   PB_LLk,
   PB_LALR,
   PB_GLR,
+  /*
+   * PB_LLVM stays even if no LLVM backend compiled in, since these constants
+   * are exposed to callers.
+   */
   PB_LLVM,
   PB_MAX = PB_LLVM
 } HParserBackend;
