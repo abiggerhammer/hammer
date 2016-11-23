@@ -1027,6 +1027,14 @@ void register_parser_tests(void) {
 #ifdef HAMMER_LLVM_BACKEND
   g_test_add_data_func("/core/parser/llvm/ch", GINT_TO_POINTER(PB_LLVM), test_ch);
   g_test_add_data_func("/core/parser/llvm/ch_range", GINT_TO_POINTER(PB_LLVM), test_ch_range);
+  g_test_add_data_func("/core/parser/llvm/int64", GINT_TO_POINTER(PB_LLVM), test_int64);
+  g_test_add_data_func("/core/parser/llvm/int32", GINT_TO_POINTER(PB_LLVM), test_int32);
+  g_test_add_data_func("/core/parser/llvm/int16", GINT_TO_POINTER(PB_LLVM), test_int16);
+  g_test_add_data_func("/core/parser/llvm/int8", GINT_TO_POINTER(PB_LLVM), test_int8);
+  g_test_add_data_func("/core/parser/llvm/uint64", GINT_TO_POINTER(PB_LLVM), test_uint64);
+  g_test_add_data_func("/core/parser/llvm/uint32", GINT_TO_POINTER(PB_LLVM), test_uint32);
+  g_test_add_data_func("/core/parser/llvm/uint16", GINT_TO_POINTER(PB_LLVM), test_uint16);
+  g_test_add_data_func("/core/parser/llvm/uint8", GINT_TO_POINTER(PB_LLVM), test_uint8);
   g_test_add_data_func("/core/parser/llvm/in", GINT_TO_POINTER(PB_LLVM), test_in);
   g_test_add_data_func("/core/parser/llvm/not_in", GINT_TO_POINTER(PB_LLVM), test_not_in);
 #endif /* defined(HAMMER_LLVM_BACKEND) */
