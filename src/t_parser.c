@@ -1049,5 +1049,6 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/llvm/uint8", GINT_TO_POINTER(PB_LLVM), test_uint8);
   g_test_add_data_func("/core/parser/llvm/in", GINT_TO_POINTER(PB_LLVM), test_in);
   g_test_add_data_func("/core/parser/llvm/not_in", GINT_TO_POINTER(PB_LLVM), test_not_in);
+  g_test_add_data_func("/core/parser/llvm/nothing_p", GINT_TO_POINTER(PB_LLVM), test_nothing_p);
 #endif /* defined(HAMMER_LLVM_BACKEND) */
 }

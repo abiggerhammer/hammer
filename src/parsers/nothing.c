@@ -1,3 +1,10 @@
+#ifdef HAMMER_LLVM_BACKEND
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#include <llvm-c/Core.h>
+#pragma GCC diagnostic pop
+#include "../backends/llvm/llvm.h"
+#endif
 #include "parser_internal.h"
 
 static HParseResult* parse_nothing() {
@@ -16,12 +23,32 @@ static bool nothing_ctrvm(HRVMProg *prog, void* env) {
   return true;
 }
 
+#ifdef HAMMER_LLVM_BACKEND
+
+static bool nothing_llvm(HLLVMParserCompileContext *ctxt, void* env) {
+  if (!ctxt) return false;
+
+  /* This one just always returns NULL */
+  LLVMBasicBlockRef entry = LLVMAppendBasicBlock(ctxt->func, "nothing_entry");
+  LLVMBuildBr(ctxt->builder, entry);
+  LLVMPositionBuilderAtEnd(ctxt->builder, entry);
+
+  LLVMBuildRet(ctxt->builder, LLVMConstNull(ctxt->llvm_parseresultptr));
+
+  return true;
+}
+
+#endif /* defined(HAMMER_LLVM_BACKEND) */
+
 static const HParserVtable nothing_vt = {
   .parse = parse_nothing,
   .isValidRegular = h_true,
   .isValidCF = h_true,
   .desugar = desugar_nothing,
   .compile_to_rvm = nothing_ctrvm,
+#ifdef HAMMER_LLVM_BACKEND
+  .llvm = nothing_llvm,
+#endif
   .higher = false,
 };
 
