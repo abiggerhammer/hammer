@@ -19,8 +19,6 @@
  *  - arena [in]: a value ref to an llvm_arenaptr to be used for the malloc
  *  - r [in]: a value ref to the value to be used to this token
  *  - mr_out [out]: the return value from make_result()
- *
- * TODO actually support TT_SINT, inputs other than 8 bit
  */
 
 void h_llvm_make_tt_suint(HLLVMParserCompileContext *ctxt,
