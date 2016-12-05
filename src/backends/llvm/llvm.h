@@ -20,6 +20,7 @@ struct HLLVMParserCompileContext_ {
   LLVMValueRef func;
   LLVMBuilderRef builder;
   /* Typerefs */
+  LLVMTypeRef llvm_size_t;
   LLVMTypeRef llvm_inputstream;
   LLVMTypeRef llvm_inputstreamptr;
   LLVMTypeRef llvm_arena;
@@ -28,6 +29,8 @@ struct HLLVMParserCompileContext_ {
   LLVMTypeRef llvm_parsedtokenptr;
   LLVMTypeRef llvm_parseresult;
   LLVMTypeRef llvm_parseresultptr;
+  LLVMTypeRef llvm_hbytes;
+  LLVMTypeRef llvm_hbytesptr;
   /* Set up in function preamble */
   LLVMValueRef stream;
   LLVMValueRef arena;

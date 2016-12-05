@@ -26,6 +26,13 @@ HParseResult* make_result(HArena *arena, HParsedToken *tok) {
 }
 
 void h_llvm_declare_common(HLLVMParserCompileContext *ctxt) {
+#if SIZE_MAX == 0xffffffffffffffff
+  ctxt->llvm_size_t = LLVMInt64Type();
+#elif SIZE_MAX == 0xffffffff
+  ctxt->llvm_size_t = LLVMInt32Type();
+#else
+#error "SIZE_MAX is not consistent with either 64 or 32-bit platform, couldn't guess LLVM type for size_t"
+#endif
   ctxt->llvm_inputstream = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HInputStream_");
   LLVMTypeRef llvm_inputstream_struct_types[] = {
     LLVMPointerType(LLVMInt8Type(), 0),
@@ -46,12 +53,20 @@ void h_llvm_declare_common(HLLVMParserCompileContext *ctxt) {
   LLVMTypeRef llvm_parsedtoken_struct_types[] = {
     LLVMInt32Type(), // actually an enum value
     LLVMInt64Type(), // actually this is a union; the largest thing in it is 64 bits
-    LLVMInt64Type(), // FIXME sizeof(size_t) will be 32 bits on 32-bit platforms
-    LLVMInt64Type(), // FIXME ditto
+    ctxt->llvm_size_t,
+    ctxt->llvm_size_t,
     LLVMInt8Type()
   };
   LLVMStructSetBody(ctxt->llvm_parsedtoken, llvm_parsedtoken_struct_types, 5, 0);
   ctxt->llvm_parsedtokenptr = LLVMPointerType(ctxt->llvm_parsedtoken, 0);
+  /* The HBytes struct is one of the cases for the union in HParsedToken */
+  ctxt->llvm_hbytes = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HBytes_");
+  LLVMTypeRef llvm_hbytes_struct_types[] = {
+    LLVMPointerType(LLVMInt8Type(), 0), /* HBytes.token */
+    ctxt->llvm_size_t                   /* HBytes.len */
+  };
+  LLVMStructSetBody(ctxt->llvm_hbytes, llvm_hbytes_struct_types, 2, 0);
+  ctxt->llvm_hbytesptr = LLVMPointerType(ctxt->llvm_hbytes, 0);
   ctxt->llvm_parseresult = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HParseResult_");
   LLVMTypeRef llvm_parseresult_struct_types[] = {
     ctxt->llvm_parsedtokenptr,
