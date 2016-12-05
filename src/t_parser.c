@@ -1037,6 +1037,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/glr/token_position", GINT_TO_POINTER(PB_GLR), test_token_position);
 
 #ifdef HAMMER_LLVM_BACKEND
+  g_test_add_data_func("/core/parser/llvm/token", GINT_TO_POINTER(PB_LLVM), test_token);
   g_test_add_data_func("/core/parser/llvm/ch", GINT_TO_POINTER(PB_LLVM), test_ch);
   g_test_add_data_func("/core/parser/llvm/ch_range", GINT_TO_POINTER(PB_LLVM), test_ch_range);
   g_test_add_data_func("/core/parser/llvm/int64", GINT_TO_POINTER(PB_LLVM), test_int64);

@@ -26,12 +26,19 @@ HParseResult* make_result(HArena *arena, HParsedToken *tok) {
 }
 
 void h_llvm_declare_common(HLLVMParserCompileContext *ctxt) {
-#if SIZE_MAX == 0xffffffffffffffff
+#if SIZE_MAX == UINT64_MAX
   ctxt->llvm_size_t = LLVMInt64Type();
-#elif SIZE_MAX == 0xffffffff
+#elif SIZE_MAX == UINT32_MAX
   ctxt->llvm_size_t = LLVMInt32Type();
 #else
 #error "SIZE_MAX is not consistent with either 64 or 32-bit platform, couldn't guess LLVM type for size_t"
+#endif
+#if UINTPTR_MAX == UINT64_MAX
+  ctxt->llvm_intptr_t = LLVMInt64Type();
+#elif UINTPTR_MAX == UINT32_MAX
+  ctxt->llvm_intptr_t = LLVMInt32Type();
+#else
+#error "UINTPTR_MAX is not consistent with either 64 or 32-bit platform, couldn't guess LLVM type for intptr"
 #endif
   ctxt->llvm_inputstream = LLVMStructCreateNamed(LLVMGetGlobalContext(), "struct.HInputStream_");
   LLVMTypeRef llvm_inputstream_struct_types[] = {
