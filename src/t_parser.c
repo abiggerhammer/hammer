@@ -8,9 +8,14 @@
 
 static void test_token(gconstpointer backend) {
   const HParser *token_ = h_token((const uint8_t*)"95\xa2", 3);
+  /* This one is above the loop-unrolling cutoff for the LLVM backend */
+  const HParser *token_long = h_token((const uint8_t *)"xyzzy", 5);
 
   g_check_parse_match(token_, (HParserBackend)GPOINTER_TO_INT(backend), "95\xa2", 3, "<39.35.a2>");
   g_check_parse_failed(token_, (HParserBackend)GPOINTER_TO_INT(backend), "95", 2);
+  g_check_parse_match(token_long, (HParserBackend)GPOINTER_TO_INT(backend), "xyzzy", 5, "<78.79.7a.7a.79>");
+  g_check_parse_failed(token_long, (HParserBackend)GPOINTER_TO_INT(backend), "xyz", 3);
+  g_check_parse_failed(token_long, (HParserBackend)GPOINTER_TO_INT(backend), "xyzzx", 5);
 }
 
 static void test_ch(gconstpointer backend) {
