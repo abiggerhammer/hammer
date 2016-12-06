@@ -857,6 +857,8 @@ static bool h_llvm_build_ir_for_bitmap(HLLVMParserCompileContext *ctxt,
   LLVMValueRef bitmap_initializer = LLVMConstArray(LLVMInt32Type(), bitmap_entries, 8);
   /* ...and we need a global variable to stick it in to GEP it */
   LLVMValueRef bitmap = LLVMAddGlobal(ctxt->mod, LLVMTypeOf(bitmap_initializer), "bitmap");
+  LLVMSetLinkage(bitmap, LLVMInternalLinkage);
+  LLVMSetGlobalConstant(bitmap, 1);
   LLVMSetInitializer(bitmap, bitmap_initializer);
 
   /* Compute the index into the bitmap */
