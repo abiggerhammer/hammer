@@ -81,7 +81,114 @@ static bool token_ctrvm(HRVMProg *prog, void *env) {
  */
 
 static bool token_llvm_with_global(HLLVMParserCompileContext *ctxt, HToken *t) {
-  /* TODO */
+  LLVMValueRef bits_args[3], bits, i, i_init, i_incr, str, str_const, len;
+  LLVMValueRef r, c, mr, icmp_i_len, icmp_c_r, rv;
+  LLVMValueRef c_gep_indices[2], c_gep;
+  LLVMBasicBlockRef entry, loop_start, loop_middle, loop_incr, success, end;
+
+  /* Set up basic blocks: entry, success and exit branches */
+  entry = LLVMAppendBasicBlock(ctxt->func, "tok_seq_entry");
+  loop_start = LLVMAppendBasicBlock(ctxt->func, "tok_seq_loop_start");
+  loop_middle = LLVMAppendBasicBlock(ctxt->func, "tok_seq_loop_middle");
+  loop_incr = LLVMAppendBasicBlock(ctxt->func, "tok_seq_loop_incr");
+  success = LLVMAppendBasicBlock(ctxt->func, "tok_seq_success");
+  end = LLVMAppendBasicBlock(ctxt->func, "tok_seq_end");
+
+  /* Branch to entry block */
+  LLVMBuildBr(ctxt->builder, entry);
+  LLVMPositionBuilderAtEnd(ctxt->builder, entry);
+
+  /*
+   * Get our string into the globals as a constant; skip the null termination
+   * and save a byte since we can compare to length in the loop.
+   */
+  str_const = LLVMConstString((const char *)(t->str), t->len, 1);
+  str = LLVMAddGlobal(ctxt->mod, LLVMArrayType(LLVMInt8Type(), t->len), "tok_str");
+  LLVMSetLinkage(str, LLVMInternalLinkage);
+  LLVMSetGlobalConstant(str, 1);
+  LLVMSetInitializer(str, str_const);
+
+  /* Have the token length available */
+  len = LLVMConstInt(ctxt->llvm_size_t, t->len, 0);
+
+  /* For each char of token... */
+  bits_args[0] = ctxt->stream;
+  bits_args[1] = LLVMConstInt(LLVMInt32Type(), 8, 0);
+  bits_args[2] = LLVMConstInt(LLVMInt8Type(), 0, 0);
+
+  /* Start the loop */
+  LLVMBuildBr(ctxt->builder, loop_start);
+  LLVMPositionBuilderAtEnd(ctxt->builder, loop_start);
+
+  /* Keep an index counter */
+  i = LLVMBuildPhi(ctxt->builder, ctxt->llvm_size_t, "i");
+  i_init = LLVMConstInt(ctxt->llvm_size_t, 0, 0);
+  /*
+   * We'll need another one once we know the value of i at the end of
+   * the loop
+   */
+  LLVMAddIncoming(i, &i_init, &entry, 1);
+
+  /*
+   * Compare i to token string length (i.e., have we hit the end of the
+   * token?); if ==, branch to success, if <, continue loop.
+   */
+  icmp_i_len = LLVMBuildICmp(ctxt->builder, LLVMIntULT, i, len, "i < len");
+  LLVMBuildCondBr(ctxt->builder, icmp_i_len, loop_middle, success);
+
+  /* Basic block loop_middle */
+  LLVMPositionBuilderAtEnd(ctxt->builder, loop_middle);
+
+  /* Get a char from the token string */
+  c_gep_indices[0] = LLVMConstInt(LLVMInt32Type(), 0, 0);
+  c_gep_indices[1] = i;
+  c_gep = LLVMBuildInBoundsGEP(ctxt->builder, str, c_gep_indices, 2, "c_p");
+  c = LLVMBuildLoad(ctxt->builder, c_gep, "c");
+
+  /* Read one char from input */
+  bits = LLVMBuildCall(ctxt->builder,
+      LLVMGetNamedFunction(ctxt->mod, "h_read_bits"), bits_args, 3, "read_bits");
+  /* Clamp to i8 */
+  r = LLVMBuildTrunc(ctxt->builder, bits, LLVMInt8Type(), "");
+
+  /*
+   * Compare c and r; if !=, token mismatches, break out of loop and
+   * fail.  If ==, increment counter and go to next iteration.
+   */
+  icmp_c_r = LLVMBuildICmp(ctxt->builder, LLVMIntEQ, c, r, "c == r");
+  LLVMBuildCondBr(ctxt->builder, icmp_c_r, loop_incr, end);
+
+  /* Basic block loop_incr */
+  LLVMPositionBuilderAtEnd(ctxt->builder, loop_incr);
+  /* End of loop, 2nd LLVMAddIncoming() for i */
+  i_incr = LLVMBuildAdd(ctxt->builder, i,
+      LLVMConstInt(ctxt->llvm_size_t, 1, 0), "i_incr");
+  LLVMAddIncoming(i, &i_incr, &loop_incr, 1);
+
+  /* Next iteration */
+  LLVMBuildBr(ctxt->builder, loop_start);
+
+  /* Basic block: success */
+  LLVMPositionBuilderAtEnd(ctxt->builder, success);
+  h_llvm_make_tt_bytes_fixed(ctxt, t->str, t->len, &mr);
+  LLVMBuildBr(ctxt->builder, end);
+
+  /* Basic block: end */
+  LLVMPositionBuilderAtEnd(ctxt->builder, end);
+  /* phi the token or a null depending on where we came from */
+  rv = LLVMBuildPhi(ctxt->builder, ctxt->llvm_parseresultptr, "rv");
+  LLVMBasicBlockRef rv_phi_incoming_blocks[] = {
+    success,
+    loop_middle
+  };
+  LLVMValueRef rv_phi_incoming_values[] = {
+    mr,
+    LLVMConstNull(ctxt->llvm_parseresultptr)
+  };
+  LLVMAddIncoming(rv, rv_phi_incoming_values, rv_phi_incoming_blocks, 2);
+  /* Return it */
+  LLVMBuildRet(ctxt->builder, rv);
+
   return true;
 }
 
