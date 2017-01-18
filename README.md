@@ -2,7 +2,9 @@ Hammer is a parsing library. Like many modern parsing libraries, it provides a p
 
 Hammer is written in C, but will provide bindings for other languages. If you don't see a language you're interested in on the list, just ask.
 
-Hammer currently builds under Linux and OS X. (Windows is coming.)
+Hammer currently builds under Linux and OS X.  
+
+To get instructions for building on Windows, [click here](WINDOWS.md)
 
 [![Build Status](https://travis-ci.org/UpstandingHackers/hammer.png)](https://travis-ci.org/UpstandingHackers/hammer)
 Features
