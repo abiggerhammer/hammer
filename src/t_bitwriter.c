@@ -32,6 +32,8 @@ void run_bitwriter_test(bitwriter_test_elem data[], char flags) {
   for (i = 0; data[i].nbits; i++) {
     g_check_cmp_uint64((uint64_t)h_read_bits(&input, data[i].nbits, FALSE), ==,  data[i].data);
   }
+
+  h_bit_writer_free(w);
 }
 
 static void test_bitwriter_ints(void) {

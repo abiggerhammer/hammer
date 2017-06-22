@@ -1,0 +1,40 @@
+{
+   <g_test_add_vtable_supp>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:g_malloc
+   ...
+   fun:g_test_add_vtable
+   ...
+}
+{
+   <g_test_init_malloc_supp>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:g_test_init
+   ...
+}
+{
+   <g_test_init_calloc_supp>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:calloc
+   ...
+   fun:g_test_init
+   ...
+}
+{
+   <g_rand_new_with_seed_array_supp>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:calloc
+   fun:g_malloc0
+   fun:g_rand_new_with_seed_array
+   ...
+   fun:g_test_run_suite
+   fun:g_test_run
+   ...
+}

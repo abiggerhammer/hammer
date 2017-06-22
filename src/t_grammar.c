@@ -12,6 +12,8 @@ static void test_end(void) {
   g_check_hashtable_size(g->geneps, 0);
 
   g_check_derives_epsilon_not(g, p);
+
+  h_cfgrammar_free(g);
 }
 
 static void test_example_1(void) {
@@ -35,6 +37,8 @@ static void test_example_1(void) {
   g_check_followset_absent(1, g, c, "$");
   g_check_followset_absent(1, g, c, "x");
   g_check_followset_present(1, g, c, "y");
+
+  h_cfgrammar_free(g);
 }
 
 void register_grammar_tests(void) {
