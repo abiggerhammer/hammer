@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include <hammer/hammer.hpp>
 
-#define HAMMER_DECL_UNUSED __attribute__((unused))
+#define HAMMER_DECL_UNUSED H_GCC_ATTRIBUTE((unused))
 
 static ::testing::AssertionResult ParseFails (hammer::Parser parser,
 					      const std::string &input) HAMMER_DECL_UNUSED;

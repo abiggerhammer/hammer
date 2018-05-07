@@ -1,0 +1,19 @@
+platform:
+- x86
+- x64
+version: 1.0.{build}
+os: Visual Studio 2015
+build_script:
+- '@echo off'
+- setlocal
+- ps: >-
+    If ($env:Platform -Match "x86") {
+      $env:VCVARS_PLATFORM="x86"
+    } Else {
+      $env:VCVARS_PLATFORM="amd64"
+    }
+- call "%VS140COMNTOOLS%\..\..\VC\vcvarsall.bat" %VCVARS_PLATFORM%
+- call tools\windows\build.bat
+# FIXME(windows) TODO(uucidl): reactivate examples
+# - call tools\windows\build_examples.bat
+- exit /b 0

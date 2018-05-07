@@ -49,6 +49,7 @@ static const HParserVtable ignore_vt = {
   .isValidCF = ignore_isValidCF,
   .desugar = desugar_ignore,
   .compile_to_rvm = ignore_ctrvm,
+  .higher = true,
 };
 
 HParser* h_ignore(const HParser* p) {

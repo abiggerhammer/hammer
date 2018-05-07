@@ -7,7 +7,7 @@ pythonenv = env.Clone(IMPLICIT_COMMAND_DEPENDENCIES = 0)
 swig = pythonenv.Command("hammer.i", "../swig/hammer.i", Copy("$TARGET", "$SOURCE"))
 setup = ['setup.py']
 pydir = os.path.join(env['BUILD_BASE'], 'src/bindings/python')
-libhammer_python = pythonenv.Command(['hammer.py', 'hammer_wrap.c'], [swig, setup], 'python ' + os.path.join(pydir, 'setup.py') + ' build_ext --inplace')
+libhammer_python = pythonenv.Command(['hammer.py', 'hammer_wrap.c'], [swig, setup], 'python ' + os.path.join(pydir, 'setup.py') + ' build_ext --swig=swig3.0 --inplace')
 Default(libhammer_python)
 
 pytestenv = pythonenv.Clone()

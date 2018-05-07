@@ -11,7 +11,7 @@ while(<>) {
   } elsif (/^HAMMER_FN_DECL\(([^,]*), ([^,]*), ([^)]*)\);/) {
     print "$1 $2($3);\n";
     print "$1 $2__m(HAllocator* mm__, $3);\n";
-  } elsif (/^HAMMER_FN_DECL_VARARGS_ATTR\((__attribute__\(\([^)]*\)\)), ([^,]*), ([^,]*), ([^)]*)\);/) {
+  } elsif (/^HAMMER_FN_DECL_VARARGS_ATTR\((H_GCC_ATTRIBUTE\(\([^)]*\)\)), ([^,]*), ([^,]*), ([^)]*)\);/) {
     print "$2 $3($4, ...);\n";
     print "$2 $3__m(HAllocator *mm__, $4, ...);\n";
     print "$2 $3__a(void* args);\n";

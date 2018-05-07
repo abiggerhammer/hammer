@@ -56,6 +56,9 @@ bool h_stringmap_empty(const HStringMap *m);
 static inline HStringMap *h_stringmap_get_char(const HStringMap *m, const uint8_t c)
  { return h_hashtable_get(m->char_branches, (void *)char_key(c)); }
 
+// dummy return value used by h_stringmap_get_lookahead when out of input
+#define NEED_INPUT ((void *)-1)
+
 
 /* Convert 'parser' into CFG representation by desugaring and compiling the set
  * of nonterminals.
@@ -102,4 +105,4 @@ void h_pprint_stringset(FILE *file, const HStringMap *set, int indent);
 void h_pprint_stringmap(FILE *file, char sep,
                         void (*valprint)(FILE *f, void *env, void *val), void *env,
                         const HStringMap *map);
-void h_pprint_char(FILE *file, char c);
+void h_pprint_char(FILE *file, uint8_t c);

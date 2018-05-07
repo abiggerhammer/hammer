@@ -81,6 +81,7 @@ static const HParserVtable action_vt = {
   .isValidCF = action_isValidCF,
   .desugar = desugar_action,
   .compile_to_rvm = action_ctrvm,
+  .higher = true,
 };
 
 HParser* h_action(const HParser* p, const HAction a, void* user_data) {

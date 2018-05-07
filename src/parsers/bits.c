@@ -102,6 +102,7 @@ static const HParserVtable bits_vt = {
   .isValidCF = h_true,
   .desugar = desugar_bits,
   .compile_to_rvm = bits_ctrvm,
+  .higher = false,
 };
 
 HParser* h_bits(size_t len, bool sign) {

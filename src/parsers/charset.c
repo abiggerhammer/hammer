@@ -76,6 +76,7 @@ static const HParserVtable charset_vt = {
   .isValidCF = h_true,
   .desugar = desugar_charset,
   .compile_to_rvm = cs_ctrvm,
+  .higher = false,
 };
 
 HParser* h_ch_range(const uint8_t lower, const uint8_t upper) {

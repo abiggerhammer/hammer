@@ -27,7 +27,7 @@ csfiles = os.path.join(thisdir, "*.cs")
 # target to stand in for.
 hammer_wrap = AlwaysBuild(dotnetenv.Command(['hammer_wrap.c'], swig,
                                             ["rm %s/*.cs || true" % (thisdir,),
-                                             "swig $SWIGFLAGS $SOURCE"]))
+                                             "swig3.0 $SWIGFLAGS $SOURCE"]))
 libhammer_dotnet = dotnetenv.SharedLibrary(['hammer_dotnet'], hammer_wrap)
 hammer_dll = AlwaysBuild(dotnetenv.Command(['hammer.dll'], Glob('ext/*.cs'),
                                            '$CSC -t:library -unsafe -out:$TARGET %s/*.cs $SOURCE' %(thisdir,)))

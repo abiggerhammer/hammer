@@ -49,7 +49,7 @@ env['backendsincpath'] = calcInstallPath("$prefix", "include", "hammer", "backen
 env['pkgconfigpath'] = calcInstallPath("$prefix", "lib", "pkgconfig")
 env.ScanReplace('libhammer.pc.in')
 
-env.MergeFlags("-std=gnu99 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -Wno-unused-variable")
+env.MergeFlags("-std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-attributes -Wno-unused-variable")
 
 if env['PLATFORM'] == 'darwin':
     env.Append(SHLINKFLAGS = '-install_name ' + env["libpath"] + '/${TARGET.file}')
@@ -90,14 +90,17 @@ if GetOption("variant") == 'debug':
 else:
     env = opt
 
-if GetOption("coverage"):
-    env.Append(CFLAGS=["-fprofile-arcs", "-ftest-coverage"],
-               CXXFLAGS=["-fprofile-arcs", "-ftest-coverage"],
-               LDFLAGS=["-fprofile-arcs", "-ftest-coverage"],
-               LIBS=['gcov'])
-
 env["CC"] = os.getenv("CC") or env["CC"]
 env["CXX"] = os.getenv("CXX") or env["CXX"]
+
+if GetOption("coverage"):
+    env.Append(CFLAGS=["--coverage"],
+               CXXFLAGS=["--coverage"],
+               LDFLAGS=["--coverage"])
+    if env["CC"] == "gcc":
+        env.Append(LIBS=['gcov'])
+    else:
+        env.ParseConfig('llvm-config --ldflags')
 
 if os.getenv("CC") == "clang" or env['PLATFORM'] == 'darwin':
     env.Replace(CC="clang",

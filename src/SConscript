@@ -5,8 +5,10 @@ Import('env testruns')
 dist_headers = [
     "hammer.h",
     "allocator.h",
+    "compiler_specifics.h",
     "glue.h",
-    "internal.h"
+    "internal.h",
+    "platform.h"
 ]
 
 parsers_headers = [
@@ -61,6 +63,7 @@ misc_hammer_parts = [
     'desugar.c',
     'glue.c',
     'hammer.c',
+    'platform_bsdlike.c',
     'pprint.c',
     'registry.c',
     'system_allocator.c']
@@ -86,7 +89,7 @@ env.Install("$pkgconfigpath", "../../../libhammer.pc")
 testenv = env.Clone()
 testenv.ParseConfig('pkg-config --cflags --libs glib-2.0')
 testenv.Append(LIBS=['hammer'], LIBPATH=['.'])
-ctestexec = testenv.Program('test_suite', ctests + ['test_suite.c'])
+ctestexec = testenv.Program('test_suite', ctests + ['test_suite.c'], LINKFLAGS="--coverage" if testenv.GetOption("coverage") else None)
 ctest = Alias('testc', [ctestexec], "".join(["env LD_LIBRARY_PATH=", os.path.dirname(ctestexec[0].path), " ", ctestexec[0].path]))
 AlwaysBuild(ctest)
 testruns.append(ctest)

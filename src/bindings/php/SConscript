@@ -11,7 +11,7 @@ phpenv.Append(LIBS = ['hammer'])
 phpenv.Append(LIBPATH = ['../../']) 
 
 swig = ['hammer.i']
-bindings_src = phpenv.Command(['hammer.php', 'hammer_wrap.c', 'php_hammer.h'], swig, 'swig -php -DHAMMER_INTERNAL__NO_STDARG_H -Isrc/ $SOURCE')
+bindings_src = phpenv.Command(['hammer.php', 'hammer_wrap.c', 'php_hammer.h'], swig, 'swig3.0 -php -DHAMMER_INTERNAL__NO_STDARG_H -Isrc/ $SOURCE')
 libhammer_php = phpenv.SharedLibrary('hammer', ['hammer_wrap.c'])
 Default(swig, bindings_src, libhammer_php)
 

@@ -84,6 +84,7 @@ static const HParserVtable optional_vt = {
   .isValidCF = opt_isValidCF,
   .desugar = desugar_optional,
   .compile_to_rvm = opt_ctrvm,
+  .higher = true,
 };
 
 HParser* h_optional(const HParser* p) {

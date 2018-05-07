@@ -3,7 +3,7 @@
 #include "../internal.h"
 #include "../parsers/parser_internal.h"
 
-// short-hand for creating cache values (regular case)
+// short-hand for creating lowlevel parse cache values (parse result case)
 static
 HParserCacheValue * cached_result(HParseState *state, HParseResult *result) {
   HParserCacheValue *ret = a_new(HParserCacheValue, 1);
@@ -13,7 +13,7 @@ HParserCacheValue * cached_result(HParseState *state, HParseResult *result) {
   return ret;
 }
 
-// short-hand for caching parse results (left recursion case)
+// short-hand for creating lowlevel parse cache values (left recursion case)
 static
 HParserCacheValue *cached_lr(HParseState *state, HLeftRec *lr) {
   HParserCacheValue *ret = a_new(HParserCacheValue, 1);
@@ -126,7 +126,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
   h_hashtable_put(state->recursion_heads, &k->input_pos, head);
   HParserCacheValue *old_cached = h_hashtable_get(state->cache, k);
   if (!old_cached || PC_LEFT == old_cached->value_type)
-    errx(1, "impossible match");
+    h_platform_errx(1, "impossible match");
   HParseResult *old_res = old_cached->right;
 
   // rewind the input
@@ -148,7 +148,7 @@ HParseResult* grow(HParserCacheKey *k, HParseState *state, HRecursionHead *head)
         state->input_stream = cached->input_stream;
 	return cached->right;
       } else {
-	errx(1, "impossible match");
+	h_platform_errx(1, "impossible match");
       }
     }
   } else {
@@ -173,7 +173,7 @@ HParseResult* lr_answer(HParserCacheKey *k, HParseState *state, HLeftRec *growab
 	return grow(k, state, growable->head);
     }
   } else {
-    errx(1, "lrAnswer with no head");
+    h_platform_errx(1, "lrAnswer with no head");
   }
 }
 
@@ -181,25 +181,34 @@ HParseResult* lr_answer(HParserCacheKey *k, HParseState *state, HLeftRec *growab
 HParseResult* h_do_parse(const HParser* parser, HParseState *state) {
   HParserCacheKey *key = a_new(HParserCacheKey, 1);
   key->input_pos = state->input_stream; key->parser = parser;
-  HParserCacheValue *m = recall(key, state);
+  HParserCacheValue *m = NULL;
+  if (parser->vtable->higher) {
+    m = recall(key, state);
+  }
   // check to see if there is already a result for this object...
   if (!m) {
     // It doesn't exist, so create a dummy result to cache
-    HLeftRec *base = a_new(HLeftRec, 1);
-    base->seed = NULL; base->rule = parser; base->head = NULL;
-    h_slist_push(state->lr_stack, base);
-    // cache it
-    h_hashtable_put(state->cache, key, cached_lr(state, base));
-    // parse the input
+    HLeftRec *base = NULL;
+    // But only cache it now if there's some chance it could grow; primitive parsers can't
+    if (parser->vtable->higher) {
+      base = a_new(HLeftRec, 1);
+      base->seed = NULL; base->rule = parser; base->head = NULL;
+      h_slist_push(state->lr_stack, base);
+      // cache it
+      h_hashtable_put(state->cache, key, cached_lr(state, base));
+      // parse the input
+    }
     HParseResult *tmp_res = perform_lowlevel_parse(state, parser);
-    // the base variable has passed equality tests with the cache
-    h_slist_pop(state->lr_stack);
-    // update the cached value to our new position
-    HParserCacheValue *cached = h_hashtable_get(state->cache, key);
-    assert(cached != NULL);
-    cached->input_stream = state->input_stream;
+    if (parser->vtable->higher) {
+      // the base variable has passed equality tests with the cache
+      h_slist_pop(state->lr_stack);
+      // update the cached value to our new position
+      HParserCacheValue *cached = h_hashtable_get(state->cache, key);
+      assert(cached != NULL);
+      cached->input_stream = state->input_stream;
+    }
     // setupLR, used below, mutates the LR to have a head if appropriate, so we check to see if we have one
-    if (NULL == base->head) {
+    if (!base || NULL == base->head) {
       h_hashtable_put(state->cache, key, cached_result(state, tmp_res));
       return tmp_res;
     } else {

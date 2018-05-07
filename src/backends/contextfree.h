@@ -18,10 +18,11 @@ struct HCFStack_ {
   HCFChoice *last_completed; // Last completed choice.
                              // XXX is last_completed still needed?
   HCFChoice *prealloc; // If not NULL, will be used for the outermost choice.
+  char error;
 };
 
 #ifndef UNUSED
-#define UNUSED __attribute__((unused))
+#define UNUSED H_GCC_ATTRIBUTE((unused))
 #endif
 
 static inline HCFChoice* h_cfstack_new_choice_raw(HAllocator *mm__, HCFStack *stk__) UNUSED;
@@ -33,6 +34,7 @@ static HCFStack* h_cfstack_new(HAllocator *mm__) {
   stack->cap = 4;
   stack->stack = h_new(HCFChoice*, stack->cap);
   stack->prealloc = NULL;
+  stack->error = 0;
   return stack;
 }
 
@@ -55,8 +57,12 @@ static inline void h_cfstack_add_to_seq(HAllocator *mm__, HCFStack *stk__, HCFCh
       for (int j = 0;; j++) {
 	if (cur_top->seq[i]->items[j] == NULL) {
 	  cur_top->seq[i]->items = mm__->realloc(mm__, cur_top->seq[i]->items, sizeof(HCFChoice*) * (j+2));
+	  if (!cur_top->seq[i]->items) {
+	    stk__->error = 1;
+	  }
 	  cur_top->seq[i]->items[j] = item;
 	  cur_top->seq[i]->items[j+1] = NULL;
+	  assert(!stk__->error);
 	  return;
 	}
       }
@@ -111,8 +117,11 @@ static inline void h_cfstack_begin_choice(HAllocator *mm__, HCFStack *stk__) {
     assert(stk__->cap > 0);
     stk__->cap *= 2;
     stk__->stack = mm__->realloc(mm__, stk__->stack, stk__->cap * sizeof(HCFChoice*));
+    if (!stk__->stack) {
+      stk__->error = 1;
+    }
   }
-  assert(stk__->cap >= 1);
+  assert(stk__->cap >= 1 && !stk__->error);
   stk__->stack[stk__->count++] = choice;
 }
 
@@ -121,6 +130,10 @@ static inline void h_cfstack_begin_seq(HAllocator *mm__, HCFStack *stk__) {
   for (int i = 0;; i++) {
     if (top->seq[i] == NULL) {
       top->seq = mm__->realloc(mm__, top->seq, sizeof(HCFSequence*) * (i+2));
+      if (!top->seq) {
+	stk__->error = 1;
+	return;
+      }
       HCFSequence *seq = top->seq[i] = h_new(HCFSequence, 1);
       top->seq[i+1] = NULL;
       seq->items = h_new(HCFChoice*, 1);

@@ -15,7 +15,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#define _GNU_SOURCE
+#include "platform.h"
+
 #include <stdio.h>
 #include <string.h>
 #include "hammer.h"
@@ -67,11 +68,11 @@ void h_pprint(FILE* stream, const HParsedToken* tok, int indent, int delta) {
   }
     break;
   case TT_USER:
-    fprintf(stream, "%*sUSER\n", indent, "");
+    fprintf(stream, "%*sUSER:%s\n", indent, "", h_get_token_type_name(tok->token_type));
     break;
   default:
     if(tok->token_type > TT_USER) {
-      fprintf(stream, "%*sUSER %d\n", indent, "", tok->token_type-TT_USER);
+      fprintf(stream, "%*sUSER:%s %d\n", indent, "", h_get_token_type_name(tok->token_type), tok->token_type-TT_USER);
     } else {
       assert_message(0, "Should not reach here.");
     }
@@ -85,25 +86,53 @@ struct result_buf {
   size_t capacity;
 };
 
-static inline void ensure_capacity(struct result_buf *buf, int amt) {
-  while (buf->len + amt >= buf->capacity)
-    buf->output = realloc(buf->output, buf->capacity *= 2);
+static inline bool ensure_capacity(struct result_buf *buf, int amt) {
+  while (buf->len + amt >= buf->capacity) {
+    buf->output = (&system_allocator)->realloc(&system_allocator, buf->output, buf->capacity *= 2);
+    if (!buf->output) {
+      return false;
+    }
+  }
+  return true;
 }
 
-static inline void append_buf(struct result_buf *buf, const char* input, int len) {
-  ensure_capacity(buf, len);
-  memcpy(buf->output + buf->len, input, len);
-  buf->len += len;
+static inline bool append_buf(struct result_buf *buf, const char* input, int len) {
+  if (ensure_capacity(buf, len)) {
+    memcpy(buf->output + buf->len, input, len);
+    buf->len += len;
+    return true;
+  } else {
+    return false;
+  }
 }
 
-static inline void append_buf_c(struct result_buf *buf, char v) {
-  ensure_capacity(buf, 1);
-  buf->output[buf->len++] = v;
+static inline bool append_buf_c(struct result_buf *buf, char v) {
+  if (ensure_capacity(buf, 1)) {
+    buf->output[buf->len++] = v;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+/** append a formatted string to the result buffer */
+static inline bool append_buf_formatted(struct result_buf *buf, char* format, ...)
+{
+  char* tmpbuf;
+  int len;
+  bool result;
+  va_list ap;
+
+  va_start(ap, format);
+  len = h_platform_vasprintf(&tmpbuf, format, ap);
+  result = append_buf(buf, tmpbuf, len);
+  free(tmpbuf);
+  va_end(ap);
+
+  return result;
 }
 
 static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
-  char* tmpbuf;
-  int len;
   if (!tok) {
     append_buf(buf, "NULL", 4);
     return;
@@ -128,16 +157,12 @@ static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
     break;
   case TT_SINT:
     if (tok->sint < 0)
-      len = asprintf(&tmpbuf, "s-%#" PRIx64, -tok->sint);
+      append_buf_formatted(buf, "s-%#" PRIx64, -tok->sint);
     else
-      len = asprintf(&tmpbuf, "s%#" PRIx64, tok->sint);
-    append_buf(buf, tmpbuf, len);
-    free(tmpbuf);
+      append_buf_formatted(buf, "s%#" PRIx64, tok->sint);
     break;
   case TT_UINT:
-    len = asprintf(&tmpbuf, "u%#" PRIx64, tok->uint);
-    append_buf(buf, tmpbuf, len);
-    free(tmpbuf);
+    append_buf_formatted(buf, "u%#" PRIx64, tok->uint);
     break;
   case TT_ERR:
     append_buf(buf, "ERR", 3);
@@ -161,10 +186,13 @@ static void unamb_sub(const HParsedToken* tok, struct result_buf *buf) {
 
 char* h_write_result_unamb(const HParsedToken* tok) {
   struct result_buf buf = {
-    .output = malloc(16),
+    .output = (&system_allocator)->alloc(&system_allocator, 16),
     .len = 0,
     .capacity = 16
   };
+  if (!buf.output) {
+    return NULL;
+  }
   unamb_sub(tok, &buf);
   append_buf_c(&buf, 0);
   return buf.output;
