@@ -8,9 +8,14 @@
 
 static void test_token(gconstpointer backend) {
   const HParser *token_ = h_token((const uint8_t*)"95\xa2", 3);
+  /* This one is above the loop-unrolling cutoff for the LLVM backend */
+  const HParser *token_long = h_token((const uint8_t *)"xyzzy", 5);
 
   g_check_parse_match(token_, (HParserBackend)GPOINTER_TO_INT(backend), "95\xa2", 3, "<39.35.a2>");
   g_check_parse_failed(token_, (HParserBackend)GPOINTER_TO_INT(backend), "95", 2);
+  g_check_parse_match(token_long, (HParserBackend)GPOINTER_TO_INT(backend), "xyzzy", 5, "<78.79.7a.7a.79>");
+  g_check_parse_failed(token_long, (HParserBackend)GPOINTER_TO_INT(backend), "xyz", 3);
+  g_check_parse_failed(token_long, (HParserBackend)GPOINTER_TO_INT(backend), "xyzzx", 5);
 }
 
 static void test_ch(gconstpointer backend) {
@@ -25,6 +30,9 @@ static void test_ch_range(gconstpointer backend) {
   const HParser *range_2 = h_ch_range('a', 'z');
   const HParser *range_3 = h_ch_range('A', 'z');
   const HParser *range_all = h_ch_range(0, 255);
+  const HParser *range_left = h_ch_range(0, 64);
+  const HParser *range_right = h_ch_range(224, 255);
+  unsigned char tmp[2];
 
   g_check_parse_match(range_1, (HParserBackend)GPOINTER_TO_INT(backend), "b", 1, "u0x62");
   g_check_parse_failed(range_1, (HParserBackend)GPOINTER_TO_INT(backend), "d", 1);
@@ -34,6 +42,15 @@ static void test_ch_range(gconstpointer backend) {
   g_check_parse_failed(range_3, (HParserBackend)GPOINTER_TO_INT(backend), "2", 1);
   /* range_all never fails anything */
   g_check_parse_match(range_all, (HParserBackend)GPOINTER_TO_INT(backend), "B", 1, "u0x42");
+  tmp[1] = '\0';
+  tmp[0] = 32;
+  g_check_parse_match(range_left, (HParserBackend)GPOINTER_TO_INT(backend), tmp, 1, "u0x20");
+  tmp[0] = 128;
+  g_check_parse_failed(range_left, (HParserBackend)GPOINTER_TO_INT(backend), tmp, 1);
+  tmp[0] = 240;
+  g_check_parse_match(range_right, (HParserBackend)GPOINTER_TO_INT(backend), tmp, 1, "u0xf0");
+  tmp[0] = 128;
+  g_check_parse_failed(range_right, (HParserBackend)GPOINTER_TO_INT(backend), tmp, 1);
 }
 
 //@MARK_START
@@ -1025,6 +1042,7 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/glr/token_position", GINT_TO_POINTER(PB_GLR), test_token_position);
 
 #ifdef HAMMER_LLVM_BACKEND
+  g_test_add_data_func("/core/parser/llvm/token", GINT_TO_POINTER(PB_LLVM), test_token);
   g_test_add_data_func("/core/parser/llvm/ch", GINT_TO_POINTER(PB_LLVM), test_ch);
   g_test_add_data_func("/core/parser/llvm/ch_range", GINT_TO_POINTER(PB_LLVM), test_ch_range);
   g_test_add_data_func("/core/parser/llvm/int64", GINT_TO_POINTER(PB_LLVM), test_int64);
@@ -1037,5 +1055,6 @@ void register_parser_tests(void) {
   g_test_add_data_func("/core/parser/llvm/uint8", GINT_TO_POINTER(PB_LLVM), test_uint8);
   g_test_add_data_func("/core/parser/llvm/in", GINT_TO_POINTER(PB_LLVM), test_in);
   g_test_add_data_func("/core/parser/llvm/not_in", GINT_TO_POINTER(PB_LLVM), test_not_in);
+  g_test_add_data_func("/core/parser/llvm/nothing_p", GINT_TO_POINTER(PB_LLVM), test_nothing_p);
 #endif /* defined(HAMMER_LLVM_BACKEND) */
 }

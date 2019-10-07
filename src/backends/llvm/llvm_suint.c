@@ -13,14 +13,11 @@
  * Construct LLVM IR to allocate a token of type TT_SINT or TT_UINT
  *
  * Parameters:
- *  - mod [in]: an LLVMModuleRef
- *  - builder [in]: an LLVMBuilderRef, positioned appropriately
- *  - stream [in]: a value ref to an llvm_inputstreamptr, for the input stream
- *  - arena [in]: a value ref to an llvm_arenaptr to be used for the malloc
+ *  - ctxt [in]: an HLLVMParserCompileContext
+ *  - length [in]: length in bits
+ *  - signedp [in]: TT_SINT if non-zero, TT_UINT otherwise
  *  - r [in]: a value ref to the value to be used to this token
  *  - mr_out [out]: the return value from make_result()
- *
- * TODO actually support TT_SINT, inputs other than 8 bit
  */
 
 void h_llvm_make_tt_suint(HLLVMParserCompileContext *ctxt,

@@ -20,6 +20,10 @@ struct HLLVMParserCompileContext_ {
   LLVMValueRef func;
   LLVMBuilderRef builder;
   /* Typerefs */
+  /* We determine typerefs for some standard C types we'll need later up front */
+  LLVMTypeRef llvm_size_t;
+  LLVMTypeRef llvm_intptr_t;
+  /* LLVM types for Hammer structs and pointers */
   LLVMTypeRef llvm_inputstream;
   LLVMTypeRef llvm_inputstreamptr;
   LLVMTypeRef llvm_arena;
@@ -28,6 +32,8 @@ struct HLLVMParserCompileContext_ {
   LLVMTypeRef llvm_parsedtokenptr;
   LLVMTypeRef llvm_parseresult;
   LLVMTypeRef llvm_parseresultptr;
+  LLVMTypeRef llvm_hbytes;
+  LLVMTypeRef llvm_hbytesptr;
   /* Set up in function preamble */
   LLVMValueRef stream;
   LLVMValueRef arena;
@@ -36,6 +42,9 @@ struct HLLVMParserCompileContext_ {
 bool h_llvm_make_charset_membership_test(HLLVMParserCompileContext *ctxt,
                                          LLVMValueRef r, HCharset cs,
                                          LLVMBasicBlockRef yes, LLVMBasicBlockRef no);
+void h_llvm_make_tt_bytes_fixed(HLLVMParserCompileContext *ctxt,
+                                const uint8_t *bytes, size_t len,
+                                LLVMValueRef *mr_out);
 void h_llvm_make_tt_suint(HLLVMParserCompileContext *ctxt,
                           uint8_t length, uint8_t signedp,
                           LLVMValueRef r, LLVMValueRef *mr_out);
