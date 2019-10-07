@@ -24,16 +24,21 @@
 #define HAMMER_INTERNAL__H
 #include <stdint.h>
 #include <assert.h>
-#include <err.h>
 #include <string.h>
 #include "hammer.h"
+#include "platform.h"
+
+/* "Internal" in this case means "we're not ready to commit
+ * to a public API." Many structures and routines here will be
+ * useful in client programs.
+ */
 
 #ifdef NDEBUG
 #define assert_message(check, message) do { } while(0)
 #else
 #define assert_message(check, message) do {				\
     if (!(check))							\
-      errx(1, "Assertion failed (programmer error): %s", message);	\
+      h_platform_errx(1, "Assertion failed (programmer error): %s", message);	\
   } while(0)
 #endif
 
@@ -67,13 +72,15 @@ typedef struct HCFStack_ HCFStack;
 typedef struct HInputStream_ {
   // This should be considered to be a really big value type.
   const uint8_t *input;
+  size_t pos;  // position of this chunk in a multi-chunk stream
   size_t index;
   size_t length;
   char bit_offset;
   char margin; // The number of bits on the end that is being read
 	       // towards that should be ignored.
   char endianness;
-  char overrun;
+  bool overrun;
+  bool last_chunk;
 } HInputStream;
 
 typedef struct HSlistNode_ {
@@ -148,20 +155,20 @@ static inline void h_sarray_clear(HSArray *arr) {
 typedef unsigned int *HCharset;
 
 static inline HCharset new_charset(HAllocator* mm__) {
-  HCharset cs = h_new(unsigned int, 256 / sizeof(unsigned int));
-  memset(cs, 0, 256);
+  HCharset cs = h_new(unsigned int, 256 / (sizeof(unsigned int) * 8));
+  memset(cs, 0, 32);  // 32 bytes = 256 bits
   return cs;
 }
 
 static inline int charset_isset(HCharset cs, uint8_t pos) {
-  return !!(cs[pos / sizeof(*cs)] & (1 << (pos % sizeof(*cs))));
+  return !!(cs[pos / (sizeof(*cs)*8)] & (1 << (pos % (sizeof(*cs)*8))));
 }
 
 static inline void charset_set(HCharset cs, uint8_t pos, int val) {
-  cs[pos / sizeof(*cs)] =
+  cs[pos / (sizeof(*cs)*8)] =
     val
-    ? cs[pos / sizeof(*cs)] |  (1 << (pos % sizeof(*cs)))
-    : cs[pos / sizeof(*cs)] & ~(1 << (pos % sizeof(*cs)));
+    ? cs[pos / (sizeof(*cs)*8)] |  (1 << (pos % (sizeof(*cs)*8)))
+    : cs[pos / (sizeof(*cs)*8)] & ~(1 << (pos % (sizeof(*cs)*8)));
 }
 
 typedef unsigned int HHashValue;
@@ -205,10 +212,32 @@ struct HParseState_ {
   HSlist *symbol_table; // its contents are HHashTables
 };
 
+struct HSuspendedParser_ {
+  HAllocator *mm__;
+  const HParser *parser;
+  void *backend_state;
+  bool done;
+
+  // input stream state
+  size_t pos;
+  uint8_t bit_offset;
+  uint8_t endianness;
+};
+
 typedef struct HParserBackendVTable_ {
   int (*compile)(HAllocator *mm__, HParser* parser, const void* params);
   HParseResult* (*parse)(HAllocator *mm__, const HParser* parser, HInputStream* stream);
   void (*free)(HParser* parser);
+
+  void (*parse_start)(HSuspendedParser *s);
+    // parse_start should allocate s->backend_state.
+  bool (*parse_chunk)(HSuspendedParser *s, HInputStream *input);
+    // if parser is done, return true. otherwise:
+    // parse_chunk MUST consume all input, integrating it into s->backend_state.
+    // parse_chunk will not be called again after it reports done.
+  HParseResult *(*parse_finish)(HSuspendedParser *s);
+    // parse_finish must free s->backend_state.
+    // parse_finish will not be called before parse_chunk reports done.
 } HParserBackendVTable;
 
 
@@ -249,9 +278,9 @@ typedef struct HRecursionHead_ {
 /* A left recursion.
  *
  * Members:
- *   seed -
- *   rule -
- *   head -
+ *   seed - the HResult yielded by rule
+ *   rule - the HParser that produces seed
+ *   head - the 
  */
 typedef struct HLeftRec_ {
   HParseResult *seed;
@@ -282,6 +311,7 @@ struct HBitWriter_ {
 		   // of used bits in the current byte. i.e., 0 always
 		   // means that 8 bits are available for use.
   char flags;
+  char error;
 };
 
 // }}}
@@ -389,6 +419,7 @@ struct HParserVtable_ {
   bool (*isValidCF)(void *env);
   bool (*compile_to_rvm)(HRVMProg *prog, void* env); // FIXME: forgot what the bool return value was supposed to mean.
   void (*desugar)(HAllocator *mm__, HCFStack *stk__, void *env);
+  bool higher; // false if primitive
 };
 
 bool h_false(void*);

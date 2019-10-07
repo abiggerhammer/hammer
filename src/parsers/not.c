@@ -15,6 +15,7 @@ static const HParserVtable not_vt = {
   .isValidRegular = h_false,  /* see and.c for why */
   .isValidCF = h_false,
   .compile_to_rvm = h_not_regular, // Is actually regular, but the generation step is currently unable to handle it. TODO: fix this.
+  .higher = true,
 };
 
 HParser* h_not(const HParser* p) {

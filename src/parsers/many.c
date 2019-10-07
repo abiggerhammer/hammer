@@ -59,6 +59,32 @@ static bool many_isValidCF(void *env) {
 	   repeat->sep->vtable->isValidCF(repeat->sep->env)));
 }
 
+// turn (_ x (_ y (_ z ()))) into (x y z) where '_' are optional
+static HParsedToken *reshape_many(const HParseResult *p, void *user)
+{
+  HCountedArray *seq = h_carray_new(p->arena);
+
+  const HParsedToken *tok = p->ast;
+  while(tok) {
+    assert(tok->token_type == TT_SEQUENCE);
+    if(tok->seq->used > 0) {
+      size_t n = tok->seq->used;
+      assert(n <= 3);
+      h_carray_append(seq, tok->seq->elements[n-2]);
+      tok = tok->seq->elements[n-1];
+    } else {
+      tok = NULL;
+    }
+  }
+
+  HParsedToken *res = a_new_(p->arena, HParsedToken, 1);
+  res->token_type = TT_SEQUENCE;
+  res->seq = seq;
+  res->index = p->ast->index;
+  res->bit_offset = p->ast->bit_offset;
+  return res;
+}
+
 static void desugar_many(HAllocator *mm__, HCFStack *stk__, void *env) {
   // TODO: refactor this.
   HRepeat *repeat = (HRepeat*)env;
@@ -93,7 +119,7 @@ static void desugar_many(HAllocator *mm__, HCFStack *stk__, void *env) {
       HCFS_BEGIN_CHOICE() { // Mar
 	HCFS_BEGIN_SEQ() {
 	  if (repeat->sep != NULL) {
-	    HCFS_DESUGAR(h_ignore__m(mm__, repeat->sep));
+	    HCFS_DESUGAR(repeat->sep);
 	  }
 	  //stk__->last_completed->reshape = h_act_ignore; // BUG: This modifies a memoized entry.
 	  HCFS_DESUGAR(repeat->p);
@@ -108,7 +134,7 @@ static void desugar_many(HAllocator *mm__, HCFStack *stk__, void *env) {
 	//HCFS_DESUGAR(h_ignore__m(mm__, h_epsilon_p()));
       } HCFS_END_SEQ();
     }
-    HCFS_THIS_CHOICE->reshape = h_act_flatten;
+    HCFS_THIS_CHOICE->reshape = reshape_many;
   } HCFS_END_CHOICE();
 }
 
@@ -173,6 +199,7 @@ static const HParserVtable many_vt = {
   .isValidCF = many_isValidCF,
   .desugar = desugar_many,
   .compile_to_rvm = many_ctrvm,
+  .higher = true,
 };
 
 HParser* h_many(const HParser* p) {
@@ -246,7 +273,7 @@ static HParseResult* parse_length_value(void *env, HParseState *state) {
   if (!len)
     return NULL;
   if (len->ast->token_type != TT_UINT)
-    errx(1, "Length parser must return an unsigned integer");
+    h_platform_errx(1, "Length parser must return an unsigned integer");
   // TODO: allocate this using public functions
   HRepeat repeat = {
     .p = lv->value,

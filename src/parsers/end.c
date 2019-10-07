@@ -25,6 +25,7 @@ static const HParserVtable end_vt = {
   .isValidCF = h_true,
   .desugar = desugar_end,
   .compile_to_rvm = end_ctrvm,
+  .higher = false,
 };
 
 HParser* h_end_p() {

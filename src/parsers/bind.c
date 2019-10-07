@@ -60,6 +60,7 @@ static const HParserVtable bind_vt = {
     .isValidRegular = h_false,
     .isValidCF = h_false,
     .compile_to_rvm = h_not_regular,
+    .higher = true,
 };
 
 HParser *h_bind(const HParser *p, HContinuation k, void *env)

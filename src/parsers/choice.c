@@ -75,6 +75,7 @@ static const HParserVtable choice_vt = {
   .isValidCF = choice_isValidCF,
   .desugar = desugar_choice,
   .compile_to_rvm = choice_ctrvm,
+  .higher = true,
 };
 
 HParser* h_choice(HParser* p, ...) {

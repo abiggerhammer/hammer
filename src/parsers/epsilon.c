@@ -18,6 +18,7 @@ static const HParserVtable epsilon_vt = {
   .isValidCF = h_true,
   .desugar = desugar_epsilon,
   .compile_to_rvm = epsilon_ctrvm,
+  .higher = false,
 };
 
 HParser* h_epsilon_p() {

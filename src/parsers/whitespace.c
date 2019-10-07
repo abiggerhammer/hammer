@@ -75,6 +75,7 @@ static const HParserVtable whitespace_vt = {
   .isValidCF = ws_isValidCF,
   .desugar = desugar_whitespace,
   .compile_to_rvm = ws_ctrvm,
+  .higher = false,
 };
 
 HParser* h_whitespace(const HParser* p) {

@@ -49,6 +49,10 @@ HArena *h_new_arena(HAllocator* mm__, size_t block_size) {
     block_size = 4096;
   struct HArena_ *ret = h_new(struct HArena_, 1);
   struct arena_link *link = (struct arena_link*)mm__->alloc(mm__, sizeof(struct arena_link) + block_size);
+  if (!link) {
+    // TODO: error-reporting -- let user know that arena link couldn't be allocated
+    return NULL;
+  }
   memset(link, 0, sizeof(struct arena_link) + block_size);
   link->free = block_size;
   link->used = 0;
@@ -76,6 +80,10 @@ void* h_arena_malloc(HArena *arena, size_t size) {
     arena->used += size;
     arena->wasted += sizeof(struct arena_link*);
     void* link = arena->mm__->alloc(arena->mm__, size + sizeof(struct arena_link*));
+    if (!link) {
+      // TODO: error-reporting -- let user know that arena link couldn't be allocated
+      return NULL;
+    }
     memset(link, 0, size + sizeof(struct arena_link*));
     *(struct arena_link**)link = arena->head->next;
     arena->head->next = (struct arena_link*)link;
@@ -83,6 +91,10 @@ void* h_arena_malloc(HArena *arena, size_t size) {
   } else {
     // we just need to allocate an ordinary new block.
     struct arena_link *link = (struct arena_link*)arena->mm__->alloc(arena->mm__, sizeof(struct arena_link) + arena->block_size);
+    if (!link) {
+      // TODO: error-reporting -- let user know that arena link couldn't be allocated
+      return NULL;
+    }
     memset(link, 0, sizeof(struct arena_link) + arena->block_size);
     link->free = arena->block_size - size;
     link->used = size;

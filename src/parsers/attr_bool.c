@@ -79,6 +79,7 @@ static const HParserVtable attr_bool_vt = {
   .isValidCF = ab_isValidCF,
   .desugar = desugar_ab,
   .compile_to_rvm = ab_ctrvm,
+  .higher = true,
 };
 
 

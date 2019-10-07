@@ -93,6 +93,7 @@ static const HParserVtable sequence_vt = {
   .isValidCF = sequence_isValidCF,
   .desugar = desugar_sequence,
   .compile_to_rvm = sequence_ctrvm,
+  .higher = true,
 };
 
 HParser* h_sequence(HParser* p, ...) {

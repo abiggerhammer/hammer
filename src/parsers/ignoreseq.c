@@ -103,6 +103,7 @@ static const HParserVtable ignoreseq_vt = {
   .isValidCF = is_isValidCF,
   .desugar = desugar_ignoreseq,
   .compile_to_rvm = is_ctrvm,
+  .higher = true,
 };
 
 
