@@ -297,7 +297,7 @@ HStringMap *h_stringmap_copy(HArena *a, const HStringMap *m)
   return res;
 }
 
-/* Replace all occurances of old in m with new.
+/* Replace all occurrences of old in m with new.
  * If old is NULL, replace all values in m with new.
  * If new is NULL, remove the respective values.
  */
@@ -554,7 +554,7 @@ const HStringMap *h_follow_(size_t k, HCFGrammar *g, HCFChoice **s)
 
 const HStringMap *h_follow(size_t k, HCFGrammar *g, const HCFChoice *x)
 {
-  // consider all occurances of X in g
+  // consider all occurrences of X in g
   // the follow set of X is the union of:
   //   {$} if X is the start symbol
   //   given a production "A -> alpha X tail":

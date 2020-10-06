@@ -230,7 +230,7 @@ int h_llk_compile(HAllocator* mm__, HParser* parser, const void* params)
 
   // TODO: eliminate common prefixes
   // TODO: eliminate left recursion
-  // TODO: avoid conflicts by splitting occurances?
+  // TODO: avoid conflicts by splitting occurrences?
 
   // generate table and store in parser->backend_data.
   HLLkTable *table = h_llktable_new(mm__);
